@@ -65,7 +65,7 @@ public class VoltageInitController {
         // applying the modifications inserts them into the node, which invalidates its children
         NodeActivityType activityType = studyService.shouldApplyModifications(studyUuid)
             ? COMPUTE_AND_UNBUILD_CHILDREN : COMPUTE;
-        nodeActivityRunnerService.runWithNodeActivity(activityType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+        nodeActivityRunnerService.runWith(activityType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> voltageInitService.runVoltageInit(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
         return ResponseEntity.ok().build();
     }

@@ -144,12 +144,12 @@ public class RebuildNodeService {
             nodeUuid -> getRootNetworkWhereNodeIsBuilt(studyUuid, nodeUuid)
         ));
 
-        T result = nodeActivityService.runWithNodeActivity(EDIT_MODIFICATIONS, studyUuid,
+        T result = nodeActivityService.runWith(EDIT_MODIFICATIONS, studyUuid,
             Stream.of(node1Uuid, node2Uuid).distinct().toList(), action);
 
         rootNetworkUuidsByNodeBuilt.forEach((nodeUuid, rootNetworkUuids) ->
             rootNetworkUuids.forEach(rootNetworkUuid ->
-                nodeActivityService.runWithNodeActivity(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+                nodeActivityService.runWith(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid),
                     () -> studyService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId))));
 
         return result;

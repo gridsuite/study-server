@@ -78,7 +78,7 @@ public class DynamicSimulationEventsController {
                                                              @RequestBody EventInfos event,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        nodeActivityRunnerService.runWithNodeActivity(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
+        nodeActivityRunnerService.runWith(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
             () -> dynamicSimulationService.createDynamicSimulationEvent(studyUuid, nodeUuid, userId, event));
         return ResponseEntity.ok().build();
     }
@@ -93,7 +93,7 @@ public class DynamicSimulationEventsController {
                                                              @RequestBody EventInfos event,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        nodeActivityRunnerService.runWithNodeActivity(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
+        nodeActivityRunnerService.runWith(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
             () -> dynamicSimulationService.updateDynamicSimulationEvent(studyUuid, nodeUuid, userId, event));
         return ResponseEntity.ok().build();
     }
@@ -108,7 +108,7 @@ public class DynamicSimulationEventsController {
                                                               @Parameter(description = "Dynamic simulation event UUIDs") @RequestParam("eventUuids") List<UUID> eventUuids,
                                                               @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        nodeActivityRunnerService.runWithNodeActivity(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
+        nodeActivityRunnerService.runWith(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
             () -> dynamicSimulationService.deleteDynamicSimulationEvents(studyUuid, nodeUuid, userId, eventUuids));
         return ResponseEntity.ok().build();
     }

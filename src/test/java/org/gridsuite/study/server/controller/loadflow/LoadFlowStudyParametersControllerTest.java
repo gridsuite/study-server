@@ -62,7 +62,7 @@ class LoadFlowStudyParametersControllerTest {
 
     /** The activity is set around the call, so the stub has to run the action for the endpoint to do anything. */
     private void runTheActionOf(List<UUID> invalidatedNodes, UUID studyUuid) {
-        when(nodeActivityService.runWithNodeActivity(eq(UNBUILD_ALL), eq(studyUuid), eq(invalidatedNodes),
+        when(nodeActivityService.runWith(eq(UNBUILD_ALL), eq(studyUuid), eq(invalidatedNodes),
             ArgumentMatchers.<Supplier<Boolean>>any()))
             .thenAnswer(invocation -> invocation.<Supplier<Boolean>>getArgument(3).get());
     }
@@ -84,7 +84,7 @@ class LoadFlowStudyParametersControllerTest {
 
         InOrder inOrder = inOrder(studyService, nodeActivityService);
         inOrder.verify(studyService).getNodesInvalidatedByLoadFlowParameters(studyUuid);
-        inOrder.verify(nodeActivityService).runWithNodeActivity(eq(UNBUILD_ALL), eq(studyUuid), eq(invalidatedNodes),
+        inOrder.verify(nodeActivityService).runWith(eq(UNBUILD_ALL), eq(studyUuid), eq(invalidatedNodes),
             ArgumentMatchers.<Supplier<Boolean>>any());
         inOrder.verify(studyService).setLoadFlowParameters(studyUuid, PARAMETERS, USER_ID);
     }
@@ -102,7 +102,7 @@ class LoadFlowStudyParametersControllerTest {
             .andExpect(status().isNoContent())
             .andExpect(content().string(""));
 
-        verify(nodeActivityService).runWithNodeActivity(eq(UNBUILD_ALL), eq(studyUuid), eq(invalidatedNodes),
+        verify(nodeActivityService).runWith(eq(UNBUILD_ALL), eq(studyUuid), eq(invalidatedNodes),
             ArgumentMatchers.<Supplier<Boolean>>any());
         verify(studyService).setLoadFlowParameters(studyUuid, null, USER_ID);
     }

@@ -65,7 +65,7 @@ public class ShortCircuitController {
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(SHORT_CIRCUIT, userId);
-        nodeActivityRunnerService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+        nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> shortCircuitService.runShortCircuit(studyUuid, nodeUuid, rootNetworkUuid, busId, debug, userId));
         return ResponseEntity.ok().build();
     }

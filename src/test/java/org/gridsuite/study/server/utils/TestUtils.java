@@ -233,10 +233,10 @@ public final class TestUtils {
         Answer<Object> supplyIt = invocation ->
             invocation.getArgument(invocation.getArguments().length - 1, Supplier.class).get();
 
-        doAnswer(runIt).when(nodeActivityService).runWithNodeActivity(any(), any(), any(), anyList(), any(Runnable.class));
-        doAnswer(runIt).when(nodeActivityService).runWithNodeActivity(any(), any(), anyList(), any(Runnable.class));
-        doAnswer(supplyIt).when(nodeActivityService).runWithNodeActivity(any(), any(), any(), anyList(), any(Supplier.class));
-        doAnswer(supplyIt).when(nodeActivityService).runWithNodeActivity(any(), any(), anyList(), any(Supplier.class));
+        doAnswer(runIt).when(nodeActivityService).runWith(any(), any(), any(), anyList(), any(Runnable.class));
+        doAnswer(runIt).when(nodeActivityService).runWith(any(), any(), anyList(), any(Runnable.class));
+        doAnswer(supplyIt).when(nodeActivityService).runWith(any(), any(), any(), anyList(), any(Supplier.class));
+        doAnswer(supplyIt).when(nodeActivityService).runWith(any(), any(), anyList(), any(Supplier.class));
     }
 
     /** Node activity notifications interleave with every other study update, so reads for anything else skip them. */

@@ -24,21 +24,21 @@ public class NodeActivityRunnerService {
         this.nodeActivityService = nodeActivityService;
     }
 
-    public void runWithNodeActivity(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid,
-                                    List<UUID> nodeUuids, Runnable action) {
-        runWithNodeActivity(type, studyUuid, rootNetworkUuid, nodeUuids, asSupplier(action));
+    public void runWith(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid,
+                        List<UUID> nodeUuids, Runnable action) {
+        runWith(type, studyUuid, rootNetworkUuid, nodeUuids, asSupplier(action));
     }
 
-    public void runWithNodeActivity(NodeActivityType type, UUID studyUuid, List<UUID> nodeUuids, Runnable action) {
-        runWithNodeActivity(type, studyUuid, null, nodeUuids, action);
+    public void runWith(NodeActivityType type, UUID studyUuid, List<UUID> nodeUuids, Runnable action) {
+        runWith(type, studyUuid, null, nodeUuids, action);
     }
 
-    public <T> T runWithNodeActivity(NodeActivityType type, UUID studyUuid, List<UUID> nodeUuids, Supplier<T> action) {
-        return runWithNodeActivity(type, studyUuid, null, nodeUuids, action);
+    public <T> T runWith(NodeActivityType type, UUID studyUuid, List<UUID> nodeUuids, Supplier<T> action) {
+        return runWith(type, studyUuid, null, nodeUuids, action);
     }
 
-    public <T> T runWithNodeActivity(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid,
-                                     List<UUID> nodeUuids, Supplier<T> action) {
+    public <T> T runWith(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid,
+                         List<UUID> nodeUuids, Supplier<T> action) {
         UUID activityRootNetworkUuid = type.affectsAllRootNetworks() ? null : rootNetworkUuid;
         nodeActivityService.addNodeActivities(type, studyUuid, activityRootNetworkUuid, nodeUuids);
         boolean succeeded = false;

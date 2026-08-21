@@ -200,7 +200,7 @@ public class StudyController {
         caseService.assertCaseExists(rootNetworkInfos.getCaseInfos() != null ? rootNetworkInfos.getCaseInfos().getOriginalCaseUuid() : null);
         // the reimport unbuilds the whole tree of this root network, so it is held on the root node
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-        nodeActivityRunnerService.runWithNodeActivity(REIMPORT_CASE, studyUuid, rootNetworkUuid, List.of(rootNodeUuid),
+        nodeActivityRunnerService.runWith(REIMPORT_CASE, studyUuid, rootNetworkUuid, List.of(rootNodeUuid),
             () -> studyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, userId));
         return ResponseEntity.ok().build();
     }
@@ -249,7 +249,7 @@ public class StudyController {
                                                   @RequestParam(name = "insertMode") InsertMode insertMode,
                                               @RequestHeader(HEADER_USER_ID) String userId) {
         //if the source study is not set we assume it's the same as the target study
-        nodeActivityRunnerService.runWithNodeActivity(EDIT_TREE, targetStudyUuid, reparentedNodes(referenceNodeUuid, insertMode),
+        nodeActivityRunnerService.runWith(EDIT_TREE, targetStudyUuid, reparentedNodes(referenceNodeUuid, insertMode),
             () -> studyService.duplicateStudyNode(sourceStudyUuid == null ? targetStudyUuid : sourceStudyUuid, targetStudyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode, userId));
         return ResponseEntity.ok().build();
     }
@@ -269,7 +269,7 @@ public class StudyController {
         studyService.assertIsNodeNotReadOnly(nodeToCutUuid);
         // the node leaves its former parent, so its own children are reparented there whatever the insert mode
         List<UUID> heldNodes = Stream.concat(Stream.of(nodeToCutUuid), reparentedNodes(referenceNodeUuid, insertMode).stream()).distinct().toList();
-        nodeActivityRunnerService.runWithNodeActivity(EDIT_TREE, studyUuid, heldNodes,
+        nodeActivityRunnerService.runWith(EDIT_TREE, studyUuid, heldNodes,
             () -> studyService.moveStudyNode(studyUuid, nodeToCutUuid, referenceNodeUuid, insertMode, userId));
         return ResponseEntity.ok().build();
     }
@@ -340,7 +340,7 @@ public class StudyController {
                                                 @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(subtreeToCutParentNodeUuid);
         // a subtree always attaches as a child at the destination, reparenting nothing there
-        nodeActivityRunnerService.runWithNodeActivity(EDIT_TREE, studyUuid, List.of(subtreeToCutParentNodeUuid),
+        nodeActivityRunnerService.runWith(EDIT_TREE, studyUuid, List.of(subtreeToCutParentNodeUuid),
             () -> studyService.moveStudySubtree(studyUuid, subtreeToCutParentNodeUuid, referenceNodeUuid, userId));
         return ResponseEntity.ok().build();
     }
@@ -720,12 +720,12 @@ public class StudyController {
             List<CompositeInfos> compositeInfos,
             String userId,
             CompositeModificationsActionType action) {
-        nodeActivityRunnerService.runWithNodeActivity(EDIT_MODIFICATIONS, targetStudyUuid, List.of(targetNodeUuid),
+        nodeActivityRunnerService.runWith(EDIT_MODIFICATIONS, targetStudyUuid, List.of(targetNodeUuid),
             () -> studyService.insertCompositeNetworkModifications(targetStudyUuid, targetNodeUuid, compositeInfos, userId, action));
     }
 
     private void handleDuplicateNetworkModifications(UUID targetStudyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationsToCopyUuidList, String userId) {
-        nodeActivityRunnerService.runWithNodeActivity(EDIT_MODIFICATIONS, targetStudyUuid, List.of(targetNodeUuid),
+        nodeActivityRunnerService.runWith(EDIT_MODIFICATIONS, targetStudyUuid, List.of(targetNodeUuid),
             () -> studyService.duplicateNetworkModifications(targetStudyUuid, targetNodeUuid, originNodeUuid, modificationsToCopyUuidList, userId));
     }
 
@@ -1101,7 +1101,7 @@ public class StudyController {
 
     private void buildCreatedNode(UUID studyUuid, UUID referenceId, NetworkModificationNode createdNode, String userId) {
         studyService.getRootNetworksToBuildAfterCreation(studyUuid, referenceId, createdNode).forEach(rootNetworkUuid ->
-            nodeActivityRunnerService.runWithNodeActivity(BUILD, studyUuid, rootNetworkUuid, List.of(createdNode.getId()),
+            nodeActivityRunnerService.runWith(BUILD, studyUuid, rootNetworkUuid, List.of(createdNode.getId()),
                 () -> studyService.buildNode(studyUuid, createdNode.getId(), rootNetworkUuid, userId)));
     }
 
@@ -1128,7 +1128,7 @@ public class StudyController {
                                                                  defaultValue = "CHILD") InsertMode insertMode,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
 
-        NetworkModificationNode newNode = nodeActivityRunnerService.runWithNodeActivity(EDIT_TREE, studyUuid, reparentedNodes(referenceId, insertMode),
+        NetworkModificationNode newNode = nodeActivityRunnerService.runWith(EDIT_TREE, studyUuid, reparentedNodes(referenceId, insertMode),
             () -> studyService.createNode(studyUuid, referenceId, node, insertMode, userId));
         buildCreatedNode(studyUuid, referenceId, newNode, userId);
 
@@ -1160,7 +1160,7 @@ public class StudyController {
                                            @Parameter(description = "ids of children to remove") @RequestParam("ids") List<UUID> nodeIds,
                                            @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren,
                                            @RequestHeader(HEADER_USER_ID) String userId) {
-        nodeActivityRunnerService.runWithNodeActivity(DELETE_NODES, studyUuid, nodeIds,
+        nodeActivityRunnerService.runWith(DELETE_NODES, studyUuid, nodeIds,
             () -> studyService.deleteNodes(studyUuid, nodeIds, deleteChildren, userId));
         return ResponseEntity.ok().build();
     }
@@ -1176,7 +1176,7 @@ public class StudyController {
                                                  @Parameter(description = "to stash a node with its children") @RequestParam(value = "stashChildren", defaultValue = "false") boolean stashChildren,
                                                  @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeId);
-        nodeActivityRunnerService.runWithNodeActivity(DELETE_NODES, studyUuid, List.of(nodeId),
+        nodeActivityRunnerService.runWith(DELETE_NODES, studyUuid, List.of(nodeId),
             () -> studyService.stashNode(studyUuid, nodeId, stashChildren, userId));
         return ResponseEntity.ok().build();
     }
@@ -1198,7 +1198,7 @@ public class StudyController {
                                             @Parameter(description = "id of node below which the node will be restored") @RequestParam("anchorNodeId") UUID anchorNodeId,
                                             @RequestHeader(HEADER_USER_ID) String userId) {
         // the restored nodes land under the anchor, so it is held exactly as an insertion under it would be
-        nodeActivityRunnerService.runWithNodeActivity(EDIT_TREE, studyUuid, List.of(anchorNodeId),
+        nodeActivityRunnerService.runWith(EDIT_TREE, studyUuid, List.of(anchorNodeId),
             () -> studyService.restoreNodes(studyUuid, nodeIds, anchorNodeId, userId));
         return ResponseEntity.ok().build();
     }
@@ -1310,7 +1310,7 @@ public class StudyController {
         if (studyService.isNodeBuilt(nodeUuid, rootNetworkUuid)) {
             return ResponseEntity.ok().build();
         }
-        nodeActivityRunnerService.runWithNodeActivity(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+        nodeActivityRunnerService.runWith(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> studyService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }
@@ -1327,7 +1327,7 @@ public class StudyController {
         // unbuildStudyNode only reaches the children of a security node whose loadflow has run
         NodeActivityType unbuildType = studyService.isSecurityNodeWithLoadflowDone(nodeUuid, rootNetworkUuid)
             ? UNBUILD_CHILDREN : UNBUILD;
-        nodeActivityRunnerService.runWithNodeActivity(unbuildType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+        nodeActivityRunnerService.runWith(unbuildType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> studyService.unbuildStudyNode(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }
@@ -1339,7 +1339,7 @@ public class StudyController {
     public ResponseEntity<Void> unbuildAllNodes(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                 @RequestHeader(HEADER_USER_ID) String userId) {
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-        nodeActivityRunnerService.runWithNodeActivity(UNBUILD_ALL, studyUuid, List.of(rootNodeUuid),
+        nodeActivityRunnerService.runWith(UNBUILD_ALL, studyUuid, List.of(rootNodeUuid),
             () -> studyService.unbuildNodeTree(studyUuid, rootNodeUuid, userId));
         return ResponseEntity.ok().build();
     }
@@ -1412,7 +1412,7 @@ public class StudyController {
                                                                @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        nodeActivityRunnerService.runWithNodeActivity(EDIT_MODIFICATIONS, studyUuid, List.of(nodeUuid),
+        nodeActivityRunnerService.runWith(EDIT_MODIFICATIONS, studyUuid, List.of(nodeUuid),
             () -> studyService.insertVoltageInitModifications(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }

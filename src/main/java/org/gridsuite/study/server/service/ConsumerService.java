@@ -559,7 +559,7 @@ public class ConsumerService {
             LoadFlowStatus loadFlowStatus = loadFlowRestService.getLoadFlowStatus(resultUuid);
             if (loadFlowStatus == LoadFlowStatus.CONVERGED) {
                 List<UUID> childrenToBuild = studyService.getFirstLevelChildrenToBuild(studyUuid, nodeUuid, rootNetworkUuid, userId);
-                nodeActivityRunnerService.runWithNodeActivity(BUILD, studyUuid, rootNetworkUuid, childrenToBuild,
+                nodeActivityRunnerService.runWith(BUILD, studyUuid, rootNetworkUuid, childrenToBuild,
                     () -> studyService.buildNodes(studyUuid, childrenToBuild, rootNetworkUuid, userId));
             }
         }

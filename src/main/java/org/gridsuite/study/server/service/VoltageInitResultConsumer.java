@@ -85,7 +85,7 @@ public class VoltageInitResultConsumer {
                     consumerService.getNodeReceiver(message).ifPresent(nodeReceiver -> {
                         String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
                         // the compute activity is already released, and this insert invalidates the node tree
-                        nodeActivityRunnerService.runWithNodeActivity(EDIT_MODIFICATIONS, studyUuid, List.of(nodeReceiver.getNodeUuid()),
+                        nodeActivityRunnerService.runWith(EDIT_MODIFICATIONS, studyUuid, List.of(nodeReceiver.getNodeUuid()),
                             () -> studyService.insertVoltageInitModifications(studyUuid, nodeReceiver.getNodeUuid(), nodeReceiver.getRootNetworkUuid(), userId));
                     });
                 }

@@ -51,7 +51,7 @@ public class LoadFlowStudyParametersController {
             @RequestBody(required = false) String lfParameter,
             @RequestHeader(HEADER_USER_ID) String userId) {
         // only what this actually unbuilds: the security nodes holding a loadflow result, and their children
-        boolean userProfileIssue = nodeActivityRunnerService.runWithNodeActivity(
+        boolean userProfileIssue = nodeActivityRunnerService.runWith(
             UNBUILD_ALL, studyUuid, studyService.getNodesInvalidatedByLoadFlowParameters(studyUuid),
             () -> studyService.setLoadFlowParameters(studyUuid, lfParameter, userId)
         );

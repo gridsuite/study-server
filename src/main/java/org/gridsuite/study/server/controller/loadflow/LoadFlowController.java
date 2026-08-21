@@ -75,10 +75,10 @@ public class LoadFlowController {
         NodeActivityType activityType = networkModificationTreeService.isSecurityNode(nodeUuid)
             ? COMPUTE_AND_UNBUILD_CHILDREN : COMPUTE;
         if (prevResultUuid != null) {
-            nodeActivityRunnerService.runWithNodeActivity(activityType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+            nodeActivityRunnerService.runWith(activityType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
                 () -> handleRerunLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, prevResultUuid, withRatioTapChangers, userId));
         } else {
-            nodeActivityRunnerService.runWithNodeActivity(activityType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+            nodeActivityRunnerService.runWith(activityType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
                 () -> studyService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, null, withRatioTapChangers, userId));
         }
         return ResponseEntity.ok().build();
