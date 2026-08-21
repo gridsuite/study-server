@@ -1221,7 +1221,7 @@ public class StudyController {
     @ApiResponses(@ApiResponse(responseCode = "200", description = "The running activities, empty when the study is idle"))
     public ResponseEntity<List<NodeActivityInfos>> getNodeActivities(
             @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(nodeActivityService.getNodeActivities(studyUuid));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(nodeActivityService.getActivities(studyUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/subtree")

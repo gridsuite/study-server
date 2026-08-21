@@ -136,7 +136,7 @@ public class ConsumerService {
             studyService.sendLoadflowRequestWorflow(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid(), workflowInfos.isWithRatioTapChangers(), workflowInfos.getUserId());
         } else {
             // a rerun's loadflow removes the activity when its own result arrives
-            nodeActivityService.removeNodeActivity(studyUuid, rootNetworkUuid, List.of(nodeUuid));
+            nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
         }
     }
 
@@ -208,7 +208,7 @@ public class ConsumerService {
         // the rerun's build failed or was canceled, so no loadflow will follow to remove the activity
         rerunLoadFlowInfos.ifPresent(infos ->
             loadFlowService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, infos.getLoadflowResultUuid()));
-        nodeActivityService.removeNodeActivity(studyUuid, rootNetworkUuid, List.of(nodeUuid));
+        nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
     }
 
     @Bean
@@ -396,7 +396,7 @@ public class ConsumerService {
 
     private void endReimportCaseActivity(UUID studyUuid, UUID rootNetworkUuid) {
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-        nodeActivityService.removeNodeActivity(studyUuid, rootNetworkUuid, List.of(rootNodeUuid));
+        nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, List.of(rootNodeUuid));
     }
 
     /**
@@ -500,7 +500,7 @@ public class ConsumerService {
     }
 
     private void endComputationActivity(UUID studyUuid, NodeReceiver receiverObj) {
-        nodeActivityService.removeNodeActivity(studyUuid, receiverObj.getRootNetworkUuid(), List.of(receiverObj.getNodeUuid()));
+        nodeActivityService.removeActivities(studyUuid, receiverObj.getRootNetworkUuid(), List.of(receiverObj.getNodeUuid()));
     }
 
     public void consumeCalculationDebug(Message<String> msg, ComputationType computationType) {

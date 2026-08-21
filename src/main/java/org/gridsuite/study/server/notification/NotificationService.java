@@ -225,7 +225,7 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitNodeActivityUpdated(UUID studyUuid, Supplier<List<NodeActivityInfos>> activities) {
+    public void emitNodeActivitiesUpdated(UUID studyUuid, Supplier<List<NodeActivityInfos>> activities) {
         try {
             sendStudyUpdateMessage(studyUuid, UPDATE_NODE_ACTIVITIES,
                 MessageBuilder.withPayload(objectMapper.writeValueAsString(activities.get())));

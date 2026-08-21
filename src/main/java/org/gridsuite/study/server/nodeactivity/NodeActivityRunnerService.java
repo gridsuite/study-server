@@ -40,7 +40,7 @@ public class NodeActivityRunnerService {
     public <T> T runWithNodeActivity(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid,
                                      List<UUID> nodeUuids, Supplier<T> action) {
         UUID activityRootNetworkUuid = type.affectsAllRootNetworks() ? null : rootNetworkUuid;
-        nodeActivityService.setNodeActivity(type, studyUuid, activityRootNetworkUuid, nodeUuids);
+        nodeActivityService.addNodeActivities(type, studyUuid, activityRootNetworkUuid, nodeUuids);
         boolean succeeded = false;
         try {
             T result = action.get();
@@ -48,7 +48,7 @@ public class NodeActivityRunnerService {
             return result;
         } finally {
             if (!succeeded || type.isSynchronous()) {
-                nodeActivityService.removeNodeActivity(studyUuid, activityRootNetworkUuid, nodeUuids);
+                nodeActivityService.removeActivities(studyUuid, activityRootNetworkUuid, nodeUuids);
             }
         }
     }

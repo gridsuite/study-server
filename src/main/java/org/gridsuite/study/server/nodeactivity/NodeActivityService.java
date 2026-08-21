@@ -45,29 +45,39 @@ public class NodeActivityService {
     }
 
     @Transactional
-    public void setNodeActivity(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
-        doSetNodeActivity(type, studyUuid, rootNetworkUuid, nodeUuids);
+    public void addNodeActivities(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
+        doAddActivities(type, studyUuid, rootNetworkUuid, nodeUuids);
     }
 
-    private void doSetNodeActivity(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
+    private void doAddActivities(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
         List<UUID> nodesUuids = nodeUuids.stream().distinct().toList();
         if (nodesUuids.isEmpty()) {
             return;
         }
+
         assertNodesExistInStudy(studyUuid, nodesUuids);
         List<NodeActivityEntity> newActivities = nodesUuids.stream()
             .map(nodeUuid -> NodeActivityEntity.from(type, studyUuid, rootNetworkUuid, nodeUuid))
             .toList();
+
         List<NodeActivityEntity> currentActivities = nodeActivityRepository.findAllByStudyId(studyUuid);
         if (!currentActivities.isEmpty()) {
-            Map<UUID, Set<UUID>> ancestorsByNode = getAncestorsByNode(type, newActivities, currentActivities);
+            assertNoConflict(newActivities, type.invalidatesChildren(), currentActivities);
+        }
+
+        nodeActivityRepository.saveAll(newActivities);
+
+        notifyActivities(studyUuid);
+    }
+
+    private void assertNoConflict(List<NodeActivityEntity> newActivities, boolean withInvalidatesChildren, List<NodeActivityEntity> currentActivities) {
+        if (!currentActivities.isEmpty()) {
+            Map<UUID, Set<UUID>> ancestorsByNode = getAncestorsByNode(newActivities, withInvalidatesChildren, currentActivities);
             newActivities.forEach(newActivity -> findConflictualCurrentActivity(newActivity, currentActivities, ancestorsByNode)
                 .ifPresent(conflictualActivity -> {
                     throw throwConflict(newActivity, conflictualActivity);
                 }));
         }
-        nodeActivityRepository.saveAll(newActivities);
-        notifyNodeActivities(studyUuid);
     }
 
     private static Optional<NodeActivityEntity> findConflictualCurrentActivity(
@@ -106,11 +116,11 @@ public class NodeActivityService {
     }
 
     @Transactional
-    public void removeNodeActivity(UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
-        doRemoveNodeActivity(studyUuid, rootNetworkUuid, nodeUuids);
+    public void removeActivities(UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
+        doRemoveActivities(studyUuid, rootNetworkUuid, nodeUuids);
     }
 
-    private void doRemoveNodeActivity(UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
+    private void doRemoveActivities(UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
         if (nodeUuids.isEmpty()) {
             return;
         }
@@ -119,27 +129,28 @@ public class NodeActivityService {
         } else {
             nodeActivityRepository.deleteByNodeIdInAndRootNetworkId(nodeUuids, rootNetworkUuid);
         }
-        notifyNodeActivities(studyUuid);
+        notifyActivities(studyUuid);
     }
 
-    private void notifyNodeActivities(UUID studyUuid) {
-        notificationService.emitNodeActivityUpdated(studyUuid, () -> doGetNodeActivities(studyUuid));
+    private void notifyActivities(UUID studyUuid) {
+        notificationService.emitNodeActivitiesUpdated(studyUuid, () -> doGetActivities(studyUuid));
     }
 
     @Transactional(readOnly = true)
-    public List<NodeActivityInfos> getNodeActivities(UUID studyUuid) {
-        return doGetNodeActivities(studyUuid);
+    public List<NodeActivityInfos> getActivities(UUID studyUuid) {
+        return doGetActivities(studyUuid);
     }
 
-    private List<NodeActivityInfos> doGetNodeActivities(UUID studyUuid) {
+    private List<NodeActivityInfos> doGetActivities(UUID studyUuid) {
         return nodeActivityRepository.findAllByStudyId(studyUuid).stream()
             .map(NodeActivityInfos::from)
             .toList();
     }
 
-    private Map<UUID, Set<UUID>> getAncestorsByNode(NodeActivityType type, List<NodeActivityEntity> newActivities,
+    private Map<UUID, Set<UUID>> getAncestorsByNode(List<NodeActivityEntity> newActivities,
+                                                    boolean withInvalidatesChildren,
                                                     List<NodeActivityEntity> currentActivities) {
-        Stream<NodeActivityEntity> involvedActivities = type.invalidatesChildren()
+        Stream<NodeActivityEntity> involvedActivities = withInvalidatesChildren
             ? Stream.concat(newActivities.stream(), currentActivities.stream()) : newActivities.stream();
         return involvedActivities.map(NodeActivityEntity::getNodeId).distinct()
             .collect(Collectors.toMap(nodeUuid -> nodeUuid, this::getAncestors));
@@ -150,7 +161,7 @@ public class NodeActivityService {
     }
 
     @Transactional
-    public List<NodeActivityEntity> removeNodeActivities(Instant startedBefore) {
+    public List<NodeActivityEntity> removeActivities(Instant startedBefore) {
         List<NodeActivityEntity> nodeActivities = nodeActivityRepository.findAllByStartedAtBefore(startedBefore);
         if (nodeActivities.isEmpty()) {
             return List.of();
@@ -159,7 +170,7 @@ public class NodeActivityService {
         nodeActivities.stream()
             .map(NodeActivityEntity::getStudyId)
             .distinct()
-            .forEach(this::notifyNodeActivities);
+            .forEach(this::notifyActivities);
         return nodeActivities;
     }
 }

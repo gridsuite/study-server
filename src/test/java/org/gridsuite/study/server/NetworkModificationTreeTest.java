@@ -1025,7 +1025,7 @@ class NetworkModificationTreeTest {
         RootNode root = createRoot();
         UUID studyId = root.getStudyId();
         UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyId);
-        nodeActivityService.setNodeActivity(NodeActivityType.BUILD, studyId, rootNetworkUuid, List.of(root.getId()));
+        nodeActivityService.addNodeActivities(NodeActivityType.BUILD, studyId, rootNetworkUuid, List.of(root.getId()));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/restore?anchorNodeId={anchorNodeId}", studyId, root.getId())
                         .header(USER_ID_HEADER, "userId")

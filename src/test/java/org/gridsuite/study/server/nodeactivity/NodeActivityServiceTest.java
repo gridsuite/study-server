@@ -151,20 +151,20 @@ class NodeActivityServiceTest {
 
     @Test
     void anActivityOnTheRootNodeReachesEveryNodeBelowIt() {
-        nodeActivityService.setNodeActivity(REIMPORT_CASE, studyUuid, rootNetworkUuid, List.of(rootNodeUuid));
+        nodeActivityService.addNodeActivities(REIMPORT_CASE, studyUuid, rootNetworkUuid, List.of(rootNodeUuid));
 
         List<UUID> requested = List.of(grandChildUuid);
-        assertThatThrownBy(() -> nodeActivityService.setNodeActivity(BUILD, studyUuid, rootNetworkUuid, requested))
+        assertThatThrownBy(() -> nodeActivityService.addNodeActivities(BUILD, studyUuid, rootNetworkUuid, requested))
             .isInstanceOf(StudyException.class)
             .hasMessageContaining("REIMPORT_CASE is running on node " + rootNodeUuid);
     }
 
     @Test
     void theRefusalCarriesWhatTheClientShowsTheUser() {
-        nodeActivityService.setNodeActivity(UNBUILD_CHILDREN, studyUuid, rootNetworkUuid, List.of(nodeUuid));
+        nodeActivityService.addNodeActivities(UNBUILD_CHILDREN, studyUuid, rootNetworkUuid, List.of(nodeUuid));
 
         List<UUID> requested = List.of(grandChildUuid);
-        assertThatThrownBy(() -> nodeActivityService.setNodeActivity(BUILD, studyUuid, rootNetworkUuid, requested))
+        assertThatThrownBy(() -> nodeActivityService.addNodeActivities(BUILD, studyUuid, rootNetworkUuid, requested))
             .isInstanceOf(StudyException.class)
             .extracting(thrown -> ((StudyException) thrown).getBusinessErrorValues())
             .isEqualTo(Map.of("requestedLabel", "BUILDING", "requestedNodeName", "grandChild",
@@ -174,10 +174,10 @@ class NodeActivityServiceTest {
 
     @Test
     void theRefusalSaysWhenTheRootNodeIsHoldingTheStudy() {
-        nodeActivityService.setNodeActivity(REIMPORT_CASE, studyUuid, rootNetworkUuid, List.of(rootNodeUuid));
+        nodeActivityService.addNodeActivities(REIMPORT_CASE, studyUuid, rootNetworkUuid, List.of(rootNodeUuid));
 
         List<UUID> requested = List.of(grandChildUuid);
-        assertThatThrownBy(() -> nodeActivityService.setNodeActivity(BUILD, studyUuid, rootNetworkUuid, requested))
+        assertThatThrownBy(() -> nodeActivityService.addNodeActivities(BUILD, studyUuid, rootNetworkUuid, requested))
             .isInstanceOf(StudyException.class)
             .extracting(thrown -> ((StudyException) thrown).getBusinessErrorValues())
             .isEqualTo(Map.of("requestedLabel", "BUILDING", "requestedNodeName", "grandChild",
@@ -187,9 +187,9 @@ class NodeActivityServiceTest {
 
     @Test
     void anActivityOnANodeLeavesItsAncestorsFree() {
-        nodeActivityService.setNodeActivity(BUILD, studyUuid, rootNetworkUuid, List.of(grandChildUuid));
+        nodeActivityService.addNodeActivities(BUILD, studyUuid, rootNetworkUuid, List.of(grandChildUuid));
 
-        assertThatCode(() -> nodeActivityService.setNodeActivity(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid)))
+        assertThatCode(() -> nodeActivityService.addNodeActivities(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid)))
             .doesNotThrowAnyException();
     }
 
@@ -197,24 +197,24 @@ class NodeActivityServiceTest {
     void aRequestNamingANodeOfAnotherStudyIsNotFound() {
         UUID otherStudyUuid = UUID.randomUUID();
         List<UUID> requested = List.of(nodeUuid);
-        assertThatThrownBy(() -> nodeActivityService.setNodeActivity(BUILD, otherStudyUuid, rootNetworkUuid, requested))
+        assertThatThrownBy(() -> nodeActivityService.addNodeActivities(BUILD, otherStudyUuid, rootNetworkUuid, requested))
             .isInstanceOf(StudyException.class)
             .hasMessageContaining("not all found in study");
     }
 
     @Test
     void theSameNodeTwiceInOneRequestIsOneActivity() {
-        nodeActivityService.setNodeActivity(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid, nodeUuid));
+        nodeActivityService.addNodeActivities(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid, nodeUuid));
 
         assertThat(nodeActivityRepository.findAllByStudyId(studyUuid)).hasSize(1);
     }
 
     @Test
     void theProjectionReportsWhatIsRunning() {
-        nodeActivityService.setNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(childUuid));
-        nodeActivityService.setNodeActivity(EDIT_TREE, studyUuid, null, List.of(grandChildUuid));
+        nodeActivityService.addNodeActivities(COMPUTE, studyUuid, rootNetworkUuid, List.of(childUuid));
+        nodeActivityService.addNodeActivities(EDIT_TREE, studyUuid, null, List.of(grandChildUuid));
 
-        assertThat(nodeActivityService.getNodeActivities(studyUuid))
+        assertThat(nodeActivityService.getActivities(studyUuid))
             .containsExactlyInAnyOrder(
                 new NodeActivityInfos(childUuid, rootNetworkUuid, NodeActivityLabel.COMPUTING, false),
                 new NodeActivityInfos(grandChildUuid, null, NodeActivityLabel.UPDATING, true));
@@ -222,24 +222,24 @@ class NodeActivityServiceTest {
 
     @Test
     void aStudyWithNothingRunningReportsNoActivity() {
-        assertThat(nodeActivityService.getNodeActivities(studyUuid)).isEmpty();
+        assertThat(nodeActivityService.getActivities(studyUuid)).isEmpty();
     }
 
     @Test
     void theCleanupLeavesActivitiesYoungerThanTheCutoff() {
-        nodeActivityService.setNodeActivity(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid));
+        nodeActivityService.addNodeActivities(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid));
 
-        assertThat(nodeActivityService.removeNodeActivities(Instant.now().minus(1, ChronoUnit.HOURS))).isEmpty();
+        assertThat(nodeActivityService.removeActivities(Instant.now().minus(1, ChronoUnit.HOURS))).isEmpty();
         assertThat(nodeActivityRepository.findAllByStudyId(studyUuid)).hasSize(1);
     }
 
     @Test
     void theCleanupReleasesWhatStartedBeforeTheCutoff() {
-        nodeActivityService.setNodeActivity(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid));
-        nodeActivityService.setNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(childUuid));
+        nodeActivityService.addNodeActivities(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid));
+        nodeActivityService.addNodeActivities(COMPUTE, studyUuid, rootNetworkUuid, List.of(childUuid));
 
         List<NodeActivityEntity> released =
-            nodeActivityService.removeNodeActivities(Instant.now().plus(1, ChronoUnit.HOURS));
+            nodeActivityService.removeActivities(Instant.now().plus(1, ChronoUnit.HOURS));
 
         assertThat(released).extracting(NodeActivityEntity::getNodeId).containsExactlyInAnyOrder(nodeUuid, childUuid);
         assertThat(nodeActivityRepository.findAllByStudyId(studyUuid)).isEmpty();
@@ -258,20 +258,20 @@ class NodeActivityServiceTest {
     /** Notifications tests */
     @Test
     void takingAndReleasingANodeIsNotified() {
-        nodeActivityService.setNodeActivity(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid));
+        nodeActivityService.addNodeActivities(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid));
         assertNodeActivitiesNotified();
 
-        nodeActivityService.removeNodeActivity(studyUuid, rootNetworkUuid, List.of(nodeUuid));
+        nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
         assertNodeActivitiesNotified();
     }
 
     @Test
     void theCleanupNotifiesEachStudyItReleasedANodeIn() {
-        nodeActivityService.setNodeActivity(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid));
-        nodeActivityService.setNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(childUuid));
+        nodeActivityService.addNodeActivities(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid));
+        nodeActivityService.addNodeActivities(COMPUTE, studyUuid, rootNetworkUuid, List.of(childUuid));
         output.clear(STUDY_UPDATE_DESTINATION);
 
-        nodeActivityService.removeNodeActivities(Instant.now().plus(1, ChronoUnit.HOURS));
+        nodeActivityService.removeActivities(Instant.now().plus(1, ChronoUnit.HOURS));
 
         // two rows of the same study, so the study is notified once
         assertNodeActivitiesNotified();
