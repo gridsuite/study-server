@@ -15,6 +15,7 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.UserAdminService;
+import org.gridsuite.study.server.service.asymmetricalload.AsymmetricalLoadService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.springframework.core.io.Resource;
@@ -38,6 +39,7 @@ import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT_ONE_B
 @Service
 public class ShortCircuitService extends AbstractComputationService {
     private final ShortCircuitRestService shortCircuitRestService;
+    private final AsymmetricalLoadService asymmetricalLoadService;
 
     protected ShortCircuitService(StudyRepository studyRepository,
                                   ComputationParametersService computationParametersService,
@@ -46,10 +48,12 @@ public class ShortCircuitService extends AbstractComputationService {
                                   ShortCircuitRestService shortCircuitServicerRest,
                                   NetworkModificationTreeService networkModificationTreeService,
                                   UserAdminService userAdminService,
-                                  RootNetworkService rootNetworkService) {
+                                  RootNetworkService rootNetworkService,
+                                  AsymmetricalLoadService asymmetricalLoadService) {
         super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService,
             rootNetworkService, computationParametersService, userAdminService);
         this.shortCircuitRestService = shortCircuitServicerRest;
+        this.asymmetricalLoadService = asymmetricalLoadService;
     }
 
     @Transactional
@@ -105,7 +109,9 @@ public class ShortCircuitService extends AbstractComputationService {
                 shortCircuitRestService::createParameters,
                 shortCircuitRestService::updateParameters,
                 SHORT_CIRCUIT,
-                List.of(this::invalidateShortCircuitStatusOnAllNodes, rootNetworkNodeInfoService::invalidatePccMinStatusOnAllNodes),
+                List.of(this::invalidateShortCircuitStatusOnAllNodes,
+                        rootNetworkNodeInfoService::invalidatePccMinStatusOnAllNodes,
+                        asymmetricalLoadService::invalidateAsymmetricalLoadStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS,
                 NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS,
                 NotificationService.UPDATE_TYPE_PCC_MIN_STATUS
