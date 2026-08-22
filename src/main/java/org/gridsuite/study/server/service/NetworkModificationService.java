@@ -310,7 +310,7 @@ public class NetworkModificationService {
     public Map<UUID, UUID> findParentComposites(List<UUID> modificationsUuids) {
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
-                .fromUriString(getNetworkModificationServerURI(false) + "network-modifications/parent-composites")
+                .fromUriString(getNetworkModificationServerURI(false) + COMPOSITE_PATH + "parent-composites")
                 .queryParam(UUIDS, modificationsUuids)
                 .buildAndExpand()
                 .toUriString();

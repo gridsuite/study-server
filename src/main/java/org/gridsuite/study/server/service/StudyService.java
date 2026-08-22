@@ -2081,15 +2081,14 @@ public class StudyService {
             @NonNull UUID studyUuid,
             @NonNull UUID targetNodeUuid,
             @NonNull List<ModificationMoveOrCopyInfos> modificationInfos,
-            UUID fallbackSourceNodeUuid,
-            ModificationContainerInfos target,
+            UUID sourceNodeUuid,
+            ModificationContainerInfos targetModificationContainer,
             UUID beforeUuid,
             boolean isTargetInDifferentNodeTree,
             String userId) {
-        ModificationContainerInfos resolvedTarget = resolveContainer(target, targetNodeUuid);
-        Map<ModificationContainerInfos, List<UUID>> modificationUuidsBySource = resolveAndGroupBySource(modificationInfos, fallbackSourceNodeUuid);
-        // a composite source has no owning node, so this map legitimately holds null values - Collectors.toMap()
-        // can't build that (it rejects null values), hence the plain loop
+        ModificationContainerInfos resolvedTarget = resolveContainer(targetModificationContainer, targetNodeUuid);
+        Map<ModificationContainerInfos, List<UUID>> modificationUuidsBySource = resolveAndGroupBySource(modificationInfos, sourceNodeUuid);
+
         Map<ModificationContainerInfos, UUID> originNodeBySource = new LinkedHashMap<>();
         modificationUuidsBySource.keySet().forEach(source ->
                 originNodeBySource.put(source, networkModificationTreeService.getNodeUuidByModificationGroup(source.id())));
@@ -2129,23 +2128,16 @@ public class StudyService {
                         Pair.of(modificationUuidsToMove, applicationContexts),
                         isTargetInDifferentNodeTree);
 
+                if (result != null && isTargetInDifferentNodeTree) {
+                    emitNetworkModificationImpactsForAllRootNetworks(result.modificationResults(), studyEntity, targetNodeUuid);
+                }
+
                 if (result != null && originNodeUuid != null) {
                     Set<UUID> allMovedUuids = networkModificationService.expandToLeafUuids(result.modificationUuids());
                     rootNetworkNodeInfoService.moveModificationsToExclude(originNodeUuid, targetNodeUuid, new ArrayList<>(allMovedUuids));
                 }
-                if (source.type() == ModificationContainerType.GROUP && resolvedTarget.type().equals(ModificationContainerType.COMPOSITE) && !referencesToMove.isEmpty()) {
-                    updateReferencesToSharedComposites(referencesToMove, userId, originNodeUuid, resolvedTarget.id(), ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION);
-                }
-                if (resolvedTarget.type() == ModificationContainerType.GROUP && source.type().equals(ModificationContainerType.COMPOSITE) && !referencesToMove.isEmpty()) {
-                    updateReferencesToSharedComposites(referencesToMove, userId, source.id(), targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE);
-                }
-                if (result != null && isTargetInDifferentNodeTree) {
-                    emitNetworkModificationImpactsForAllRootNetworks(result.modificationResults(), studyEntity, targetNodeUuid);
-                }
-                // shared composites: the moved occurrence's node reference is updated, not duplicated
-                if (result != null && isTargetDifferentNode && originNodeUuid != null && !referencesToMove.isEmpty()) {
-                    updateReferencesToSharedComposites(referencesToMove, userId, originNodeUuid, targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE);
-                }
+
+                updateSharedCompositeReferencesForMove(result, source, resolvedTarget, referencesToMove, userId, originNodeUuid, targetNodeUuid, isTargetDifferentNode);
             }
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid, targetChildrenUuids);
@@ -2156,10 +2148,40 @@ public class StudyService {
     }
 
     /**
+     * Updates node-references to shared composites impacted by a move, based on source/target container types:
+     * - group -> composite: the reference now targets the composite it was moved into
+     * - composite -> group: the reference now targets the node it was moved into
+     * - composite -> different composite: the reference now targets the new composite (independent of node,
+     *   since a composite's own identity - not the node it happens to be attached to - is what the reference tracks)
+     * - moved to a different node (from a node-level group): the existing reference is repointed, not duplicated
+     */
+    private void updateSharedCompositeReferencesForMove(NetworkModificationsResult result, ModificationContainerInfos source, ModificationContainerInfos target,
+                                                        List<ReferenceData> referencesToMove, String userId,
+                                                        UUID originNodeUuid, UUID targetNodeUuid, boolean isTargetDifferentNode) {
+        if (referencesToMove.isEmpty()) {
+            return;
+        }
+        if (source.type() == ModificationContainerType.GROUP && target.type() == ModificationContainerType.COMPOSITE) {
+            updateReferenceWhenMoveModification(referencesToMove, userId, originNodeUuid, target.id(), ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION);
+        }
+        if (target.type() == ModificationContainerType.GROUP && source.type() == ModificationContainerType.COMPOSITE) {
+            updateReferenceWhenMoveModification(referencesToMove, userId, source.id(), targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE);
+        }
+        if (source.type() == ModificationContainerType.COMPOSITE && target.type() == ModificationContainerType.COMPOSITE
+                && !source.id().equals(target.id())) {
+            updateReferenceWhenMoveModification(referencesToMove, userId, source.id(), target.id(), ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION);
+        }
+        // shared composites: the moved occurrence's node reference is updated, not duplicated
+        if (result != null && isTargetDifferentNode && originNodeUuid != null) {
+            updateReferenceWhenMoveModification(referencesToMove, userId, originNodeUuid, targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE);
+        }
+    }
+
+    /**
      * updates, for each moved shared composite, the existing node-reference so that it points
      * to the target
      */
-    private void updateReferencesToSharedComposites(List<ReferenceData> referenceTargets, String userId, UUID originNodeUuid,
+    private void updateReferenceWhenMoveModification(List<ReferenceData> referenceTargets, String userId, UUID originNodeUuid,
                                                     UUID targetNodeUuid, ReferenceAttributes.ReferenceType targetReferenceType) {
         List<UUID> referenceUuids = referenceTargets.stream()
                 .map(ReferenceData::referenceId)
@@ -2175,7 +2197,7 @@ public class StudyService {
 
     private Map<ModificationContainerInfos, List<UUID>> resolveAndGroupBySource(List<ModificationMoveOrCopyInfos> modificationInfos, UUID fallbackSourceNodeUuid) {
         List<UUID> modificationUuidsNeedingSourceLookup = modificationInfos.stream()
-                .filter(info -> !hasExplicitSource(info.source()))
+                .filter(info -> !hasModificationSource(info.source()))
                 .map(ModificationMoveOrCopyInfos::modificationUuid)
                 .toList();
         Map<UUID, UUID> parentCompositeByModificationUuid = modificationUuidsNeedingSourceLookup.isEmpty()
@@ -2189,20 +2211,20 @@ public class StudyService {
                         Collectors.mapping(ModificationMoveOrCopyInfos::modificationUuid, Collectors.toList())));
     }
 
-    private boolean hasExplicitSource(ModificationContainerInfos source) {
+    private boolean hasModificationSource(ModificationContainerInfos source) {
         return source != null && source.id() != null;
     }
 
-    private ModificationContainerInfos resolveSourceContainer(ModificationContainerInfos source, UUID modificationUuid, UUID fallbackSourceNodeUuid,
+    private ModificationContainerInfos resolveSourceContainer(ModificationContainerInfos source, UUID modificationUuid, UUID originNodeUuid,
                                                                 Map<UUID, UUID> parentCompositeByModificationUuid) {
-        if (hasExplicitSource(source)) {
+        if (hasModificationSource(source)) {
             return source;
         }
         UUID parentCompositeUuid = parentCompositeByModificationUuid.get(modificationUuid);
         if (parentCompositeUuid != null) {
             return new ModificationContainerInfos(parentCompositeUuid, ModificationContainerType.COMPOSITE);
         }
-        return new ModificationContainerInfos(networkModificationTreeService.getModificationGroupUuid(fallbackSourceNodeUuid), ModificationContainerType.GROUP);
+        return new ModificationContainerInfos(networkModificationTreeService.getModificationGroupUuid(originNodeUuid), ModificationContainerType.GROUP);
     }
 
     private ModificationContainerInfos resolveContainer(ModificationContainerInfos container, UUID nodeUuid) {
