@@ -280,9 +280,7 @@ public class NetworkModificationService {
     }
 
     /**
-     * @return one {@link ReferenceData} per modification-reference found among modificationsUuids. Returned as a flat
-     * list (one entry per modification, not grouped/keyed by the referenced element) so that several modifications
-     * sharing the same reference are all returned, instead of being collapsed into a single entry.
+     * @return references data of the modificationsUuids found among modificationsUuids
      */
     public List<ReferenceData> getReferences(List<UUID> modificationsUuids) {
         Objects.requireNonNull(modificationsUuids);
@@ -331,7 +329,9 @@ public class NetworkModificationService {
     }
 
     /**
-     * @return one {@link ReferenceData} per modification-reference found in the group
+     * @return references data of the modifications in the group :
+     * - element uuid in directory server
+     * - uuid of its mother composite (null if the modification is at the root level)
      */
     public List<ReferenceData> getReferencesFromGroup(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);

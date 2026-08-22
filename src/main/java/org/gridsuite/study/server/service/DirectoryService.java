@@ -188,9 +188,8 @@ public class DirectoryService {
     }
 
     /**
-     * moves node references of shared composite modifications in directory server: the existing references
-     * pointing to the origin node are updated to point to the target node (cut-paste: references move, they aren't duplicated)
-     * @param elementsUuids element uuids of the shared composites in directory server
+     * update references of shared composite modifications in directory serve
+     * @param elementsUuids element uuids of the shared composites
      * @param userId id of the user who moves the references
      * @param originReferenceUuid the node references to update
      * @param targetReferenceUuid where the references will point after the move

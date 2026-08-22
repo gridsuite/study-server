@@ -93,10 +93,6 @@ public class RebuildNodeService {
     private void handleMoveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<ModificationMoveOrCopyInfos> modificationInfos, String userId) {
         boolean isTargetInDifferentNodeTree = studyService.invalidateNodeTreeWhenMoveModifications(studyUuid, targetNodeUuid, originNodeUuid);
         try {
-            // a selection can mix modifications sitting directly under originNodeUuid's own group and modifications
-            // nested in one or more composites; studyService resolves each modification's real source (falling back
-            // to originNodeUuid's group only when neither an explicit source nor a parent composite is found) and
-            // applies the move per resolved source, in a single batched call
             studyService.moveNetworkModifications(studyUuid, targetNodeUuid, modificationInfos, originNodeUuid, null, null, isTargetInDifferentNodeTree, userId);
         } finally {
             studyService.unblockNodeTree(studyUuid, originNodeUuid);
