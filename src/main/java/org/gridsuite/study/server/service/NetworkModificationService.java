@@ -13,6 +13,7 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.ReferenceData;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -279,11 +280,9 @@ public class NetworkModificationService {
     }
 
     /**
-     * @return references of the modificationsUuids as Pair of :
-     * - element uuid in directory server
-     * - uuid of its mother composite (null if the modification is at the root level)
+     * @return references data of the modificationsUuids found among modificationsUuids
      */
-    public Map<UUID, UUID> getReferences(List<UUID> modificationsUuids) {
+    public List<ReferenceData> getReferences(List<UUID> modificationsUuids) {
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + "references")
@@ -294,7 +293,32 @@ public class NetworkModificationService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<Map<UUID, UUID>> httpEntity = new HttpEntity<>(headers);
+        HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
+
+        return restTemplate.exchange(
+                path,
+                HttpMethod.GET,
+                httpEntity,
+                new ParameterizedTypeReference<List<ReferenceData>>() { }
+        ).getBody();
+    }
+
+    /**
+     * @return modification uuid -> uuid of the composite currently containing it; modifications sitting directly
+     * under a group (or not found) have no entry
+     */
+    public Map<UUID, UUID> findParentComposites(List<UUID> modificationsUuids) {
+        Objects.requireNonNull(modificationsUuids);
+        var path = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + "network-modifications/parent-composites")
+                .queryParam(UUIDS, modificationsUuids)
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
 
         return restTemplate.exchange(
                 path,
@@ -305,24 +329,24 @@ public class NetworkModificationService {
     }
 
     /**
-     * @return references data of the modifications in the group as Pairof :
+     * @return references data of the modifications in the group :
      * - element uuid in directory server
      * - uuid of its mother composite (null if the modification is at the root level)
      */
-    public Map<UUID, UUID> getReferencesFromGroup(UUID groupUuid) {
+    public List<ReferenceData> getReferencesFromGroup(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "references");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<Map<UUID, UUID>> httpEntity = new HttpEntity<>(headers);
+        HttpEntity<List<ReferenceData>> httpEntity = new HttpEntity<>(headers);
 
         return restTemplate.exchange(
                 getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(),
                 HttpMethod.GET,
                 httpEntity,
-                new ParameterizedTypeReference<Map<UUID, UUID>>() { }
+                new ParameterizedTypeReference<List<ReferenceData>>() { }
         ).getBody();
     }
 
