@@ -60,7 +60,7 @@ class LoadFlowStudyParametersControllerTest {
         UUID studyUuid = UUID.randomUUID();
         UUID rootNodeUuid = UUID.randomUUID();
         when(networkModificationTreeService.getStudyRootNodeUuid(studyUuid)).thenReturn(rootNodeUuid);
-        when(studyService.setLoadFlowParameters(studyUuid, PARAMETERS, USER_ID)).thenReturn(false);
+        when(loadFlowService.setLoadFlowParameters(studyUuid, PARAMETERS, USER_ID)).thenReturn(false);
 
         mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
                 .header(HEADER_USER_ID, USER_ID)
@@ -69,10 +69,10 @@ class LoadFlowStudyParametersControllerTest {
             .andExpect(status().isOk())
             .andExpect(content().string(""));
 
-        InOrder inOrder = inOrder(networkModificationTreeService, studyService);
+        InOrder inOrder = inOrder(networkModificationTreeService, studyService, loadFlowService);
         inOrder.verify(networkModificationTreeService).getStudyRootNodeUuid(studyUuid);
         inOrder.verify(studyService).assertNoBlockedNodeInStudy(studyUuid, rootNodeUuid);
-        inOrder.verify(studyService).setLoadFlowParameters(studyUuid, PARAMETERS, USER_ID);
+        inOrder.verify(loadFlowService).setLoadFlowParameters(studyUuid, PARAMETERS, USER_ID);
     }
 
     @Test
@@ -80,7 +80,7 @@ class LoadFlowStudyParametersControllerTest {
         UUID studyUuid = UUID.randomUUID();
         UUID rootNodeUuid = UUID.randomUUID();
         when(networkModificationTreeService.getStudyRootNodeUuid(studyUuid)).thenReturn(rootNodeUuid);
-        when(studyService.setLoadFlowParameters(studyUuid, null, USER_ID)).thenReturn(true);
+        when(loadFlowService.setLoadFlowParameters(studyUuid, null, USER_ID)).thenReturn(true);
 
         mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
                 .header(HEADER_USER_ID, USER_ID))
@@ -88,7 +88,7 @@ class LoadFlowStudyParametersControllerTest {
             .andExpect(content().string(""));
 
         verify(studyService).assertNoBlockedNodeInStudy(studyUuid, rootNodeUuid);
-        verify(studyService).setLoadFlowParameters(studyUuid, null, USER_ID);
+        verify(loadFlowService).setLoadFlowParameters(studyUuid, null, USER_ID);
     }
 
     @Test

@@ -44,20 +44,18 @@ public class LoadFlowStudyParametersController {
     @PostMapping(value = "/parameters")
     @Operation(summary = "set loadflow parameters on study, reset to default ones if empty body")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters are set"),
-                           @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
-    public ResponseEntity<Void> setLoadflowParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String lfParameter,
-            @RequestHeader(HEADER_USER_ID) String userId) {
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    public ResponseEntity<Void> setLoadflowParameters(@PathVariable("studyUuid") UUID studyUuid,
+                                                      @RequestBody(required = false) String lfParameter,
+                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertNoBlockedNodeInStudy(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid));
-        return studyService.setLoadFlowParameters(studyUuid, lfParameter, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
+        return loadFlowService.setLoadFlowParameters(studyUuid, lfParameter, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/parameters")
     @Operation(summary = "Get loadflow parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters")})
-    public ResponseEntity<LoadFlowParametersInfos> getLoadflowParameters(
-            @PathVariable("studyUuid") UUID studyUuid) {
+    public ResponseEntity<LoadFlowParametersInfos> getLoadflowParameters(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(loadFlowService.getLoadFlowParametersInfos(studyUuid));
     }
 

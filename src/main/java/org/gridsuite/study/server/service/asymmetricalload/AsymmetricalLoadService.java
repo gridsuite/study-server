@@ -16,7 +16,10 @@ import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
+import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.slf4j.Logger;
@@ -39,10 +42,7 @@ import static org.gridsuite.study.server.dto.ComputationType.ASYMMETRICAL_LOAD;
 public class AsymmetricalLoadService extends AbstractComputationService {
 
     private final AsymmetricalLoadRestService asymmetricalLoadRestService;
-    private final NetworkModificationTreeService networkModificationTreeService;
-    private final UserAdminService userAdminService;
     private final ObjectMapper objectMapper;
-    private final RootNetworkService rootNetworkService;
     private static final Logger LOGGER = LoggerFactory.getLogger(AsymmetricalLoadService.class);
 
     protected AsymmetricalLoadService(StudyRepository studyRepository,
@@ -54,12 +54,10 @@ public class AsymmetricalLoadService extends AbstractComputationService {
                                       UserAdminService userAdminService,
                                       ObjectMapper objectMapper,
                                       RootNetworkService rootNetworkService) {
-        super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService,
+            computationParametersService, userAdminService);
         this.asymmetricalLoadRestService = asymmetricalLoadRestService;
-        this.networkModificationTreeService = networkModificationTreeService;
-        this.userAdminService = userAdminService;
         this.objectMapper = objectMapper;
-        this.rootNetworkService = rootNetworkService;
     }
 
     @Transactional
