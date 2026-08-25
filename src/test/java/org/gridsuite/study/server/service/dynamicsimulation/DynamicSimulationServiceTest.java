@@ -8,9 +8,12 @@ package org.gridsuite.study.server.service.dynamicsimulation;
 
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
+import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
-import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -52,14 +55,14 @@ class DynamicSimulationServiceTest {
     @Mock
     private DynamicSimulationEventService dynamicSimulationEventService;
     @Mock
-    private DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
+    private DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
 
     private DynamicSimulationService dynamicSimulationService;
 
     @BeforeEach
     void setUp() {
         dynamicSimulationService = new DynamicSimulationService(studyRepository, computationParametersService, notificationService,
-            rootNetworkNodeInfoService, dynamicSimulationRestService, dynamicSecurityAnalysisService, dynamicSimulationEventService,
+            rootNetworkNodeInfoService, dynamicSimulationRestService, dynamicSecurityAnalysisRestService, dynamicSimulationEventService,
             networkModificationTreeService, userAdminService, rootNetworkService);
     }
 

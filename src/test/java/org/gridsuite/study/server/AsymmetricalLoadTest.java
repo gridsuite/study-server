@@ -27,7 +27,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.pccmin.PccMinRestService;
+import org.gridsuite.study.server.service.asymmetricalload.AsymmetricalLoadRestService;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -36,7 +36,9 @@ import org.gridsuite.study.server.utils.wiremock.UserAdminServerStubs;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria;
 import org.json.JSONObject;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -53,32 +55,47 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.HttpClientErrorException;
-import java.util.*;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static org.gridsuite.study.server.StudyConstants.*;
+import static com.github.tomakehurst.wiremock.client.WireMock.delete;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.put;
+import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * @author Etienne Lesot <etienne.lesot at rte-france.com>
+ */
 @SpringBootTest
 @AutoConfigureMockMvc
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-class PccMinTest {
+class AsymmetricalLoadTest {
 
-    private static final String PCC_MIN_URL_BASE = "/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/";
+    private static final String ASYMMETRICAL_LOAD_URL_BASE = "/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/asymmetrical-load/";
     private static final String COMPUTATION_URL_BASE = "/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/computations/";
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
-    private static final String PCC_MIN_RESULT_UUID = "cf203721-6150-4203-8960-d61d815a9d16";
-    private static final String PCC_MIN_ERROR_RESULT_UUID = "25222222-9994-4e55-8ec7-07ea965d24eb";
-    private static final UUID PCCMIN_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f2");
-    private static final String PCC_MIN_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
+    private static final String ASYMMETRICAL_LOAD_RESULT_UUID = "cf203721-6150-4203-8960-d61d815a9d16";
+    private static final String ASYMMETRICAL_LOAD_ERROR_RESULT_UUID = "25222222-9994-4e55-8ec7-07ea965d24eb";
+    private static final UUID ASYMMETRICAL_LOAD_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f2");
+    private static final String ASYMMETRICAL_LOAD_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
     private static final String ALL_COMPUTATION_STATUS_JSON = "{\"LOAD_FLOW\":null,\"SECURITY_ANALYSIS\":null," +
             "\"SENSITIVITY_ANALYSIS\":null,\"SHORT_CIRCUIT\":null,\"SHORT_CIRCUIT_ONE_BUS\":null," +
             "\"VOLTAGE_INITIALIZATION\":null,\"DYNAMIC_SIMULATION\":null,\"DYNAMIC_SECURITY_ANALYSIS\":null," +
-            "\"DYNAMIC_MARGIN_CALCULATION\":null,\"STATE_ESTIMATION\":null," +
-            "\"PCC_MIN\":\"{\\\"status\\\":\\\"COMPLETED\\\"}\",\"ASYMMETRICAL_LOAD\":null}";
+            "\"DYNAMIC_MARGIN_CALCULATION\":null,\"STATE_ESTIMATION\":null,\"PCC_MIN\":null," +
+            "\"ASYMMETRICAL_LOAD\":\"{\\\"status\\\":\\\"COMPLETED\\\"}\"}";
     private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
 
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
@@ -88,31 +105,35 @@ class PccMinTest {
     private static final long TIMEOUT = 1000;
 
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
-    private static final String PCC_MIN_RESULT_JSON_DESTINATION = "pccmin.result";
-    private static final String PCC_MIN_STOPPED_DESTINATION = "pccmin.stopped";
-    private static final String PCC_MIN_FAILED_DESTINATION = "pccmin.run.dlx";
-    private static final byte[] PCC_MIN_RESULTS_AS_ZIPPED_CSV = {0x00, 0x01};
+    private static final String ASYMMETRICAL_LOAD_RESULT_JSON_DESTINATION = "asymmetricalload.result";
+    private static final String ASYMMETRICAL_LOAD_STOPPED_DESTINATION = "asymmetricalload.stopped";
+    private static final String ASYMMETRICAL_LOAD_FAILED_DESTINATION = "asymmetricalload.run.dlx";
+    private static final byte[] ASYMMETRICAL_LOAD_RESULTS_AS_ZIPPED_CSV = {0x00, 0x01};
 
     private static final String NO_PROFILE_USER_ID = "noProfileUser";
     private static final String NO_PARAMS_IN_PROFILE_USER_ID = "noParamInProfileUser";
     private static final String INVALID_PARAMS_IN_PROFILE_USER_ID = "invalidParamInProfileUser";
     private static final String USER_PROFILE_NO_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile No params\"}";
 
-    private static final String PCC_MIN_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
-    private static final UUID PCC_MIN_PARAMETERS_UUID = UUID.fromString(PCC_MIN_PARAMETERS_UUID_STRING);
-    private static final String PCC_MIN_PROFILE_PARAMETERS_JSON =
+    private static final String ASYMMETRICAL_LOAD_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
+    private static final UUID ASYMMETRICALLOAD_PARAMETERS_UUID = UUID.fromString(ASYMMETRICAL_LOAD_PARAMETERS_UUID_STRING);
+    private static final String ASYMMETRICAL_LOAD_PROFILE_PARAMETERS_JSON =
             "{\"uuid\":\"7cce52fd-2aca-4d93-9b7b-6a2b4c0c2c11\",\"filters\":[{\"filterId\":\"b5fafd19-25f4-45b9-b5c8-3af51fdc9d1c\",\"filterName\":\"filterName\"}]}";
 
-    private static final String PROFILE_PCC_MIN_DUPLICATED_PARAMETERS_UUID_STRING = "a4ce25e1-59a7-401d-abb1-04425fe24587";
-    private static final String PROFILE_PCC_MIN_INVALID_PARAMETERS_UUID_STRING = "f09f5282-8e34-48b5-b66e-7ef9f3f36c4f";
+    private static final String PROFILE_ASYMMETRICAL_LOAD_DUPLICATED_PARAMETERS_UUID_STRING = "a4ce25e1-59a7-401d-abb1-04425fe24587";
+    private static final String PROFILE_ASYMMETRICAL_LOAD_INVALID_PARAMETERS_UUID_STRING = "f09f5282-8e34-48b5-b66e-7ef9f3f36c4f";
     private static final String VALID_PARAMS_IN_PROFILE_USER_ID = "validParamInProfileUser";
-    private static final String PROFILE_PCC_MIN_VALID_PARAMETERS_UUID_STRING = "1cec4a7b-ab7e-4d78-9dd7-ce73c5ef11d9";
+    private static final String PROFILE_ASYMMETRICAL_LOAD_VALID_PARAMETERS_UUID_STRING = "1cec4a7b-ab7e-4d78-9dd7-ce73c5ef11d9";
 
-    private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid pcc min params\",\"pccMinParameterId\":\"" +
-            PROFILE_PCC_MIN_VALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":true}";
-    private static final String USER_PROFILE_INVALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with broken pcc min params\",\"pccMinParameterId\":\"" +
-            PROFILE_PCC_MIN_INVALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":false}";
-    private static final String DUPLICATED_PARAMS_JSON = "\"" + PROFILE_PCC_MIN_DUPLICATED_PARAMETERS_UUID_STRING + "\"";
+    private static final String USER_PROFILE_VALID_PARAMS_JSON =
+            "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid asymmetrical load params\",\"asymmetricalLoadParameterId\":\"" +
+            PROFILE_ASYMMETRICAL_LOAD_VALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":true}";
+    private static final String USER_PROFILE_INVALID_PARAMS_JSON =
+            "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with broken asymmetrical load params\",\"asymmetricalLoadParameterId\":\"" +
+            PROFILE_ASYMMETRICAL_LOAD_INVALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":false}";
+    private static final String DUPLICATED_PARAMS_JSON = "\"" + PROFILE_ASYMMETRICAL_LOAD_DUPLICATED_PARAMETERS_UUID_STRING + "\"";
+
+    private static final String ASYMMETRICAL_LOAD_PREFIX = "asymmetrical-load/";
 
     @Autowired
     private MockMvc mockMvc;
@@ -123,7 +144,7 @@ class PccMinTest {
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
     @MockitoSpyBean
-    private PccMinRestService pccMinService;
+    private AsymmetricalLoadRestService asymmetricalLoadRestService;
     @Autowired
     private StudyRepository studyRepository;
     @Autowired
@@ -156,7 +177,7 @@ class PccMinTest {
         configureFor("localhost", wireMockServer.port());
         String baseUrl = wireMockServer.baseUrl();
 
-        pccMinService.setBaseUri(baseUrl);
+        asymmetricalLoadRestService.setBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
         userAdminService.setUserAdminServerBaseUri(baseUrl);
 
@@ -168,7 +189,7 @@ class PccMinTest {
         studyRepository.deleteAll();
         wireMockServer.stop();
         TestUtils.assertQueuesEmptyThenClear(
-            List.of(STUDY_UPDATE_DESTINATION, PCC_MIN_RESULT_JSON_DESTINATION, PCC_MIN_STOPPED_DESTINATION, PCC_MIN_FAILED_DESTINATION),
+            List.of(STUDY_UPDATE_DESTINATION, ASYMMETRICAL_LOAD_RESULT_JSON_DESTINATION, ASYMMETRICAL_LOAD_STOPPED_DESTINATION, ASYMMETRICAL_LOAD_FAILED_DESTINATION),
             output
         );
     }
@@ -180,9 +201,13 @@ class PccMinTest {
         UUID nodeId;
     }
 
-    private StudyNodeIds createStudyAndNode(String variantId, String nodeName, UUID pccMinParametersUuid) throws Exception {
-        StudyEntity studyEntity = TestUtils.createDummyStudy(UUID.fromString(NETWORK_UUID_STRING),
-            "netId", CASE_UUID, "", "", null, null, null, null, null, null, pccMinParametersUuid);
+    private StudyNodeIds createStudyAndNode(String variantId, String nodeName, UUID asymmetricalLoadParametersUuid) throws Exception {
+        StudyEntity studyEntity = TestUtils.CreateDummyStudyBuilder.builder()
+                .setNetworkUuid(UUID.fromString(NETWORK_UUID_STRING)).setNetworkId("netId")
+                .setCaseUuid(CASE_UUID).setCaseFormat("").setCaseName("")
+                .setLoadFlowParametersUuid(UUID.randomUUID())
+                .setAsymmetricalLoadParametersUuid(asymmetricalLoadParametersUuid)
+                .build();
         studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
 
@@ -237,117 +262,118 @@ class PccMinTest {
         return modificationNode;
     }
 
-    private void checkPccMinMessagesReceived(UUID studyUuid, String updateTypeToCheck) {
+    private void checkAsymmetricalLoadMessagesReceived(UUID studyUuid, String updateTypeToCheck) {
         Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(updateType, updateTypeToCheck);
     }
 
-    private void consumePccMinResult(StudyNodeIds ids, String resultUuid) throws JsonProcessingException {
+    private void consumeAsymmetricalLoadResult(StudyNodeIds ids, String resultUuid) throws JsonProcessingException {
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(ids.nodeId, ids.rootNetworkUuid));
         MessageHeaders headers = new MessageHeaders(Map.of("resultUuid", resultUuid, HEADER_RECEIVER, resultUuidJson));
-        consumerService.consumePccMinResult().accept(MessageBuilder.createMessage("", headers));
+        consumerService.consumeAsymmetricalLoadResult().accept(MessageBuilder.createMessage("", headers));
 
-        checkPccMinMessagesReceived(ids.studyId, UPDATE_TYPE_PCC_MIN_STATUS);
-        checkPccMinMessagesReceived(ids.studyId, UPDATE_TYPE_PCC_MIN_STATUS);
-        checkPccMinMessagesReceived(ids.studyId, UPDATE_TYPE_PCC_MIN_RESULT);
+        checkAsymmetricalLoadMessagesReceived(ids.studyId, UPDATE_TYPE_ASYMMETRICAL_LOAD_STATUS);
+        checkAsymmetricalLoadMessagesReceived(ids.studyId, UPDATE_TYPE_ASYMMETRICAL_LOAD_STATUS);
+        checkAsymmetricalLoadMessagesReceived(ids.studyId, UPDATE_TYPE_ASYMMETRICAL_LOAD_RESULT);
 
         wireMockServer.verify(postRequestedFor(urlPathMatching(
-            "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*"))
+            "/v1/asymmetrical-load/networks/" + NETWORK_UUID_STRING + "/run-and-save.*"))
             .withQueryParam("variantId", equalTo(VARIANT_ID)));
     }
 
-    private void runPccMin(StudyNodeIds ids) throws Exception {
-        computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, PCC_MIN_RESULT_UUID);
+    private void runAsymmetricalLoad(StudyNodeIds ids) throws Exception {
+        computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, ASYMMETRICAL_LOAD_RESULT_UUID, ASYMMETRICAL_LOAD_PREFIX);
 
-        mockMvc.perform(post(PCC_MIN_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
+        mockMvc.perform(post(ASYMMETRICAL_LOAD_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
                 .header("userId", "userId"))
             .andExpect(status().isOk());
 
-        consumePccMinResult(ids, PCC_MIN_RESULT_UUID);
-        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save",
+        consumeAsymmetricalLoadResult(ids, ASYMMETRICAL_LOAD_RESULT_UUID);
+        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, "/v1/asymmetrical-load/networks/" + NETWORK_UUID_STRING + "/run-and-save",
             true, Map.of("variantId", WireMock.equalTo(VARIANT_ID)), null, 1);
     }
 
     @Test
     void testRunAndCheckStatus() throws Exception {
-        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node1", PCCMIN_PARAMETERS_UUID);
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node1", ASYMMETRICAL_LOAD_PARAMETERS_UUID);
 
-        // Run Pcc min
-        UUID stubRun = wireMockStubs.stubPccMinRun(NETWORK_UUID_STRING, VARIANT_ID, PCC_MIN_RESULT_UUID);
-        mockMvc.perform(post(PCC_MIN_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
+        // Run Asymmetrical load
+        UUID stubRun = wireMockStubs.stubAsymmetricalLoadRun(NETWORK_UUID_STRING, VARIANT_ID, ASYMMETRICAL_LOAD_RESULT_UUID);
+        mockMvc.perform(post(ASYMMETRICAL_LOAD_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
                 .header("userId", "userId"))
             .andExpect(status().isOk());
 
-        consumePccMinResult(ids, PCC_MIN_RESULT_UUID);
-        wireMockStubs.verifyPccMinRun(stubRun, NETWORK_UUID_STRING, VARIANT_ID);
+        consumeAsymmetricalLoadResult(ids, ASYMMETRICAL_LOAD_RESULT_UUID);
+        wireMockStubs.verifyAsymmetricalLoadRun(stubRun, NETWORK_UUID_STRING, VARIANT_ID);
 
-        // verify pcc min status
-        computationServerStubs.stubGetResultStatus(PCC_MIN_RESULT_UUID, PCC_MIN_STATUS_JSON);
-        mockMvc.perform(get(PCC_MIN_URL_BASE + "status", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
-            .andExpectAll(status().isOk(), content().string(PCC_MIN_STATUS_JSON));
+        // verify asymmetrical load status
+        computationServerStubs.stubGetResultStatus(ASYMMETRICAL_LOAD_RESULT_UUID, ASYMMETRICAL_LOAD_STATUS_JSON, ASYMMETRICAL_LOAD_PREFIX);
+        mockMvc.perform(get(ASYMMETRICAL_LOAD_URL_BASE + "status", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
+            .andExpectAll(status().isOk(), content().string(ASYMMETRICAL_LOAD_STATUS_JSON));
 
-        computationServerStubs.verifyGetResultStatus(PCC_MIN_RESULT_UUID);
+        computationServerStubs.verifyGetResultStatus(ASYMMETRICAL_LOAD_RESULT_UUID, 1, ASYMMETRICAL_LOAD_PREFIX);
 
         mockMvc.perform(get(COMPUTATION_URL_BASE + "status", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
             .andExpectAll(status().isOk(), content().string(ALL_COMPUTATION_STATUS_JSON));
 
-        computationServerStubs.verifyGetResultStatus(PCC_MIN_RESULT_UUID);
+        computationServerStubs.verifyGetResultStatus(ASYMMETRICAL_LOAD_RESULT_UUID, 1, ASYMMETRICAL_LOAD_PREFIX);
     }
 
     @Test
     void testStop() throws Exception {
-        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 2", PCCMIN_PARAMETERS_UUID);
-        runPccMin(ids);
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 2", ASYMMETRICAL_LOAD_PARAMETERS_UUID);
+        runAsymmetricalLoad(ids);
 
-        wireMockServer.stubFor(put(urlPathMatching("/v1/results/" + PCC_MIN_RESULT_UUID + "/stop.*"))
+        wireMockServer.stubFor(put(urlPathMatching("/v1/asymmetrical-load/results/" + ASYMMETRICAL_LOAD_RESULT_UUID + "/stop.*"))
             .willReturn(ok()));
 
-        // stop pcc min
-        mockMvc.perform(put(PCC_MIN_URL_BASE + "stop", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
+        // stop asymmetrical load
+        mockMvc.perform(put(ASYMMETRICAL_LOAD_URL_BASE + "stop", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
             .andExpect(status().isOk());
 
         String receiverJson = objectMapper.writeValueAsString(new NodeReceiver(ids.nodeId, ids.rootNetworkUuid));
         Message<String> stoppedMessage = MessageBuilder.withPayload("")
             .setHeader(HEADER_RECEIVER, receiverJson)
-            .setHeader("resultUuid", PCC_MIN_RESULT_UUID)
+            .setHeader("resultUuid", ASYMMETRICAL_LOAD_RESULT_UUID)
             .build();
-        consumerService.consumePccMinStopped().accept(stoppedMessage);
-        checkPccMinMessagesReceived(ids.studyId, UPDATE_TYPE_PCC_MIN_STATUS);
-        computationServerStubs.verifyComputationStop(PCC_MIN_RESULT_UUID, Map.of("receiver", WireMock.matching(".*")));
+        consumerService.consumeAsymmetricalLoadStopped().accept(stoppedMessage);
+        checkAsymmetricalLoadMessagesReceived(ids.studyId, UPDATE_TYPE_ASYMMETRICAL_LOAD_STATUS);
+        computationServerStubs.verifyComputationStop(ASYMMETRICAL_LOAD_RESULT_UUID, Map.of("receiver", WireMock.matching(".*")), ASYMMETRICAL_LOAD_PREFIX);
     }
 
     @Test
     void testFailure() throws Exception {
-        StudyNodeIds ids = createStudyAndNode(VARIANT_ID_2, "node 2", PCCMIN_PARAMETERS_UUID);
-        UUID stubFail = wireMockStubs.stubPccMinFailed(NETWORK_UUID_STRING, VARIANT_ID_2, PCC_MIN_ERROR_RESULT_UUID);
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID_2, "node 2", ASYMMETRICAL_LOAD_PARAMETERS_UUID);
+        UUID stubFail = wireMockStubs.stubAsymmetricalLoadFailed(NETWORK_UUID_STRING, VARIANT_ID_2, ASYMMETRICAL_LOAD_ERROR_RESULT_UUID);
 
-        mockMvc.perform(post(PCC_MIN_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
+        mockMvc.perform(post(ASYMMETRICAL_LOAD_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
                 .header("userId", "userId"))
             .andExpect(status().isOk());
 
-        // pcc min failed
+        // asymmetrical load failed
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(ids.nodeId, ids.rootNetworkUuid));
         Message<String> failedMessage = MessageBuilder.withPayload("")
             .setHeader(HEADER_RECEIVER, resultUuidJson)
-            .setHeader("resultUuid", PCC_MIN_ERROR_RESULT_UUID)
+            .setHeader("resultUuid", ASYMMETRICAL_LOAD_ERROR_RESULT_UUID)
             .build();
-        consumerService.consumePccMinFailed().accept(failedMessage);
+        consumerService.consumeAsymmetricalLoadFailed().accept(failedMessage);
 
-        checkPccMinMessagesReceived(ids.studyId, UPDATE_TYPE_PCC_MIN_STATUS);
-        checkPccMinMessagesReceived(ids.studyId, UPDATE_TYPE_PCC_MIN_FAILED);
+        checkAsymmetricalLoadMessagesReceived(ids.studyId, UPDATE_TYPE_ASYMMETRICAL_LOAD_STATUS);
+        checkAsymmetricalLoadMessagesReceived(ids.studyId, UPDATE_TYPE_ASYMMETRICAL_LOAD_FAILED);
 
-        wireMockStubs.verifyPccMinFail(stubFail, NETWORK_UUID_STRING, VARIANT_ID_2);
+        wireMockStubs.verifyAsymmetricalLoadFail(stubFail, NETWORK_UUID_STRING, VARIANT_ID_2);
     }
 
     @Test
-    void testResetPccMinParametersUserHasValidParamsInProfileButNoExistingPccMinParams() throws Exception {
+    void testResetAsymmetricalLoadParametersUserHasValidParamsInProfileButNoExistingAsymmetricalLoadParams() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null);
         UUID studyUuid = studyEntity.getId();
 
         userAdminServerStubs.stubGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
-        wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters/" + PROFILE_PCC_MIN_VALID_PARAMETERS_UUID_STRING + "/duplicate"))
+        wireMockServer.stubFor(post(urlPathEqualTo("/v1/asymmetrical-load/parameters/" +
+                PROFILE_ASYMMETRICAL_LOAD_VALID_PARAMETERS_UUID_STRING + "/duplicate"))
             .willReturn(ok()
                 .withBody(DUPLICATED_PARAMS_JSON)
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -356,145 +382,147 @@ class PccMinTest {
         createOrUpdateParametersAndDoChecks(studyUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
         userAdminServerStubs.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
-        wireMockServer.verify(postRequestedFor(urlPathEqualTo("/v1/parameters/" + PROFILE_PCC_MIN_VALID_PARAMETERS_UUID_STRING + "/duplicate"))
+        wireMockServer.verify(postRequestedFor(
+                urlPathEqualTo("/v1/asymmetrical-load/parameters/" + PROFILE_ASYMMETRICAL_LOAD_VALID_PARAMETERS_UUID_STRING + "/duplicate"))
         );
     }
 
     @Test
-    void testResetPccMinParametersUserHasNoProfile() throws Exception {
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), UUID.randomUUID(), PCC_MIN_PARAMETERS_UUID);
+    void testResetAsymmetricalLoadParametersUserHasNoProfile() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), UUID.randomUUID(), ASYMMETRICALLOAD_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         userAdminServerStubs.stubGetUserProfile(NO_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
-        computationServerStubs.stubParameterPut(wireMockServer, PCC_MIN_PARAMETERS_UUID_STRING, PCC_MIN_PROFILE_PARAMETERS_JSON);
+        computationServerStubs.stubParameterPut(ASYMMETRICAL_LOAD_PARAMETERS_UUID_STRING, ASYMMETRICAL_LOAD_PROFILE_PARAMETERS_JSON, ASYMMETRICAL_LOAD_PREFIX);
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PROFILE_USER_ID, HttpStatus.OK);
-        computationServerStubs.verifyParameterPut(wireMockServer, PCC_MIN_PARAMETERS_UUID_STRING);
+        computationServerStubs.verifyParameterPut(ASYMMETRICAL_LOAD_PARAMETERS_UUID_STRING, ASYMMETRICAL_LOAD_PREFIX);
     }
 
     @Test
-    void testResetPccMinParametersUserHasNoParamsInProfile() throws Exception {
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, PCC_MIN_PARAMETERS_UUID);
+    void testResetAsymmetricalLoadParametersUserHasNoParamsInProfile() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, ASYMMETRICALLOAD_PARAMETERS_UUID);
         UUID studyUuid = studyEntity.getId();
 
         userAdminServerStubs.stubGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
-        computationServerStubs.stubParameterPut(wireMockServer, PCC_MIN_PARAMETERS_UUID_STRING, PCC_MIN_PROFILE_PARAMETERS_JSON);
+        computationServerStubs.stubParameterPut(ASYMMETRICAL_LOAD_PARAMETERS_UUID_STRING, ASYMMETRICAL_LOAD_PROFILE_PARAMETERS_JSON, ASYMMETRICAL_LOAD_PREFIX);
         createOrUpdateParametersAndDoChecks(studyUuid, "", NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
         userAdminServerStubs.verifyGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID);
-        computationServerStubs.verifyParameterPut(wireMockServer, PCC_MIN_PARAMETERS_UUID_STRING);
+        computationServerStubs.verifyParameterPut(ASYMMETRICAL_LOAD_PARAMETERS_UUID_STRING, ASYMMETRICAL_LOAD_PREFIX);
     }
 
     @Test
-    void testResetPccMinParametersUserHasInvalidParamsInProfile() throws Exception {
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, PCC_MIN_PARAMETERS_UUID);
+    void testResetAsymmetricalLoadParametersUserHasInvalidParamsInProfile() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, ASYMMETRICALLOAD_PARAMETERS_UUID);
         UUID studyUuid = studyEntity.getId();
 
         userAdminServerStubs.stubGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON);
-        computationServerStubs.stubParameterPut(wireMockServer, PCC_MIN_PARAMETERS_UUID_STRING, PCC_MIN_PROFILE_PARAMETERS_JSON);
-        computationServerStubs.stubParametersDuplicateFromNotFound(PROFILE_PCC_MIN_INVALID_PARAMETERS_UUID_STRING);
+        computationServerStubs.stubParameterPut(ASYMMETRICAL_LOAD_PARAMETERS_UUID_STRING, ASYMMETRICAL_LOAD_PROFILE_PARAMETERS_JSON, ASYMMETRICAL_LOAD_PREFIX);
+        computationServerStubs.stubParametersDuplicateFromNotFound(PROFILE_ASYMMETRICAL_LOAD_INVALID_PARAMETERS_UUID_STRING, ASYMMETRICAL_LOAD_PREFIX);
         createOrUpdateParametersAndDoChecks(studyUuid, "", INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
 
         // --- Verify WireMock requests ---
         userAdminServerStubs.verifyGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID);
-        computationServerStubs.verifyParameterPut(wireMockServer, PCC_MIN_PARAMETERS_UUID_STRING);
-        computationServerStubs.verifyParametersDuplicateFrom(PROFILE_PCC_MIN_INVALID_PARAMETERS_UUID_STRING);
+        computationServerStubs.verifyParameterPut(ASYMMETRICAL_LOAD_PARAMETERS_UUID_STRING, ASYMMETRICAL_LOAD_PREFIX);
+        computationServerStubs.verifyParametersDuplicateFrom(PROFILE_ASYMMETRICAL_LOAD_INVALID_PARAMETERS_UUID_STRING, 1, ASYMMETRICAL_LOAD_PREFIX);
     }
 
     @Test
-    void testResetPccMinParametersUserHasValidParamsInProfile() throws Exception {
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, PCC_MIN_PARAMETERS_UUID);
+    void testResetAsymmetricalLoadParametersUserHasValidParamsInProfile() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, ASYMMETRICALLOAD_PARAMETERS_UUID);
         UUID studyUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
-        wireMockServer.stubFor(post(urlPathMatching("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*"))
+        wireMockServer.stubFor(post(urlPathMatching("/v1/asymmetrical-load/networks/" + NETWORK_UUID_STRING + "/run-and-save.*"))
             .willReturn(ok()));
         userAdminServerStubs.stubGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
-        computationServerStubs.stubParameterPut(wireMockServer, PCC_MIN_PARAMETERS_UUID_STRING, PCC_MIN_PROFILE_PARAMETERS_JSON);
-        computationServerStubs.stubParametersDuplicateFrom(PROFILE_PCC_MIN_VALID_PARAMETERS_UUID_STRING, DUPLICATED_PARAMS_JSON);
-        wireMockServer.stubFor(put(urlPathMatching("/v1/results/invalidate-status.*"))
+        computationServerStubs.stubParameterPut(ASYMMETRICAL_LOAD_PARAMETERS_UUID_STRING, ASYMMETRICAL_LOAD_PROFILE_PARAMETERS_JSON, ASYMMETRICAL_LOAD_PREFIX);
+        computationServerStubs.stubParametersDuplicateFrom(PROFILE_ASYMMETRICAL_LOAD_VALID_PARAMETERS_UUID_STRING, DUPLICATED_PARAMS_JSON, ASYMMETRICAL_LOAD_PREFIX);
+        wireMockServer.stubFor(put(urlPathMatching("/v1/asymmetrical-load/results/invalidate-status.*"))
             .withQueryParam("resultUuid", matching(".*"))
             .willReturn(ok()));
-        computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, PCC_MIN_RESULT_UUID);
-        mockMvc.perform(post(PCC_MIN_URL_BASE + "run", studyUuid, firstRootNetworkUuid, modificationNode1.getId())
+        computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, ASYMMETRICAL_LOAD_RESULT_UUID, ASYMMETRICAL_LOAD_PREFIX);
+        mockMvc.perform(post(ASYMMETRICAL_LOAD_URL_BASE + "run", studyUuid, firstRootNetworkUuid, modificationNode1.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("userId", "userId"))
             .andExpect(status().isOk());
 
         Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertEquals(UPDATE_TYPE_PCC_MIN_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_ASYMMETRICAL_LOAD_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
 
         createOrUpdateParametersAndDoChecks(studyUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
         userAdminServerStubs.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
-        computationServerStubs.verifyComputationRun(NETWORK_UUID_STRING, Map.of("reportUuid", matching(".*")));
-        computationServerStubs.verifyParametersDuplicateFrom(PROFILE_PCC_MIN_VALID_PARAMETERS_UUID_STRING);
+        computationServerStubs.verifyComputationRun(NETWORK_UUID_STRING, Map.of("reportUuid", matching(".*")), ASYMMETRICAL_LOAD_PREFIX);
+        computationServerStubs.verifyParametersDuplicateFrom(PROFILE_ASYMMETRICAL_LOAD_VALID_PARAMETERS_UUID_STRING, 1, ASYMMETRICAL_LOAD_PREFIX);
         List<ServeEvent> invalidateCalls = wireMockServer.getAllServeEvents().stream()
-            .filter(e -> e.getRequest().getUrl().startsWith("/v1/results/invalidate-status"))
+            .filter(e -> e.getRequest().getUrl().startsWith("/v1/asymmetrical-load/results/invalidate-status"))
             .toList();
         assertTrue(invalidateCalls.size() <= 1);
     }
 
     @Test
     void testResultsDeletion() throws Exception {
-        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", PCCMIN_PARAMETERS_UUID);
-        runPccMin(ids);
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", ASYMMETRICAL_LOAD_PARAMETERS_UUID);
+        runAsymmetricalLoad(ids);
 
-        assertEquals(1, rootNetworkNodeInfoRepository.findAllByPccMinResultUuidNotNull().size());
+        assertEquals(1, rootNetworkNodeInfoRepository.findAllByAsymmetricalLoadResultUuidNotNull().size());
 
-        wireMockServer.stubFor(get(urlPathEqualTo("/v1/supervision/results-count"))
+        wireMockServer.stubFor(get(urlPathEqualTo("/v1/supervision/asymmetrical-load/results-count"))
             .willReturn(okJson("1")));
 
-        wireMockServer.stubFor(get(urlPathEqualTo("/v1/results"))
+        wireMockServer.stubFor(get(urlPathEqualTo("/v1/asymmetrical-load/results"))
             .withQueryParam("resultsUuids", matching(".*"))
-            .willReturn(WireMock.ok().withBody(PCC_MIN_RESULT_UUID)));
+            .willReturn(WireMock.ok().withBody(ASYMMETRICAL_LOAD_RESULT_UUID)));
 
-        wireMockServer.stubFor(delete(urlPathEqualTo("/v1/results"))
+        wireMockServer.stubFor(delete(urlPathEqualTo("/v1/asymmetrical-load/results"))
             .withQueryParam("resultsUuids", matching(".*"))
             .willReturn(ok()));
 
-        Integer dryRunCount = supervisionService.deleteComputationResults(ComputationType.PCC_MIN, true);
+        Integer dryRunCount = supervisionService.deleteComputationResults(ComputationType.ASYMMETRICAL_LOAD, true);
         assertEquals(1, dryRunCount);
-        wireMockServer.verify(1, getRequestedFor(urlPathEqualTo("/v1/supervision/results-count")));
+        wireMockServer.verify(1, getRequestedFor(urlPathEqualTo("/v1/supervision/asymmetrical-load/results-count")));
 
-        Integer deletedCount = supervisionService.deleteComputationResults(ComputationType.PCC_MIN, false);
+        Integer deletedCount = supervisionService.deleteComputationResults(ComputationType.ASYMMETRICAL_LOAD, false);
         assertEquals(1, deletedCount);
 
-        wireMockServer.verify(1, deleteRequestedFor(urlPathEqualTo("/v1/results"))
+        wireMockServer.verify(1, deleteRequestedFor(urlPathEqualTo("/v1/asymmetrical-load/results"))
             .withQueryParam("resultsUuids", matching(".*")));
 
-        assertEquals(0, rootNetworkNodeInfoRepository.findAllByPccMinResultUuidNotNull().size());
+        assertEquals(0, rootNetworkNodeInfoRepository.findAllByAsymmetricalLoadResultUuidNotNull().size());
     }
 
     @Test
-    void testGetPccMinResults() throws Exception {
+    void testGetAsymmetricalLoadResults() throws Exception {
         // --- create study and node ---
-        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", PCCMIN_PARAMETERS_UUID);
-        runPccMin(ids);
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", ASYMMETRICAL_LOAD_PARAMETERS_UUID);
+        runAsymmetricalLoad(ids);
 
         //get pages, sorted and filtered results
-        UUID stubId = wireMockStubs.stubPagedPccMinResult(PCC_MIN_RESULT_UUID, TestUtils.resourceToString("/pccmin-result-paged.json"));
-        mockMvc.perform(get(PCC_MIN_URL_BASE + "result", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
+        UUID stubId = wireMockStubs.stubPagedAsymmetricalLoadResult(ASYMMETRICAL_LOAD_RESULT_UUID, TestUtils.resourceToString("/asymmetricalload-result-paged.json"));
+        mockMvc.perform(get(ASYMMETRICAL_LOAD_URL_BASE + "result", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
                 .param("page", "0")
                 .param("size", "20")
                 .param("sort", "id,DESC")
                 .param("filters", "fakeFilters")
                 .param("globalFilters", "fakeGlobalFilters"))
             .andExpect(status().isOk())
-            .andExpect(content().string(TestUtils.resourceToString("/pccmin-result-paged.json")));
+            .andExpect(content().string(TestUtils.resourceToString("/asymmetricalload-result-paged.json")));
 
-        wireMockStubs.verifyPccMinPagedGet(stubId, PCC_MIN_RESULT_UUID);
+        wireMockStubs.verifyAsymmetricalLoadPagedGet(stubId, ASYMMETRICAL_LOAD_RESULT_UUID);
 
         UUID resultUuid = UUID.randomUUID();
         ResultParameters params = new ResultParameters(UUID.randomUUID(), UUID.randomUUID(), "variantId", UUID.randomUUID(), resultUuid);
 
         // results NOT FOUND
         wireMockServer.stubFor(
-            WireMock.get("/v1/pcc-min/results/" + resultUuid)
+            WireMock.get("/v1/asymmetrical-load/results/" + resultUuid)
                 .willReturn(WireMock.notFound())
         );
         PageRequest pageRequest = PageRequest.of(0, 20);
         assertThrows(HttpClientErrorException.NotFound.class, () ->
-            pccMinService.getPccMinResultsPage(params, null, null, pageRequest)
+            asymmetricalLoadRestService.getAsymmetricalLoadResultsPage(params, null, null, pageRequest)
         );
+        wireMockServer.resetRequests();
 
         // no content
         ResultParameters params2 = new ResultParameters(
@@ -504,14 +532,14 @@ class PccMinTest {
             null,
             null
         );
-        String result = pccMinService.getPccMinResultsPage(params2, null, null, PageRequest.of(0, 20));
+        String result = asymmetricalLoadRestService.getAsymmetricalLoadResultsPage(params2, null, null, PageRequest.of(0, 20));
         assertNull(result);
-        wireMockServer.verify(0, WireMock.getRequestedFor(WireMock.urlMatching("/v1/pcc-min/results/.*")));
+        wireMockServer.verify(0, WireMock.getRequestedFor(WireMock.urlMatching("/v1/asymmetrical-load/results/.*")));
     }
 
     private void createOrUpdateParametersAndDoChecks(UUID studyUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
         mockMvc.perform(
-                post("/v1/studies/{studyUuid}/pcc-min/parameters", studyUuid)
+                post("/v1/studies/{studyUuid}/asymmetrical-load/parameters", studyUuid)
                     .header("userId", userId)
                     .contentType(MediaType.ALL)
                     .content(parameters))
@@ -519,7 +547,7 @@ class PccMinTest {
 
         Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(UPDATE_TYPE_PCC_MIN_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_ASYMMETRICAL_LOAD_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -529,8 +557,13 @@ class PccMinTest {
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
     }
 
-    private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, UUID pccMinParametersUuid) {
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null, UUID.randomUUID(), null, null, null, null, pccMinParametersUuid);
+    private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, UUID asymmetricalLoadParametersUuid) {
+        StudyEntity studyEntity = TestUtils.CreateDummyStudyBuilder.builder()
+                .setNetworkUuid(networkUuid).setNetworkId("netId")
+                .setCaseUuid(caseUuid).setCaseFormat("").setCaseName("")
+                .setLoadFlowParametersUuid(UUID.randomUUID())
+                .setAsymmetricalLoadParametersUuid(asymmetricalLoadParametersUuid)
+                .build();
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
         return study;
@@ -543,132 +576,133 @@ class PccMinTest {
     }
 
     @Test
-    void testGetPccMinParameters() throws Exception {
-        String parametersToCreate = buildFilter();
+    void testGetAsymmetricalLoadParameters() throws Exception {
+        String parametersToCreate = "{asymmetricalLoadParameters}";
         computationServerStubs.stubParametersGet(
-            String.valueOf(PCCMIN_PARAMETERS_UUID),
-            parametersToCreate
+            String.valueOf(ASYMMETRICAL_LOAD_PARAMETERS_UUID),
+            parametersToCreate,
+            ASYMMETRICAL_LOAD_PREFIX
         );
 
-        UUID studyUuid = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), PCCMIN_PARAMETERS_UUID).getId();
+        UUID studyUuid = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), ASYMMETRICAL_LOAD_PARAMETERS_UUID).getId();
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/pcc-min/parameters", studyUuid))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/asymmetrical-load/parameters", studyUuid))
             .andExpect(status().isOk())
             .andExpect(content().string(parametersToCreate));
 
-        computationServerStubs.verifyParametersGet(String.valueOf(PCCMIN_PARAMETERS_UUID));
+        computationServerStubs.verifyParametersGet(String.valueOf(ASYMMETRICAL_LOAD_PARAMETERS_UUID), ASYMMETRICAL_LOAD_PREFIX);
 
         // Not found case
         UUID wrongParamUuid = UUID.randomUUID();
 
-        wireMockServer.stubFor(WireMock.get("v1/parameters/" + wrongParamUuid)
+        wireMockServer.stubFor(WireMock.get("v1/" + ASYMMETRICAL_LOAD_PREFIX + "parameters/" + wrongParamUuid)
             .willReturn(WireMock.notFound()));
 
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> pccMinService.getPccMinParameters(wrongParamUuid)
+            () -> asymmetricalLoadRestService.getAsymmetricalLoadParameters(wrongParamUuid)
         );
     }
 
     @Test
-    void testSetPccMinParameters() throws Exception {
+    void testSetAsymmetricalLoadParameters() throws Exception {
         String parameterToUpdate = buildFilter();
 
-        wireMockServer.stubFor(put(urlPathEqualTo("/v1/parameters/" + PCCMIN_PARAMETERS_UUID))
+        wireMockServer.stubFor(put(urlPathEqualTo("/v1/asymmetrical-load/parameters/" + ASYMMETRICAL_LOAD_PARAMETERS_UUID))
             .willReturn(ok()));
-        UUID studyUuid = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), PCCMIN_PARAMETERS_UUID).getId();
+        UUID studyUuid = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), ASYMMETRICAL_LOAD_PARAMETERS_UUID).getId();
 
         createOrUpdateParametersAndDoChecks(studyUuid, parameterToUpdate, "userId", HttpStatus.OK);
-        wireMockServer.verify(putRequestedFor(urlPathEqualTo("/v1/parameters/" + PCCMIN_PARAMETERS_UUID)));
+        wireMockServer.verify(putRequestedFor(urlPathEqualTo("/v1/asymmetrical-load/parameters/" + ASYMMETRICAL_LOAD_PARAMETERS_UUID)));
 
         // Fail case
         UUID wrongParamUuid = UUID.randomUUID();
-        wireMockServer.stubFor(WireMock.put("v1/parameters/" + wrongParamUuid)
+        wireMockServer.stubFor(WireMock.put("v1/asymmetrical-load/parameters/" + wrongParamUuid)
             .willReturn(WireMock.notFound()));
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> pccMinService.updatePccMinParameters(wrongParamUuid, "parameterToUpdate")
+            () -> asymmetricalLoadRestService.updateAsymmetricalLoadParameters(wrongParamUuid, "parameterToUpdate")
         );
     }
 
     @Test
-    void testCreatePccMinParameters() {
+    void testCreateAsymmetricalLoadParameters() {
         String parameterToCreate = "\"fakeParamsToCreate\"";
 
         UUID expectedUuid = UUID.randomUUID();
-        wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters"))
+        wireMockServer.stubFor(post(urlPathEqualTo("/v1/asymmetrical-load/parameters"))
             .willReturn(okJson("\"" + expectedUuid + "\"")));
 
-        UUID paramUuid = pccMinService.createPccMinParameters(parameterToCreate);
+        UUID paramUuid = asymmetricalLoadRestService.createAsymmetricalLoadParameters(parameterToCreate);
 
         assertEquals(expectedUuid, paramUuid);
-        wireMockServer.verify(postRequestedFor(urlPathEqualTo("/v1/parameters"))
+        wireMockServer.verify(postRequestedFor(urlPathEqualTo("/v1/asymmetrical-load/parameters"))
             .withRequestBody(equalToJson(parameterToCreate)));
 
         //failure
-        wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters"))
+        wireMockServer.stubFor(post(urlPathEqualTo("/v1/asymmetrical-load/parameters"))
             .willReturn(notFound()));
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> pccMinService.createPccMinParameters(parameterToCreate)
+            () -> asymmetricalLoadRestService.createAsymmetricalLoadParameters(parameterToCreate)
         );
     }
 
     @Test
     void testDefaultParameters() throws Exception {
         String params = buildFilter();
-        wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters/default"))
-            .willReturn(okJson(objectMapper.writeValueAsString(PCCMIN_PARAMETERS_UUID))));
+        wireMockServer.stubFor(post(urlPathEqualTo("/v1/asymmetrical-load/parameters/default"))
+            .willReturn(okJson(objectMapper.writeValueAsString(ASYMMETRICAL_LOAD_PARAMETERS_UUID))));
 
         computationServerStubs.stubParametersGet(
-            String.valueOf(PCCMIN_PARAMETERS_UUID),
-            params
+            String.valueOf(ASYMMETRICAL_LOAD_PARAMETERS_UUID),
+            params,
+            ASYMMETRICAL_LOAD_PREFIX
         );
 
         UUID studyUuid = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), null).getId();
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/pcc-min/parameters", studyUuid))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/asymmetrical-load/parameters", studyUuid))
             .andExpect(status().isOk())
             .andExpect(content().string(params));
 
-        wireMockServer.verify(postRequestedFor(urlPathEqualTo("/v1/parameters/default")));
-        computationServerStubs.verifyParametersGet(String.valueOf(PCCMIN_PARAMETERS_UUID));
+        wireMockServer.verify(postRequestedFor(urlPathEqualTo("/v1/asymmetrical-load/parameters/default")));
+        computationServerStubs.verifyParametersGet(String.valueOf(ASYMMETRICAL_LOAD_PARAMETERS_UUID), ASYMMETRICAL_LOAD_PREFIX);
 
         assertNotNull(studyUuid);
-        assertEquals(PCCMIN_PARAMETERS_UUID,
-            studyRepository.findById(studyUuid).orElseThrow().getPccMinParametersUuid());
+        assertEquals(ASYMMETRICAL_LOAD_PARAMETERS_UUID,
+            studyRepository.findById(studyUuid).orElseThrow().getAsymmetricalLoadParametersUuid());
 
         // Fail case
-        wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters/default"))
+        wireMockServer.stubFor(post(urlPathEqualTo("/v1/asymmetrical-load/parameters/default"))
             .willReturn(WireMock.notFound()));
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> pccMinService.createDefaultParameters()
+            () -> asymmetricalLoadRestService.createDefaultParameters()
         );
     }
 
     @Test
-    void testExportPccMinResults() throws Exception {
+    void testExportAsymmetricalLoadResults() throws Exception {
         // --- create study and node ---
-        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node1", PCCMIN_PARAMETERS_UUID);
-        runPccMin(ids);
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node1", ASYMMETRICAL_LOAD_PARAMETERS_UUID);
+        runAsymmetricalLoad(ids);
 
         // Prepare body: JSON array of csv headers
-        List<String> csvHeaders = List.of("busId", "Pcc min", "Icc min");
+        List<String> csvHeaders = List.of("busId", "imbalanceRate", "calculatedP", "calculatedQ");
         String content = objectMapper.writeValueAsString(csvHeaders);
 
-        UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/results/" + PCC_MIN_RESULT_UUID + "/csv"))
+        UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/asymmetrical-load/results/" + ASYMMETRICAL_LOAD_RESULT_UUID + "/csv"))
             .withQueryParam("sort", WireMock.equalTo("id,DESC"))
             .withQueryParam("filters", WireMock.equalTo("fakeFilters"))
             .withQueryParam("globalFilters", WireMock.equalTo("fakeGlobalFilters"))
             .withRequestBody(WireMock.equalToJson(content))
             .willReturn(WireMock.ok()
-                .withBody(PCC_MIN_RESULTS_AS_ZIPPED_CSV)
+                .withBody(ASYMMETRICAL_LOAD_RESULTS_AS_ZIPPED_CSV)
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
             )
         ).getId();
-
-        mockMvc.perform(post(PCC_MIN_URL_BASE + "result/csv", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
+        mockMvc.perform(post(ASYMMETRICAL_LOAD_URL_BASE + "result/csv", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
                 .param("sort", "id,DESC")
                 .param("filters", "fakeFilters")
                 .param("globalFilters", "fakeGlobalFilters")
@@ -676,22 +710,22 @@ class PccMinTest {
                 .content(content)
                 .header("userId", "userId"))
             .andExpect(status().isOk())
-            .andExpect(content().bytes(PCC_MIN_RESULTS_AS_ZIPPED_CSV));
+            .andExpect(content().bytes(ASYMMETRICAL_LOAD_RESULTS_AS_ZIPPED_CSV));
 
-        // Verification of the POST to the PCC MIN server
-        wireMockStubs.verifyExportPccMinResult(stubId, UUID.fromString(PCC_MIN_RESULT_UUID));
+        // Verification of the POST to the ASYMMETRICAL LOAD server
+        wireMockStubs.verifyExportAsymmetricalLoadResult(stubId, UUID.fromString(ASYMMETRICAL_LOAD_RESULT_UUID));
 
         // --- NOT FOUND CASE ---
         UUID notFoundUuid = UUID.randomUUID();
-        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/results/" + notFoundUuid + "/csv"))
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/asymmetrical-load/results/" + notFoundUuid + "/csv"))
             .withRequestBody(WireMock.equalToJson(content))
             .willReturn(WireMock.notFound())
         );
 
         // test csv failure
         assertThrows(HttpClientErrorException.NotFound.class, () ->
-            pccMinService.exportPccMinResultsAsCsv(notFoundUuid, "", null, null, Sort.unsorted(), null, null));
+            asymmetricalLoadRestService.exportAsymmetricalLoadResultsAsCsv(notFoundUuid, "", null, null, Sort.unsorted(), null, null));
         assertThrows(StudyException.class, () ->
-            pccMinService.exportPccMinResultsAsCsv(null, "", null, null, Sort.unsorted(), null, null));
+            asymmetricalLoadRestService.exportAsymmetricalLoadResultsAsCsv(null, "", null, null, Sort.unsorted(), null, null));
     }
 }
