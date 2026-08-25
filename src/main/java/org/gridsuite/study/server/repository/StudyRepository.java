@@ -6,12 +6,10 @@
  */
 package org.gridsuite.study.server.repository;
 
-import org.gridsuite.study.server.dto.NetworkLoadStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -24,6 +22,4 @@ import java.util.UUID;
 public interface StudyRepository extends JpaRepository<StudyEntity, UUID> {
     @EntityGraph(attributePaths = {"rootNetworks"}, type = EntityGraph.EntityGraphType.LOAD)
     Optional<StudyEntity> findWithRootNetworksById(UUID id);
-
-    List<StudyEntity> findAllByIdInAndNetworkLoadStatus(List<UUID> ids, NetworkLoadStatus networkLoadStatus);
 }

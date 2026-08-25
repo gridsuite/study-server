@@ -71,6 +71,7 @@ public class ConsumerService {
     private final NetworkModificationTreeService networkModificationTreeService;
     private final StudyConfigService studyConfigService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    private final RootNetworkService rootNetworkService;
     private final DirectoryService directoryService;
     private final ComputationParametersService computationParametersService;
     private final UserAdminService userAdminService;
@@ -84,6 +85,7 @@ public class ConsumerService {
                            NetworkModificationTreeService networkModificationTreeService,
                            StudyConfigService studyConfigService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                           RootNetworkService rootNetworkService,
                            DirectoryService directoryService,
                            ComputationParametersService computationParametersService,
                            UserAdminService userAdminService,
@@ -96,6 +98,7 @@ public class ConsumerService {
         this.networkModificationTreeService = networkModificationTreeService;
         this.studyConfigService = studyConfigService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.rootNetworkService = rootNetworkService;
         this.directoryService = directoryService;
         this.computationParametersService = computationParametersService;
         this.userAdminService = userAdminService;
@@ -371,6 +374,8 @@ public class ConsumerService {
                     } else {
                         if (receiver.getCaseImportAction() == CaseImportAction.ROOT_NETWORK_CREATION) {
                             studyService.deleteRootNetworkRequest(rootNetworkUuid);
+                        } else if (receiver.getCaseImportAction() == CaseImportAction.NETWORK_RECREATION) {
+                            rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, NetworkLoadStatus.UNLOADED);
                         }
                         notificationService.emitRootNetworksUpdateFailed(studyUuid, errorMessage);
                     }

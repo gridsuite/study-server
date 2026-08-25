@@ -414,9 +414,7 @@ public class SupervisionService {
 
     @Transactional(readOnly = true)
     public List<UUID> getLoadedStudyUuids(List<UUID> studyUuids) {
-        return studyRepository.findAllByIdInAndNetworkLoadStatus(studyUuids, NetworkLoadStatus.LOADED).stream()
-                .map(StudyEntity::getId)
-                .toList();
+        return rootNetworkService.getLoadedStudyIds(studyUuids);
     }
 
     @Transactional

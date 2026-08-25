@@ -19,7 +19,6 @@ import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
-import org.gridsuite.study.server.dto.NetworkLoadStatus;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.computation.ComputationParameterUUIDs;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
@@ -448,14 +447,16 @@ public class StudyService {
             ? new HashMap<>(rootNetworkService.getImportParameters(rootNetworkInfos.getId()))
             : importParameters;
 
-        self.updateNetworkLoadStatus(studyUuid, NetworkLoadStatus.LOADING);
-        persistNetwork(rootNetworkInfos, studyUuid, null, userId, importParametersToUse, CaseImportAction.NETWORK_RECREATION, reportId);
-        notificationService.emitElementUpdated(studyUuid, userId);
-    }
-
-    @Transactional
-    public void updateNetworkLoadStatus(UUID studyUuid, NetworkLoadStatus networkLoadStatus) {
-        getStudy(studyUuid).setNetworkLoadStatus(networkLoadStatus);
+        rootNetworkService.updateNetworkLoadStatus(rootNetworkInfos.getId(), NetworkLoadStatus.LOADING);
+        boolean submitted = false;
+        try {
+            persistNetwork(rootNetworkInfos, studyUuid, null, userId, importParametersToUse, CaseImportAction.NETWORK_RECREATION, reportId);
+            submitted = true;
+        } finally {
+            if (!submitted) {
+                rootNetworkService.updateNetworkLoadStatus(rootNetworkInfos.getId(), NetworkLoadStatus.UNLOADED);
+            }
+        }
     }
 
     public UUID duplicateStudy(UUID sourceStudyUuid, String userId) {
@@ -640,7 +641,7 @@ public class StudyService {
         RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
 
         rootNetworkService.updateNetwork(rootNetworkEntity, networkInfos);
-        studyEntity.setNetworkLoadStatus(NetworkLoadStatus.LOADED);
+        rootNetworkEntity.setNetworkLoadStatus(NetworkLoadStatus.LOADED);
 
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
@@ -1371,10 +1372,11 @@ public class StudyService {
 
     @Transactional
     public void unbuildNodeTree(@NonNull UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes, @NonNull String userId) {
-        doUnbuildNodeTree(studyUuid, rootNodeUuid, withBlockNodes, false, userId);
+        doUnbuildNodeTree(studyUuid, rootNodeUuid, withBlockNodes, false, userId, false);
     }
 
-    private void doUnbuildNodeTree(UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes, boolean skipDeleteVariants, @NonNull String userId) {
+    private void doUnbuildNodeTree(UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes, boolean skipDeleteVariants, @NonNull String userId,
+                                   boolean skipElementUpdatedNotification) {
         InvalidateNodeTreeParameters invalidateNodeTreeParameters = withBlockNodes
                 ? InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES
                 : InvalidateNodeTreeParameters.ALL;
@@ -1384,7 +1386,9 @@ public class StudyService {
                     networkModificationTreeService.invalidateNodeTree(studyUuid, rootNodeUuid, rnId, invalidateNodeTreeParameters, skipDeleteVariants)))
                 .toList();
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
-        notificationService.emitElementUpdated(studyUuid, userId);
+        if (!skipElementUpdatedNotification) {
+            notificationService.emitElementUpdated(studyUuid, userId);
+        }
     }
 
     public void stopBuild(@NonNull UUID nodeUuid, UUID rootNetworkUuid) {
@@ -2713,16 +2717,21 @@ public class StudyService {
 
     public void invalidateStudyRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId, boolean updateCase) {
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
-        self.updateNetworkLoadStatus(studyUuid, NetworkLoadStatus.UNLOADING);
-        var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-        // First we unbuild all nodes
-        doUnbuildNodeTree(studyUuid, rootNodeUuid, true, true, userId);
-        // Then we erase data linked to root node on all root networks
-        rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetworkService.getRootNetworkInfos(rootNetworkUuid)), true, false);
-        if (!updateCase) {
-            rootNetworkService.updateRootNetworkIndexationStatus(studyUuid, rootNetworkUuid, RootNetworkIndexationStatus.NOT_INDEXED);
+        rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, NetworkLoadStatus.UNLOADING);
+        boolean unloaded = false;
+        try {
+            var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+            // First we unbuild all nodes
+            doUnbuildNodeTree(studyUuid, rootNodeUuid, true, true, userId, true);
+            // Then we erase data linked to root node on all root networks
+            rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetworkService.getRootNetworkInfos(rootNetworkUuid)), true, false);
+            if (!updateCase) {
+                rootNetworkService.updateRootNetworkIndexationStatus(studyUuid, rootNetworkUuid, RootNetworkIndexationStatus.NOT_INDEXED);
+            }
+            unloaded = true;
+        } finally {
+            rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, unloaded ? NetworkLoadStatus.UNLOADED : NetworkLoadStatus.LOADED);
         }
-        self.updateNetworkLoadStatus(studyUuid, NetworkLoadStatus.UNLOADED);
         notificationService.emitRootNetworksUpdated(studyUuid);
     }
 

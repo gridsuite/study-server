@@ -342,6 +342,7 @@ class SupervisionControllerTest {
     @Test
     void testInvalidateStudy() throws Exception {
         initStudy();
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(STUDY_UUID);
         UUID secondRootNetworkUuid = UUID.randomUUID();
         addSecondRootNetwork(secondRootNetworkUuid, SECOND_NETWORK_UUID);
         when(rootNetworkService.getNetworkUuid(secondRootNetworkUuid)).thenReturn(SECOND_NETWORK_UUID);
@@ -369,16 +370,15 @@ class SupervisionControllerTest {
         allRootNetworkUuids.forEach(rootNetworkUuid ->
                 rootNetworkNodeInfoRepository.findAllByRootNetworkId(rootNetworkUuid)
                         .forEach(info -> assertThat(info.getBlockedNode()).isFalse()));
-
-        // Check that the study network is now marked as unloaded, and that invalidating a study does not
-        // update its last modification date in directory-server (no element-update message emitted)
-        assertEquals(NetworkLoadStatus.UNLOADED, studyRepository.findById(STUDY_UUID).orElseThrow().getNetworkLoadStatus());
+        assertEquals(NetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(firstRootNetworkUuid).orElseThrow().getNetworkLoadStatus());
+        assertEquals(NetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(secondRootNetworkUuid).orElseThrow().getNetworkLoadStatus());
     }
 
     @Test
     void testGetLoadedStudies() throws Exception {
         initStudy();
-        assertEquals(NetworkLoadStatus.LOADED, studyRepository.findById(STUDY_UUID).orElseThrow().getNetworkLoadStatus());
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(STUDY_UUID);
+        assertEquals(NetworkLoadStatus.LOADED, rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow().getNetworkLoadStatus());
         UUID unknownStudyUuid = UUID.randomUUID();
         MvcResult mvcResult = mockMvc.perform(get("/v1/supervision/studies/loaded")
                         .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))

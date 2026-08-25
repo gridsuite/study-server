@@ -48,6 +48,11 @@ public class RootNetworkEntity {
     @Builder.Default
     private RootNetworkIndexationStatus indexationStatus = RootNetworkIndexationStatus.NOT_INDEXED;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "network_load_status")
+    @Builder.Default
+    private NetworkLoadStatus networkLoadStatus = NetworkLoadStatus.LOADED;
+
     @OneToMany(orphanRemoval = true, mappedBy = "rootNetwork", cascade = CascadeType.ALL)
     @Builder.Default
     private List<RootNetworkNodeInfoEntity> rootNetworkNodeInfos = new ArrayList<>();
