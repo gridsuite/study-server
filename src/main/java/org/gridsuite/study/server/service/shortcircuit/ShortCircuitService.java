@@ -11,11 +11,13 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
+import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.asymmetricalload.AsymmetricalLoadService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
-import org.gridsuite.study.server.service.pccmin.PccMinService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
@@ -37,10 +39,6 @@ import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT_ONE_B
 @Service
 public class ShortCircuitService extends AbstractComputationService {
     private final ShortCircuitRestService shortCircuitRestService;
-    private final NetworkModificationTreeService networkModificationTreeService;
-    private final UserAdminService userAdminService;
-    private final RootNetworkService rootNetworkService;
-    private final PccMinService pccMinService;
     private final AsymmetricalLoadService asymmetricalLoadService;
 
     protected ShortCircuitService(StudyRepository studyRepository,
@@ -51,14 +49,10 @@ public class ShortCircuitService extends AbstractComputationService {
                                   NetworkModificationTreeService networkModificationTreeService,
                                   UserAdminService userAdminService,
                                   RootNetworkService rootNetworkService,
-                                  PccMinService pccMinService,
                                   AsymmetricalLoadService asymmetricalLoadService) {
-        super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService,
+            rootNetworkService, computationParametersService, userAdminService);
         this.shortCircuitRestService = shortCircuitServicerRest;
-        this.networkModificationTreeService = networkModificationTreeService;
-        this.userAdminService = userAdminService;
-        this.rootNetworkService = rootNetworkService;
-        this.pccMinService = pccMinService;
         this.asymmetricalLoadService = asymmetricalLoadService;
     }
 
@@ -116,7 +110,7 @@ public class ShortCircuitService extends AbstractComputationService {
                 shortCircuitRestService::updateParameters,
                 SHORT_CIRCUIT,
                 List.of(this::invalidateShortCircuitStatusOnAllNodes,
-                        pccMinService::invalidatePccMinStatusOnAllNodes,
+                        rootNetworkNodeInfoService::invalidatePccMinStatusOnAllNodes,
                         asymmetricalLoadService::invalidateAsymmetricalLoadStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS,
                 NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS,
