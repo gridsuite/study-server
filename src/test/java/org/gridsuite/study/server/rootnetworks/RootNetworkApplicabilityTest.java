@@ -45,6 +45,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -181,8 +182,11 @@ class RootNetworkApplicabilityTest {
         NetworkModificationNode secondNode = networkModificationTreeService.createNode(studyEntity, firstNode.getId(), createModificationNodeInfo(NODE_2_NAME), InsertMode.AFTER, null);
 
         // the network modification server resolves the applicability of each modification from that tag
-        BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(secondNode.getId(), rootNetworkUuid);
-        assertEquals(ROOT_NETWORK_TAG_1, buildInfos.getRootNetworkTag());
+        networkModificationTreeService.buildNode(studyEntity.getId(), secondNode.getId(), rootNetworkUuid, "userId", null);
+
+        ArgumentCaptor<BuildInfos> buildInfosCaptor = ArgumentCaptor.captor();
+        verify(networkModificationService).buildNode(any(UUID.class), any(UUID.class), buildInfosCaptor.capture(), isNull());
+        assertEquals(ROOT_NETWORK_TAG_1, buildInfosCaptor.getValue().getRootNetworkTag());
     }
 
     @Test
