@@ -7,9 +7,11 @@
 package org.gridsuite.study.server.rootnetworks;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.network.store.client.NetworkStoreService;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
+import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
@@ -21,11 +23,13 @@ import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.HttpClientErrorException;
@@ -36,9 +40,11 @@ import java.util.*;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -66,6 +72,7 @@ class RootNetworkApplicabilityTest {
 
     // tag of the root network created by TestUtils.createDummyStudy
     private static final String ROOT_NETWORK_TAG_1 = "dum";
+    private static final String ROOT_NETWORK_TAG_2 = "sec";
 
     private static final UUID MODIFICATION_1 = UUID.randomUUID();
 
@@ -92,6 +99,12 @@ class RootNetworkApplicabilityTest {
     private CaseService caseService;
     @MockitoBean
     private NetworkService networkService;
+    @MockitoBean
+    private ReportService reportService;
+    @MockitoBean
+    private EquipmentInfosService equipmentInfosService;
+    @MockitoBean
+    private NetworkStoreService networkStoreService;
 
     @Test
     void testUpdateApplicability() throws Exception {
@@ -182,6 +195,62 @@ class RootNetworkApplicabilityTest {
         NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
 
         assertEquals(ROOT_NETWORK_TAG_1, rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), firstNode.getId(), NETWORK_UUID).rootNetworkTag());
+    }
+
+    @Test
+    void testRenamingARootNetworkTagCarriesTheApplicabilitiesAlong() throws Exception {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+        UUID rootNetworkUuid = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).getFirst().rootNetworkUuid();
+
+        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
+        NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
+        NetworkModificationNode secondNode = networkModificationTreeService.createNode(studyEntity, firstNode.getId(), createModificationNodeInfo(NODE_2_NAME), InsertMode.AFTER, null);
+
+        // an applicability is keyed by the tag, so renaming it must reach every modification group of the study
+        updateRootNetwork(studyEntity.getId(), rootNetworkUuid, ROOT_NETWORK_TAG_2);
+
+        ArgumentCaptor<List<UUID>> groupUuidsCaptor = ArgumentCaptor.captor();
+        verify(networkModificationService, times(1)).renameRootNetworkTag(groupUuidsCaptor.capture(), eq(ROOT_NETWORK_TAG_1), eq(ROOT_NETWORK_TAG_2));
+        assertEquals(Set.of(firstNode.getModificationGroupUuid(), secondNode.getModificationGroupUuid()), Set.copyOf(groupUuidsCaptor.getValue()));
+
+        // an update carrying no tag at all leaves it as it was, so it is not a rename
+        updateRootNetwork(studyEntity.getId(), rootNetworkUuid, null);
+        verify(networkModificationService, times(1)).renameRootNetworkTag(any(), any(), any());
+
+        // and neither is an update carrying the tag the root network already has
+        updateRootNetwork(studyEntity.getId(), rootNetworkUuid, ROOT_NETWORK_TAG_2);
+        verify(networkModificationService, times(1)).renameRootNetworkTag(any(), any(), any());
+    }
+
+    @Test
+    void testDeletingARootNetworkDropsTheApplicabilitiesOfItsTag() {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        UUID deletedRootNetworkUuid = UUID.randomUUID();
+        studyEntity.addRootNetwork(RootNetworkInfos.builder()
+            .id(deletedRootNetworkUuid)
+            .name("secondRootNetworkName")
+            .caseInfos(new CaseInfos(UUID.randomUUID(), UUID.randomUUID(), CASE_NAME, CASE_FORMAT))
+            .networkInfos(new NetworkInfos(UUID.randomUUID(), UUID.randomUUID().toString()))
+            .reportUuid(UUID.randomUUID())
+            .tag(ROOT_NETWORK_TAG_2)
+            .build().toEntity(objectMapper));
+        studyRepository.save(studyEntity);
+
+        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
+        NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
+
+        studyService.deleteRootNetworks(studyEntity.getId(), List.of(deletedRootNetworkUuid), USER_ID);
+
+        verify(networkModificationService, times(1)).deleteRootNetworkTags(List.of(firstNode.getModificationGroupUuid()), List.of(ROOT_NETWORK_TAG_2));
+    }
+
+    private void updateRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String tag) throws Exception {
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}", studyUuid, rootNetworkUuid)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(RootNetworkInfos.builder().id(rootNetworkUuid).tag(tag).build()))
+                .header(USER_ID, USER_ID))
+            .andExpect(status().isOk());
     }
 
     @AfterEach

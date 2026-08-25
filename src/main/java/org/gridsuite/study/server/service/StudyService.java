@@ -338,7 +338,15 @@ public class StudyService {
         }
         notificationService.emitRootNetworksDeletionStarted(studyUuid, rootNetworksUuids);
 
+        List<String> deletedTags = allRootNetworkEntities.stream()
+                .filter(rootNetworkEntity -> rootNetworksUuids.contains(rootNetworkEntity.getId()))
+                .map(RootNetworkEntity::getTag)
+                .filter(Objects::nonNull)
+                .toList();
+
         rootNetworkService.deleteRootNetworks(studyEntity, rootNetworksUuids.stream());
+
+        networkModificationService.deleteRootNetworkTags(getStudyModificationGroupUuids(studyUuid), deletedTags);
 
         notificationService.emitRootNetworksUpdated(studyUuid);
         notificationService.emitElementUpdated(studyUuid, userId);
@@ -394,8 +402,25 @@ public class StudyService {
     }
 
     private void updateRootNetworkBasicInfos(UUID studyUuid, RootNetworkInfos rootNetworkInfos, boolean updateCase) {
+        String previousTag = rootNetworkService.getRootNetworkTag(rootNetworkInfos.getId());
         rootNetworkService.updateRootNetwork(rootNetworkInfos, updateCase);
+        // the entity says what the tag really became, unlike the DTO
+        String newTag = rootNetworkService.getRootNetworkTag(rootNetworkInfos.getId());
+        renameRootNetworkTagInApplicabilities(studyUuid, previousTag, newTag);
         postRootNetworkUpdate(studyUuid, rootNetworkInfos.getId(), updateCase);
+    }
+
+    private void renameRootNetworkTagInApplicabilities(UUID studyUuid, String previousTag, String newTag) {
+        if (previousTag == null || previousTag.equals(newTag)) {
+            return;
+        }
+        networkModificationService.renameRootNetworkTag(getStudyModificationGroupUuids(studyUuid), previousTag, newTag);
+    }
+
+    private List<UUID> getStudyModificationGroupUuids(UUID studyUuid) {
+        return networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid).stream()
+                .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
+                .toList();
     }
 
     @Transactional

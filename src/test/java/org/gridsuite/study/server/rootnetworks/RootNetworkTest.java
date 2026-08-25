@@ -183,6 +183,8 @@ class RootNetworkTest {
     @MockitoBean
     private NetworkService networkService;
     @MockitoBean
+    private NetworkModificationService networkModificationService;
+    @MockitoBean
     private PccMinRestService pccMinService;
 
     @BeforeEach

@@ -15,6 +15,7 @@ import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.util.Pair;
@@ -50,6 +51,9 @@ public class NetworkModificationService {
     private static final String NETWORK_MODIFICATIONS_COUNT_PATH = "network-modifications-count";
     private static final String QUERY_PARAM_ACTION = "action";
     private static final String QUERY_PARAM_ROOT_NETWORK_TAG = "rootNetworkTag";
+    private static final String QUERY_PARAM_GROUP_UUIDS = "groupUuids";
+    private static final String QUERY_PARAM_ROOT_NETWORK_TAGS = "rootNetworkTags";
+    private static final String ROOT_NETWORK_TAG_PATH = "root-network-tag";
     private static final String PARAM_USER_INPUT = "userInput";
 
     private final RestTemplate restTemplate;
@@ -342,6 +346,49 @@ public class NetworkModificationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         restTemplate.exchange(path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
+    }
+
+    /**
+     * Renames a root network tag in the applicabilities held by the modifications of the given groups.
+     */
+    public void renameRootNetworkTag(List<UUID> groupUuids, String oldTag, String newTag) {
+        Objects.requireNonNull(oldTag);
+        Objects.requireNonNull(newTag);
+        if (CollectionUtils.isEmpty(groupUuids)) {
+            return;
+        }
+        var path = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + ROOT_NETWORK_TAG_PATH)
+                .queryParam(QUERY_PARAM_GROUP_UUIDS, groupUuids)
+                .queryParam("oldTag", oldTag)
+                .queryParam("newTag", newTag)
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        restTemplate.exchange(path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
+    }
+
+    /**
+     * Drops root network tags from the applicabilities held by the modifications of the given groups.
+     */
+    public void deleteRootNetworkTags(List<UUID> groupUuids, List<String> rootNetworkTags) {
+        if (CollectionUtils.isEmpty(groupUuids) || CollectionUtils.isEmpty(rootNetworkTags)) {
+            return;
+        }
+        var path = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + ROOT_NETWORK_TAG_PATH)
+                .queryParam(QUERY_PARAM_GROUP_UUIDS, groupUuids)
+                .queryParam(QUERY_PARAM_ROOT_NETWORK_TAGS, rootNetworkTags)
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        restTemplate.exchange(path, HttpMethod.DELETE, new HttpEntity<>(headers), Void.class);
     }
 
     public void buildNode(@NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull BuildInfos buildInfos, AbstractWorkflowInfos workflowInfos) {
