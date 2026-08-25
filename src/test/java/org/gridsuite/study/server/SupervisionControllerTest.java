@@ -369,5 +369,28 @@ class SupervisionControllerTest {
         allRootNetworkUuids.forEach(rootNetworkUuid ->
                 rootNetworkNodeInfoRepository.findAllByRootNetworkId(rootNetworkUuid)
                         .forEach(info -> assertThat(info.getBlockedNode()).isFalse()));
+
+        // Check that the study network is now marked as unloaded, and that invalidating a study does not
+        // update its last modification date in directory-server (no element-update message emitted)
+        assertEquals(NetworkLoadStatus.UNLOADED, studyRepository.findById(STUDY_UUID).orElseThrow().getNetworkLoadStatus());
+    }
+
+    @Test
+    void testGetLoadedStudies() throws Exception {
+        initStudy();
+        assertEquals(NetworkLoadStatus.LOADED, studyRepository.findById(STUDY_UUID).orElseThrow().getNetworkLoadStatus());
+        UUID unknownStudyUuid = UUID.randomUUID();
+        MvcResult mvcResult = mockMvc.perform(get("/v1/supervision/studies/loaded")
+                        .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
+        List<UUID> loadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        assertEquals(List.of(STUDY_UUID), loadedStudyUuids);
+        mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/invalidate", STUDY_UUID))
+                .andExpect(status().isOk());
+        mvcResult = mockMvc.perform(get("/v1/supervision/studies/loaded")
+                        .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
+        loadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        assertThat(loadedStudyUuids).isEmpty();
     }
 }

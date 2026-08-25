@@ -19,6 +19,7 @@ import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
+import org.gridsuite.study.server.dto.NetworkLoadStatus;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.computation.ComputationParameterUUIDs;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
@@ -447,8 +448,14 @@ public class StudyService {
             ? new HashMap<>(rootNetworkService.getImportParameters(rootNetworkInfos.getId()))
             : importParameters;
 
+        self.updateNetworkLoadStatus(studyUuid, NetworkLoadStatus.LOADING);
         persistNetwork(rootNetworkInfos, studyUuid, null, userId, importParametersToUse, CaseImportAction.NETWORK_RECREATION, reportId);
         notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    @Transactional
+    public void updateNetworkLoadStatus(UUID studyUuid, NetworkLoadStatus networkLoadStatus) {
+        getStudy(studyUuid).setNetworkLoadStatus(networkLoadStatus);
     }
 
     public UUID duplicateStudy(UUID sourceStudyUuid, String userId) {
@@ -633,6 +640,7 @@ public class StudyService {
         RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
 
         rootNetworkService.updateNetwork(rootNetworkEntity, networkInfos);
+        studyEntity.setNetworkLoadStatus(NetworkLoadStatus.LOADED);
 
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
@@ -2705,6 +2713,7 @@ public class StudyService {
 
     public void invalidateStudyRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId, boolean updateCase) {
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
+        self.updateNetworkLoadStatus(studyUuid, NetworkLoadStatus.UNLOADING);
         var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
         // First we unbuild all nodes
         doUnbuildNodeTree(studyUuid, rootNodeUuid, true, true, userId);
@@ -2713,6 +2722,7 @@ public class StudyService {
         if (!updateCase) {
             rootNetworkService.updateRootNetworkIndexationStatus(studyUuid, rootNetworkUuid, RootNetworkIndexationStatus.NOT_INDEXED);
         }
+        self.updateNetworkLoadStatus(studyUuid, NetworkLoadStatus.UNLOADED);
         notificationService.emitRootNetworksUpdated(studyUuid);
     }
 
