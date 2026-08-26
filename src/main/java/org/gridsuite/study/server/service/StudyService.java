@@ -2717,20 +2717,19 @@ public class StudyService {
 
     public void invalidateStudyRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId, boolean updateCase) {
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
-        rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, NetworkLoadStatus.UNLOADING);
-        boolean unloaded = false;
+        boolean unloaded = true;
         try {
             var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
             // First we unbuild all nodes
-            doUnbuildNodeTree(studyUuid, rootNodeUuid, true, true, userId, true);
+            doUnbuildNodeTree(studyUuid, rootNodeUuid, true, true, userId, unloaded);
             // Then we erase data linked to root node on all root networks
             rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetworkService.getRootNetworkInfos(rootNetworkUuid)), true, false);
             if (!updateCase) {
                 rootNetworkService.updateRootNetworkIndexationStatus(studyUuid, rootNetworkUuid, RootNetworkIndexationStatus.NOT_INDEXED);
             }
-            unloaded = true;
+            unloaded = false;
         } finally {
-            rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, unloaded ? NetworkLoadStatus.UNLOADED : NetworkLoadStatus.LOADED);
+            rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, unloaded ? NetworkLoadStatus.LOADED : NetworkLoadStatus.UNLOADED);
         }
         notificationService.emitRootNetworksUpdated(studyUuid);
     }

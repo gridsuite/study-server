@@ -403,4 +403,9 @@ public class RootNetworkService {
     public List<UUID> getLoadedStudyIds(List<UUID> studyUuids) {
         return rootNetworkRepository.findDistinctStudyIdsByStudyIdInAndNetworkLoadStatus(studyUuids, NetworkLoadStatus.LOADED);
     }
+
+    @Transactional(readOnly = true)
+    public List<UUID> getUnloadedStudyIds(List<UUID> studyUuids) {
+        return rootNetworkRepository.findDistinctStudyIdsByStudyIdInAndNetworkLoadStatus(studyUuids, NetworkLoadStatus.UNLOADED);
+    }
 }

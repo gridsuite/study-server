@@ -36,6 +36,7 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -76,6 +77,7 @@ class SupervisionControllerTest {
     private static final UUID CASE_UUID = UUID.randomUUID();
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final UUID STUDY_UUID = UUID.randomUUID();
+    private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
 
     private static final UUID SECOND_NETWORK_UUID = UUID.randomUUID();
     private static final UUID SECOND_CASE_UUID = UUID.randomUUID();
@@ -118,6 +120,9 @@ class SupervisionControllerTest {
 
     @Autowired
     private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
+
+    @Autowired
+    private OutputDestination output;
 
     private static EquipmentInfos toEquipmentInfos(Identifiable<?> i) {
         return EquipmentInfos.builder()
@@ -372,6 +377,7 @@ class SupervisionControllerTest {
                         .forEach(info -> assertThat(info.getBlockedNode()).isFalse()));
         assertEquals(NetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(firstRootNetworkUuid).orElseThrow().getNetworkLoadStatus());
         assertEquals(NetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(secondRootNetworkUuid).orElseThrow().getNetworkLoadStatus());
+        TestUtils.assertQueuesEmptyThenClear(List.of(ELEMENT_UPDATE_DESTINATION), output);
     }
 
     @Test
@@ -392,5 +398,36 @@ class SupervisionControllerTest {
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         loadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
         assertThat(loadedStudyUuids).isEmpty();
+    }
+
+    @Test
+    void testGetUnloadedStudies() throws Exception {
+        initStudy();
+        UUID unknownStudyUuid = UUID.randomUUID();
+        MvcResult mvcResult = mockMvc.perform(get("/v1/supervision/studies/unloaded")
+                        .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
+        List<UUID> unloadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        assertThat(unloadedStudyUuids).isEmpty();
+
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(STUDY_UUID);
+        UUID secondRootNetworkUuid = UUID.randomUUID();
+        addSecondRootNetwork(secondRootNetworkUuid, SECOND_NETWORK_UUID);
+        rootNetworkService.updateNetworkLoadStatus(secondRootNetworkUuid, NetworkLoadStatus.UNLOADED);
+
+        assertEquals(NetworkLoadStatus.LOADED, rootNetworkService.getRootNetwork(firstRootNetworkUuid).orElseThrow().getNetworkLoadStatus());
+        assertEquals(NetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(secondRootNetworkUuid).orElseThrow().getNetworkLoadStatus());
+
+        mvcResult = mockMvc.perform(get("/v1/supervision/studies/unloaded")
+                        .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
+        unloadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        assertEquals(List.of(STUDY_UUID), unloadedStudyUuids);
+
+        mvcResult = mockMvc.perform(get("/v1/supervision/studies/loaded")
+                        .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
+        List<UUID> loadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        assertEquals(List.of(STUDY_UUID), loadedStudyUuids);
     }
 }

@@ -417,6 +417,11 @@ public class SupervisionService {
         return rootNetworkService.getLoadedStudyIds(studyUuids);
     }
 
+    @Transactional(readOnly = true)
+    public List<UUID> getUnloadedStudyUuids(List<UUID> studyUuids) {
+        return rootNetworkService.getUnloadedStudyIds(studyUuids);
+    }
+
     @Transactional
     public void recreateStudyIndices() {
         recreateIndex(CreatedStudyBasicInfos.class);
