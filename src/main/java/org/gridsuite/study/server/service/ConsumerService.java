@@ -58,6 +58,7 @@ public class ConsumerService {
     private static final String NETWORK_ID = "networkId";
     private static final String HEADER_CASE_FORMAT = "caseFormat";
     private static final String HEADER_CASE_NAME = "caseName";
+    private static final String HEADER_STUDY_NODE_UUIDS = "studyNodeUuids";
     private static final String HEADER_WITH_RATIO_TAP_CHANGERS = "withRatioTapChangers";
     private static final String HEADER_ERROR_MESSAGE = "errorMessage";
     private static final String HEADER_EXPORT_UUID = "exportUuid";
@@ -832,5 +833,27 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeNetworkExportFinished() {
         return this::consumeNetworkExportFinished;
+    }
+
+    /**
+     * directory-server tells us a shared (referenced) composite modification changed - it already
+     * resolved, from its "who references what" graph, which study nodes point at it (comma-joined
+     * node uuids, see directory-server's NotificationService.emitSharedElementChanged) : each of
+     * them gets its subtree invalidated.
+     */
+    @Bean
+    public Consumer<Message<String>> consumeSharedElementUpdate() {
+        return message -> {
+            String studyNodeUuidsStr = message.getHeaders().get(HEADER_STUDY_NODE_UUIDS, String.class);
+            if (StringUtils.isEmpty(studyNodeUuidsStr)) {
+                return;
+            }
+            Arrays.stream(studyNodeUuidsStr.split(","))
+                    .map(UUID::fromString)
+                    .forEach(nodeUuid -> {
+                        UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
+                        studyService.invalidateNodeTreeWhenSharedModificationChanged(studyUuid, nodeUuid);
+                    });
+        };
     }
 }

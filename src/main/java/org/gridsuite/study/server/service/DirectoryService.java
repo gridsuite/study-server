@@ -114,7 +114,9 @@ public class DirectoryService {
      * creates references and add them to shared composite modifications stored in directory server
      * @param elementsUuids element uuids of the shared composites in directory server
      * @param userId id of the user who creates the references
-     * @param targetReferenceUuid where the new references will point
+     * @param targetReferenceUuid where the new references will point - a node uuid, or a composite-modification
+     * uuid when the reference is pasted nested inside another composite
+     * @param targetReferenceType type of the target the new references point to
      */
     public void createsReferencesToSharedComposites(@NonNull List<UUID> elementsUuids, String userId, UUID targetReferenceUuid, ReferenceAttributes.ReferenceType targetReferenceType) {
         // TODO : instead of multiple calls, an endpoint in directory server should be created to handle multiple references creation
