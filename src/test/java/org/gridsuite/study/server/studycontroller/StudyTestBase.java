@@ -37,8 +37,8 @@ import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
@@ -266,7 +266,7 @@ class StudyTestBase {
     protected DynamicSimulationRestService dynamicSimulationRestService;
 
     @Autowired
-    protected DynamicSecurityAnalysisClient dynamicSecurityAnalysisClient;
+    protected DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
 
     @Autowired
     protected DynamicMarginCalculationRestService dynamicMarginCalculationRestService;
@@ -387,7 +387,7 @@ class StudyTestBase {
         loadflowRestService.setBaseUri(baseUrl);
         shortCircuitService.setBaseUri(baseUrl);
         dynamicSimulationRestService.setBaseUri(baseUrl);
-        dynamicSecurityAnalysisClient.setBaseUri(baseUrl);
+        dynamicSecurityAnalysisRestService.setBaseUri(baseUrl);
         dynamicMarginCalculationRestService.setBaseUri(baseUrl);
         stateEstimationService.setBaseUri(baseUrl);
         pccMinService.setBaseUri(baseUrl);

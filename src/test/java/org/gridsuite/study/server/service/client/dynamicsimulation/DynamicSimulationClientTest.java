@@ -326,7 +326,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
         // call service to test
-        UUID resultUuid = dynamicSimulationRestService.runDynamicSimulation(NODE_UUID , ROOT_NETWORK_UUID, NETWORK_UUID, VARIANT_ID,
+        UUID resultUuid = dynamicSimulationRestService.runDynamicSimulation(NODE_UUID, ROOT_NETWORK_UUID, NETWORK_UUID, VARIANT_ID,
                 REPORT_UUID, PARAMETERS_UUID, events, "userId", false);
 
         // check result
@@ -347,7 +347,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
         // check result
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> dynamicSimulationRestService.runDynamicSimulation(NODE_UUID , ROOT_NETWORK_UUID, NETWORK_UUID, "variantIdFailed",
+            () -> dynamicSimulationRestService.runDynamicSimulation(NODE_UUID, ROOT_NETWORK_UUID, NETWORK_UUID, "variantIdFailed",
                         REPORT_UUID, PARAMETERS_UUID, events, "userId", true)
         );
     }
