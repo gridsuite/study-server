@@ -124,8 +124,6 @@ public class RootNetworkService {
 
             updateCaseInfos(rootNetworkEntity, rootNetworkInfos.getCaseInfos());
             updateNetworkInfos(rootNetworkEntity, rootNetworkInfos.getNetworkInfos());
-            // the network we're switching to has already been successfully imported at this point
-            rootNetworkEntity.setNetworkLoadStatus(NetworkLoadStatus.LOADED);
             rootNetworkEntity.setImportParameters(JsonUtils.serializeImportParameters(rootNetworkInfos.getImportParameters(), objectMapper));
             rootNetworkEntity.setReportUuid(rootNetworkInfos.getReportUuid());
             rootNetworkEntity.setIndexationStatus(RootNetworkIndexationStatus.INDEXED);

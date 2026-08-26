@@ -400,7 +400,7 @@ public class StudyService {
 
     @Transactional
     public void modifyRootNetwork(UUID studyUuid, RootNetworkInfos rootNetworkInfos, String userId) {
-        invalidateStudyRootNetwork(studyUuid, rootNetworkInfos.getId(), userId, true);
+        invalidateStudyRootNetwork(studyUuid, rootNetworkInfos.getId(), userId, true, false);
         updateRootNetworkBasicInfos(studyUuid, rootNetworkInfos, true);
     }
 
@@ -2715,13 +2715,13 @@ public class StudyService {
         return allComputationStatus;
     }
 
-    public void invalidateStudyRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId, boolean updateCase) {
+    public void invalidateStudyRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId, boolean updateCase, boolean skipElementUpdatedNotification) {
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         boolean unloaded = true;
         try {
             var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
             // First we unbuild all nodes
-            doUnbuildNodeTree(studyUuid, rootNodeUuid, true, true, userId, unloaded);
+            doUnbuildNodeTree(studyUuid, rootNodeUuid, true, true, userId, skipElementUpdatedNotification);
             // Then we erase data linked to root node on all root networks
             rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetworkService.getRootNetworkInfos(rootNetworkUuid)), true, false);
             if (!updateCase) {
@@ -2729,7 +2729,9 @@ public class StudyService {
             }
             unloaded = false;
         } finally {
-            rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, unloaded ? NetworkLoadStatus.LOADED : NetworkLoadStatus.UNLOADED);
+            if (skipElementUpdatedNotification) {
+                rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, unloaded ? NetworkLoadStatus.LOADED : NetworkLoadStatus.UNLOADED);
+            }
         }
         notificationService.emitRootNetworksUpdated(studyUuid);
     }
