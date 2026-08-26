@@ -293,12 +293,6 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
         return (List) timeSeries;
     }
 
-    /**
-     * Get timeline from a given result UUID
-     *
-     * @param resultUuid a given result UUID
-     * @return a list of {@link TimelineEventInfos}
-     */
     public UUID getTimeSeriesResult(UUID resultUuid) {
         Objects.requireNonNull(resultUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SIMULATION_API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
@@ -319,6 +313,12 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
         return getRestTemplate().getForObject(uriComponents.toUriString(), UUID.class);
     }
 
+    /**
+     * Get timeline from a given result UUID
+     *
+     * @param resultUuid a given result UUID
+     * @return a list of {@link TimelineEventInfos}
+     */
     public List<TimelineEventInfos> getTimelineResult(UUID resultUuid) {
         if (resultUuid != null) {
             UUID timelineUuid = getTimelineRestResult(resultUuid); // get timeline uuid
