@@ -332,7 +332,7 @@ class SecurityAnalysisTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
             .andExpect(status().isOk());
-        var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        var mess = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
@@ -533,7 +533,7 @@ class SecurityAnalysisTest {
         // Test reset uuid result in the database
         assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SECURITY_ANALYSIS));
 
-        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_FAILED, updateType);
@@ -611,16 +611,16 @@ class SecurityAnalysisTest {
         MessageHeaders messageHeaders = new MessageHeaders(Map.of("resultUuid", resultUuid, HEADER_RECEIVER, resultUuidJson));
         consumerService.consumeSaResult().accept(MessageBuilder.createMessage("", messageHeaders));
 
-        Message<byte[]> securityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> securityAnalysisStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) securityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
-        securityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        securityAnalysisStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) securityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
 
-        Message<byte[]> securityAnalysisUpdateMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> securityAnalysisUpdateMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, securityAnalysisUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) securityAnalysisUpdateMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_RESULT, updateType);
@@ -774,7 +774,7 @@ class SecurityAnalysisTest {
     }
 
     private void checkMessagesReceived(UUID studyUuid, String updateTypeToCheck) {
-        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(updateType, updateTypeToCheck);
@@ -807,8 +807,8 @@ class SecurityAnalysisTest {
         ).andExpect(status().isOk());
 
         computationServerStubs.verifyParameterPut(SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);
-        assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/parameters", studyUuid))
             .andExpect(status().isOk())
@@ -825,8 +825,8 @@ class SecurityAnalysisTest {
 
         computationServerStubs.verifyParameterPut(SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);
 
-        assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         assertEquals(
             SECURITY_ANALYSIS_PARAMETERS_UUID,
@@ -851,8 +851,8 @@ class SecurityAnalysisTest {
 
         computationServerStubs.verifyParameterPost(bodyJson);
         assertEquals(SECURITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyUuid).orElseThrow().getSecurityAnalysisParametersUuid());
-        assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     @Test
@@ -896,7 +896,7 @@ class SecurityAnalysisTest {
         consumerService.consumeSaFailed().accept(failedMessage);
 
         // message sent by run and save controller to notify frontend security analysis is running and should update SA status
-        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
@@ -982,7 +982,7 @@ class SecurityAnalysisTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .header(HEADER_USER_ID, "testUserId"))
             .andExpect(status().isOk());
-        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
 
         createOrUpdateParametersAndDoChecks(studyUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
@@ -1025,11 +1025,11 @@ class SecurityAnalysisTest {
             .andExpect(status().is(status.value()));
 
         // --- Consume and verify Kafka messages ---
-        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
-        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         message = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);

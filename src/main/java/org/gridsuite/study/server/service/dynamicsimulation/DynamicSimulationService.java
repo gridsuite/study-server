@@ -20,7 +20,6 @@ import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
-import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -46,7 +45,6 @@ public class DynamicSimulationService extends AbstractComputationService {
                                        NotificationService notificationService,
                                        RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                        DynamicSimulationRestService dynamicSimulationRestService,
-                                       DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService,
                                        DynamicSimulationEventService dynamicSimulationEventService,
                                        NetworkModificationTreeService networkModificationTreeService,
                                        UserAdminService userAdminService, RootNetworkService rootNetworkService
@@ -93,7 +91,6 @@ public class DynamicSimulationService extends AbstractComputationService {
     public UUID runDynamicSimulation(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid,
                                      String userId, boolean debug) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
         UUID result = handleDynamicSimulationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
 
@@ -149,11 +146,10 @@ public class DynamicSimulationService extends AbstractComputationService {
     @Transactional
     public void createDynamicSimulationEvent(UUID studyUuid, UUID nodeUuid, String userId, EventInfos event) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
-        notificationService.emitStartEventCrudNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.EVENTS_CRUD_CREATING_IN_PROGRESS);
         try {
             dynamicSimulationEventService.saveEvent(nodeUuid, event);
         } finally {
-            notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+            notificationService.emitEventsUpdated(studyUuid, nodeUuid, childrenUuids);
         }
         postProcessEventCrud(studyUuid, nodeUuid);
         notificationService.emitElementUpdated(studyUuid, userId);
@@ -168,11 +164,10 @@ public class DynamicSimulationService extends AbstractComputationService {
     @Transactional
     public void updateDynamicSimulationEvent(UUID studyUuid, UUID nodeUuid, String userId, EventInfos event) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
-        notificationService.emitStartEventCrudNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.EVENTS_CRUD_UPDATING_IN_PROGRESS);
         try {
             dynamicSimulationEventService.saveEvent(nodeUuid, event);
         } finally {
-            notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+            notificationService.emitEventsUpdated(studyUuid, nodeUuid, childrenUuids);
         }
         postProcessEventCrud(studyUuid, nodeUuid);
         notificationService.emitElementUpdated(studyUuid, userId);
@@ -181,11 +176,10 @@ public class DynamicSimulationService extends AbstractComputationService {
     @Transactional
     public void deleteDynamicSimulationEvents(UUID studyUuid, UUID nodeUuid, String userId, List<UUID> eventUuids) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
-        notificationService.emitStartEventCrudNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.EVENTS_CRUD_DELETING_IN_PROGRESS);
         try {
             dynamicSimulationEventService.deleteEvents(eventUuids);
         } finally {
-            notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+            notificationService.emitEventsUpdated(studyUuid, nodeUuid, childrenUuids);
         }
         postProcessEventCrud(studyUuid, nodeUuid);
         notificationService.emitElementUpdated(studyUuid, userId);

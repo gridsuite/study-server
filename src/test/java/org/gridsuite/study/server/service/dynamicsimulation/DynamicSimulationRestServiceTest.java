@@ -58,6 +58,13 @@ class DynamicSimulationRestServiceTest extends AbstractWireMockRestClientTest {
     private static final UUID RESULT_UUID = UUID.randomUUID();
     private static final UUID RESULT_NOT_FOUND_UUID = UUID.randomUUID();
 
+    // running node
+
+    private static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
+    private static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
+    private static final String TIMELINE_NAME = "Timeline";
+
+
     private DynamicSimulationRestService dynamicSimulationRestService;
 
     @Autowired
@@ -377,31 +384,6 @@ class DynamicSimulationRestServiceTest extends AbstractWireMockRestClientTest {
         assertThrows(
             HttpClientErrorException.NotFound.class,
             () -> dynamicSimulationRestService.getTimeSeriesResult(RESULT_NOT_FOUND_UUID)
-        );
-    }
-
-    @Test
-    void testGetTimelineResult() throws Exception {
-        // configure mock server response for test get timeline result - uuid results/{resultUuid}/timeline
-        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + RESULT_UUID + DELIMITER + "timeline"))
-                .willReturn(WireMock.ok()
-                        .withBody(objectMapper.writeValueAsString(TIMELINE_UUID))
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                ));
-        UUID timelineUuid = dynamicSimulationRestService.getTimelineRestResult(RESULT_UUID);
-        // check result
-        assertThat(timelineUuid).isEqualTo(TIMELINE_UUID);
-    }
-
-    @Test
-    void testGetTimelineResultGivenBadUuid() {
-        // configure mock server response
-        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + RESULT_NOT_FOUND_UUID + DELIMITER + "timeline"))
-                .willReturn(WireMock.notFound()
-                ));
-        assertThrows(
-            HttpClientErrorException.NotFound.class,
-            () -> dynamicSimulationRestService.getTimelineResult(RESULT_NOT_FOUND_UUID)
         );
     }
 

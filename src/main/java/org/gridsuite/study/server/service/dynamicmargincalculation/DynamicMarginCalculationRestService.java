@@ -15,7 +15,6 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
@@ -42,7 +41,6 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORTER_ID;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_TYPE;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_UUID;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 
@@ -268,13 +266,6 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
 
         // call dynamic-margin-calculation REST API
         return getRestTemplate().getForObject(url, Integer.class);
-    }
-
-    public void assertDynamicMarginCalculationNotRunning(UUID resultUuid) {
-        DynamicMarginCalculationStatus status = getStatus(resultUuid);
-        if (DynamicMarginCalculationStatus.RUNNING == status) {
-            throw new StudyException(COMPUTATION_RUNNING);
-        }
     }
 
     public UUID getDynamicMarginCalculationParametersUuidOrElseCreateDefault(StudyEntity studyEntity) {
