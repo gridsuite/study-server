@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.asymmetricalload.AsymmetricalLoadService;
@@ -21,10 +22,12 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.ASYMMETRICAL_LOAD;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
 
 /**
  * @author Etienne Lesot <etienne.lesot at rte-france.com>
@@ -36,11 +39,14 @@ public class AsymmetricalLoadController {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final StudyService studyService;
     private final AsymmetricalLoadService asymmetricalLoadService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
 
-    public AsymmetricalLoadController(RootNetworkNodeInfoService rootNetworkNodeInfoService, StudyService studyService, AsymmetricalLoadService asymmetricalLoadService) {
+    public AsymmetricalLoadController(RootNetworkNodeInfoService rootNetworkNodeInfoService, StudyService studyService, AsymmetricalLoadService asymmetricalLoadService,
+                                      NodeActivityRunnerService nodeActivityRunnerService) {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.studyService = studyService;
         this.asymmetricalLoadService = asymmetricalLoadService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
     }
 
     @PostMapping(value = "/result/csv", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -68,7 +74,8 @@ public class AsymmetricalLoadController {
 
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(ASYMMETRICAL_LOAD, userId);
-        asymmetricalLoadService.runAsymmetricalLoad(studyUuid, nodeUuid, rootNetworkUuid, userId);
+        nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+            () -> asymmetricalLoadService.runAsymmetricalLoad(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }
 

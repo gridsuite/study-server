@@ -215,7 +215,6 @@ class NetworkModificationUnitTest {
         NetworkModificationMetadata metadata = new NetworkModificationMetadata(null, "new description", null, null);
         studyController.updateNetworkModificationsMetadata(studyUuid, node1Uuid, List.of(modificationUuid), metadata, USER_ID_HEADER);
 
-        checkModificationUpdatedMessageReceived(studyUuid, node1Uuid, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         checkModificationUpdatedMessageReceived(studyUuid, node1Uuid, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
 
         NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
@@ -278,7 +277,7 @@ class NetworkModificationUnitTest {
 
         ArgumentCaptor<UUID> rootNetworkUuidCaptor = ArgumentCaptor.forClass(UUID.class);
         verify(networkModificationTreeService, times(2))
-            .invalidateNodeTree(eq(studyUuid), eq(rootNodeUuid), rootNetworkUuidCaptor.capture(), eq(InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES), eq(false));
+            .invalidateNodeTree(eq(studyUuid), eq(rootNodeUuid), rootNetworkUuidCaptor.capture(), eq(InvalidateNodeTreeParameters.ALL), eq(false));
         assertThat(rootNetworkUuids).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(rootNetworkUuidCaptor.getAllValues());
 
         // one for each root network
@@ -291,7 +290,6 @@ class NetworkModificationUnitTest {
         NetworkModificationMetadata metadata = new NetworkModificationMetadata(activated, null, null, null);
         studyController.updateNetworkModificationsMetadata(studyUuid, node1Uuid, networkModificationUuids, metadata, USER_ID_HEADER);
 
-        checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         checkUpdateBuildStateMessageReceived(studyUuid, nodesToUnbuild);
         checkUpdateStatusMessagesReceived(studyUuid, nodeWithModification, output);
         checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
@@ -309,7 +307,7 @@ class NetworkModificationUnitTest {
     }
 
     private void checkModificationUpdatedMessageReceived(UUID studyUuid, UUID nodeUuid, List<UUID> childrenNodeUuids, String notificationType) {
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> messageStatus = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStatus.getPayload()));
 
         MessageHeaders headersStatus = messageStatus.getHeaders();
@@ -320,7 +318,7 @@ class NetworkModificationUnitTest {
     }
 
     private void checkUpdateBuildStateMessageReceived(UUID studyUuid, List<UUID> nodeUuids) {
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> messageStatus = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStatus.getPayload()));
 
         MessageHeaders headersStatus = messageStatus.getHeaders();
@@ -456,7 +454,7 @@ class NetworkModificationUnitTest {
     void tearDown() {
         List<String> destinations = List.of(STUDY_UPDATE_DESTINATION);
         try {
-            destinations.forEach(destination -> assertNull(output.receive(100, destination), "Should not be any messages in queue " + destination + " : "));
+            destinations.forEach(destination -> assertNull(TestUtils.receiveStudyUpdate(output, destination, 100), "Should not be any messages in queue " + destination + " : "));
         } catch (NullPointerException e) {
             // Ignoring
         } finally {

@@ -106,7 +106,6 @@ class SpreadsheetConfigCollectionTest {
     }
 
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
-    private static final long TIMEOUT = 1000;
 
     @Autowired
     private MockMvc mockMvc;
@@ -495,7 +494,7 @@ class SpreadsheetConfigCollectionTest {
     }
 
     private void checkSpreadsheetCollectionUpdateMessageReceived(UUID studyUuid) {
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> messageStudyUpdate = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_SPREADSHEET_COLLECTION, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));

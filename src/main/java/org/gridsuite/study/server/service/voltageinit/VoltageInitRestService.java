@@ -14,10 +14,8 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.VariantInfos;
-import org.gridsuite.study.server.dto.VoltageInitStatus;
 import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
@@ -34,7 +32,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
@@ -223,13 +220,6 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/supervision/results-count").toUriString();
         return restTemplate.getForObject(baseUri + path, Integer.class);
-    }
-
-    public void assertVoltageInitNotRunning(UUID resultUuid) {
-        String scs = getVoltageInitStatus(resultUuid);
-        if (VoltageInitStatus.RUNNING.name().equals(scs)) {
-            throw new StudyException(COMPUTATION_RUNNING);
-        }
     }
 
     public UUID getModificationsGroupUuid(UUID nodeUuid, UUID resultUuid) {

@@ -97,7 +97,6 @@ class ReportServiceTest {
 
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
 
-    private static final long TIMEOUT = 1000;
     @Autowired
     private RootNetworkRepository rootNetworkRepository;
     @Autowired
@@ -183,7 +182,7 @@ class ReportServiceTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
         NetworkModificationNode node = studyService.createNode(studyEntity.getId(), rootNode.getId(), createModificationNodeInfo("Node1"), InsertMode.AFTER, null);
-        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);  // message for modification node creation
+        TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);  // message for modification node creation
         List<Report> expectedNodeReports = List.of(getNodeReport(MODIFICATION_NODE_REPORT_UUID, node.getId().toString()));
 
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/parent-nodes-report?nodeOnlyReport=true&reportType=NETWORK_MODIFICATION",
@@ -214,9 +213,9 @@ class ReportServiceTest {
         NetworkModificationNode child2 = studyService.createNode(studyEntity.getId(), node.getId(), createModificationNodeInfo("Child 2"), InsertMode.AFTER, null);
 
         // message for 3 modification nodes creation
-        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
+        TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
+        TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
 
         /*           Root
         *             |
