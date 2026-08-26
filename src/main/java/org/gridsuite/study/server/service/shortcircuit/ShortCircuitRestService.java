@@ -23,6 +23,7 @@ import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
@@ -40,6 +41,7 @@ import java.util.Objects;
 import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
+import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 import static org.gridsuite.study.server.utils.StudyUtils.*;
 
 /**
@@ -140,14 +142,14 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
         return UriComponentsBuilder.fromPath(path).buildAndExpand(resultUuid).toUriString();
     }
 
-    public byte[] getShortCircuitAnalysisCsvResultResource(URI resourcePath, String headersCsv) {
+    public ResponseEntity<byte[]> getShortCircuitAnalysisCsvResultResource(URI resourcePath, String headersCsv) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(headersCsv, headers);
-        return restTemplate.exchange(resourcePath, HttpMethod.POST, entity, byte[].class).getBody();
+        return restTemplate.exchange(resourcePath, HttpMethod.POST, entity, byte[].class);
     }
 
-    public byte[] getShortCircuitAnalysisCsvResult(UUID resultUuid, UUID networkUuid, String variantId, String filters, String globalFilters, Sort sort, String headersCsv) {
+    public ResponseEntity<byte[]> getShortCircuitAnalysisCsvResult(UUID resultUuid, UUID networkUuid, String variantId, String filters, String globalFilters, Sort sort, String headersCsv) {
         String resultPath = getShortCircuitAnalysisCsvResultResourcePath(resultUuid);
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUri + resultPath)
                 .queryParam(QUERY_PARAM_NETWORK_UUID, networkUuid)
@@ -330,5 +332,19 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
             .buildAndExpand(resultUuid)
             .toUriString();
         return restTemplate.exchange(baseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<Map<String, Double>>() { }).getBody();
+    }
+
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        String resultBaseUrl = buildEndPointUrl(getBaseUri(), SHORT_CIRCUIT_API_VERSION, "results");
+        String url = UriComponentsBuilder.fromUriString(resultBaseUrl + "/{resultUuid}/download-debug-file")
+            .buildAndExpand(resultUuid)
+            .toUriString();
+        return getRestTemplate().exchange(url, HttpMethod.GET, null, Resource.class);
+    }
+
+    public String getSpecificParameters() {
+        String parametersBaseUrl = buildEndPointUrl(getBaseUri(), SHORT_CIRCUIT_API_VERSION, "parameters");
+
+        return getRestTemplate().getForObject(parametersBaseUrl + "/specific-parameters", String.class);
     }
 }

@@ -20,6 +20,8 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -298,5 +300,13 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
     @Override
     public List<String> getEnumValues(String enumName, UUID resultUuidOpt) {
         return List.of();
+    }
+
+    public String getProviders() {
+        return dynamicMarginCalculationClient.getProviders();
+    }
+
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        return dynamicMarginCalculationClient.downloadDebugFile(resultUuid);
     }
 }

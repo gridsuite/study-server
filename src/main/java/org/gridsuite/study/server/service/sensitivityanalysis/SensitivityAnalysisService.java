@@ -32,11 +32,8 @@ import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSI
 @Service
 public class SensitivityAnalysisService extends AbstractComputationService {
 
-    private final SensitivityAnalysisRestService sensitivityAnalysisRestService;
-    private final NetworkModificationTreeService networkModificationTreeService;
-    private final RootNetworkService rootNetworkService;
-    private final UserAdminService userAdminService;
     private final DirectoryService directoryService;
+    private final SensitivityAnalysisRestService sensitivityAnalysisRestService;
 
     protected SensitivityAnalysisService(StudyRepository studyRepository,
                                          ComputationParametersService computationParametersService,
@@ -47,11 +44,9 @@ public class SensitivityAnalysisService extends AbstractComputationService {
                                          RootNetworkService rootNetworkService,
                                          UserAdminService userAdminService,
                                          DirectoryService directoryService) {
-        super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService,
+            rootNetworkService, computationParametersService, userAdminService);
         this.sensitivityAnalysisRestService = sensitivityAnalysisRestService;
-        this.networkModificationTreeService = networkModificationTreeService;
-        this.rootNetworkService = rootNetworkService;
-        this.userAdminService = userAdminService;
         this.directoryService = directoryService;
     }
 
@@ -75,13 +70,9 @@ public class SensitivityAnalysisService extends AbstractComputationService {
                 sensitivityAnalysisRestService::createSensitivityAnalysisParameters,
                 sensitivityAnalysisRestService::updateSensitivityAnalysisParameters,
                 SENSITIVITY_ANALYSIS,
-                List.of(this::invalidateSensitivityAnalysisStatusOnAllNodes),
+                List.of(rootNetworkNodeInfoService::invalidateSensitivityAnalysisStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS
         );
-    }
-
-    public void invalidateSensitivityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        sensitivityAnalysisRestService.invalidateSensitivityAnalysisStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SENSITIVITY_ANALYSIS));
     }
 
     @Transactional
@@ -119,4 +110,17 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         notificationService.emitElementUpdated(study.getId(), userId);
         return result;
     }
+
+    public String getProviders() {
+        return sensitivityAnalysisRestService.getProviders();
+    }
+
+    public String getSensitivityAnalysisParametersByUuid(UUID parameterUuid) {
+        return sensitivityAnalysisRestService.getParameters(parameterUuid);
+    }
+
+    public void updateSensitivityAnalysisParameters(UUID parameterUuid, String parameters) {
+        sensitivityAnalysisRestService.updateParameters(parameterUuid, parameters);
+    }
+
 }

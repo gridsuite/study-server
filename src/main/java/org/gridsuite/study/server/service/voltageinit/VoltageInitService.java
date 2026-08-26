@@ -25,6 +25,8 @@ import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,9 +45,6 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 @Service
 public class VoltageInitService extends AbstractComputationService {
     private final VoltageInitRestService voltageInitRestService;
-    private final NetworkModificationTreeService networkModificationTreeService;
-    private final UserAdminService userAdminService;
-    private final RootNetworkService rootNetworkService;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(VoltageInitService.class);
 
@@ -57,11 +56,9 @@ public class VoltageInitService extends AbstractComputationService {
                                  NetworkModificationTreeService networkModificationTreeService,
                                  UserAdminService userAdminService,
                                  RootNetworkService rootNetworkService) {
-        super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService,
+            rootNetworkService, computationParametersService, userAdminService);
         this.voltageInitRestService = voltageInitRestService;
-        this.networkModificationTreeService = networkModificationTreeService;
-        this.userAdminService = userAdminService;
-        this.rootNetworkService = rootNetworkService;
     }
 
     public StudyVoltageInitParameters getVoltageInitParameters(UUID studyUuid) {
@@ -172,4 +169,13 @@ public class VoltageInitService extends AbstractComputationService {
 
         return userProfileIssue;
     }
+
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        return voltageInitRestService.downloadDebugFile(resultUuid);
+    }
+
+    public VoltageInitParametersInfos getVoltageInitParametersByUuid(UUID parameterUuid) {
+        return voltageInitRestService.getParameters(parameterUuid);
+    }
+
 }

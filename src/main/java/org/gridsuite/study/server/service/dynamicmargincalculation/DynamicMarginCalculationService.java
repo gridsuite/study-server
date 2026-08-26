@@ -14,9 +14,14 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
+import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,9 +38,6 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_ALLOWE
 @Service
 public class DynamicMarginCalculationService extends AbstractComputationService {
     private final DynamicMarginCalculationRestService dynamicMarginCalculationRestService;
-    private final NetworkModificationTreeService networkModificationTreeService;
-    private final UserAdminService userAdminService;
-    private final RootNetworkService rootNetworkService;
 
     protected DynamicMarginCalculationService(StudyRepository studyRepository,
                                               ComputationParametersService computationParametersService,
@@ -45,11 +47,9 @@ public class DynamicMarginCalculationService extends AbstractComputationService 
                                               NetworkModificationTreeService networkModificationTreeService,
                                               UserAdminService userAdminService,
                                               RootNetworkService rootNetworkService) {
-        super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService,
+            rootNetworkService, computationParametersService, userAdminService);
         this.dynamicMarginCalculationRestService = dynamicMarginCalculationRestService;
-        this.networkModificationTreeService = networkModificationTreeService;
-        this.userAdminService = userAdminService;
-        this.rootNetworkService = rootNetworkService;
     }
 
     public String getDynamicMarginCalculationProvider(UUID studyUuid) {
@@ -77,13 +77,9 @@ public class DynamicMarginCalculationService extends AbstractComputationService 
                 dynamicMarginCalculationRestService::createParameters,
                 dynamicMarginCalculationRestService::updateParameters,
                 DYNAMIC_MARGIN_CALCULATION,
-                List.of(this::invalidateDynamicMarginCalculationStatusOnAllNodes),
+                List.of(rootNetworkNodeInfoService::invalidateDynamicMarginCalculationStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS
         );
-    }
-
-    public void invalidateDynamicMarginCalculationStatusOnAllNodes(UUID studyUuid) {
-        dynamicMarginCalculationRestService.invalidateStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, DYNAMIC_MARGIN_CALCULATION));
     }
 
     @Transactional
@@ -136,4 +132,21 @@ public class DynamicMarginCalculationService extends AbstractComputationService 
 
         return dynamicMarginCalculationResultUuid;
     }
+
+    public String getProviders() {
+        return dynamicMarginCalculationRestService.getProviders();
+    }
+
+    public String getParameters(UUID parametersUuid, String userId) {
+        return dynamicMarginCalculationRestService.getParameters(parametersUuid, userId);
+    }
+
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        return dynamicMarginCalculationRestService.downloadDebugFile(resultUuid);
+    }
+
+    public void updateParameters(UUID parametersUuid, String parametersInfos) {
+        dynamicMarginCalculationRestService.updateParameters(parametersUuid, parametersInfos);
+    }
+
 }

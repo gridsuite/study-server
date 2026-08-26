@@ -19,10 +19,7 @@ import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
@@ -128,8 +125,9 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
         return restTemplate.getForObject(uri, String.class);
     }
 
-    public byte[] exportSensitivityResultsAsCsv(UUID resultUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos, UUID networkUuid, String variantId, String selector, String filters,
-            String globalFilters) {
+    public ResponseEntity<byte[]> exportSensitivityResultsAsCsv(UUID resultUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos,
+                                                                UUID networkUuid, String variantId, String selector, String filters,
+                                                                String globalFilters) {
         if (resultUuid == null) {
             throw new StudyException(NOT_FOUND, "Result of sensitivity analysis was not found");
         }
@@ -153,7 +151,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<SensitivityAnalysisCsvFileInfos> httpEntity = new HttpEntity<>(sensitivityAnalysisCsvFileInfos, headers);
-        return restTemplate.exchange(uri, HttpMethod.POST, httpEntity, byte[].class).getBody();
+        return restTemplate.exchange(uri, HttpMethod.POST, httpEntity, byte[].class);
     }
 
     public String getSensitivityResultsFilterOptions(UUID resultUuid, String selector) {
@@ -361,5 +359,21 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
         } catch (RestClientException e) {
             return List.of();
         }
+    }
+
+    public String getProviders() {
+        return getRestTemplate().getForObject(getBaseUri() + DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/providers", String.class);
+    }
+
+    public String getParameters(UUID parameterUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
+        return getRestTemplate().getForObject(getBaseUri() + path, String.class);
+    }
+
+    public void updateParameters(UUID parameterUuid, @Nullable String parameters) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        getRestTemplate().put(getBaseUri() + path, new HttpEntity<>(parameters, headers));
     }
 }

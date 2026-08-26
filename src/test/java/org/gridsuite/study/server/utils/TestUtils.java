@@ -179,6 +179,111 @@ public final class TestUtils {
         return studyEntity;
     }
 
+    // TODO remove all createDummyStudy and use the builder
+    public static class CreateDummyStudyBuilder {
+        private UUID networkUuid;
+        private String networkId;
+        private UUID caseUuid;
+        private String caseFormat;
+        private String caseName;
+        private UUID reportUuid;
+        private UUID loadFlowParametersUuid;
+        private UUID shortCircuitParametersUuid;
+        private UUID securityAnalysisParametersUuid;
+        private UUID sensitivityParametersUuid;
+        private UUID stateEstimationParametersUuid;
+        private UUID pccMinParametersUuid;
+        private UUID asymmetricalLoadParametersUuid;
+
+        public static CreateDummyStudyBuilder builder() {
+            return new CreateDummyStudyBuilder();
+        }
+
+        public CreateDummyStudyBuilder setNetworkUuid(UUID networkUuid) {
+            this.networkUuid = networkUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setNetworkId(String networkId) {
+            this.networkId = networkId;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setCaseUuid(UUID caseUuid) {
+            this.caseUuid = caseUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setCaseFormat(String caseFormat) {
+            this.caseFormat = caseFormat;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setCaseName(String caseName) {
+            this.caseName = caseName;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setReportUuid(UUID reportUuid) {
+            this.reportUuid = reportUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setLoadFlowParametersUuid(UUID loadFlowParametersUuid) {
+            this.loadFlowParametersUuid = loadFlowParametersUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setShortCircuitParametersUuid(UUID shortCircuitParametersUuid) {
+            this.shortCircuitParametersUuid = shortCircuitParametersUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setSecurityAnalysisParametersUuid(UUID securityAnalysisParametersUuid) {
+            this.securityAnalysisParametersUuid = securityAnalysisParametersUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setSensitivityParametersUuid(UUID sensitivityParametersUuid) {
+            this.sensitivityParametersUuid = sensitivityParametersUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setStateEstimationParametersUuid(UUID stateEstimationParametersUuid) {
+            this.stateEstimationParametersUuid = stateEstimationParametersUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setPccMinParametersUuid(UUID pccMinParametersUuid) {
+            this.pccMinParametersUuid = pccMinParametersUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setAsymmetricalLoadParametersUuid(UUID asymmetricalLoadParametersUuid) {
+            this.asymmetricalLoadParametersUuid = asymmetricalLoadParametersUuid;
+            return this;
+        }
+
+        public StudyEntity build() {
+            StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
+                    .loadFlowParametersUuid(loadFlowParametersUuid)
+                    .shortCircuitParametersUuid(shortCircuitParametersUuid)
+                    .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
+                    .sensitivityAnalysisParametersUuid(sensitivityParametersUuid)
+                    .stateEstimationParametersUuid(stateEstimationParametersUuid)
+                    .pccMinParametersUuid(pccMinParametersUuid)
+                    .asymmetricalLoadParametersUuid(asymmetricalLoadParametersUuid)
+                    .build();
+            RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder()
+                    .id(UUID.randomUUID()).name("rootNetworkName").tag("dum")
+                    .caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName)
+                    .networkId(networkId).networkUuid(networkUuid).reportUuid(reportUuid)
+                    .build();
+            studyEntity.addRootNetwork(rootNetworkEntity);
+            return studyEntity;
+        }
+    }
+
     public static StudyEntity createDummyStudy(UUID networkUuid, String networkId, UUID caseUuid, String caseFormat, String caseName, UUID reportUuid,
                                                UUID loadFlowParametersUuid,
                                                UUID shortCircuitParametersUuid,

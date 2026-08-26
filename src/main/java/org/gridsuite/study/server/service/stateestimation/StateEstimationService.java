@@ -16,6 +16,8 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,10 +35,7 @@ import static org.gridsuite.study.server.dto.ComputationType.STATE_ESTIMATION;
 
 @Service
 public class StateEstimationService extends AbstractComputationService {
-    private final NetworkModificationTreeService networkModificationTreeService;
-    private final RootNetworkService rootNetworkService;
     private final StateEstimationRestService stateEstimationRestService;
-    private final UserAdminService userAdminService;
     private final ObjectMapper objectMapper;
 
     protected StateEstimationService(StudyRepository studyRepository,
@@ -47,11 +46,8 @@ public class StateEstimationService extends AbstractComputationService {
                                      StateEstimationRestService stateEstimationRestService,
                                      UserAdminService userAdminService,
                                      ObjectMapper objectMapper) {
-        super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
-        this.networkModificationTreeService = networkModificationTreeService;
-        this.rootNetworkService = rootNetworkService;
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService, computationParametersService, userAdminService);
         this.stateEstimationRestService = stateEstimationRestService;
-        this.userAdminService = userAdminService;
         this.objectMapper = objectMapper;
     }
 
@@ -117,4 +113,9 @@ public class StateEstimationService extends AbstractComputationService {
     private void invalidateStateEstimationStatusOnAllNodes(UUID studyUuid) {
         stateEstimationRestService.invalidateStateEstimationStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, STATE_ESTIMATION));
     }
+
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        return stateEstimationRestService.downloadDebugFile(resultUuid);
+    }
+
 }

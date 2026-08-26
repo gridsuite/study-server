@@ -21,6 +21,8 @@ import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,10 +39,8 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_ALLOWE
 
 @Service
 public class DynamicSecurityAnalysisService extends AbstractComputationService {
+
     private final DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
-    private final NetworkModificationTreeService networkModificationTreeService;
-    private final UserAdminService userAdminService;
-    private final RootNetworkService rootNetworkService;
 
     protected DynamicSecurityAnalysisService(StudyRepository studyRepository,
                                              ComputationParametersService computationParametersService,
@@ -49,11 +49,9 @@ public class DynamicSecurityAnalysisService extends AbstractComputationService {
                                              DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService,
                                              NetworkModificationTreeService networkModificationTreeService,
                                              UserAdminService userAdminService, RootNetworkService rootNetworkService) {
-        super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService,
+            computationParametersService, userAdminService);
         this.dynamicSecurityAnalysisRestService = dynamicSecurityAnalysisRestService;
-        this.networkModificationTreeService = networkModificationTreeService;
-        this.userAdminService = userAdminService;
-        this.rootNetworkService = rootNetworkService;
     }
 
     public String getDynamicSecurityAnalysisProvider(UUID studyUuid) {
@@ -81,13 +79,9 @@ public class DynamicSecurityAnalysisService extends AbstractComputationService {
                 dynamicSecurityAnalysisRestService::createParameters,
                 dynamicSecurityAnalysisRestService::updateParameters,
                 DYNAMIC_SECURITY_ANALYSIS,
-                List.of(this::invalidateDynamicSecurityAnalysisStatusOnAllNodes),
+                List.of(rootNetworkNodeInfoService::invalidateDynamicSecurityAnalysisStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS
         );
-    }
-
-    public void invalidateDynamicSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        dynamicSecurityAnalysisRestService.invalidateStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, DYNAMIC_SECURITY_ANALYSIS));
     }
 
     @Transactional
@@ -142,4 +136,21 @@ public class DynamicSecurityAnalysisService extends AbstractComputationService {
 
         return dynamicSecurityAnalysisResultUuid;
     }
+
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        return dynamicSecurityAnalysisRestService.downloadDebugFile(resultUuid);
+    }
+
+    public String getProviders() {
+        return dynamicSecurityAnalysisRestService.getProviders();
+    }
+
+    public String getParameters(UUID parametersUuid) {
+        return dynamicSecurityAnalysisRestService.getParameters(parametersUuid);
+    }
+
+    public void updateParameters(UUID parametersUuid, String parametersInfos) {
+        dynamicSecurityAnalysisRestService.updateParameters(parametersUuid, parametersInfos);
+    }
+
 }

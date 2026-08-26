@@ -30,6 +30,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
@@ -46,6 +47,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -119,11 +121,15 @@ class LoadFLowIntegrationTest {
     private NetworkService networkService;
     @MockitoBean
     private UserAdminService userAdminService;
+    @MockitoBean
+    private OutputDestination output;
 
     @MockitoSpyBean
     StudyService studyService;
     @MockitoSpyBean
     NetworkModificationTreeService networkModificationTreeService;
+    @MockitoSpyBean
+    private LoadFlowService loadFlowService;
     @MockitoSpyBean
     LoadFlowRestService loadFlowRestService;
 
@@ -188,7 +194,7 @@ class LoadFLowIntegrationTest {
     @Test
     void testDynaFlowNotAllowed() throws Exception {
         UUID loadFlowProviderStubUuid = wireMockStubs.stubLoadFlowProvider(parametersUuid, DYNA_FLOW_PROVIDER);
-        doNothing().when(studyService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString());
+        doNothing().when(loadFlowService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString());
 
         // Construction node : forbidden
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyUuid, rootNetworkUuid, constructionNodeUuid, userId)
@@ -213,7 +219,8 @@ class LoadFLowIntegrationTest {
             .andExpect(status().isOk());
         wireMockStubs.verifyRunLoadflow(runLoadflowStubUuid, networkUuid, withRatioTapChangers, null);
         if (isSecurityNode) {
-            verify(networkModificationTreeService, times(1)).invalidateNodeTree(eq(nodeUuid), eq(rootNetworkUuid), any(InvalidateNodeTreeParameters.class));
+            verify(networkModificationTreeService, times(1))
+                .invalidateNodeTree(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), any(InvalidateNodeTreeParameters.class), eq(false));
         } else {
             wireMockStubs.verifyLoadFlowProviderGet(loadFlowProviderStubUuid, parametersUuid);
         }
@@ -255,7 +262,8 @@ class LoadFLowIntegrationTest {
         wireMockStubs.verifyCreateRunningLoadflowStatus(stubCreateRunningLoadflowStatusUuid);
 
         if (isSecurityNode) {
-            verify(networkModificationTreeService, times(1)).invalidateNodeTree(eq(nodeUuid), eq(rootNetworkUuid), any(InvalidateNodeTreeParameters.class));
+            verify(networkModificationTreeService, times(1))
+                .invalidateNodeTree(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), any(InvalidateNodeTreeParameters.class), eq(false));
             ArgumentCaptor<RerunLoadFlowInfos> rerunLoadFlowWorkflowInfosArgumentCaptor = ArgumentCaptor.forClass(RerunLoadFlowInfos.class);
             verify(networkModificationService, times(1)).buildNode(eq(nodeUuid), eq(rootNetworkUuid), any(BuildInfos.class), rerunLoadFlowWorkflowInfosArgumentCaptor.capture());
             assertEquals(withRatioTapChangers, rerunLoadFlowWorkflowInfosArgumentCaptor.getValue().isWithRatioTapChangers());

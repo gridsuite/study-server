@@ -20,6 +20,8 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -75,6 +77,10 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
         return UriComponentsBuilder.fromUriString(parametersBaseUrl + "/{uuid}")
                 .buildAndExpand(parametersUuid)
                 .toUriString();
+    }
+
+    public String getProviders() {
+        return dynamicSecurityAnalysisClient.getProviders();
     }
 
     public UUID createParameters(String parameters) {
