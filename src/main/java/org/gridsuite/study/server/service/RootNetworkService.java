@@ -124,6 +124,8 @@ public class RootNetworkService {
 
             updateCaseInfos(rootNetworkEntity, rootNetworkInfos.getCaseInfos());
             updateNetworkInfos(rootNetworkEntity, rootNetworkInfos.getNetworkInfos());
+            // the network we're switching to has already been successfully imported at this point
+            rootNetworkEntity.setNetworkLoadStatus(NetworkLoadStatus.LOADED);
             rootNetworkEntity.setImportParameters(JsonUtils.serializeImportParameters(rootNetworkInfos.getImportParameters(), objectMapper));
             rootNetworkEntity.setReportUuid(rootNetworkInfos.getReportUuid());
             rootNetworkEntity.setIndexationStatus(RootNetworkIndexationStatus.INDEXED);
@@ -399,6 +401,14 @@ public class RootNetworkService {
         rootNetwork.setNetworkLoadStatus(networkLoadStatus);
     }
 
+    @Transactional
+    public void updateNetworkLoadStatusIfCurrent(UUID rootNetworkUuid, NetworkLoadStatus expectedCurrentStatus, NetworkLoadStatus networkLoadStatus) {
+        RootNetworkEntity rootNetwork = getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        if (rootNetwork.getNetworkLoadStatus() == expectedCurrentStatus) {
+            rootNetwork.setNetworkLoadStatus(networkLoadStatus);
+        }
+    }
+
     @Transactional(readOnly = true)
     public List<UUID> getLoadedStudyIds(List<UUID> studyUuids) {
         return rootNetworkRepository.findDistinctStudyIdsByStudyIdInAndNetworkLoadStatus(studyUuids, NetworkLoadStatus.LOADED);
@@ -406,6 +416,6 @@ public class RootNetworkService {
 
     @Transactional(readOnly = true)
     public List<UUID> getUnloadedStudyIds(List<UUID> studyUuids) {
-        return rootNetworkRepository.findDistinctStudyIdsByStudyIdInAndNetworkLoadStatus(studyUuids, NetworkLoadStatus.UNLOADED);
+        return rootNetworkRepository.findDistinctStudyIdsByStudyIdInAndAllRootNetworksHaveNetworkLoadStatus(studyUuids, NetworkLoadStatus.UNLOADED);
     }
 }

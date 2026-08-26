@@ -50,4 +50,8 @@ public interface RootNetworkRepository extends JpaRepository<RootNetworkEntity, 
 
     @Query("select distinct r.study.id from RootNetworkEntity r where r.study.id in :studyUuids and r.networkLoadStatus = :networkLoadStatus")
     List<UUID> findDistinctStudyIdsByStudyIdInAndNetworkLoadStatus(@Param("studyUuids") List<UUID> studyUuids, @Param("networkLoadStatus") NetworkLoadStatus networkLoadStatus);
+
+    @Query("select distinct r.study.id from RootNetworkEntity r where r.study.id in :studyUuids and not exists ("
+        + "select 1 from RootNetworkEntity r2 where r2.study.id = r.study.id and r2.networkLoadStatus <> :networkLoadStatus)")
+    List<UUID> findDistinctStudyIdsByStudyIdInAndAllRootNetworksHaveNetworkLoadStatus(@Param("studyUuids") List<UUID> studyUuids, @Param("networkLoadStatus") NetworkLoadStatus networkLoadStatus);
 }

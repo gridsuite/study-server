@@ -454,7 +454,7 @@ public class StudyService {
             submitted = true;
         } finally {
             if (!submitted) {
-                rootNetworkService.updateNetworkLoadStatus(rootNetworkInfos.getId(), NetworkLoadStatus.UNLOADED);
+                rootNetworkService.updateNetworkLoadStatusIfCurrent(rootNetworkInfos.getId(), NetworkLoadStatus.LOADING, NetworkLoadStatus.UNLOADED);
             }
         }
     }

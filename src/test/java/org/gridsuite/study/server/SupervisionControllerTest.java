@@ -418,6 +418,23 @@ class SupervisionControllerTest {
         assertEquals(NetworkLoadStatus.LOADED, rootNetworkService.getRootNetwork(firstRootNetworkUuid).orElseThrow().getNetworkLoadStatus());
         assertEquals(NetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(secondRootNetworkUuid).orElseThrow().getNetworkLoadStatus());
 
+        // mixed state (one loaded, one unloaded): the study must NOT be reported as unloaded yet,
+        // since one of its root networks is still loaded
+        mvcResult = mockMvc.perform(get("/v1/supervision/studies/unloaded")
+                        .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
+        unloadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        assertThat(unloadedStudyUuids).isEmpty();
+
+        mvcResult = mockMvc.perform(get("/v1/supervision/studies/loaded")
+                        .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
+        List<UUID> loadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        assertEquals(List.of(STUDY_UUID), loadedStudyUuids);
+
+        // now unload the last remaining loaded root network: the study becomes fully unloaded
+        rootNetworkService.updateNetworkLoadStatus(firstRootNetworkUuid, NetworkLoadStatus.UNLOADED);
+
         mvcResult = mockMvc.perform(get("/v1/supervision/studies/unloaded")
                         .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
@@ -427,7 +444,7 @@ class SupervisionControllerTest {
         mvcResult = mockMvc.perform(get("/v1/supervision/studies/loaded")
                         .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
-        List<UUID> loadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
-        assertEquals(List.of(STUDY_UUID), loadedStudyUuids);
+        loadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        assertThat(loadedStudyUuids).isEmpty();
     }
 }
