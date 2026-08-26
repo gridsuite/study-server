@@ -11,7 +11,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.UUID;
 
 /**
- * @author Maissa Souissi <abdelsalem.hedhili at rte-france.com>
+ * @author Maissa Souissi <maissa.souissi at rte-france.com>
  */
 
 public record ModificationMoveOrCopyInfos(

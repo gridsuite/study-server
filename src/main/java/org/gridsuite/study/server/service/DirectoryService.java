@@ -188,11 +188,12 @@ public class DirectoryService {
     }
 
     /**
-     * update references of shared composite modifications in directory serve
+     * update references of shared composite modifications in directory server
      * @param elementsUuids element uuids of the shared composites
      * @param userId id of the user who moves the references
-     * @param originReferenceUuid the node references to update
-     * @param targetReferenceUuid where the references will point after the move
+     * @param originReferenceUuid uuid of the container whose references are updated
+     * @param targetReferenceUuid where the references will point after the update
+     * @param targetReferenceType type where the references will point after the update
      */
     public void updateReferencesToSharedComposites(@NonNull List<UUID> elementsUuids, String userId, @NonNull UUID originReferenceUuid,
             UUID targetReferenceUuid, ReferenceAttributes.ReferenceType targetReferenceType) {

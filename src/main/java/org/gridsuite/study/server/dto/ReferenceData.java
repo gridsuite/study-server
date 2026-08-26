@@ -12,8 +12,8 @@ import java.util.UUID;
  * One occurrence of a network modification referencing a shared composite modification
  *
  * @param modificationUuid uuid of the modification-reference itself
- * @param referenceId uuid of the referenced shared composite
+ * @param sharedCompositeId uuid of the referenced shared composite
  * @param containerId uuid of the composite containing the reference, null if the modification-reference is at the root level
  */
-public record ReferenceData(UUID modificationUuid, UUID referenceId, UUID containerId) {
+public record ReferenceData(UUID modificationUuid, UUID sharedCompositeId, UUID containerId) {
 }
