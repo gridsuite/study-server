@@ -59,6 +59,7 @@ public class ConsumerService {
     private static final String HEADER_CASE_FORMAT = "caseFormat";
     private static final String HEADER_CASE_NAME = "caseName";
     private static final String HEADER_STUDY_NODE_UUIDS = "studyNodeUuids";
+    private static final String HEADER_NETWORK_MODIFICATION_UUIDS = "networkModificationUuids";
     private static final String HEADER_WITH_RATIO_TAP_CHANGERS = "withRatioTapChangers";
     private static final String HEADER_ERROR_MESSAGE = "errorMessage";
     private static final String HEADER_EXPORT_UUID = "exportUuid";
@@ -70,6 +71,7 @@ public class ConsumerService {
     private final CaseService caseService;
     private final LoadFlowRestService loadFlowRestService;
     private final NetworkModificationTreeService networkModificationTreeService;
+    private final NetworkModificationService networkModificationService;
     private final StudyConfigService studyConfigService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final DirectoryService directoryService;
@@ -83,6 +85,7 @@ public class ConsumerService {
                            CaseService caseService,
                            LoadFlowRestService loadFlowRestService,
                            NetworkModificationTreeService networkModificationTreeService,
+                           NetworkModificationService networkModificationService,
                            StudyConfigService studyConfigService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            DirectoryService directoryService,
@@ -95,6 +98,7 @@ public class ConsumerService {
         this.caseService = caseService;
         this.loadFlowRestService = loadFlowRestService;
         this.networkModificationTreeService = networkModificationTreeService;
+        this.networkModificationService = networkModificationService;
         this.studyConfigService = studyConfigService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.directoryService = directoryService;
@@ -835,25 +839,33 @@ public class ConsumerService {
         return this::consumeNetworkExportFinished;
     }
 
-    /**
-     * directory-server tells us a shared (referenced) composite modification changed - it already
-     * resolved, from its "who references what" graph, which study nodes point at it (comma-joined
-     * node uuids, see directory-server's NotificationService.emitSharedElementChanged) : each of
-     * them gets its subtree invalidated.
-     */
     @Bean
     public Consumer<Message<String>> consumeSharedElementUpdate() {
         return message -> {
             String studyNodeUuidsStr = message.getHeaders().get(HEADER_STUDY_NODE_UUIDS, String.class);
-            if (StringUtils.isEmpty(studyNodeUuidsStr)) {
-                return;
+            String networkModificationUuidsStr = message.getHeaders().get(HEADER_NETWORK_MODIFICATION_UUIDS, String.class);
+
+            Set<UUID> nodeUuidsToInvalidate = new LinkedHashSet<>(parseUuidList(studyNodeUuidsStr));
+
+            List<UUID> networkModificationUuids = parseUuidList(networkModificationUuidsStr);
+            if (!networkModificationUuids.isEmpty()) {
+                Collection<UUID> rootGroupUuids = networkModificationService.findRootGroups(networkModificationUuids).values();
+                if (!rootGroupUuids.isEmpty()) {
+                    nodeUuidsToInvalidate.addAll(networkModificationTreeService.getNodeUuidsByModificationGroups(List.copyOf(rootGroupUuids)).values());
+                }
             }
-            Arrays.stream(studyNodeUuidsStr.split(","))
-                    .map(UUID::fromString)
-                    .forEach(nodeUuid -> {
-                        UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
-                        studyService.invalidateNodeTreeWhenSharedModificationChanged(studyUuid, nodeUuid);
-                    });
+
+            nodeUuidsToInvalidate.forEach(nodeUuid -> {
+                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
+                studyService.invalidateNodeTreeWhenSharedModificationChanged(studyUuid, nodeUuid);
+            });
         };
+    }
+
+    private static List<UUID> parseUuidList(String commaJoinedUuids) {
+        if (StringUtils.isEmpty(commaJoinedUuids)) {
+            return List.of();
+        }
+        return Arrays.stream(commaJoinedUuids.split(",")).map(UUID::fromString).toList();
     }
 }

@@ -1487,4 +1487,10 @@ public class NetworkModificationTreeService {
         var node = networkModificationNodeInfoRepository.findByModificationGroupUuidIn(List.of(groupUuid));
         return node.isEmpty() ? null : node.getFirst().getIdNode();
     }
+
+    @Transactional(readOnly = true)
+    public Map<UUID, UUID> getNodeUuidsByModificationGroups(List<UUID> groupUuids) {
+        return networkModificationNodeInfoRepository.findByModificationGroupUuidIn(groupUuids).stream()
+                .collect(Collectors.toMap(NetworkModificationNodeInfoEntity::getModificationGroupUuid, NetworkModificationNodeInfoEntity::getIdNode));
+    }
 }

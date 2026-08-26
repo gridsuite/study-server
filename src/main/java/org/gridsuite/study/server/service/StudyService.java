@@ -1581,7 +1581,7 @@ public class StudyService {
 
     private void removeReferences(List<ReferenceData> references, String userId, UUID nodeUuid) {
         references.forEach(reference ->
-                directoryService.removeReference(reference.containerId() != null ? reference.containerId() : nodeUuid, userId, reference.sharedCompositeId())
+                directoryService.removeReference(reference.containerId() != null ? reference.containerId() : nodeUuid, userId, reference.referenceId())
         );
     }
 
@@ -1914,7 +1914,7 @@ public class StudyService {
     private void updateReferenceWhenMoveModification(List<ReferenceData> referenceTargets, String userId, UUID originNodeUuid,
                                                     UUID targetNodeUuid, ReferenceAttributes.ReferenceType targetReferenceType) {
         List<UUID> referenceUuids = referenceTargets.stream()
-                .map(ReferenceData::sharedCompositeId)
+                .map(ReferenceData::referenceId)
                 .collect(Collectors.toList());
         directoryService.updateReferencesToSharedComposites(
                 referenceUuids,
@@ -2040,7 +2040,7 @@ public class StudyService {
 
         List<UUID> directlyRequestedReferenceIds = referenceTargets.stream()
                 .filter(reference -> requestedUuids.contains(reference.modificationUuid()))
-                .map(ReferenceData::sharedCompositeId)
+                .map(ReferenceData::referenceId)
                 .toList();
         if (!directlyRequestedReferenceIds.isEmpty()) {
             directoryService.createsReferencesToSharedComposites(directlyRequestedReferenceIds, userId, targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE);
@@ -2050,7 +2050,7 @@ public class StudyService {
                 .filter(reference -> !requestedUuids.contains(reference.modificationUuid()))
                 .collect(Collectors.groupingBy(
                         reference -> mappingModificationsUuids.get(reference.containerId()),
-                        Collectors.mapping(ReferenceData::sharedCompositeId, Collectors.toList())));
+                        Collectors.mapping(ReferenceData::referenceId, Collectors.toList())));
         nestedReferenceIdsByNewComposite.forEach((newCompositeUuid, referenceIds) ->
                 directoryService.createsReferencesToSharedComposites(referenceIds, userId, newCompositeUuid, ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION));
     }

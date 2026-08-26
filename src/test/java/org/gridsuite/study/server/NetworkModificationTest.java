@@ -1155,7 +1155,7 @@ class NetworkModificationTest {
 
         UUID modificationUuid = UUID.randomUUID();
         // stubs the checks and updates of referenced modifications
-        List<ReferenceData> stubbedReferences = List.of(new ReferenceData(modificationUuid, modificationUuid, null, null));
+        List<ReferenceData> stubbedReferences = List.of(new ReferenceData(modificationUuid, modificationUuid, null));
         UUID referencesStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/references"))
                 .withQueryParam("uuids", WireMock.equalTo(modificationUuid.toString()))
                 .willReturn(WireMock.ok()
@@ -2537,8 +2537,8 @@ class NetworkModificationTest {
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/references"))
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(List.of(
-                                new ReferenceData(nestedReferenceModification1, sharedElementUuid1, compositeModification, ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION),
-                                new ReferenceData(nestedReferenceModification2, sharedElementUuid2, compositeModification, ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION))))
+                                new ReferenceData(nestedReferenceModification1, sharedElementUuid1, compositeModification),
+                                new ReferenceData(nestedReferenceModification2, sharedElementUuid2, compositeModification))))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
 
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/elements/" + sharedElementUuid1 + "/references"))
@@ -2616,7 +2616,7 @@ class NetworkModificationTest {
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/references"))
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(List.of(
-                                new ReferenceData(referenceModification, sharedElementUuid, parentComposite, ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION))))
+                                new ReferenceData(referenceModification, sharedElementUuid, parentComposite))))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
 
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/elements/" + sharedElementUuid + "/references"))
@@ -3782,7 +3782,7 @@ class NetworkModificationTest {
         // modification1 IS a reference - value is the node it currently points to (nodeUuid1, its origin)
         UUID referencesStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/references"))
                 .willReturn(WireMock.ok()
-                        .withBody(mapper.writeValueAsString(List.of(new ReferenceData(modification1, modification1, nodeUuid1, STUDY_NODE))))
+                        .withBody(mapper.writeValueAsString(List.of(new ReferenceData(modification1, modification1, nodeUuid1))))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
         ).getId();
 
