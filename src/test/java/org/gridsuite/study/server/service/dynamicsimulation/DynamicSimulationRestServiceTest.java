@@ -448,7 +448,7 @@ class DynamicSimulationRestServiceTest extends AbstractWireMockRestClientTest {
     @Test
     void testInvalidateStatusGivenBadUuid() {
         // configure mock server response for test get status result - results/{resultUuid}/invalidate-status
-        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + "invalidate-status" + ".*"))
+        wireMockServer.stubFor(WireMock.put(WireMock.urlMatching(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + "invalidate-status" + ".*"))
                 .withQueryParam("resultUuid", equalTo(RESULT_NOT_FOUND_UUID.toString()))
                 .willReturn(WireMock.notFound()
                 ));

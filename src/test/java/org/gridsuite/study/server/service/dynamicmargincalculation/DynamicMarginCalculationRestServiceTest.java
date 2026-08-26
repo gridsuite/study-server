@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
-class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest {
+class DynamicMarginCalculationRestServiceTest extends AbstractWireMockRestClientTest {
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final UUID REPORT_UUID = UUID.randomUUID();
     private static final UUID NODE_UUID = UUID.randomUUID();
@@ -328,13 +328,13 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
                 .withQueryParam(QUERY_PARAM_REPORT_UUID, equalTo(REPORT_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORTER_ID, equalTo(NODE_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORT_TYPE, equalTo(StudyService.ReportType.DYNAMIC_MARGIN_CALCULATION.reportKey))
-                .withHeader(QUERY_PARAM_DEBUG, equalTo("true"))
+                .withQueryParam(QUERY_PARAM_DEBUG, equalTo("true"))
                 .withHeader(HEADER_USER_ID, equalTo("userId"))
                 .willReturn(WireMock.serverError()));
 
         // check result
         assertThrows(
-            HttpClientErrorException.NotFound.class,
+                HttpServerErrorException.class,
             () -> dynamicMarginCalculationRestService.runDynamicMarginCalculation(NODE_UUID, ROOT_NETWORK_UUID, NETWORK_UUID, null,
                 REPORT_UUID, DYNAMIC_SIMULATION_PARAMETERS_UUID, DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_UUID, PARAMETERS_UUID, "userId", true)
         );
