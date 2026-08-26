@@ -21,11 +21,11 @@ import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.core.io.Resource;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -303,10 +303,15 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
     }
 
     public String getProviders() {
-        return dynamicMarginCalculationClient.getProviders();
+        String url = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, "providers");
+        return getRestTemplate().getForObject(url, String.class);
     }
 
     public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
-        return dynamicMarginCalculationClient.downloadDebugFile(resultUuid);
+        String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_RESULT);
+        String url = UriComponentsBuilder.fromUriString(resultBaseUrl + "/{resultUuid}/download-debug-file")
+                .buildAndExpand(resultUuid)
+                .toUriString();
+        return getRestTemplate().exchange(url, HttpMethod.GET, null, Resource.class);
     }
 }

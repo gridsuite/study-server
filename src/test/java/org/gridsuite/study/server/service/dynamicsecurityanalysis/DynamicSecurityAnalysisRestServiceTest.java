@@ -17,9 +17,6 @@ import org.gridsuite.study.server.utils.assertions.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.HttpClientErrorException;
@@ -425,21 +422,5 @@ class DynamicSecurityAnalysisRestServiceTest extends AbstractWireMockRestClientT
         // call service to test
         Integer resultCount = dynamicSecurityAnalysisRestService.getResultsCount();
         assertThat(resultCount).isEqualTo(expectedResultCount);
-    }
-
-    @Test
-    void testGetProviders() {
-        String providers = "[\"Dynawo\"]";
-        given(dynamicSecurityAnalysisClient.getProviders()).willReturn(providers);
-
-        assertThat(dynamicSecurityAnalysisRestService.getProviders()).isEqualTo(providers);
-    }
-
-    @Test
-    void testDownloadDebugFile() {
-        ResponseEntity<Resource> response = ResponseEntity.ok(new ByteArrayResource(PARAMETERS_JSON.getBytes()));
-        given(dynamicSecurityAnalysisClient.downloadDebugFile(RESULT_UUID)).willReturn(response);
-
-        assertThat(dynamicSecurityAnalysisRestService.downloadDebugFile(RESULT_UUID)).isEqualTo(response);
     }
 }

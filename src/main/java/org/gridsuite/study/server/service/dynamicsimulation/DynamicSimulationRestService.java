@@ -28,9 +28,11 @@ import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -46,6 +48,7 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORTER_ID;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_TYPE;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_UUID;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.TIME_SERIES_BAD_TYPE;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
@@ -75,7 +78,6 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
     }
 
     // --- Parameters related methods --- //
-    String getProviders();
 
     public String getProvider(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
@@ -429,5 +431,18 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
         if (DynamicSimulationStatus.RUNNING == status) {
             throw new StudyException(COMPUTATION_RUNNING);
         }
+    }
+
+    public String getProviders() {
+        String url = buildEndPointUrl(getBaseUri(), DYNAMIC_SIMULATION_API_VERSION, "providers");
+        return getRestTemplate().getForObject(url, String.class);
+    }
+
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SIMULATION_API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
+        String url = UriComponentsBuilder.fromUriString(resultBaseUrl + "/{resultUuid}/download-debug-file")
+                .buildAndExpand(resultUuid)
+                .toUriString();
+        return getRestTemplate().exchange(url, org.springframework.http.HttpMethod.GET, null, Resource.class);
     }
 }
