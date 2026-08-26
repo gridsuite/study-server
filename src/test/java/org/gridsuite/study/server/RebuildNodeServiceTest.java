@@ -45,8 +45,6 @@ class RebuildNodeServiceTest {
     @MockitoBean
     private StudyService studyService;
 
-    // RebuildNodeService's bulk move path now looks up each modification's real parent composite
-    // before grouping by source; mock it here too so these tests don't hit the real HTTP client
     @MockitoBean
     private NetworkModificationService networkModificationService;
 

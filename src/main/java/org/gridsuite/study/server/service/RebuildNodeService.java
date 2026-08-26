@@ -88,9 +88,9 @@ public class RebuildNodeService {
                 });
     }
 
-    private void handleMoveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<ModificationMoveOrCopyInfos> modificationInfos, String userId) {
+    private void handleMoveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<ModificationMoveOrCopyInfos> moveOrCopyInfos, String userId) {
         boolean isTargetInDifferentNodeTree = studyService.invalidateNodeTreeWhenMoveModifications(studyUuid, targetNodeUuid, originNodeUuid);
-        studyService.moveNetworkModifications(studyUuid, targetNodeUuid, modificationInfos, originNodeUuid, null, null, isTargetInDifferentNodeTree, userId);
+        studyService.moveNetworkModifications(studyUuid, targetNodeUuid, moveOrCopyInfos, originNodeUuid, null, null, isTargetInDifferentNodeTree, userId);
     }
 
     public void moveNetworkModification(
