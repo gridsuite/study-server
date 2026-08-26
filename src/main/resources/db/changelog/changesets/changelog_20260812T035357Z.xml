@@ -1,0 +1,55 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="labidiayo (generated)" id="1786506869975-14">
+        <createTable tableName="node_activity">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="node_activityPK"/>
+            </column>
+            <column name="node_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="root_network_id" type="UUID"/>
+            <column name="started_at" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+            <column name="study_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="labidiayo (generated)" id="1786506869975-15">
+        <addUniqueConstraint columnNames="node_id, root_network_id" constraintName="node_activity_node_rn_uq" tableName="node_activity"/>
+    </changeSet>
+    <changeSet author="labidiayo (generated)" id="1786506869975-16">
+        <createIndex indexName="node_activity_study_id_idx" tableName="node_activity">
+            <column name="study_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="labidiayo (generated)" id="1786506869975-17">
+        <dropColumn columnName="BLOCKED_NODE" tableName="ROOT_NETWORK_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="labidiayo" id="1786506869975-18">
+        <addForeignKeyConstraint baseTableName="node_activity" baseColumnNames="study_id"
+                                 constraintName="node_activity_study_fk"
+                                 referencedTableName="study" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="node_activity" baseColumnNames="node_id"
+                                 constraintName="node_activity_node_fk"
+                                 referencedTableName="node" referencedColumnNames="id_node" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="node_activity" baseColumnNames="root_network_id"
+                                 constraintName="node_activity_rn_fk"
+                                 referencedTableName="root_network" referencedColumnNames="id" onDelete="CASCADE"/>
+    </changeSet>
+    <changeSet author="labidiayo" id="1786506869975-20">
+        <update tableName="root_network_node_info">
+            <column name="local_build_status" value="NOT_BUILT"/>
+            <where>local_build_status = 'BUILDING'</where>
+        </update>
+        <update tableName="root_network_node_info">
+            <column name="global_build_status" value="NOT_BUILT"/>
+            <where>global_build_status = 'BUILDING'</where>
+        </update>
+    </changeSet>
+</databaseChangeLog>

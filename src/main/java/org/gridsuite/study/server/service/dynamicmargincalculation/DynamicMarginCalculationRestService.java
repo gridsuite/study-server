@@ -13,7 +13,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
 import org.gridsuite.study.server.service.common.ComputationParameters;
@@ -26,8 +25,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
-
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -109,13 +106,6 @@ public class DynamicMarginCalculationRestService implements ComputationParameter
 
     public Integer getResultsCount() {
         return dynamicMarginCalculationClient.getResultsCount();
-    }
-
-    public void assertDynamicMarginCalculationNotRunning(UUID resultUuid) {
-        DynamicMarginCalculationStatus status = getStatus(resultUuid);
-        if (DynamicMarginCalculationStatus.RUNNING == status) {
-            throw new StudyException(COMPUTATION_RUNNING);
-        }
     }
 
     public UUID getDynamicMarginCalculationParametersUuidOrElseCreateDefault(StudyEntity studyEntity) {

@@ -24,9 +24,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.DYNAWO_PROVIDER;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
-import static org.gridsuite.study.server.utils.TestUtils.assertStudyException;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -53,7 +50,6 @@ class DynamicSecurityAnalysisRestServiceTest {
     private static final UUID REPORT_UUID = UUID.randomUUID();
 
     // running node
-    private static final UUID RESULT_UUID_RUNNING = UUID.randomUUID();
 
     @MockitoBean
     DynamicSecurityAnalysisClient dynamicSecurityAnalysisClient;
@@ -176,26 +172,6 @@ class DynamicSecurityAnalysisRestServiceTest {
         Integer resultsCount = dynamicSecurityAnalysisRestService.getResultsCount();
 
         assertThat(resultsCount).isEqualTo(10);
-    }
-
-    @Test
-    void testAssertDynamicSecurityAnalysisNotRunning() {
-        when(dynamicSecurityAnalysisClient.getStatus(RESULT_UUID)).thenReturn(DynamicSecurityAnalysisStatus.SUCCEED);
-
-        // test not running
-        assertDoesNotThrow(() -> dynamicSecurityAnalysisRestService.assertDynamicSecurityAnalysisNotRunning(RESULT_UUID));
-
-        verify(dynamicSecurityAnalysisClient, times(1)).getStatus(RESULT_UUID);
-    }
-
-    @Test
-    void testAssertDynamicSecurityAnalysisRunning() {
-        // setup for running node
-        given(dynamicSecurityAnalysisClient.getStatus(RESULT_UUID_RUNNING)).willReturn(DynamicSecurityAnalysisStatus.RUNNING);
-
-        // test running
-        assertStudyException(() -> dynamicSecurityAnalysisRestService.assertDynamicSecurityAnalysisNotRunning(RESULT_UUID_RUNNING),
-            COMPUTATION_RUNNING, null);
     }
 
     @Test

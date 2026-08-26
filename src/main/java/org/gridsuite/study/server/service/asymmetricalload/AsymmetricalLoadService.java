@@ -63,7 +63,6 @@ public class AsymmetricalLoadService extends AbstractComputationService {
     @Transactional
     public UUID runAsymmetricalLoad(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
         return handleAsymmetricalLoadRequest(studyEntity, nodeUuid, rootNetworkUuid, userId);
     }

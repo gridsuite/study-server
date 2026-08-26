@@ -57,7 +57,6 @@ public class LoadFlowService extends AbstractComputationService {
             networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid,
                 InvalidateNodeTreeParameters.builder()
                     .invalidationMode(InvalidateNodeTreeParameters.InvalidationMode.ALL)
-                    .withBlockedNode(true)
                     .computationsInvalidationMode(InvalidateNodeTreeParameters.ComputationsInvalidationMode.PRESERVE_LOAD_FLOW_RESULTS)
                     .build(),
                 false);
@@ -68,7 +67,6 @@ public class LoadFlowService extends AbstractComputationService {
                 .userId(userId)
                 .build());
         } else {
-            networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
             handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
         }
         notificationService.emitElementUpdated(studyEntity.getId(), userId);
@@ -86,12 +84,9 @@ public class LoadFlowService extends AbstractComputationService {
         if (networkModificationTreeService.isSecurityNode(nodeUuid)) {
             networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.builder()
                 .invalidationMode(InvalidateNodeTreeParameters.InvalidationMode.ONLY_CHILDREN_BUILD_STATUS)
-                .withBlockedNode(true)
                 .computationsInvalidationMode(InvalidateNodeTreeParameters.ComputationsInvalidationMode.ALL)
                 .build(),
                 false);
-        } else {
-            networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
         }
 
         handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
@@ -202,23 +197,35 @@ public class LoadFlowService extends AbstractComputationService {
             .collect(Collectors.groupingBy(rootNetworkNodeInfoEntity -> rootNetworkNodeInfoEntity.getRootNetwork().getId()));
 
         rootNetworkNodeInfosWithLFByRootNetwork.forEach((rootNetworkUuid, rootNetworkNodeInfoEntities) -> {
-            // since invalidateNodeTree is costly, optimise node tree invalidation by keeping only least deep parents from the set to invalidate them and all their children
             Set<NodeEntity> nodesToInvalidate = rootNetworkNodeInfoEntities.stream().map(rootNetworkNodeInfoEntity -> rootNetworkNodeInfoEntity.getNodeInfo().getNode()).collect(Collectors.toSet());
-            Set<NodeEntity> nodeTreesToInvalidate = new HashSet<>(nodesToInvalidate);
-
-            nodesToInvalidate.forEach(node -> {
-                NodeEntity currentNode = node.getParentNode();
-                while (currentNode != null) {
-                    if (nodesToInvalidate.contains(currentNode)) {
-                        nodeTreesToInvalidate.remove(node);
-                        break;
-                    }
-                    currentNode = currentNode.getParentNode();
-                }
-            });
-
-            nodeTreesToInvalidate.forEach(node -> networkModificationTreeService.invalidateNodeTree(studyUuid, node.getIdNode(), rootNetworkUuid, InvalidateNodeTreeParameters.ALL, false));
+            // since invalidateNodeTree is costly, keep only the highest nodes: they invalidate all their children
+            getHighestNodes(nodesToInvalidate).forEach(node ->
+                networkModificationTreeService.invalidateNodeTree(studyUuid, node.getIdNode(), rootNetworkUuid, InvalidateNodeTreeParameters.ALL, false));
         });
+    }
+
+    private static Set<NodeEntity> getHighestNodes(Set<NodeEntity> nodes) {
+        Set<NodeEntity> highestNodes = new HashSet<>(nodes);
+        nodes.forEach(node -> {
+            NodeEntity currentNode = node.getParentNode();
+            while (currentNode != null) {
+                if (nodes.contains(currentNode)) {
+                    highestNodes.remove(node);
+                    break;
+                }
+                currentNode = currentNode.getParentNode();
+            }
+        });
+        return highestNodes;
+    }
+
+    @Transactional(readOnly = true)
+    public List<UUID> getNodesInvalidatedByLoadFlowParameters(UUID studyUuid) {
+        Set<NodeEntity> nodesWithLoadFlowResults = rootNetworkNodeInfoService.getAllByStudyUuidWithLoadFlowResultsNotNull(studyUuid).stream()
+            .map(rootNetworkNodeInfoEntity -> rootNetworkNodeInfoEntity.getNodeInfo().getNode())
+            .collect(Collectors.toSet());
+        // a row on an ancestor already covers its descendants, since the activity invalidates children
+        return getHighestNodes(nodesWithLoadFlowResults).stream().map(NodeEntity::getIdNode).toList();
     }
 
     private void invalidateLoadFlowStatusOnAllNodes(UUID studyUuid) {

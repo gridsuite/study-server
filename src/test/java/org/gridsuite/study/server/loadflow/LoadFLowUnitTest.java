@@ -17,6 +17,7 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStat
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -24,6 +25,7 @@ import org.gridsuite.study.server.repository.networkmodificationtree.NodeReposit
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
+import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -75,6 +77,8 @@ class LoadFLowUnitTest {
     UUID loadflowResultUuid = UUID.randomUUID();
 
     @MockitoBean
+    private NodeActivityRunnerService nodeActivityService;
+    @MockitoBean
     RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @MockitoBean
     private RootNetworkService rootNetworkService;
@@ -98,6 +102,8 @@ class LoadFLowUnitTest {
     @BeforeEach
     void setup() {
         synchronizeStudyServerExecutionService(studyServerExecutionService);
+        TestUtils.bypassNodeActivities(nodeActivityService);
+        doReturn(Boolean.FALSE).when(networkModificationTreeService).isSecurityNode(nodeUuid);
     }
 
     @Test
@@ -170,7 +176,6 @@ class LoadFLowUnitTest {
         InvalidateNodeTreeParameters expectedInvalidationParameters = InvalidateNodeTreeParameters.builder()
             .invalidationMode(InvalidateNodeTreeParameters.InvalidationMode.ALL)
             .computationsInvalidationMode(InvalidateNodeTreeParameters.ComputationsInvalidationMode.PRESERVE_LOAD_FLOW_RESULTS)
-            .withBlockedNode(true)
             .build();
 
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
