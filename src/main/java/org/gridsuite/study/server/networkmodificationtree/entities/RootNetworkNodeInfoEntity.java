@@ -106,9 +106,6 @@ public class RootNetworkNodeInfoEntity {
     @Column(name = "asymmetricalLoadResultUuid")
     private UUID asymmetricalLoadResultUuid;
 
-    @Column(name = "blockedNode")
-    private Boolean blockedNode;
-
     @Embedded
     @AttributeOverrides(value = {
         @AttributeOverride(name = "localBuildStatus", column = @Column(name = "localBuildStatus", nullable = false)),

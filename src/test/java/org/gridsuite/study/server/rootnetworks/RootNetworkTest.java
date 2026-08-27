@@ -22,7 +22,6 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
@@ -705,10 +704,9 @@ class RootNetworkTest {
         createDummyRootNetwork(studyEntity, rootNetworkInfos);
         studyRepository.save(studyEntity);
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
-        NetworkModificationNode modificationNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
+        networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
 
         assertEqualsRootNetworkInDB(rootNetworkInfos);
-        assertNodeBlocked(modificationNode.getId(), rootNetworkInfos.getId(), false);
 
         // update root network
         final UUID newCaseUuid = UUID.randomUUID();
@@ -751,13 +749,6 @@ class RootNetworkTest {
         verify(caseService, times(1)).deleteCase(CASE_UUID);
 
         assertEqualsRootNetworkInDB(rootNetworkInfos);
-        assertNodeBlocked(modificationNode.getId(), rootNetworkInfos.getId(), false);
-    }
-
-    private void assertNodeBlocked(UUID nodeUuid, UUID rootNetworkUuid, boolean isNodeBlocked) {
-        Optional<RootNetworkNodeInfoEntity> networkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
-        assertTrue(networkNodeInfoEntity.isPresent());
-        assertEquals(isNodeBlocked, networkNodeInfoEntity.get().getBlockedNode());
     }
 
     private void assertEqualsRootNetworkInDB(RootNetworkInfos rootNetworkInfos) {

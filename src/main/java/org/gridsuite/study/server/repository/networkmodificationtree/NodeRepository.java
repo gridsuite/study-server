@@ -13,6 +13,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.NativeQuery;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,6 +27,8 @@ public interface NodeRepository extends JpaRepository<NodeEntity, UUID> {
     List<NodeEntity> findAllByParentNodeIdNode(UUID id);
 
     List<NodeEntity> findAllByStudyId(UUID id);
+
+    long countByIdNodeInAndStudyId(Collection<UUID> idNodes, UUID studyId);
 
     List<NodeEntity> findAllByStudyIdAndTypeAndStashed(UUID id, NodeType type, boolean stashed);
 
@@ -74,10 +77,11 @@ public interface NodeRepository extends JpaRepository<NodeEntity, UUID> {
 
         "    SELECT n.id_node, n.parent_node " +
         "    FROM NODE n " +
-        "    INNER JOIN NodeHierarchy nh ON n.id_node = nh.parent_node AND n.type != 'ROOT'" +
+        "    INNER JOIN NodeHierarchy nh ON n.id_node = nh.parent_node" +
         ") " +
         "SELECT cast(nh.id_node AS VARCHAR) " +
         "FROM NodeHierarchy nh where nh.id_node != :nodeUuid ")
+    /** Every node above this one up to and including the root, which has no parent and ends the walk. */
     List<UUID> findAllAncestorsUuids(UUID nodeUuid);
 
     @NativeQuery("WITH RECURSIVE ancestors (id_node, parent_node) AS ( " +

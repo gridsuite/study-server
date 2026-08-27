@@ -17,6 +17,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificatio
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.nodeactivity.NodeActivityRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -91,6 +92,8 @@ class RootNetworkApplicabilityTest {
     private ObjectMapper objectMapper;
     @Autowired
     private OutputDestination output;
+    @Autowired
+    private NodeActivityRepository nodeActivityRepository;
 
     @MockitoBean
     private NetworkModificationService networkModificationService;
@@ -106,6 +109,8 @@ class RootNetworkApplicabilityTest {
     private EquipmentInfosService equipmentInfosService;
     @MockitoBean
     private NetworkStoreService networkStoreService;
+    @MockitoBean
+    private UserAdminService userAdminService;
 
     @Test
     void testUpdateApplicability() throws Exception {
@@ -250,6 +255,8 @@ class RootNetworkApplicabilityTest {
     }
 
     private void updateRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String tag) throws Exception {
+        // an update runs asynchronously: its node activity outlives the request and would have the next one refused
+        nodeActivityRepository.deleteAll();
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}", studyUuid, rootNetworkUuid)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(RootNetworkInfos.builder().id(rootNetworkUuid).tag(tag).build()))

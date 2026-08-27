@@ -127,13 +127,7 @@ public class NetworkModificationTreeService {
 
         // Store all reports (inherited + new) for this node
         setModificationReports(nodeUuid, rootNetworkUuid, buildInfos.getAllReportsAsMap());
-        doUpdateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
-        try {
-            networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos, workflowInfos);
-        } catch (Exception e) {
-            doUpdateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.NOT_BUILT));
-            throw e;
-        }
+        networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos, workflowInfos);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
@@ -440,12 +434,6 @@ public class NetworkModificationTreeService {
     public List<UUID> getNodeTreeUuids(UUID parentUuid) {
         List<UUID> nodesUuids = nodesRepository.findAllChildrenUuids(parentUuid);
         nodesUuids.add(parentUuid);
-        return nodesUuids;
-    }
-
-    public List<UUID> getNodeBranchUuids(UUID nodeUuid) {
-        List<UUID> nodesUuids = nodesRepository.findAllAncestorsUuids(nodeUuid);
-        nodesUuids.addAll(getNodeTreeUuids(nodeUuid));
         return nodesUuids;
     }
 
@@ -1106,7 +1094,7 @@ public class NetworkModificationTreeService {
         }
 
         // Children
-        invalidateNodeInfos.add(invalidateChildrenNodes(nodeUuid, rootNetworkUuid, invalidateTreeParameters));
+        invalidateNodeInfos.add(invalidateChildrenNodes(nodeUuid, rootNetworkUuid));
 
         if (!invalidateNodeInfos.getNodeUuids().isEmpty()) {
             notificationService.emitNodeBuildStatusUpdated(nodeEntity.getStudy().getId(), invalidateNodeInfos.getNodeUuids().stream().toList(), rootNetworkUuid);
@@ -1115,31 +1103,16 @@ public class NetworkModificationTreeService {
         return invalidateNodeInfos;
     }
 
-    private InvalidateNodeInfos invalidateChildrenNodes(UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
+    /** Children are always invalidated in full, whatever was asked of the node itself. */
+    private InvalidateNodeInfos invalidateChildrenNodes(UUID nodeUuid, UUID rootNetworkUuid) {
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
         InvalidateNodeTreeParameters invalidateChildrenParameters = InvalidateNodeTreeParameters.builder()
             .invalidationMode(InvalidateNodeTreeParameters.InvalidationMode.ALL)
-            .withBlockedNode(invalidateTreeParameters.withBlockedNode())
             .build();
 
         invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNodes(rootNetworkUuid, getAllChildrenUuids(nodeUuid), invalidateChildrenParameters));
 
         return invalidateNodeInfos;
-    }
-
-    @Transactional
-    public void unblockNodeTree(UUID rootNetworkUuid, UUID nodeUuid) {
-        rootNetworkNodeInfoService.unblockNodes(rootNetworkUuid, getNodeTreeUuids(nodeUuid));
-    }
-
-    @Transactional
-    public void unblockNode(UUID rootNetworkUuid, UUID nodeUuid) {
-        rootNetworkNodeInfoService.unblockNodes(rootNetworkUuid, List.of(nodeUuid));
-    }
-
-    @Transactional
-    public void blockNode(UUID rootNetworkUuid, UUID nodeUuid) {
-        rootNetworkNodeInfoService.blockNodes(rootNetworkUuid, List.of(nodeUuid));
     }
 
     /**

@@ -9,6 +9,8 @@ package org.gridsuite.study.server;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
@@ -82,7 +84,12 @@ class StudyServiceTest {
         doReturn(Map.of(QuotaType.BUILD, 10)).when(userAdminService).getUserMaxQuota(userId);
         doReturn(0L).when(networkModificationTreeService).countBuiltNodes(studyUuid, rootNetworkUuid);
 
-        studyService.buildFirstLevelChildren(studyUuid, node1.getIdNode(), rootNetworkUuid, userId);
+        mockNodeBuild(node2.getIdNode(), rootNetworkUuid);
+        mockNodeBuild(node3.getIdNode(), rootNetworkUuid);
+
+        studyService.buildNodes(studyUuid,
+            studyService.getFirstLevelChildrenToBuild(studyUuid, node1.getIdNode(), rootNetworkUuid, userId),
+            rootNetworkUuid, userId);
 
         verify(networkModificationTreeService, times(1)).buildNode(eq(studyUuid), eq(node2.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
         verify(networkModificationTreeService, times(1)).buildNode(eq(studyUuid), eq(node3.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
@@ -120,7 +127,9 @@ class StudyServiceTest {
         doReturn(Map.of(QuotaType.BUILD, 10)).when(userAdminService).getUserMaxQuota(userId);
         doReturn(10L).when(networkModificationTreeService).countBuiltNodes(studyUuid, rootNetworkUuid);
 
-        studyService.buildFirstLevelChildren(studyUuid, node1.getIdNode(), rootNetworkUuid, userId);
+        studyService.buildNodes(studyUuid,
+            studyService.getFirstLevelChildrenToBuild(studyUuid, node1.getIdNode(), rootNetworkUuid, userId),
+            rootNetworkUuid, userId);
 
         verify(networkModificationService, times(0)).buildNode(eq(node2.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
         verify(networkModificationService, times(0)).buildNode(eq(node3.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
@@ -157,7 +166,11 @@ class StudyServiceTest {
         doReturn(Map.of(QuotaType.BUILD, 10)).when(userAdminService).getUserMaxQuota(userId);
         doReturn(9L).when(networkModificationTreeService).countBuiltNodes(studyUuid, rootNetworkUuid);
 
-        studyService.buildFirstLevelChildren(studyUuid, node1.getIdNode(), rootNetworkUuid, userId);
+        mockNodeBuild(node2.getIdNode(), rootNetworkUuid);
+
+        studyService.buildNodes(studyUuid,
+            studyService.getFirstLevelChildrenToBuild(studyUuid, node1.getIdNode(), rootNetworkUuid, userId),
+            rootNetworkUuid, userId);
 
         verify(networkModificationTreeService, times(1)).buildNode(eq(studyUuid), eq(node2.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
         verify(networkModificationTreeService, times(0)).buildNode(eq(studyUuid), eq(node3.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
@@ -249,4 +262,9 @@ class StudyServiceTest {
         ReflectionTestUtils.setField(studyService, "shouldCheckOperationQuotas", false);
         assertFalse(studyService.getOperationQuotaStatus());
     }
+
+    private void mockNodeBuild(UUID nodeUuid, UUID rootNetworkUuid) {
+        doReturn(NodeBuildStatus.from(BuildStatus.NOT_BUILT)).when(networkModificationTreeService).getNodeBuildStatus(nodeUuid, rootNetworkUuid);
+    }
+
 }
