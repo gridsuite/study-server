@@ -12,6 +12,7 @@ import org.gridsuite.study.server.dto.modification.MoveModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
+import org.gridsuite.study.server.service.NetworkModificationService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RebuildNodeService;
 import org.gridsuite.study.server.service.StudyService;
@@ -45,6 +46,9 @@ class RebuildNodeServiceTest {
     private StudyService studyService;
 
     @MockitoBean
+    private NetworkModificationService networkModificationService;
+
+    @MockitoBean
     private NodeActivityRunnerService nodeActivityService;
 
     UUID studyUuid = UUID.randomUUID();
@@ -60,6 +64,7 @@ class RebuildNodeServiceTest {
         doReturn(List.of(node1Uuid, node2Uuid)).when(networkModificationTreeService).getHighestNodeUuids(node1Uuid, node2Uuid);
         doReturn(List.of(node1Uuid)).when(networkModificationTreeService).getHighestNodeUuids(node1Uuid, node1Uuid);
         doReturn(false).when(networkModificationTreeService).isRootOrConstructionNode(any());
+        doReturn(Map.of()).when(networkModificationService).findParentComposites(any());
         TestUtils.bypassNodeActivities(nodeActivityService);
     }
 
