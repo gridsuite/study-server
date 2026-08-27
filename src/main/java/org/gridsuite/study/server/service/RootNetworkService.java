@@ -187,22 +187,23 @@ public class RootNetworkService {
     public void duplicateStudyRootNetworks(StudyEntity newStudyEntity, StudyEntity sourceStudyEntity) {
         List<RootNetworkEntity> rootNetworkEntities = sourceStudyEntity.getRootNetworks();
         rootNetworkEntities.forEach(rootNetworkEntityToDuplicate -> {
-                UUID sourceNetworkUuid = rootNetworkEntityToDuplicate.getNetworkUuid();
-                UUID clonedNetworkUuid = sourceNetworkUuid;
-                if (networkService.doesNetworkExist(sourceNetworkUuid)) {
-                    List<VariantInfos> networkVariants = networkService.getNetworkVariants(sourceNetworkUuid);
-                    // Clone only the initial variant
-                    List<String> targetVariantIds = networkVariants.stream().findFirst().map(VariantInfos::getId).stream().toList();
-                    Network clonedNetwork = networkService.cloneNetwork(sourceNetworkUuid, targetVariantIds);
-                    clonedNetworkUuid = networkService.getNetworkUuid(clonedNetwork);
-                }
+            UUID sourceNetworkUuid = rootNetworkEntityToDuplicate.getNetworkUuid();
+            UUID clonedNetworkUuid = sourceNetworkUuid;
+            boolean networkExists = networkService.doesNetworkExist(sourceNetworkUuid);
+            if (networkExists) {
+                List<VariantInfos> networkVariants = networkService.getNetworkVariants(sourceNetworkUuid);
+                // Clone only the initial variant
+                List<String> targetVariantIds = networkVariants.stream().findFirst().map(VariantInfos::getId).stream().toList();
+                Network clonedNetwork = networkService.cloneNetwork(sourceNetworkUuid, targetVariantIds);
+                clonedNetworkUuid = networkService.getNetworkUuid(clonedNetwork);
+            }
 
                 UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkEntityToDuplicate.getCaseUuid(), false);
                 Map<String, Object> newImportParameters = JsonUtils.deserializeImportParameters(rootNetworkEntityToDuplicate.getImportParameters(), objectMapper);
 
                 UUID clonedRootNodeReportUuid = reportService.duplicateReport(rootNetworkEntityToDuplicate.getReportUuid());
 
-                createRootNetwork(newStudyEntity,
+                RootNetworkEntity newRootNetworkEntity = createRootNetwork(newStudyEntity,
                     RootNetworkInfos.builder()
                         .id(UUID.randomUUID())
                         .name(rootNetworkEntityToDuplicate.getName())
@@ -214,6 +215,10 @@ public class RootNetworkService {
                         .tag(rootNetworkEntityToDuplicate.getTag())
                         .build()
                 );
+                // source network was unloaded: we kept its (now stale) uuid instead of cloning, so mark the new root network as UNLOADED too
+                if (!networkExists) {
+                    newRootNetworkEntity.setNetworkLoadStatus(NetworkLoadStatus.UNLOADED);
+                }
             }
         );
     }
