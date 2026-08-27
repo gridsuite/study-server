@@ -874,6 +874,7 @@ public class ConsumerService {
             nodeUuidsToInvalidate.forEach(nodeUuid -> {
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
                 studyService.invalidateNodeTreeWhenSharedModificationChanged(studyUuid, nodeUuid);
+                notificationService.emitSharedElementUpdated(studyUuid, nodeUuid, networkModificationUuids);
             });
         };
     }
