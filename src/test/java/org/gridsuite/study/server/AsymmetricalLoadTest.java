@@ -250,7 +250,7 @@ class AsymmetricalLoadTest {
                 .header("userId", "userId"))
             .andExpect(status().isOk());
 
-        Message<?> msg = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<?> msg = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertNotNull(msg);
         modificationNode.setId(UUID.fromString(String.valueOf(msg.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), msg.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
@@ -263,7 +263,7 @@ class AsymmetricalLoadTest {
     }
 
     private void checkAsymmetricalLoadMessagesReceived(UUID studyUuid, String updateTypeToCheck) {
-        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(updateType, updateTypeToCheck);
@@ -447,7 +447,7 @@ class AsymmetricalLoadTest {
                 .header("userId", "userId"))
             .andExpect(status().isOk());
 
-        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(UPDATE_TYPE_ASYMMETRICAL_LOAD_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
 
         createOrUpdateParametersAndDoChecks(studyUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
@@ -545,11 +545,11 @@ class AsymmetricalLoadTest {
                     .content(parameters))
             .andExpect(status().is(status.value()));
 
-        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(UPDATE_TYPE_ASYMMETRICAL_LOAD_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
-        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 

@@ -13,7 +13,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.common.ComputationParameters;
@@ -26,8 +25,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
-
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -115,13 +112,6 @@ public class DynamicSecurityAnalysisRestService implements ComputationParameters
 
     public Integer getResultsCount() {
         return dynamicSecurityAnalysisClient.getResultsCount();
-    }
-
-    public void assertDynamicSecurityAnalysisNotRunning(UUID resultUuid) {
-        DynamicSecurityAnalysisStatus status = getStatus(resultUuid);
-        if (DynamicSecurityAnalysisStatus.RUNNING == status) {
-            throw new StudyException(COMPUTATION_RUNNING);
-        }
     }
 
     public UUID getDynamicSecurityAnalysisParametersUuidOrElseCreateDefault(StudyEntity studyEntity) {

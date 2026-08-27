@@ -11,10 +11,12 @@ import org.gridsuite.study.server.dto.modification.ModificationContainerType;
 import org.gridsuite.study.server.dto.modification.MoveModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.NetworkModificationService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RebuildNodeService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,10 +45,11 @@ class RebuildNodeServiceTest {
     @MockitoBean
     private StudyService studyService;
 
-    // RebuildNodeService's bulk move path now looks up each modification's real parent composite
-    // before grouping by source; mock it here too so these tests don't hit the real HTTP client
     @MockitoBean
     private NetworkModificationService networkModificationService;
+
+    @MockitoBean
+    private NodeActivityRunnerService nodeActivityService;
 
     UUID studyUuid = UUID.randomUUID();
     UUID node1Uuid = UUID.randomUUID();
@@ -62,6 +65,7 @@ class RebuildNodeServiceTest {
         doReturn(List.of(node1Uuid)).when(networkModificationTreeService).getHighestNodeUuids(node1Uuid, node1Uuid);
         doReturn(false).when(networkModificationTreeService).isRootOrConstructionNode(any());
         doReturn(Map.of()).when(networkModificationService).findParentComposites(any());
+        TestUtils.bypassNodeActivities(nodeActivityService);
     }
 
     @Test

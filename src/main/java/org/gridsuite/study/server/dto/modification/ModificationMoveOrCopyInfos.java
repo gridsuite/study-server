@@ -16,5 +16,5 @@ import java.util.UUID;
 
 public record ModificationMoveOrCopyInfos(
         UUID modificationUuid,
-        @Schema(description = "current source container of modification to copy/move") ModificationContainerInfos source) {
+        @Schema(description = "current source container of the moved/copied modification") ModificationContainerInfos source) {
 }
