@@ -666,11 +666,12 @@ public class StudyController {
                                                          @RequestParam("action") ModificationsActionType action,
                                                          @RequestParam("originStudyUuid") UUID originStudyUuid,
                                                          @RequestParam("originNodeUuid") UUID originNodeUuid,
-                                                         @RequestBody List<UUID> modificationsToCopyUuidList,
+                                                         @RequestBody List<ModificationMoveOrCopyInfos> modificationInfos,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertIsStudyAndNodeExist(originStudyUuid, originNodeUuid);
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        List<UUID> modificationsToCopyUuidList = modificationInfos.stream().map(ModificationMoveOrCopyInfos::modificationUuid).toList();
         switch (action) {
             case COPY:
                 handleDuplicateNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
@@ -680,7 +681,7 @@ public class StudyController {
                 if (!studyUuid.equals(originStudyUuid)) {
                     throw new StudyException(MOVE_NETWORK_MODIFICATION_FORBIDDEN);
                 }
-                rebuildNodeService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
+                rebuildNodeService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationInfos, userId);
                 break;
         }
         return ResponseEntity.ok().build();

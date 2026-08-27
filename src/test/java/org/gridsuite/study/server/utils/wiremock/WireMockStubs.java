@@ -241,7 +241,7 @@ public class WireMockStubs {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + ".*/references"))
                 .willReturn(WireMock.ok()
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .withBody("{}"))).getId();
+                        .withBody("[]"))).getId();
     }
 
     public void verifyGetReferencesDataFromGroup(UUID getReferencesUuid) {

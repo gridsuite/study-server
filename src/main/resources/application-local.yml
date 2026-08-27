@@ -91,4 +91,3 @@ gridsuite:
     -
       name: directory-server
       base-uri: http://localhost:5026
-
