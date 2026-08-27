@@ -17,7 +17,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificatio
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.repository.nodeactivity.NodeActivityRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -92,8 +91,6 @@ class RootNetworkApplicabilityTest {
     private ObjectMapper objectMapper;
     @Autowired
     private OutputDestination output;
-    @Autowired
-    private NodeActivityRepository nodeActivityRepository;
 
     @MockitoBean
     private NetworkModificationService networkModificationService;
@@ -162,7 +159,7 @@ class RootNetworkApplicabilityTest {
 
         // the modification is a reference to a shared modification the user is not allowed to write on
         UUID sharedModificationUuid = UUID.randomUUID();
-        doReturn(new HashMap<>(Collections.singletonMap(sharedModificationUuid, null))).when(networkModificationService).getReferences(List.of(MODIFICATION_1));
+        doReturn(List.of(new ReferenceData(MODIFICATION_1, sharedModificationUuid, null))).when(networkModificationService).getReferences(List.of(MODIFICATION_1));
         doThrow(HttpClientErrorException.create(HttpStatus.FORBIDDEN, "Forbidden", null, null, null))
             .when(directoryService).checkPermission(List.of(sharedModificationUuid), null, USER_ID, PermissionType.WRITE, false);
 
@@ -255,8 +252,6 @@ class RootNetworkApplicabilityTest {
     }
 
     private void updateRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String tag) throws Exception {
-        // an update runs asynchronously: its node activity outlives the request and would have the next one refused
-        nodeActivityRepository.deleteAll();
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}", studyUuid, rootNetworkUuid)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(RootNetworkInfos.builder().id(rootNetworkUuid).tag(tag).build()))
