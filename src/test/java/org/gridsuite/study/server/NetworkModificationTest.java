@@ -2543,7 +2543,6 @@ class NetworkModificationTest {
                 .andExpect(status().isOk());
 
         checkUpdateStatusMessagesReceived(studyUuid, nodeUuid1, output);
-        checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
         checkElementUpdatedMessageSent(studyUuid, userId);
 

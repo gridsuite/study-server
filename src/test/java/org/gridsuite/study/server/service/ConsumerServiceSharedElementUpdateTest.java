@@ -7,6 +7,8 @@
 package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityService;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
@@ -64,6 +66,10 @@ class ConsumerServiceSharedElementUpdateTest {
     private UserAdminService userAdminService;
     @Mock
     private LoadFlowService loadFlowService;
+    @Mock
+    private NodeActivityRunnerService nodeActivityRunnerService;
+    @Mock
+    private NodeActivityService nodeActivityService;
 
     private Consumer<Message<String>> consumeSharedElementUpdate;
 
@@ -71,7 +77,8 @@ class ConsumerServiceSharedElementUpdateTest {
     void setup() {
         ConsumerService consumerService = new ConsumerService(new ObjectMapper(), notificationService, studyService, caseService,
                 loadFlowRestService, networkModificationTreeService, networkModificationService, studyConfigService,
-                rootNetworkNodeInfoService, directoryService, computationParametersService, userAdminService, loadFlowService);
+                rootNetworkNodeInfoService, directoryService, computationParametersService, userAdminService, loadFlowService,
+                nodeActivityRunnerService, nodeActivityService);
         consumeSharedElementUpdate = consumerService.consumeSharedElementUpdate();
     }
 
