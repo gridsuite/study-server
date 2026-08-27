@@ -208,11 +208,8 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
     }
 
     public DynamicMarginCalculationStatus getStatus(UUID resultUuid) {
-        if (resultUuid == null) {
-            return null;
-        }
-
         Objects.requireNonNull(resultUuid);
+
         String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_RESULT);
 
         String url = UriComponentsBuilder

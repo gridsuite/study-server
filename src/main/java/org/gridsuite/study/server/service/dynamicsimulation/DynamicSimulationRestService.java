@@ -78,6 +78,10 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
     }
 
     // --- Parameters related methods --- //
+    public String getProviders() {
+        String url = buildEndPointUrl(getBaseUri(), DYNAMIC_SIMULATION_API_VERSION, "providers");
+        return getRestTemplate().getForObject(url, String.class);
+    }
 
     public String getProvider(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
@@ -234,34 +238,6 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
         // call dynamic-simulation REST API
         HttpEntity<List<EventInfos>> httpEntity = new HttpEntity<>(events, headers);
         return getRestTemplate().postForObject(uriComponent.toUriString(), httpEntity, UUID.class);
-    }
-
-    /**
-     * Get list of time-series metadata
-     * @param resultUuid a given result UUID
-     * @return a list of time-series metadata
-     */
-    public List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID resultUuid) {
-        List<TimeSeriesMetadataInfos> metadataList = new ArrayList<>();
-
-        if (resultUuid != null) {
-            UUID timeSeriesUuid = getTimeSeriesResult(resultUuid); // get timeseries uuid
-            if (timeSeriesUuid != null) {
-                // get timeseries metadata
-                TimeSeriesGroupRest timeSeriesGroupMetadata = timeSeriesClient.getTimeSeriesGroupMetadata(timeSeriesUuid);
-
-                if (timeSeriesGroupMetadata != null &&
-                        !CollectionUtils.isEmpty(timeSeriesGroupMetadata.getMetadatas())) {
-                    metadataList = timeSeriesGroupMetadata
-                            .getMetadatas()
-                            .stream()
-                            .map(TimeSeriesMetadataInfos::fromRest)
-                            .toList();
-                }
-            }
-        }
-
-        return metadataList;
     }
 
     /**
@@ -426,16 +402,32 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
         return getRestTemplate().getForObject(uriComponents.toUriString(), Integer.class);
     }
 
-    public void assertDynamicSimulationNotRunning(UUID resultUuid) {
-        DynamicSimulationStatus status = getStatus(resultUuid);
-        if (DynamicSimulationStatus.RUNNING == status) {
-            throw new StudyException(COMPUTATION_RUNNING);
-        }
-    }
+    /**
+     * Get list of time-series metadata
+     * @param resultUuid a given result UUID
+     * @return a list of time-series metadata
+     */
+    public List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID resultUuid) {
+        List<TimeSeriesMetadataInfos> metadataList = new ArrayList<>();
 
-    public String getProviders() {
-        String url = buildEndPointUrl(getBaseUri(), DYNAMIC_SIMULATION_API_VERSION, "providers");
-        return getRestTemplate().getForObject(url, String.class);
+        if (resultUuid != null) {
+            UUID timeSeriesUuid = getTimeSeriesResult(resultUuid); // get timeseries uuid
+            if (timeSeriesUuid != null) {
+                // get timeseries metadata
+                TimeSeriesGroupRest timeSeriesGroupMetadata = timeSeriesClient.getTimeSeriesGroupMetadata(timeSeriesUuid);
+
+                if (timeSeriesGroupMetadata != null &&
+                        !CollectionUtils.isEmpty(timeSeriesGroupMetadata.getMetadatas())) {
+                    metadataList = timeSeriesGroupMetadata
+                            .getMetadatas()
+                            .stream()
+                            .map(TimeSeriesMetadataInfos::fromRest)
+                            .toList();
+                }
+            }
+        }
+
+        return metadataList;
     }
 
     public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
