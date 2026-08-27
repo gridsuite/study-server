@@ -195,11 +195,4 @@ public class SupervisionController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.getLoadedStudyUuids(studyUuids));
     }
 
-    @GetMapping(value = "/studies/unloaded")
-    @Operation(summary = "Get the study uuids whose network is currently fully unloaded")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of the study uuids whose network is currently fully unloaded (all root networks unloaded)")})
-    public ResponseEntity<List<UUID>> getUnloadedStudies(@Parameter(description = "Study uuids to filter") @RequestParam("ids") List<UUID> studyUuids) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.getUnloadedStudyUuids(studyUuids));
-    }
-
 }

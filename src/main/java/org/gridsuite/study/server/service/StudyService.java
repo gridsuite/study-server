@@ -400,7 +400,7 @@ public class StudyService {
 
     @Transactional
     public void modifyRootNetwork(UUID studyUuid, RootNetworkInfos rootNetworkInfos, String userId) {
-        invalidateStudyRootNetwork(studyUuid, rootNetworkInfos.getId(), userId, true, false);
+        invalidateStudyRootNetwork(studyUuid, rootNetworkInfos.getId(), userId, true);
         updateRootNetworkBasicInfos(studyUuid, rootNetworkInfos, true);
     }
 
@@ -1333,11 +1333,10 @@ public class StudyService {
 
     @Transactional
     public void unbuildNodeTree(@NonNull UUID studyUuid, UUID rootNodeUuid, @NonNull String userId) {
-        doUnbuildNodeTree(studyUuid, rootNodeUuid, false, userId, false);
+        doUnbuildNodeTree(studyUuid, rootNodeUuid, false, userId);
     }
 
-    private void doUnbuildNodeTree(UUID studyUuid, UUID rootNodeUuid, boolean skipDeleteVariants, @NonNull String userId,
-                                   boolean skipElementUpdatedNotification) {
+    private void doUnbuildNodeTree(UUID studyUuid, UUID rootNodeUuid, boolean skipDeleteVariants, @NonNull String userId) {
         InvalidateNodeTreeParameters invalidateNodeTreeParameters = InvalidateNodeTreeParameters.ALL;
         List<UUID> rootNetworkIds = rootNetworkService.getStudyRootNetworkIds(studyUuid);
         List<CompletableFuture<Void>> futures = rootNetworkIds.stream()
@@ -1345,7 +1344,9 @@ public class StudyService {
                     networkModificationTreeService.invalidateNodeTree(studyUuid, rootNodeUuid, rnId, invalidateNodeTreeParameters, skipDeleteVariants)))
                 .toList();
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
-        if (!skipElementUpdatedNotification) {
+        boolean allRootNetworksNotUnloading = rootNetworkService.getStudyRootNetworks(studyUuid).stream()
+                .noneMatch(rootNetwork -> rootNetwork.getNetworkLoadStatus() == NetworkLoadStatus.UNLOADING);
+        if (allRootNetworksNotUnloading) {
             notificationService.emitElementUpdated(studyUuid, userId);
         }
     }
@@ -2791,23 +2792,15 @@ public class StudyService {
         return allComputationStatus;
     }
 
-    public void invalidateStudyRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId, boolean updateCase, boolean skipElementUpdatedNotification) {
+    public void invalidateStudyRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId, boolean updateCase) {
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
-        boolean unloaded = true;
-        try {
-            var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-            // First we unbuild all nodes
-            doUnbuildNodeTree(studyUuid, rootNodeUuid, true, userId, skipElementUpdatedNotification);
-            // Then we erase data linked to root node on all root networks
-            rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetworkService.getRootNetworkInfos(rootNetworkUuid)), true, false);
-            if (!updateCase) {
-                rootNetworkService.updateRootNetworkIndexationStatus(studyUuid, rootNetworkUuid, RootNetworkIndexationStatus.NOT_INDEXED);
-            }
-            unloaded = false;
-        } finally {
-            if (skipElementUpdatedNotification) {
-                rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, unloaded ? NetworkLoadStatus.LOADED : NetworkLoadStatus.UNLOADED);
-            }
+        var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+        // First we unbuild all nodes
+        doUnbuildNodeTree(studyUuid, rootNodeUuid, true, userId);
+        // Then we erase data linked to root node on all root networks
+        rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetworkService.getRootNetworkInfos(rootNetworkUuid)), true, false);
+        if (!updateCase) {
+            rootNetworkService.updateRootNetworkIndexationStatus(studyUuid, rootNetworkUuid, RootNetworkIndexationStatus.NOT_INDEXED);
         }
         notificationService.emitRootNetworksUpdated(studyUuid);
     }

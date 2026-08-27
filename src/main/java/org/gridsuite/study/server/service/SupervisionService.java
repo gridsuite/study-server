@@ -407,9 +407,15 @@ public class SupervisionService {
     public void invalidateStudy(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
-        rootNetworkService.getStudyRootNetworkIds(studyUuid).forEach(rnId ->
-                studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER, false, true)
-        );
+        rootNetworkService.getStudyRootNetworkIds(studyUuid).forEach(rnId -> {
+            try {
+                rootNetworkService.updateNetworkLoadStatus(rnId, NetworkLoadStatus.UNLOADING);
+                studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER, false);
+            } catch (Exception e) {
+                rootNetworkService.updateNetworkLoadStatus(rnId, NetworkLoadStatus.LOADING);
+                LOGGER.error("Error while invalidating study root network", e);
+            }
+        });
         notificationService.emitElementUpdated(studyUuid, SUPERVISION_USER);
         LOGGER.trace("Study {} nodes builds deleted and root node invalidated in : {} milliseconds", studyUuid, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime.get()));
     }
@@ -417,11 +423,6 @@ public class SupervisionService {
     @Transactional(readOnly = true)
     public List<UUID> getLoadedStudyUuids(List<UUID> studyUuids) {
         return rootNetworkService.getLoadedStudyIds(studyUuids);
-    }
-
-    @Transactional(readOnly = true)
-    public List<UUID> getUnloadedStudyUuids(List<UUID> studyUuids) {
-        return rootNetworkService.getUnloadedStudyIds(studyUuids);
     }
 
     @Transactional
