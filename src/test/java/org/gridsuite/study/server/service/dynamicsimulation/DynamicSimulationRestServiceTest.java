@@ -58,13 +58,6 @@ class DynamicSimulationRestServiceTest extends AbstractWireMockRestClientTest {
     private static final UUID RESULT_UUID = UUID.randomUUID();
     private static final UUID RESULT_NOT_FOUND_UUID = UUID.randomUUID();
 
-    // running node
-
-    private static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
-    private static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
-    private static final String TIMELINE_NAME = "Timeline";
-
-
     private DynamicSimulationRestService dynamicSimulationRestService;
 
     @Autowired

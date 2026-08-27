@@ -200,6 +200,9 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
     }
 
     public DynamicSecurityAnalysisStatus getStatus(UUID resultUuid) {
+        if (resultUuid == null) {
+            return null;
+        }
         Objects.requireNonNull(resultUuid);
 
         String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RESULT);

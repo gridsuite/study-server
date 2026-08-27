@@ -9,7 +9,6 @@ package org.gridsuite.study.server.service.dynamicsecurityanalysis;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
-import com.powsybl.network.store.model.Resource;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
 import org.gridsuite.study.server.service.StudyService;
@@ -18,13 +17,11 @@ import org.gridsuite.study.server.utils.assertions.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.UUID;
@@ -32,14 +29,13 @@ import java.util.UUID;
 import static com.github.tomakehurst.wiremock.client.WireMock.absent;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyControllerDynamicSecurityAnalysisTest.PARAMETERS_JSON;
+import static org.gridsuite.study.server.StudyConstants.DYNAWO_PROVIDER;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
 import static org.gridsuite.study.server.service.client.RestClient.DELIMITER;
+import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
+import static org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService.*;
 import static org.gridsuite.study.server.utils.assertions.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.gridsuite.study.server.StudyConstants.DYNAWO_PROVIDER;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.*;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -48,16 +44,18 @@ class DynamicSecurityAnalysisRestServiceTest extends AbstractWireMockRestClientT
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final UUID REPORT_UUID = UUID.randomUUID();
     private static final UUID NODE_UUID = UUID.randomUUID();
-    private static final UUID ROOT_NETWORK_UUID = UUID.randomUUID();
     private static final UUID DYNAMIC_SIMULATION_RESULT_UUID = UUID.randomUUID();
     private static final UUID PARAMETERS_UUID = UUID.randomUUID();
     private static final UUID RESULT_UUID = UUID.randomUUID();
+    private static final UUID ROOT_NETWORK_UUID = UUID.randomUUID();
 
-    // running node
-
-    @MockitoBean
-    DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
-
+    private static final String PARAMETERS_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
+    private static final String RUN_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN);
+    private static final String RESULT_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RESULT);
+    private static final String PARAMETERS_JSON = "parametersJson";
+    private DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
+    @Autowired
+    private RestTemplate restTemplate;
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired
@@ -360,6 +358,11 @@ class DynamicSecurityAnalysisRestServiceTest extends AbstractWireMockRestClientT
     }
 
     @Test
+    void testGetStatusWithoutResultUuid() {
+        assertThat(dynamicSecurityAnalysisRestService.getStatus(null)).isNull();
+    }
+
+    @Test
     void testInvalidateStatus() {
         String url = RESULT_BASE_URL + "/invalidate-status";
 
@@ -414,36 +417,40 @@ class DynamicSecurityAnalysisRestServiceTest extends AbstractWireMockRestClientT
     }
 
     @Test
-    void testResultCount() {
-        given(dynamicSecurityAnalysisRestService.getResultsCount()).willReturn(10);
-
-        Integer resultsCount = dynamicSecurityAnalysisRestService.getResultsCount();
-
-        assertThat(resultsCount).isEqualTo(10);
-    }
-
-    @Test
-    void testGetProvider() {
-        given(dynamicSecurityAnalysisRestService.getProvider(PARAMETERS_UUID)).willReturn(DYNAWO_PROVIDER);
-
-        String provider = dynamicSecurityAnalysisRestService.getProvider(PARAMETERS_UUID);
-
-        assertThat(provider).isEqualTo(DYNAWO_PROVIDER);
+    void testResultsCount() throws Exception {
+        Integer expectedResultCount = 10;
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(RESULT_BASE_URL))
+                .willReturn(WireMock.ok()
+                        .withBody(objectMapper.writeValueAsString(expectedResultCount))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                ));
+        // call service to test
+        Integer resultCount = dynamicSecurityAnalysisRestService.getResultsCount();
+        assertThat(resultCount).isEqualTo(expectedResultCount);
     }
 
     @Test
     void testGetProviders() {
+        String url = buildEndPointUrl("", DYNAMIC_SECURITY_ANALYSIS_API_VERSION, "providers");
         String providers = "[\"Dynawo\"]";
-        given(dynamicSecurityAnalysisRestService.getProviders()).willReturn(providers);
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.ok().withBody(providers).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
 
         assertThat(dynamicSecurityAnalysisRestService.getProviders()).isEqualTo(providers);
+        wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlEqualTo(url)));
     }
 
     @Test
-    void testDownloadDebugFile() {
-        ResponseEntity<Resource> response = ResponseEntity.ok(new ByteArrayResource(PARAMETERS_JSON.getBytes()));
-        given(dynamicSecurityAnalysisRestService.downloadDebugFile(RESULT_UUID)).willReturn(response);
+    void testDownloadDebugFile() throws Exception {
+        String body = "{\"debug\":true}";
+        String url = RESULT_BASE_URL + DELIMITER + RESULT_UUID + DELIMITER + "download-debug-file";
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url)).willReturn(WireMock.ok().withBody(body)));
 
-        assertThat(dynamicSecurityAnalysisRestService.downloadDebugFile(RESULT_UUID)).isEqualTo(response);
+        var response = dynamicSecurityAnalysisRestService.downloadDebugFile(RESULT_UUID);
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(new String(response.getBody().getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)).isEqualTo(body);
+        wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlEqualTo(url)));
     }
+
 }

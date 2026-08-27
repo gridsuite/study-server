@@ -357,6 +357,11 @@ class DynamicMarginCalculationRestServiceTest extends AbstractWireMockRestClient
     }
 
     @Test
+    void testGetStatusWithoutResultUuid() {
+        assertThat(dynamicMarginCalculationRestService.getStatus(null)).isNull();
+    }
+
+    @Test
     void testInvalidateStatus() {
         String url = RESULT_BASE_URL + "/invalidate-status";
 
