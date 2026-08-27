@@ -378,7 +378,7 @@ public class StudyService {
         rootNetworkService.assertCanModifyRootNetwork(studyUuid, rootNetworkInfos.getId(), rootNetworkInfos.getName(), rootNetworkInfos.getTag());
         StudyEntity studyEntity = getStudy(studyUuid);
 
-        if (rootNetworkInfos.getCaseInfos() != null && rootNetworkInfos.getCaseInfos().getOriginalCaseUuid() != null) {
+        if (rootNetworkInfos.hasCaseToImport()) {
             RootNetworkRequestEntity requestEntity = rootNetworkService.insertModificationRequest(studyEntity.getId(), rootNetworkInfos, userId);
             updateRootNetworkCaseInfos(studyEntity.getId(), rootNetworkInfos, userId, requestEntity);
         } else {
