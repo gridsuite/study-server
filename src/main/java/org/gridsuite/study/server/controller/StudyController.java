@@ -198,10 +198,15 @@ public class StudyController {
                                                   @RequestBody RootNetworkInfos rootNetworkInfos,
                                                   @RequestHeader(HEADER_USER_ID) String userId) {
         caseService.assertCaseExists(rootNetworkInfos.getCaseInfos() != null ? rootNetworkInfos.getCaseInfos().getOriginalCaseUuid() : null);
-        // the reimport unbuilds the whole tree of this root network, so it is held on the root node
-        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-        nodeActivityRunnerService.runWith(REIMPORT_CASE, studyUuid, rootNetworkUuid, List.of(rootNodeUuid),
-            () -> studyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, userId));
+        if (rootNetworkInfos.hasCaseToImport()) {
+            // the reimport unbuilds the whole tree of this root network, so it is held on the root node
+            UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+            nodeActivityRunnerService.runWith(REIMPORT_CASE, studyUuid, rootNetworkUuid, List.of(rootNodeUuid),
+                () -> studyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, userId));
+        } else {
+            // only the basic infos (name, tag) are updated, the tree is left untouched
+            studyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, userId);
+        }
         return ResponseEntity.ok().build();
     }
 
