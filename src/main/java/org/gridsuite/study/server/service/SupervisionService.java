@@ -411,12 +411,12 @@ public class SupervisionService {
             try {
                 rootNetworkService.updateNetworkLoadStatus(rnId, NetworkLoadStatus.UNLOADING);
                 studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER, false);
+                rootNetworkService.updateNetworkLoadStatus(rnId, NetworkLoadStatus.UNLOADED);
             } catch (Exception e) {
-                rootNetworkService.updateNetworkLoadStatus(rnId, NetworkLoadStatus.LOADING);
+                rootNetworkService.updateNetworkLoadStatus(rnId, NetworkLoadStatus.LOADED);
                 LOGGER.error("Error while invalidating study root network", e);
             }
         });
-        notificationService.emitElementUpdated(studyUuid, SUPERVISION_USER);
         LOGGER.trace("Study {} nodes builds deleted and root node invalidated in : {} milliseconds", studyUuid, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime.get()));
     }
 

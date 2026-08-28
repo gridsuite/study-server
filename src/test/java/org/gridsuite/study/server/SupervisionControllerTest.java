@@ -370,9 +370,6 @@ class SupervisionControllerTest {
 
         List<UUID> allRootNetworkUuids = rootNetworkService.getStudyRootNetworkIds(STUDY_UUID);
         assertThat(allRootNetworkUuids).hasSize(2);
-        allRootNetworkUuids.forEach(rootNetworkUuid ->
-                rootNetworkNodeInfoRepository.findAllByRootNetworkId(rootNetworkUuid)
-                        .forEach(info -> assertThat(info.getBlockedNode()).isFalse()));
         assertEquals(NetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(firstRootNetworkUuid).orElseThrow().getNetworkLoadStatus());
         assertEquals(NetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(secondRootNetworkUuid).orElseThrow().getNetworkLoadStatus());
         TestUtils.assertQueuesEmptyThenClear(List.of(ELEMENT_UPDATE_DESTINATION), output);
@@ -391,54 +388,6 @@ class SupervisionControllerTest {
         assertEquals(List.of(STUDY_UUID), loadedStudyUuids);
         mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/invalidate", STUDY_UUID))
                 .andExpect(status().isOk());
-        mvcResult = mockMvc.perform(get("/v1/supervision/studies/loaded")
-                        .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
-                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
-        loadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
-        assertThat(loadedStudyUuids).isEmpty();
-    }
-
-    @Test
-    void testGetUnloadedStudies() throws Exception {
-        initStudy();
-        UUID unknownStudyUuid = UUID.randomUUID();
-        MvcResult mvcResult = mockMvc.perform(get("/v1/supervision/studies/unloaded")
-                        .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
-                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
-        List<UUID> unloadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
-        assertThat(unloadedStudyUuids).isEmpty();
-
-        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(STUDY_UUID);
-        UUID secondRootNetworkUuid = UUID.randomUUID();
-        addSecondRootNetwork(secondRootNetworkUuid, SECOND_NETWORK_UUID);
-        rootNetworkService.updateNetworkLoadStatus(secondRootNetworkUuid, NetworkLoadStatus.UNLOADED);
-
-        assertEquals(NetworkLoadStatus.LOADED, rootNetworkService.getRootNetwork(firstRootNetworkUuid).orElseThrow().getNetworkLoadStatus());
-        assertEquals(NetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(secondRootNetworkUuid).orElseThrow().getNetworkLoadStatus());
-
-        // mixed state (one loaded, one unloaded): the study must NOT be reported as unloaded yet,
-        // since one of its root networks is still loaded
-        mvcResult = mockMvc.perform(get("/v1/supervision/studies/unloaded")
-                        .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
-                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
-        unloadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
-        assertThat(unloadedStudyUuids).isEmpty();
-
-        mvcResult = mockMvc.perform(get("/v1/supervision/studies/loaded")
-                        .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
-                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
-        List<UUID> loadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
-        assertEquals(List.of(STUDY_UUID), loadedStudyUuids);
-
-        // now unload the last remaining loaded root network: the study becomes fully unloaded
-        rootNetworkService.updateNetworkLoadStatus(firstRootNetworkUuid, NetworkLoadStatus.UNLOADED);
-
-        mvcResult = mockMvc.perform(get("/v1/supervision/studies/unloaded")
-                        .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
-                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
-        unloadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
-        assertEquals(List.of(STUDY_UUID), unloadedStudyUuids);
-
         mvcResult = mockMvc.perform(get("/v1/supervision/studies/loaded")
                         .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();

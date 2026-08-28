@@ -1344,9 +1344,10 @@ public class StudyService {
                     networkModificationTreeService.invalidateNodeTree(studyUuid, rootNodeUuid, rnId, invalidateNodeTreeParameters, skipDeleteVariants)))
                 .toList();
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
-        boolean allRootNetworksNotUnloading = rootNetworkService.getStudyRootNetworks(studyUuid).stream()
-                .noneMatch(rootNetwork -> rootNetwork.getNetworkLoadStatus() == NetworkLoadStatus.UNLOADING);
-        if (allRootNetworksNotUnloading) {
+        boolean allRootNetworksUnloaded = rootNetworkIds.stream()
+                .map(rnId -> rootNetworkService.getRootNetwork(rnId).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")))
+                .allMatch(rootNetwork -> rootNetwork.getNetworkLoadStatus() == NetworkLoadStatus.UNLOADED);
+        if (!allRootNetworksUnloaded) {
             notificationService.emitElementUpdated(studyUuid, userId);
         }
     }
