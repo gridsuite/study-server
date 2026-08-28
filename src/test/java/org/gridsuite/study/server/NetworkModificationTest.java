@@ -237,10 +237,10 @@ class NetworkModificationTest {
     @Autowired
     private StudyRepository studyRepository;
 
-    @MockitoSpyBean
+    @Autowired
     private DynamicSimulationRestService dynamicSimulationRestService;
 
-    @MockitoSpyBean
+    @Autowired
     private DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
 
     @MockitoSpyBean
