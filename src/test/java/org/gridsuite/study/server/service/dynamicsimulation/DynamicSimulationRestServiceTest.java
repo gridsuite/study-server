@@ -46,7 +46,7 @@ class DynamicSimulationRestServiceTest extends AbstractWireMockRestClientTest {
     private static final UUID NODE_UUID = UUID.randomUUID();
     private static final UUID PARAMETERS_UUID = UUID.randomUUID();
 
-    private static final String DYNAMIC_SIMUALTION_RUN_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
+    private static final String DYNAMIC_SIMULATION_RUN_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
     private static final String DYNAMIC_SIMULATION_RESULT_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
     private static final String PARAMETERS_BASE_URL = buildEndPointUrl("", DYNAMIC_SIMULATION_API_VERSION, DYNAMIC_SIMULATION_END_POINT_PARAMETER);
     private static final String PARAMETERS_JSON = "parametersJson";
@@ -313,7 +313,7 @@ class DynamicSimulationRestServiceTest extends AbstractWireMockRestClientTest {
         List<EventInfos> events = ParameterTestUtils.getEventInfosList();
 
         // configure mock server response for test case run - networks/{networkUuid}/run?
-        String url = DYNAMIC_SIMUALTION_RUN_BASE_URL + DELIMITER + NETWORK_UUID + DELIMITER + "run";
+        String url = DYNAMIC_SIMULATION_RUN_BASE_URL + DELIMITER + NETWORK_UUID + DELIMITER + "run";
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(url))
                 .withQueryParam(QUERY_PARAM_VARIANT_ID, equalTo(VARIANT_ID))
                 .withQueryParam(QUERY_PARAM_REPORT_UUID, equalTo(REPORT_UUID.toString()))
