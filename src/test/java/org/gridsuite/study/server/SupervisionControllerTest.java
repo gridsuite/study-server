@@ -362,12 +362,7 @@ class SupervisionControllerTest {
         assertIndexationStatus(STUDY_UUID, RootNetworkIndexationStatus.NOT_INDEXED.name());
         assertIndexationCount(0, 0);
 
-        // Check that all nodes aren't blocked
-        Mockito.verify(studyService, Mockito.times(1)).unblockNodeTree(eq(STUDY_UUID), any());
         List<UUID> allRootNetworkUuids = rootNetworkService.getStudyRootNetworkIds(STUDY_UUID);
         assertThat(allRootNetworkUuids).hasSize(2);
-        allRootNetworkUuids.forEach(rootNetworkUuid ->
-                rootNetworkNodeInfoRepository.findAllByRootNetworkId(rootNetworkUuid)
-                        .forEach(info -> assertThat(info.getBlockedNode()).isFalse()));
     }
 }

@@ -105,6 +105,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "pccMinParametersUuid")
     private UUID pccMinParametersUuid;
 
+    @Column(name = "asymmetricalLoadParametersUuid")
+    private UUID asymmetricalLoadParametersUuid;
+
     @Column(name = "networkVisualizationParametersUuid")
     private UUID networkVisualizationParametersUuid;
 

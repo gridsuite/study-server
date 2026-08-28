@@ -18,10 +18,12 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
+import org.gridsuite.study.server.service.asymmetricalload.AsymmetricalLoadRestService;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
@@ -61,6 +63,8 @@ public class SupervisionService {
 
     private final ReportService reportService;
 
+    private final LoadFlowService loadFlowService;
+
     private final LoadFlowRestService loadFlowRestService;
 
     private final DynamicSimulationRestService dynamicSimulationRestService;
@@ -85,6 +89,8 @@ public class SupervisionService {
 
     private final PccMinRestService pccMinService;
 
+    private final AsymmetricalLoadRestService asymmetricalLoadRestService;
+
     private final ElasticsearchOperations elasticsearchOperations;
 
     private final StudyInfosService studyInfosService;
@@ -96,7 +102,7 @@ public class SupervisionService {
     private static final String SUPERVISION_USER = "Supervision";
 
     public SupervisionService(StudyService studyService,
-                              NetworkModificationTreeService networkModificationTreeService,
+                              NetworkModificationTreeService networkModificationTreeService, LoadFlowService loadFlowService,
                               RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                               ReportService reportService,
                               LoadFlowRestService loadFlowRestService,
@@ -108,6 +114,7 @@ public class SupervisionService {
                               ShortCircuitRestService shortCircuitService,
                               VoltageInitRestService voltageInitService,
                               EquipmentInfosService equipmentInfosService,
+                              AsymmetricalLoadRestService asymmetricalLoadRestService,
                               StateEstimationRestService stateEstimationService,
                               PccMinRestService pccMinService,
                               ElasticsearchOperations elasticsearchOperations,
@@ -117,6 +124,7 @@ public class SupervisionService {
                               NotificationService notificationService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
+        this.loadFlowService = loadFlowService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.reportService = reportService;
         this.loadFlowRestService = loadFlowRestService;
@@ -130,6 +138,7 @@ public class SupervisionService {
         this.equipmentInfosService = equipmentInfosService;
         this.stateEstimationService = stateEstimationService;
         this.pccMinService = pccMinService;
+        this.asymmetricalLoadRestService = asymmetricalLoadRestService;
         this.elasticsearchOperations = elasticsearchOperations;
         this.studyInfosService = studyInfosService;
         this.rootNetworkService = rootNetworkService;
@@ -159,6 +168,8 @@ public class SupervisionService {
                 dryRun ? stateEstimationService.getStateEstimationResultsCount() : deleteStateEstimationResults();
             case PCC_MIN ->
                 dryRun ? pccMinService.getPccMinResultsCount() : deletePccMinResults();
+            case ASYMMETRICAL_LOAD ->
+                dryRun ? asymmetricalLoadRestService.getAsymmetricalLoadResultsCount() : deleteAsymmetricalLoadResults();
         };
     }
 
@@ -213,7 +224,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
         List<UUID> studyUuids = rootNetworkNodeInfoEntities.stream().map(rnnie -> rnnie.getRootNetwork().getStudy().getId()).distinct().toList();
-        studyUuids.forEach(studyService::invalidateAllStudyLoadFlowStatus);
+        studyUuids.forEach(loadFlowService::invalidateAllStudyLoadFlowStatus);
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.LOAD_FLOW, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
@@ -367,11 +378,27 @@ public class SupervisionService {
         return rootNetworkNodeInfoEntities.size();
     }
 
+    private Integer deleteAsymmetricalLoadResults() {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        startTime.set(System.nanoTime());
+        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByAsymmetricalLoadResultUuidNotNull();
+        List<UUID> reportsToDelete = new ArrayList<>();
+        rootNetworkNodeInfoEntities.forEach(rootNetworkNodeInfo -> {
+            rootNetworkNodeInfo.setAsymmetricalLoadResultUuid(null);
+            reportsToDelete.add(rootNetworkNodeInfo.getComputationReports().get(ComputationType.ASYMMETRICAL_LOAD.name()));
+            rootNetworkNodeInfo.getComputationReports().remove(ComputationType.ASYMMETRICAL_LOAD.name());
+        });
+        reportService.deleteReports(reportsToDelete);
+        asymmetricalLoadRestService.deleteAllAsymmetricalLoadResults();
+        LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.ASYMMETRICAL_LOAD, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        return rootNetworkNodeInfoEntities.size();
+    }
+
     @Transactional
     public void unbuildAllNodes(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
-        studyService.unbuildNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false, SUPERVISION_USER);
+        studyService.unbuildNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), SUPERVISION_USER);
 
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
@@ -379,14 +406,9 @@ public class SupervisionService {
     public void invalidateStudy(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
-        try {
-            rootNetworkService.getStudyRootNetworkIds(studyUuid).forEach(rnId ->
-                    studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER)
-            );
-        } finally {
-            var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-            studyService.unblockNodeTree(studyUuid, rootNodeUuid);
-        }
+        rootNetworkService.getStudyRootNetworkIds(studyUuid).forEach(rnId ->
+                studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER, false)
+        );
         notificationService.emitElementUpdated(studyUuid, SUPERVISION_USER);
         LOGGER.trace("Study {} nodes builds deleted and root node invalidated in : {} milliseconds", studyUuid, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime.get()));
     }

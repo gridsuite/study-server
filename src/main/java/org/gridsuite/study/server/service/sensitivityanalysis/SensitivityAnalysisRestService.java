@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -19,10 +18,7 @@ import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
@@ -39,7 +35,6 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
 /**
@@ -128,8 +123,9 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
         return restTemplate.getForObject(uri, String.class);
     }
 
-    public byte[] exportSensitivityResultsAsCsv(UUID resultUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos, UUID networkUuid, String variantId, String selector, String filters,
-            String globalFilters) {
+    public ResponseEntity<byte[]> exportSensitivityResultsAsCsv(UUID resultUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos,
+                                                                UUID networkUuid, String variantId, String selector, String filters,
+                                                                String globalFilters) {
         if (resultUuid == null) {
             throw new StudyException(NOT_FOUND, "Result of sensitivity analysis was not found");
         }
@@ -153,7 +149,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<SensitivityAnalysisCsvFileInfos> httpEntity = new HttpEntity<>(sensitivityAnalysisCsvFileInfos, headers);
-        return restTemplate.exchange(uri, HttpMethod.POST, httpEntity, byte[].class).getBody();
+        return restTemplate.exchange(uri, HttpMethod.POST, httpEntity, byte[].class);
     }
 
     public String getSensitivityResultsFilterOptions(UUID resultUuid, String selector) {
@@ -228,13 +224,6 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/supervision/results-count").toUriString();
         return restTemplate.getForObject(baseUri + path, Integer.class);
-    }
-
-    public void assertSensitivityAnalysisNotRunning(UUID resultUuid) {
-        String sas = getSensitivityAnalysisStatus(resultUuid);
-        if (SensitivityAnalysisStatus.RUNNING.name().equals(sas)) {
-            throw new StudyException(COMPUTATION_RUNNING);
-        }
     }
 
     public UUID getSensitivityAnalysisParametersUuidOrElseCreateDefault(StudyEntity studyEntity) {

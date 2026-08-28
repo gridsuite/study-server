@@ -44,6 +44,8 @@ public interface RootNetworkNodeInfoRepository extends JpaRepository<RootNetwork
 
     List<RootNetworkNodeInfoEntity> findAllByPccMinResultUuidNotNull();
 
+    List<RootNetworkNodeInfoEntity> findAllByAsymmetricalLoadResultUuidNotNull();
+
     List<RootNetworkNodeInfoEntity> findAllByNodeInfoId(UUID nodeInfoId);
 
     List<RootNetworkNodeInfoEntity> findAllByRootNetworkId(UUID rootNetworkUuid);
@@ -63,9 +65,6 @@ public interface RootNetworkNodeInfoRepository extends JpaRepository<RootNetwork
     List<RootNetworkNodeInfoEntity> findAllByRootNetworkStudyIdAndNodeInfoNodeTypeAndLoadFlowResultUuidNotNull(UUID studyUuid, NetworkModificationNodeType nodeType);
 
     List<RootNetworkNodeInfoEntity> getAllByRootNetworkIdAndNodeInfoIdIn(UUID rootNetworkUuid, List<UUID> nodesUuids);
-
-    @Query(value = "SELECT count(rnni) > 0 FROM RootNetworkNodeInfoEntity rnni WHERE rnni.rootNetwork.id = :rootNetworkUuid AND rnni.nodeInfo.idNode IN :nodesUuids AND rnni.blockedNode = true ")
-    boolean existsByNodeUuidsAndBlockedNode(UUID rootNetworkUuid, List<UUID> nodesUuids);
 
     @Query(value = "SELECT count(rnni) > 0 FROM RootNetworkNodeInfoEntity rnni WHERE rnni.rootNetwork.id = :rootNetworkUuid AND rnni.nodeInfo.idNode IN :nodesUuids AND" +
         " (rnni.nodeBuildStatus.globalBuildStatus = :buildStatus or rnni.nodeBuildStatus.localBuildStatus = :buildStatus) ")
