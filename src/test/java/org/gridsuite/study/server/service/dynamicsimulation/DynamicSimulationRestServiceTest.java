@@ -381,6 +381,31 @@ class DynamicSimulationRestServiceTest extends AbstractWireMockRestClientTest {
     }
 
     @Test
+    void testGetTimelineResult() throws Exception {
+        // configure mock server response for test get timeline result - uuid results/{resultUuid}/timeline
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + RESULT_UUID + DELIMITER + "timeline"))
+                .willReturn(WireMock.ok()
+                        .withBody(objectMapper.writeValueAsString(TIMELINE_UUID))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                ));
+        UUID timelineUuid = dynamicSimulationRestService.getTimelineRestResult(RESULT_UUID);
+        // check result
+        assertThat(timelineUuid).isEqualTo(TIMELINE_UUID);
+    }
+
+    @Test
+    void testGetTimelineResultGivenBadUuid() {
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + RESULT_NOT_FOUND_UUID + DELIMITER + "timeline"))
+                .willReturn(WireMock.notFound()
+                ));
+        assertThrows(
+                HttpClientErrorException.NotFound.class,
+                () -> dynamicSimulationRestService.getTimelineResult(RESULT_NOT_FOUND_UUID)
+        );
+    }
+
+    @Test
     void testGetStatus() throws Exception {
 
         // configure mock server response for test get status result - results/{resultUuid}/status
