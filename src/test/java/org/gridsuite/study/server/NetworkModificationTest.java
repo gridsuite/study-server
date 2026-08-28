@@ -312,8 +312,8 @@ class NetworkModificationTest {
         pccMinService.setBaseUri(baseUrl);
         dynamicMarginCalculationRestService.setBaseUri(baseUrl);
 
-        doReturn(baseUrl).when(dynamicSimulationRestService).getBaseUri();
-        doReturn(baseUrl).when(dynamicSecurityAnalysisRestService).getBaseUri();
+        dynamicSimulationRestService.setBaseUri(baseUrl);
+        dynamicSecurityAnalysisRestService.setBaseUri(baseUrl);
 
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
         directoryService.setDirectoryServerServerBaseUri(baseUrl);
