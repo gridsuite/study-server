@@ -183,10 +183,10 @@ class NetworkModificationTreeTest {
     @Autowired
     private ActionsService actionsService;
 
-    @MockitoSpyBean
+    @Autowired
     private DynamicSimulationRestService dynamicSimulationRestService;
 
-    @MockitoSpyBean
+    @Autowired
     private DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
 
     @MockitoBean
