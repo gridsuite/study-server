@@ -24,6 +24,7 @@ import com.powsybl.iidm.serde.XMLImporter;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
+import org.awaitility.Awaitility;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
@@ -82,6 +83,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -614,6 +617,8 @@ class NetworkModificationTest {
 
         // Mark the node 1 status as building
         clearNodeActivities();
+        Instant timestamp = Instant.now();
+        Awaitility.await().atLeast(Duration.ofMillis(1)).until(() -> Instant.now().isAfter(timestamp));
         markNodeBuilding(studyNameUserIdUuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid), modificationNode1.getId());
 
         // a build reaches no other node, so only node 1 itself is refused
@@ -624,6 +629,8 @@ class NetworkModificationTest {
 
         // Mark the node 2 status as building
         clearNodeActivities();
+        Instant timestamp2 = Instant.now();
+        Awaitility.await().atLeast(Duration.ofMillis(1)).until(() -> Instant.now().isAfter(timestamp2));
         markNodeBuilding(studyNameUserIdUuid, rootNetworkUuid, modificationNode2.getId());
 
         testBuildAsserts(studyNameUserIdUuid, rootNetworkUuid,
