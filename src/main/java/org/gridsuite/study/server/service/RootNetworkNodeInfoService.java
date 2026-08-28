@@ -169,10 +169,6 @@ public class RootNetworkNodeInfoService {
         }
     }
 
-    public List<RootNetworkNodeInfoEntity> getAllWithRootNetworkByNodeInfoId(UUID nodeUuid) {
-        return rootNetworkNodeInfoRepository.findAllWithRootNetworkByNodeInfoId(nodeUuid);
-    }
-
     @SuppressWarnings("checkstyle:LambdaBodyLength")
     public void fillDeleteNodeInfo(UUID nodeUuid, DeleteNodeInfos deleteNodeInfos) {
         //get all rootNetworkNodeInfo info linked to node
