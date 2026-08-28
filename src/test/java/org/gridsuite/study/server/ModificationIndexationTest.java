@@ -36,8 +36,7 @@ import java.util.stream.Collectors;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.timeout;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -109,7 +108,7 @@ class ModificationIndexationTest {
 
     private void verifyInvalidateResults(List<UUID> getModificationGroupUuids, int expectedSelectCount) {
         ArgumentCaptor<List<UUID>> uuidsCaptor = ArgumentCaptor.forClass(List.class);
-        verify(networkModificationService, timeout(5000).times(1))
+        verify(networkModificationService, times(1))
             .deleteIndexedModifications(uuidsCaptor.capture(), any(UUID.class));
 
         assertEquals(getModificationGroupUuids.stream().collect(Collectors.toSet()), uuidsCaptor.getValue().stream().collect(Collectors.toSet()));

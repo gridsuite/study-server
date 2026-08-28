@@ -46,7 +46,6 @@
         <java.version>25</java.version>
         <maven.jacoco.version>0.8.15</maven.jacoco.version>
         <checkstyle.version>13.8.0</checkstyle.version>
-        <awaitility.version>4.3.0</awaitility.version>
         <maven.jib.version>3.5.1</maven.jib.version>
         <jib.from.image>powsybl/java:4.0.0</jib.from.image>
         <gridsuite-dependencies.version>51.1.0</gridsuite-dependencies.version>
@@ -237,12 +236,6 @@
         </dependency>
 
         <!-- Test dependencies -->
-        <dependency>
-            <groupId>org.awaitility</groupId>
-            <artifactId>awaitility</artifactId>
-            <version>${awaitility.version}</version>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-config-test</artifactId>
