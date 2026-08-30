@@ -378,7 +378,7 @@ public class StudyService {
         rootNetworkService.assertCanModifyRootNetwork(studyUuid, rootNetworkInfos.getId(), rootNetworkInfos.getName(), rootNetworkInfos.getTag());
         StudyEntity studyEntity = getStudy(studyUuid);
 
-        if (rootNetworkInfos.getCaseInfos() != null && rootNetworkInfos.getCaseInfos().getOriginalCaseUuid() != null) {
+        if (rootNetworkInfos.hasCaseToImport()) {
             RootNetworkRequestEntity requestEntity = rootNetworkService.insertModificationRequest(studyEntity.getId(), rootNetworkInfos, userId);
             updateRootNetworkCaseInfos(studyEntity.getId(), rootNetworkInfos, userId, requestEntity);
         } else {
@@ -1976,7 +1976,7 @@ public class StudyService {
      * one new reference is created per pasted modification-reference occurrence: even if several of them target the
      * same shared composite, each occurrence must get its own reference row in directory-server (symmetric with
      * {@link #removeReferences}, which likewise issues one removal per occurrence on delete) - so this must NOT be
-     * deduplicated by sharedCompositeId.
+     * deduplicated by referenceId.
      */
     private void createReferencesToSharedComposites(List<ReferenceData> references, List<UUID> modificationsUuids,
                                                     Map<UUID, UUID> mappingModificationsUuids, String userId, UUID targetNodeUuid) {
