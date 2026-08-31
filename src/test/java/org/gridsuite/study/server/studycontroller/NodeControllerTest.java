@@ -20,6 +20,7 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.utils.MatcherReportLog;
 import org.gridsuite.study.server.utils.TestUtils;
+import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.util.Pair;
 import org.springframework.http.HttpHeaders;
@@ -1101,5 +1102,34 @@ class NodeControllerTest extends StudyTestBase {
         Map<UUID, NodeInfos> infosByNodeUuid = nodesInfos.stream().collect(Collectors.toMap(NodeInfos::nodeUuid, Function.identity()));
         assertEquals(new NodeInfos(node1.getId(), "node1", study1Uuid), infosByNodeUuid.get(node1.getId()));
         assertEquals(new NodeInfos(node2.getId(), "node2", study2Uuid), infosByNodeUuid.get(node2.getId()));
+    }
+
+    @Test
+    void testGetNodeUuidsByNetworkModification() throws Exception {
+        String userId = "userId";
+        UUID studyUuid = createStudyWithStubs(userId, CASE_UUID);
+        UUID rootUuid = networkModificationTreeService.getStudyTree(studyUuid, null).getId();
+        UUID modificationGroupUuid = UUID.randomUUID();
+        NetworkModificationNode node = createNetworkModificationNode(studyUuid, rootUuid, modificationGroupUuid, VARIANT_ID, "node", userId);
+
+        UUID modificationInNodeUuid = UUID.randomUUID();
+        UUID unresolvedModificationUuid = UUID.randomUUID();
+
+        // the network-modification-server walks a modification up to its top-level group
+        UUID rootGroupsStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/network-composite-modifications/root-groups"))
+                .willReturn(WireMock.ok(mapper.writeValueAsString(Map.of(modificationInNodeUuid, modificationGroupUuid)))
+                        .withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE))).getId();
+
+        MvcResult result = mockMvc.perform(get("/v1/nodes/uuids-by-network-modification")
+                        .param("uuids", modificationInNodeUuid.toString(), unresolvedModificationUuid.toString()))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Map<UUID, UUID> nodeUuidByModification = mapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() { });
+
+        // the modification sitting in the node's modification group resolves to that node; the other is omitted
+        assertEquals(Map.of(modificationInNodeUuid, node.getId()), nodeUuidByModification);
+
+        WireMockUtils.verifyGetRequest(wireMockServer, rootGroupsStubId, "/v1/network-composite-modifications/root-groups", Map.of());
     }
 }
