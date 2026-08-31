@@ -35,6 +35,11 @@ public class RootNetworkInfos {
 
     private String tag;
 
+    // a case is provided for import
+    public boolean hasCaseToImport() {
+        return caseInfos != null && caseInfos.getOriginalCaseUuid() != null;
+    }
+
     public RootNetworkEntity toEntity(ObjectMapper objectMapper) {
         RootNetworkEntity.RootNetworkEntityBuilder rootNetworkEntityBuilder = RootNetworkEntity.builder()
                 .id(id)

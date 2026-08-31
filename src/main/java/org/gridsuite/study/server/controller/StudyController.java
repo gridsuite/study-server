@@ -198,10 +198,15 @@ public class StudyController {
                                                   @RequestBody RootNetworkInfos rootNetworkInfos,
                                                   @RequestHeader(HEADER_USER_ID) String userId) {
         caseService.assertCaseExists(rootNetworkInfos.getCaseInfos() != null ? rootNetworkInfos.getCaseInfos().getOriginalCaseUuid() : null);
-        // the reimport unbuilds the whole tree of this root network, so it is held on the root node
-        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-        nodeActivityRunnerService.runWith(REIMPORT_CASE, studyUuid, rootNetworkUuid, List.of(rootNodeUuid),
-            () -> studyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, userId));
+        if (rootNetworkInfos.hasCaseToImport()) {
+            // the reimport unbuilds the whole tree of this root network, so it is held on the root node
+            UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+            nodeActivityRunnerService.runWith(REIMPORT_CASE, studyUuid, rootNetworkUuid, List.of(rootNodeUuid),
+                () -> studyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, userId));
+        } else {
+            // only the basic infos (name, tag) are updated, the tree is left untouched
+            studyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, userId);
+        }
         return ResponseEntity.ok().build();
     }
 
@@ -666,11 +671,12 @@ public class StudyController {
                                                          @RequestParam("action") ModificationsActionType action,
                                                          @RequestParam("originStudyUuid") UUID originStudyUuid,
                                                          @RequestParam("originNodeUuid") UUID originNodeUuid,
-                                                         @RequestBody List<UUID> modificationsToCopyUuidList,
+                                                         @RequestBody List<ModificationMoveOrCopyInfos> modificationInfos,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertIsStudyAndNodeExist(originStudyUuid, originNodeUuid);
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        List<UUID> modificationsToCopyUuidList = modificationInfos.stream().map(ModificationMoveOrCopyInfos::modificationUuid).toList();
         switch (action) {
             case COPY:
                 handleDuplicateNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
@@ -680,7 +686,7 @@ public class StudyController {
                 if (!studyUuid.equals(originStudyUuid)) {
                     throw new StudyException(MOVE_NETWORK_MODIFICATION_FORBIDDEN);
                 }
-                rebuildNodeService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
+                rebuildNodeService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationInfos, userId);
                 break;
         }
         return ResponseEntity.ok().build();
