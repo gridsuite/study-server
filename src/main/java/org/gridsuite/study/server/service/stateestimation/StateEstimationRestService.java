@@ -12,8 +12,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
-import org.gridsuite.study.server.dto.StateEstimationStatus;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
@@ -32,7 +30,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
 
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
@@ -135,13 +132,6 @@ public class StateEstimationRestService extends AbstractComputationRestService i
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/supervision/results-count").toUriString();
         return restTemplate.getForObject(baseUri + path, Integer.class);
-    }
-
-    public void assertStateEstimationNotRunning(UUID resultUuid) {
-        String status = getStateEstimationStatus(resultUuid);
-        if (StateEstimationStatus.RUNNING.name().equals(status)) {
-            throw new StudyException(COMPUTATION_RUNNING);
-        }
     }
 
     public UUID getStateEstimationParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {

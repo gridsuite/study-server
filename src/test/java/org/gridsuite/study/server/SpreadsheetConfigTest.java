@@ -321,7 +321,7 @@ class SpreadsheetConfigTest {
     }
 
     private void checkSpreadsheetTabUpdateMessageReceived(UUID studyUuid) {
-        Message<byte[]> messageStudyUpdate = output.receive(1000, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> messageStudyUpdate = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION, 1000);
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_SPREADSHEET_TAB, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));

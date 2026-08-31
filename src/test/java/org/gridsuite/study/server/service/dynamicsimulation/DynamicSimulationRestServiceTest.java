@@ -69,8 +69,6 @@ class DynamicSimulationRestServiceTest {
     private static final UUID TIMELINE_UUID = UUID.randomUUID();
 
     // running node
-    private static final UUID NODE_UUID_RUNNING = UUID.randomUUID();
-    private static final UUID RESULT_UUID_RUNNING = UUID.randomUUID();
 
     private static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
     private static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
@@ -286,23 +284,6 @@ class DynamicSimulationRestServiceTest {
     @Test
     void testDeleteResult() {
         assertDoesNotThrow(() -> dynamicSimulationRestService.deleteResults(List.of(RESULT_UUID)));
-    }
-
-    @Test
-    void testAssertDynamicSimulationNotRunning() {
-
-        // test not running
-        assertDoesNotThrow(() -> dynamicSimulationRestService.assertDynamicSimulationNotRunning(RESULT_UUID));
-    }
-
-    @Test
-    void testAssertDynamicSimulationRunning() {
-        // setup for running node
-        given(dynamicSimulationClient.getStatus(RESULT_UUID_RUNNING)).willReturn(DynamicSimulationStatus.RUNNING);
-        given(rootNetworkNodeInfoService.getComputationResultUuid(NODE_UUID_RUNNING, ROOTNETWORK_UUID, ComputationType.DYNAMIC_SIMULATION)).willReturn(RESULT_UUID_RUNNING);
-
-        // test running
-        assertThrows(StudyException.class, () -> dynamicSimulationRestService.assertDynamicSimulationNotRunning(RESULT_UUID_RUNNING));
     }
 
     @Test

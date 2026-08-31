@@ -832,7 +832,9 @@ class ModificationToExcludeTest {
                 new ModificationContainerInfos(firstNodeGroupUuid, ModificationContainerType.GROUP),
                 new ModificationContainerInfos(secondNodeGroupUuid, ModificationContainerType.GROUP),
                 null);
-        assertThrows(RuntimeException.class, () -> studyService.moveNetworkModifications(studyUuid, firstNodeUuid, modificationsToMove, moveModificationInfos, false, USER_ID));
+        assertThrows(RuntimeException.class, () -> studyService.moveNetworkModifications(studyUuid, firstNodeUuid,
+                modificationsToMove.stream().map(uuid -> new ModificationMoveOrCopyInfos(uuid, moveModificationInfos.source())).toList(),
+                null, moveModificationInfos.target(), moveModificationInfos.beforeUuid(), false, USER_ID));
 
         // assert origin node still have all excluded modifications
         Set<UUID> excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNodeUuid,
@@ -861,7 +863,9 @@ class ModificationToExcludeTest {
                 new ModificationContainerInfos(firstNodeGroupUuid, ModificationContainerType.GROUP),
                 new ModificationContainerInfos(secondNodeGroupUuid, ModificationContainerType.GROUP),
                 null);
-        studyService.moveNetworkModifications(studyUuid, secondNodeUuid, modificationsToMove, moveModificationInfos2, true, USER_ID);
+        studyService.moveNetworkModifications(studyUuid, secondNodeUuid,
+                modificationsToMove.stream().map(uuid -> new ModificationMoveOrCopyInfos(uuid, moveModificationInfos2.source())).toList(),
+                null, moveModificationInfos2.target(), moveModificationInfos2.beforeUuid(), true, USER_ID);
         // assert origin node still have all excluded modifications, except the moved one
         excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNodeUuid,
                 rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")).getModificationsUuidsToExclude();

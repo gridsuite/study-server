@@ -6,8 +6,8 @@
  */
 package org.gridsuite.study.server;
 
+import com.powsybl.network.store.client.NetworkStoreService;
 import com.vladmihalcea.sql.SQLStatementCountValidator;
-import org.gridsuite.study.server.dto.InvalidateNodeInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -17,19 +17,27 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
+import org.gridsuite.study.server.service.NetworkModificationService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -57,6 +65,13 @@ class ModificationIndexationTest {
     private NetworkModificationTreeService networkModificationTreeService;
     @Autowired
     private TestUtils testUtils;
+
+    @MockitoBean
+    private NetworkModificationService networkModificationService;
+    @MockitoBean
+    private NetworkStoreService networkStoreService;
+    @MockitoBean
+    private OutputDestination output;
 
     StudyEntity studyEntity;
     RootNetworkEntity rootNetworkEntity;
@@ -87,70 +102,54 @@ class ModificationIndexationTest {
 
     @Test
     void testInvalidateBuiltNodeAndItsChildren() {
-        InvalidateNodeInfos invalidateNodeInfos = networkModificationTreeService.invalidateNodeTree(node2.getId(), rootNetworkEntity.getId(), InvalidateNodeTreeParameters.ALL);
+        networkModificationTreeService.invalidateNodeTree(studyEntity.getId(), node2.getId(), rootNetworkEntity.getId(), InvalidateNodeTreeParameters.ALL, false);
 
-        assertThat(invalidateNodeInfos.getGroupUuids()).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(List.of(
-            node2.getModificationGroupUuid(),
-            node3.getModificationGroupUuid()
-        ));
+        verifyInvalidateResults(List.of(node2.getModificationGroupUuid(), node3.getModificationGroupUuid()), 20);
+    }
 
-        SQLStatementCountValidator.assertSelectCount(18);
+    private void verifyInvalidateResults(List<UUID> getModificationGroupUuids, int expectedSelectCount) {
+        ArgumentCaptor<List<UUID>> uuidsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(networkModificationService, times(1))
+            .deleteIndexedModifications(uuidsCaptor.capture(), any(UUID.class));
+
+        assertEquals(getModificationGroupUuids.stream().collect(Collectors.toSet()), uuidsCaptor.getValue().stream().collect(Collectors.toSet()));
+
+        SQLStatementCountValidator.assertSelectCount(expectedSelectCount);
     }
 
     @Test
     void testInvalidateNotBuiltNodeAndItsChildren() {
-        InvalidateNodeInfos invalidateNodeInfos = networkModificationTreeService.invalidateNodeTree(node4.getId(), rootNetworkEntity.getId(), InvalidateNodeTreeParameters.ALL);
+        networkModificationTreeService.invalidateNodeTree(studyEntity.getId(), node4.getId(), rootNetworkEntity.getId(), InvalidateNodeTreeParameters.ALL, false);
 
-        assertThat(invalidateNodeInfos.getGroupUuids()).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(List.of(
-            node4.getModificationGroupUuid(),
-            node5.getModificationGroupUuid()
-        ));
-
-        SQLStatementCountValidator.assertSelectCount(18);
+        verifyInvalidateResults(List.of(node4.getModificationGroupUuid(), node5.getModificationGroupUuid()), 20);
     }
 
     @Test
     void testInvalidateBuiltNodeChildrenOnly() {
-        InvalidateNodeInfos invalidateNodeInfos = networkModificationTreeService.invalidateNodeTree(node4.getId(), rootNetworkEntity.getId(), InvalidateNodeTreeParameters.ONLY_CHILDREN_BUILD_STATUS);
+        networkModificationTreeService.invalidateNodeTree(studyEntity.getId(), node4.getId(), rootNetworkEntity.getId(), InvalidateNodeTreeParameters.ONLY_CHILDREN_BUILD_STATUS, false);
 
-        assertThat(invalidateNodeInfos.getGroupUuids()).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(List.of(
-            node5.getModificationGroupUuid()
-        ));
-
-        SQLStatementCountValidator.assertSelectCount(9);
+        verifyInvalidateResults(List.of(node5.getModificationGroupUuid()), 11);
     }
 
     @Test
     void testInvalidateNotBuiltNodeChildrenOnly() {
-        InvalidateNodeInfos invalidateNodeInfos = networkModificationTreeService.invalidateNodeTree(node2.getId(), rootNetworkEntity.getId(), InvalidateNodeTreeParameters.ONLY_CHILDREN_BUILD_STATUS);
+        networkModificationTreeService.invalidateNodeTree(studyEntity.getId(), node2.getId(), rootNetworkEntity.getId(), InvalidateNodeTreeParameters.ONLY_CHILDREN_BUILD_STATUS, false);
 
-        assertThat(invalidateNodeInfos.getGroupUuids()).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(List.of(
-            node2.getModificationGroupUuid(),
-            node3.getModificationGroupUuid()
-        ));
-
-        SQLStatementCountValidator.assertSelectCount(18);
+        verifyInvalidateResults(List.of(node2.getModificationGroupUuid(), node3.getModificationGroupUuid()), 20);
     }
 
     @Test
     void testInvalidateBuiltNodeOnlyWithBuiltChildren() {
-        InvalidateNodeInfos invalidateNodeInfos = networkModificationTreeService.invalidateNode(node4.getId(), rootNetworkEntity.getId());
+        networkModificationTreeService.invalidateNode(studyEntity.getId(), node4.getId(), rootNetworkEntity.getId());
 
-        assertThat(invalidateNodeInfos.getGroupUuids()).isEmpty();
-
-        SQLStatementCountValidator.assertSelectCount(8);
+        verifyInvalidateResults(List.of(), 9);
     }
 
     @Test
     void testInvalidateBuiltNodeOnlyWithoutBuiltChildren() {
-        InvalidateNodeInfos invalidateNodeInfos = networkModificationTreeService.invalidateNodeTree(node3.getId(), rootNetworkEntity.getId(), InvalidateNodeTreeParameters.ALL);
+        networkModificationTreeService.invalidateNodeTree(studyEntity.getId(), node3.getId(), rootNetworkEntity.getId(), InvalidateNodeTreeParameters.ALL, false);
 
-        assertThat(invalidateNodeInfos.getGroupUuids()).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(List.of(
-            node2.getModificationGroupUuid(),
-            node3.getModificationGroupUuid()
-        ));
-
-        SQLStatementCountValidator.assertSelectCount(19);
+        verifyInvalidateResults(List.of(node2.getModificationGroupUuid(), node3.getModificationGroupUuid()), 21);
     }
 
     private void createStudyAndNodesWithIndexedModification() {

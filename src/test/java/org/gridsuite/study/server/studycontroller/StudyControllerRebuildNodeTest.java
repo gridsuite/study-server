@@ -8,12 +8,16 @@ package org.gridsuite.study.server.studycontroller;
 
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.controller.StudyController;
+import org.gridsuite.study.server.dto.modification.ModificationMoveOrCopyInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
+import org.gridsuite.study.server.service.NetworkModificationService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RebuildNodeService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,6 +49,14 @@ class StudyControllerRebuildNodeTest {
     @MockitoBean
     NetworkModificationTreeService networkModificationTreeService;
 
+    // RebuildNodeService now looks up each modification's real parent composite before delegating
+    // to studyService; mock it here too so this delegation-only test doesn't hit the real HTTP client
+    @MockitoBean
+    private NetworkModificationService networkModificationService;
+
+    @MockitoBean
+    private NodeActivityRunnerService nodeActivityService;
+
     @Autowired
     private StudyController studyController;
 
@@ -61,6 +73,9 @@ class StudyControllerRebuildNodeTest {
 
         doAnswer(invocation -> List.of(nodeUuid)).when(networkModificationTreeService).getHighestNodeUuids(any(), any());
         doAnswer(invocation -> false).when(networkModificationTreeService).isRootOrConstructionNode(any());
+        doAnswer(invocation -> Map.of()).when(networkModificationService).findParentComposites(any());
+
+        TestUtils.bypassNodeActivities(nodeActivityService);
     }
 
     @Test
@@ -73,11 +88,11 @@ class StudyControllerRebuildNodeTest {
 
     @Test
     void testMoveNetworkModifications() {
-        List<UUID> modificationUuids = List.of(UUID.randomUUID());
+        List<ModificationMoveOrCopyInfos> modificationInfos = List.of(new ModificationMoveOrCopyInfos(UUID.randomUUID(), null));
         UUID originNodeUuid = UUID.randomUUID();
-        studyController.moveOrCopyModifications(studyUuid, nodeUuid, StudyConstants.ModificationsActionType.MOVE, studyUuid, originNodeUuid, modificationUuids, userId);
+        studyController.moveOrCopyModifications(studyUuid, nodeUuid, StudyConstants.ModificationsActionType.MOVE, studyUuid, originNodeUuid, modificationInfos, userId);
 
-        verify(rebuildNodeService, times(1)).moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationUuids, userId);
+        verify(rebuildNodeService, times(1)).moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationInfos, userId);
         verify(studyService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
     }
 

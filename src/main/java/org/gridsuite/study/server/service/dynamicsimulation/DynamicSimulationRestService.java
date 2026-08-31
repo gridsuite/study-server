@@ -12,7 +12,6 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.core.io.Resource;
@@ -108,12 +107,6 @@ public interface DynamicSimulationRestService extends ComputationParameters {
      * Get results count
      */
     Integer getResultsCount();
-
-    /**
-     * @param resultUuid a given result UUID
-     * @throws StudyException with type DYNAMIC_SIMULATION_RUNNING if this node is in RUNNING status
-     */
-    void assertDynamicSimulationNotRunning(UUID resultUuid);
 
     /**
      * Get list of time-series metadata

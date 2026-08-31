@@ -13,7 +13,10 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
+import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.slf4j.Logger;
@@ -35,12 +38,10 @@ import static org.gridsuite.study.server.dto.ComputationType.PCC_MIN;
 
 @Service
 public class PccMinService extends AbstractComputationService {
-    private final PccMinRestService pccMinRestService;
-    private final NetworkModificationTreeService networkModificationTreeService;
-    private final UserAdminService userAdminService;
-    private final ObjectMapper objectMapper;
-    private final RootNetworkService rootNetworkService;
     private static final Logger LOGGER = LoggerFactory.getLogger(PccMinService.class);
+
+    private final ObjectMapper objectMapper;
+    private final PccMinRestService pccMinRestService;
 
     protected PccMinService(StudyRepository studyRepository,
                             ComputationParametersService computationParametersService,
@@ -51,12 +52,10 @@ public class PccMinService extends AbstractComputationService {
                             UserAdminService userAdminService,
                             ObjectMapper objectMapper,
                             RootNetworkService rootNetworkService) {
-        super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService,
+            rootNetworkService, computationParametersService, userAdminService);
         this.pccMinRestService = pccMinRestService;
-        this.networkModificationTreeService = networkModificationTreeService;
-        this.userAdminService = userAdminService;
         this.objectMapper = objectMapper;
-        this.rootNetworkService = rootNetworkService;
     }
 
     @Transactional
@@ -68,7 +67,6 @@ public class PccMinService extends AbstractComputationService {
     @Transactional
     public UUID runPccMin(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
         UUID result = handlePccMinRequest(studyEntity, nodeUuid, rootNetworkUuid, userId);
 
@@ -106,7 +104,7 @@ public class PccMinService extends AbstractComputationService {
         StudyEntity studyEntity = getStudy(studyUuid);
         boolean userProfileIssue = createOrUpdatePccMinParameters(studyEntity, parameters, userId);
 
-        invalidatePccMinStatusOnAllNodes(studyEntity.getId());
+        rootNetworkNodeInfoService.invalidatePccMinStatusOnAllNodes(studyEntity.getId());
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
         notificationService.emitComputationParamsChanged(studyUuid, PCC_MIN);
@@ -141,12 +139,7 @@ public class PccMinService extends AbstractComputationService {
         return userProfileIssue;
     }
 
-    public void invalidatePccMinStatusOnAllNodes(UUID studyUuid) {
-        pccMinRestService.invalidatePccMinStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, PCC_MIN));
-    }
-
     public String getPccMinParametersByUuid(UUID parameterUuid) {
         return pccMinRestService.getParameters(parameterUuid);
     }
-
 }

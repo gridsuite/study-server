@@ -35,10 +35,7 @@ import static org.gridsuite.study.server.dto.ComputationType.STATE_ESTIMATION;
 
 @Service
 public class StateEstimationService extends AbstractComputationService {
-    private final NetworkModificationTreeService networkModificationTreeService;
-    private final RootNetworkService rootNetworkService;
     private final StateEstimationRestService stateEstimationRestService;
-    private final UserAdminService userAdminService;
     private final ObjectMapper objectMapper;
 
     protected StateEstimationService(StudyRepository studyRepository,
@@ -49,18 +46,14 @@ public class StateEstimationService extends AbstractComputationService {
                                      StateEstimationRestService stateEstimationRestService,
                                      UserAdminService userAdminService,
                                      ObjectMapper objectMapper) {
-        super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
-        this.networkModificationTreeService = networkModificationTreeService;
-        this.rootNetworkService = rootNetworkService;
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService, computationParametersService, userAdminService);
         this.stateEstimationRestService = stateEstimationRestService;
-        this.userAdminService = userAdminService;
         this.objectMapper = objectMapper;
     }
 
     @Transactional
     public UUID runStateEstimation(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, boolean debug) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
         UUID result = handleStateEstimationRequest(studyEntity, nodeUuid, rootNetworkUuid, userId, debug);
 

@@ -105,8 +105,8 @@ public class RootNetworkNodeInfoEntity {
     @Column(name = "pccMinResultUuid")
     private UUID pccMinResultUuid;
 
-    @Column(name = "blockedNode")
-    private Boolean blockedNode;
+    @Column(name = "asymmetricalLoadResultUuid")
+    private UUID asymmetricalLoadResultUuid;
 
     @Embedded
     @AttributeOverrides(value = {
@@ -137,6 +137,7 @@ public class RootNetworkNodeInfoEntity {
             .securityAnalysisResultUuid(securityAnalysisResultUuid)
             .stateEstimationResultUuid(stateEstimationResultUuid)
             .pccMinResultUuid(pccMinResultUuid)
+            .asymmetricalLoadResultUuid(asymmetricalLoadResultUuid)
             .sensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid)
             .voltageInitResultUuid(voltageInitResultUuid)
             .shortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid)

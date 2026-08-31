@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
@@ -25,6 +26,7 @@ import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.DYNAWO_PROVIDER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_MARGIN_CALCULATION;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -37,13 +39,16 @@ public class DynamicMarginCalculationController {
 
     private final StudyService studyService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
     private final DynamicMarginCalculationService dynamicMarginCalculationService;
 
     public DynamicMarginCalculationController(StudyService studyService,
                                               RootNetworkNodeInfoService rootNetworkNodeInfoService,
-                                              DynamicMarginCalculationService dynamicMarginCalculationService) {
+                                              DynamicMarginCalculationService dynamicMarginCalculationService,
+                                              NodeActivityRunnerService nodeActivityRunnerService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
         this.dynamicMarginCalculationService = dynamicMarginCalculationService;
     }
 
@@ -58,7 +63,8 @@ public class DynamicMarginCalculationController {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(DYNAMIC_MARGIN_CALCULATION, userId);
         studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), dynamicMarginCalculationService::getDynamicMarginCalculationProvider);
-        dynamicMarginCalculationService.runDynamicMarginCalculation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
+        nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+            () -> dynamicMarginCalculationService.runDynamicMarginCalculation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
 
