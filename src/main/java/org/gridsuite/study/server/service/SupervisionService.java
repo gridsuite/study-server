@@ -13,7 +13,6 @@ import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
-import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
