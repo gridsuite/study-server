@@ -450,7 +450,6 @@ public class StudyService {
             : importParameters;
 
         persistNetwork(rootNetworkInfos, studyUuid, null, userId, importParametersToUse, CaseImportAction.NETWORK_RECREATION, reportId);
-        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public UUID duplicateStudy(UUID sourceStudyUuid, String userId) {
@@ -633,6 +632,7 @@ public class StudyService {
         RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
 
         rootNetworkService.updateNetwork(rootNetworkEntity, networkInfos);
+        rootNetworkEntity.setLoadStatus(RootNetworkLoadStatus.LOADED);
 
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
@@ -1337,7 +1337,12 @@ public class StudyService {
                     networkModificationTreeService.invalidateNodeTree(studyUuid, rootNodeUuid, rnId, invalidateNodeTreeParameters, skipDeleteVariants)))
                 .toList();
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
-        notificationService.emitElementUpdated(studyUuid, userId);
+        boolean noneMatchUnloading = rootNetworkIds.stream()
+                .map(rnId -> rootNetworkService.getRootNetwork(rnId).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")))
+                .noneMatch(rootNetwork -> rootNetwork.getLoadStatus() == RootNetworkLoadStatus.UNLOADING);
+        if (noneMatchUnloading) {
+            notificationService.emitElementUpdated(studyUuid, userId);
+        }
     }
 
     public void stopBuild(@NonNull UUID nodeUuid, UUID rootNetworkUuid) {

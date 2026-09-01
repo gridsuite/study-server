@@ -396,4 +396,15 @@ public class RootNetworkService {
         rootNetwork.setIndexationStatus(indexationStatus);
         notificationService.emitRootNetworkIndexationStatusChanged(studyUuid, rootNetworkUuid, indexationStatus);
     }
+
+    @Transactional
+    public void updateNetworkLoadStatus(UUID rootNetworkUuid, RootNetworkLoadStatus rootNetworkLoadStatus) {
+        RootNetworkEntity rootNetwork = getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        rootNetwork.setLoadStatus(rootNetworkLoadStatus);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UUID> getLoadedStudyIds(List<UUID> studyUuids) {
+        return rootNetworkRepository.findDistinctStudyIdsByStudyIdInAndLoadStatus(studyUuids, RootNetworkLoadStatus.LOADED);
+    }
 }

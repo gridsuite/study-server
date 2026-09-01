@@ -72,6 +72,7 @@ public class ConsumerService {
     private final LoadFlowRestService loadFlowRestService;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    private final RootNetworkService rootNetworkService;
     private final DirectoryService directoryService;
     private final ComputationParametersService computationParametersService;
     private final UserAdminService userAdminService;
@@ -87,6 +88,7 @@ public class ConsumerService {
                            LoadFlowRestService loadFlowRestService,
                            NetworkModificationTreeService networkModificationTreeService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                           RootNetworkService rootNetworkService,
                            DirectoryService directoryService,
                            ComputationParametersService computationParametersService,
                            UserAdminService userAdminService,
@@ -101,6 +103,7 @@ public class ConsumerService {
         this.loadFlowRestService = loadFlowRestService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.rootNetworkService = rootNetworkService;
         this.directoryService = directoryService;
         this.computationParametersService = computationParametersService;
         this.userAdminService = userAdminService;
@@ -347,6 +350,9 @@ public class ConsumerService {
         }
         if (receiver.getCaseImportAction() == CaseImportAction.ROOT_NETWORK_MODIFICATION) {
             removeReimportCaseActivity(receiver.getStudyUuid(), receiver.getRootNetworkUuid());
+        }
+        if (receiver.getCaseImportAction() == CaseImportAction.NETWORK_RECREATION) {
+            rootNetworkService.updateNetworkLoadStatus(receiver.getRootNetworkUuid(), RootNetworkLoadStatus.UNLOADED);
         }
         if (receiver.getCaseImportAction() == CaseImportAction.ROOT_NETWORK_CREATION_FOR_STUDY_IMPORT) {
             studyService.deleteRootNetworkRequest(receiver.getRootNetworkUuid());
