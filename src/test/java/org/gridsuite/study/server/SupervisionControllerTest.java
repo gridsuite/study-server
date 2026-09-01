@@ -370,8 +370,8 @@ class SupervisionControllerTest {
 
         List<UUID> allRootNetworkUuids = rootNetworkService.getStudyRootNetworkIds(STUDY_UUID);
         assertThat(allRootNetworkUuids).hasSize(2);
-        assertEquals(NetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(firstRootNetworkUuid).orElseThrow().getNetworkLoadStatus());
-        assertEquals(NetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(secondRootNetworkUuid).orElseThrow().getNetworkLoadStatus());
+        assertEquals(RootNetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(firstRootNetworkUuid).orElseThrow().getRootNetworkLoadStatus());
+        assertEquals(RootNetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(secondRootNetworkUuid).orElseThrow().getRootNetworkLoadStatus());
         TestUtils.assertQueuesEmptyThenClear(List.of(ELEMENT_UPDATE_DESTINATION), output);
     }
 
@@ -379,7 +379,7 @@ class SupervisionControllerTest {
     void testGetLoadedStudies() throws Exception {
         initStudy();
         UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(STUDY_UUID);
-        assertEquals(NetworkLoadStatus.LOADED, rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow().getNetworkLoadStatus());
+        assertEquals(RootNetworkLoadStatus.LOADED, rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow().getRootNetworkLoadStatus());
         UUID unknownStudyUuid = UUID.randomUUID();
         MvcResult mvcResult = mockMvc.perform(get("/v1/supervision/studies/loaded")
                         .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))

@@ -394,21 +394,13 @@ public class RootNetworkService {
     }
 
     @Transactional
-    public void updateNetworkLoadStatus(UUID rootNetworkUuid, NetworkLoadStatus networkLoadStatus) {
+    public void updateNetworkLoadStatus(UUID rootNetworkUuid, RootNetworkLoadStatus rootNetworkLoadStatus) {
         RootNetworkEntity rootNetwork = getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-        rootNetwork.setNetworkLoadStatus(networkLoadStatus);
-    }
-
-    @Transactional
-    public void updateNetworkLoadStatusIfCurrent(UUID rootNetworkUuid, NetworkLoadStatus expectedCurrentStatus, NetworkLoadStatus networkLoadStatus) {
-        RootNetworkEntity rootNetwork = getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-        if (rootNetwork.getNetworkLoadStatus() == expectedCurrentStatus) {
-            rootNetwork.setNetworkLoadStatus(networkLoadStatus);
-        }
+        rootNetwork.setLoadStatus(rootNetworkLoadStatus);
     }
 
     @Transactional(readOnly = true)
     public List<UUID> getLoadedStudyIds(List<UUID> studyUuids) {
-        return rootNetworkRepository.findDistinctStudyIdsByStudyIdInAndNetworkLoadStatus(studyUuids, NetworkLoadStatus.LOADED);
+        return rootNetworkRepository.findDistinctStudyIdsByStudyIdInAndNetworkLoadStatus(studyUuids, RootNetworkLoadStatus.LOADED);
     }
 }

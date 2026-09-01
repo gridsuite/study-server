@@ -250,7 +250,6 @@ public class ConsumerService {
 
         CaseInfos caseInfos = new CaseInfos(caseUuid, receiver.getOriginalCaseUuid(), caseName, caseFormat);
         NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
-        boolean success = false;
         try {
             switch (caseImportAction) {
                 case STUDY_CREATION ->
@@ -272,7 +271,6 @@ public class ConsumerService {
                     .build(), userId);
             }
             caseService.disableCaseExpiration(caseUuid);
-            success = true;
         } catch (Exception e) {
             LOGGER.error("Error while importing case", e);
         } finally {
@@ -282,9 +280,6 @@ public class ConsumerService {
             }
             if (caseImportAction == CaseImportAction.ROOT_NETWORK_MODIFICATION) {
                 removeReimportCaseActivity(studyUuid, rootNetworkUuid);
-            }
-            if (!success && caseImportAction == CaseImportAction.NETWORK_RECREATION) {
-                rootNetworkService.updateNetworkLoadStatusIfCurrent(rootNetworkUuid, NetworkLoadStatus.LOADING, NetworkLoadStatus.UNLOADED);
             }
             LOGGER.trace("{} for study uuid '{}' : {} seconds", caseImportAction.getLabel(), studyUuid,
                 TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
@@ -400,7 +395,7 @@ public class ConsumerService {
             removeReimportCaseActivity(receiver.getStudyUuid(), receiver.getRootNetworkUuid());
         }
         if (receiver.getCaseImportAction() == CaseImportAction.NETWORK_RECREATION) {
-            rootNetworkService.updateNetworkLoadStatusIfCurrent(receiver.getRootNetworkUuid(), NetworkLoadStatus.LOADING, NetworkLoadStatus.UNLOADED);
+            rootNetworkService.updateNetworkLoadStatus(receiver.getRootNetworkUuid(), RootNetworkLoadStatus.UNLOADED);
         }
         notificationService.emitRootNetworksUpdateFailed(receiver.getStudyUuid(), errorMessage);
     }

@@ -409,11 +409,11 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         rootNetworkService.getStudyRootNetworkIds(studyUuid).forEach(rnId -> {
             try {
-                rootNetworkService.updateNetworkLoadStatus(rnId, NetworkLoadStatus.UNLOADING);
+                rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADING);
                 studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER, false);
-                rootNetworkService.updateNetworkLoadStatus(rnId, NetworkLoadStatus.UNLOADED);
+                rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADED);
             } catch (Exception e) {
-                rootNetworkService.updateNetworkLoadStatus(rnId, NetworkLoadStatus.LOADED);
+                rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.LOADED);
                 LOGGER.error("Error while invalidating study root network", e);
             }
         });

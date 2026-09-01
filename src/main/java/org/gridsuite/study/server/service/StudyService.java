@@ -447,16 +447,7 @@ public class StudyService {
             ? new HashMap<>(rootNetworkService.getImportParameters(rootNetworkInfos.getId()))
             : importParameters;
 
-        rootNetworkService.updateNetworkLoadStatus(rootNetworkInfos.getId(), NetworkLoadStatus.LOADING);
-        boolean submitted = false;
-        try {
-            persistNetwork(rootNetworkInfos, studyUuid, null, userId, importParametersToUse, CaseImportAction.NETWORK_RECREATION, reportId);
-            submitted = true;
-        } finally {
-            if (!submitted) {
-                rootNetworkService.updateNetworkLoadStatusIfCurrent(rootNetworkInfos.getId(), NetworkLoadStatus.LOADING, NetworkLoadStatus.UNLOADED);
-            }
-        }
+        persistNetwork(rootNetworkInfos, studyUuid, null, userId, importParametersToUse, CaseImportAction.NETWORK_RECREATION, reportId);
     }
 
     public UUID duplicateStudy(UUID sourceStudyUuid, String userId) {
@@ -639,7 +630,7 @@ public class StudyService {
         RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
 
         rootNetworkService.updateNetwork(rootNetworkEntity, networkInfos);
-        rootNetworkEntity.setNetworkLoadStatus(NetworkLoadStatus.LOADED);
+        rootNetworkEntity.setLoadStatus(RootNetworkLoadStatus.LOADED);
 
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
@@ -1344,10 +1335,10 @@ public class StudyService {
                     networkModificationTreeService.invalidateNodeTree(studyUuid, rootNodeUuid, rnId, invalidateNodeTreeParameters, skipDeleteVariants)))
                 .toList();
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
-        boolean allRootNetworkLoaded = rootNetworkIds.stream()
+        boolean atLeastOneRootNetworkLoaded = rootNetworkIds.stream()
                 .map(rnId -> rootNetworkService.getRootNetwork(rnId).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")))
-                .allMatch(rootNetwork -> rootNetwork.getNetworkLoadStatus() == NetworkLoadStatus.LOADED);
-        if (allRootNetworkLoaded) {
+                .anyMatch(rootNetwork -> rootNetwork.getLoadStatus() == RootNetworkLoadStatus.LOADED);
+        if (atLeastOneRootNetworkLoaded) {
             notificationService.emitElementUpdated(studyUuid, userId);
         }
     }

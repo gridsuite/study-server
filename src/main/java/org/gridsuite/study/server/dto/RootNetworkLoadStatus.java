@@ -9,9 +9,8 @@ package org.gridsuite.study.server.dto;
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
  */
-public enum NetworkLoadStatus {
+public enum RootNetworkLoadStatus {
     LOADED,
     UNLOADED,
-    LOADING,
     UNLOADING
 }

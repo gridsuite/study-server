@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.repository.rootnetwork;
 
-import org.gridsuite.study.server.dto.NetworkLoadStatus;
+import org.gridsuite.study.server.dto.RootNetworkLoadStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -48,6 +48,6 @@ public interface RootNetworkRepository extends JpaRepository<RootNetworkEntity, 
 
     boolean existsByIdAndTag(UUID rootNetworkUuid, String rootNetworkName);
 
-    @Query("select distinct r.study.id from RootNetworkEntity r where r.study.id in :studyUuids and r.networkLoadStatus = :networkLoadStatus")
-    List<UUID> findDistinctStudyIdsByStudyIdInAndNetworkLoadStatus(@Param("studyUuids") List<UUID> studyUuids, @Param("networkLoadStatus") NetworkLoadStatus networkLoadStatus);
+    @Query("select distinct r.study.id from RootNetworkEntity r where r.study.id in :studyUuids and r.loadStatus = :networkLoadStatus")
+    List<UUID> findDistinctStudyIdsByStudyIdInAndNetworkLoadStatus(@Param("studyUuids") List<UUID> studyUuids, @Param("networkLoadStatus") RootNetworkLoadStatus rootNetworkLoadStatus);
 }

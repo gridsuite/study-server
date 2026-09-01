@@ -49,9 +49,9 @@ public class RootNetworkEntity {
     private RootNetworkIndexationStatus indexationStatus = RootNetworkIndexationStatus.NOT_INDEXED;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "network_load_status")
+    @Column(name = "load_status")
     @Builder.Default
-    private NetworkLoadStatus networkLoadStatus = NetworkLoadStatus.LOADED;
+    private RootNetworkLoadStatus loadStatus = RootNetworkLoadStatus.LOADED;
 
     @OneToMany(orphanRemoval = true, mappedBy = "rootNetwork", cascade = CascadeType.ALL)
     @Builder.Default
