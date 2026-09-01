@@ -7,12 +7,13 @@
 package org.gridsuite.study.server.controller.loadflow;
 
 import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -20,9 +21,13 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.util.List;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNBUILD_ALL;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -43,7 +48,7 @@ class LoadFlowStudyParametersControllerTest {
     private StudyService studyService;
 
     @Mock
-    private NetworkModificationTreeService networkModificationTreeService;
+    private NodeActivityRunnerService nodeActivityService;
 
     @Mock
     private LoadFlowService loadFlowService;
@@ -52,15 +57,23 @@ class LoadFlowStudyParametersControllerTest {
 
     @BeforeEach
     void setup() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new LoadFlowStudyParametersController(studyService, networkModificationTreeService, loadFlowService)).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(new LoadFlowStudyParametersController(nodeActivityService, loadFlowService)).build();
+    }
+
+    /** The activity is set around the call, so the stub has to run the action for the endpoint to do anything. */
+    private void runTheActionOf(List<UUID> invalidatedNodes, UUID studyUuid) {
+        when(nodeActivityService.runWith(eq(UNBUILD_ALL), eq(studyUuid), eq(invalidatedNodes),
+            ArgumentMatchers.<Supplier<Boolean>>any()))
+            .thenAnswer(invocation -> invocation.<Supplier<Boolean>>getArgument(3).get());
     }
 
     @Test
     void testSetLoadflowParameters() throws Exception {
         UUID studyUuid = UUID.randomUUID();
-        UUID rootNodeUuid = UUID.randomUUID();
-        when(networkModificationTreeService.getStudyRootNodeUuid(studyUuid)).thenReturn(rootNodeUuid);
-        when(studyService.setLoadFlowParameters(studyUuid, PARAMETERS, USER_ID)).thenReturn(false);
+        List<UUID> invalidatedNodes = List.of(UUID.randomUUID());
+        when(loadFlowService.getNodesInvalidatedByLoadFlowParameters(studyUuid)).thenReturn(invalidatedNodes);
+        runTheActionOf(invalidatedNodes, studyUuid);
+        when(loadFlowService.setLoadFlowParameters(studyUuid, PARAMETERS, USER_ID)).thenReturn(false);
 
         mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
                 .header(HEADER_USER_ID, USER_ID)
@@ -69,26 +82,29 @@ class LoadFlowStudyParametersControllerTest {
             .andExpect(status().isOk())
             .andExpect(content().string(""));
 
-        InOrder inOrder = inOrder(networkModificationTreeService, studyService);
-        inOrder.verify(networkModificationTreeService).getStudyRootNodeUuid(studyUuid);
-        inOrder.verify(studyService).assertNoBlockedNodeInStudy(studyUuid, rootNodeUuid);
-        inOrder.verify(studyService).setLoadFlowParameters(studyUuid, PARAMETERS, USER_ID);
+        InOrder inOrder = inOrder(loadFlowService, nodeActivityService);
+        inOrder.verify(loadFlowService).getNodesInvalidatedByLoadFlowParameters(studyUuid);
+        inOrder.verify(nodeActivityService).runWith(eq(UNBUILD_ALL), eq(studyUuid), eq(invalidatedNodes),
+            ArgumentMatchers.<Supplier<Boolean>>any());
+        inOrder.verify(loadFlowService).setLoadFlowParameters(studyUuid, PARAMETERS, USER_ID);
     }
 
     @Test
     void testSetLoadflowParametersReturnsNoContent() throws Exception {
         UUID studyUuid = UUID.randomUUID();
-        UUID rootNodeUuid = UUID.randomUUID();
-        when(networkModificationTreeService.getStudyRootNodeUuid(studyUuid)).thenReturn(rootNodeUuid);
-        when(studyService.setLoadFlowParameters(studyUuid, null, USER_ID)).thenReturn(true);
+        List<UUID> invalidatedNodes = List.of(UUID.randomUUID());
+        when(loadFlowService.getNodesInvalidatedByLoadFlowParameters(studyUuid)).thenReturn(invalidatedNodes);
+        runTheActionOf(invalidatedNodes, studyUuid);
+        when(loadFlowService.setLoadFlowParameters(studyUuid, null, USER_ID)).thenReturn(true);
 
         mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
                 .header(HEADER_USER_ID, USER_ID))
             .andExpect(status().isNoContent())
             .andExpect(content().string(""));
 
-        verify(studyService).assertNoBlockedNodeInStudy(studyUuid, rootNodeUuid);
-        verify(studyService).setLoadFlowParameters(studyUuid, null, USER_ID);
+        verify(nodeActivityService).runWith(eq(UNBUILD_ALL), eq(studyUuid), eq(invalidatedNodes),
+            ArgumentMatchers.<Supplier<Boolean>>any());
+        verify(loadFlowService).setLoadFlowParameters(studyUuid, null, USER_ID);
     }
 
     @Test

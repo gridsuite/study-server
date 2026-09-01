@@ -20,7 +20,6 @@ import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
-import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -38,30 +37,22 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_ALLOWE
 
 @Service
 public class DynamicSimulationService extends AbstractComputationService {
-    private final DynamicSimulationRestService dynamicSimulationRestService;
-    private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final DynamicSimulationEventService dynamicSimulationEventService;
-    private final NetworkModificationTreeService networkModificationTreeService;
-    private final UserAdminService userAdminService;
-    private final RootNetworkService rootNetworkService;
+    private final DynamicSimulationRestService dynamicSimulationRestService;
 
     protected DynamicSimulationService(StudyRepository studyRepository,
                                        ComputationParametersService computationParametersService,
                                        NotificationService notificationService,
                                        RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                        DynamicSimulationRestService dynamicSimulationRestService,
-                                       DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
                                        DynamicSimulationEventService dynamicSimulationEventService,
                                        NetworkModificationTreeService networkModificationTreeService,
-                                       UserAdminService userAdminService,
-                                       RootNetworkService rootNetworkService) {
-        super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
+                                       UserAdminService userAdminService, RootNetworkService rootNetworkService
+    ) {
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService,
+            rootNetworkService, computationParametersService, userAdminService);
         this.dynamicSimulationRestService = dynamicSimulationRestService;
-        this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.dynamicSimulationEventService = dynamicSimulationEventService;
-        this.networkModificationTreeService = networkModificationTreeService;
-        this.userAdminService = userAdminService;
-        this.rootNetworkService = rootNetworkService;
     }
 
     @Transactional
@@ -84,15 +75,11 @@ public class DynamicSimulationService extends AbstractComputationService {
                 dynamicSimulationRestService::createParameters,
                 dynamicSimulationRestService::updateParameters,
                 DYNAMIC_SIMULATION,
-                List.of(this::invalidateDynamicSimulationStatusOnAllNodes,
-                        dynamicSecurityAnalysisService::invalidateDynamicSecurityAnalysisStatusOnAllNodes),
+                List.of(rootNetworkNodeInfoService::invalidateDynamicSimulationStatusOnAllNodes,
+                        rootNetworkNodeInfoService::invalidateDynamicSecurityAnalysisStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS,
                 NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS
         );
-    }
-
-    public void invalidateDynamicSimulationStatusOnAllNodes(UUID studyUuid) {
-        dynamicSimulationRestService.invalidateStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, DYNAMIC_SIMULATION));
     }
 
     public String getDynamicSimulationProvider(UUID studyUuid) {
@@ -104,7 +91,6 @@ public class DynamicSimulationService extends AbstractComputationService {
     public UUID runDynamicSimulation(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid,
                                      String userId, boolean debug) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
         UUID result = handleDynamicSimulationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
 
@@ -160,11 +146,10 @@ public class DynamicSimulationService extends AbstractComputationService {
     @Transactional
     public void createDynamicSimulationEvent(UUID studyUuid, UUID nodeUuid, String userId, EventInfos event) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
-        notificationService.emitStartEventCrudNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.EVENTS_CRUD_CREATING_IN_PROGRESS);
         try {
             dynamicSimulationEventService.saveEvent(nodeUuid, event);
         } finally {
-            notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+            notificationService.emitEventsUpdated(studyUuid, nodeUuid, childrenUuids);
         }
         postProcessEventCrud(studyUuid, nodeUuid);
         notificationService.emitElementUpdated(studyUuid, userId);
@@ -172,18 +157,17 @@ public class DynamicSimulationService extends AbstractComputationService {
 
     private void postProcessEventCrud(UUID studyUuid, UUID nodeUuid) {
         // for delete old result and refresh dynamic simulation run button in UI
-        invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
+        rootNetworkNodeInfoService.invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
     }
 
     @Transactional
     public void updateDynamicSimulationEvent(UUID studyUuid, UUID nodeUuid, String userId, EventInfos event) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
-        notificationService.emitStartEventCrudNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.EVENTS_CRUD_UPDATING_IN_PROGRESS);
         try {
             dynamicSimulationEventService.saveEvent(nodeUuid, event);
         } finally {
-            notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+            notificationService.emitEventsUpdated(studyUuid, nodeUuid, childrenUuids);
         }
         postProcessEventCrud(studyUuid, nodeUuid);
         notificationService.emitElementUpdated(studyUuid, userId);
@@ -192,11 +176,10 @@ public class DynamicSimulationService extends AbstractComputationService {
     @Transactional
     public void deleteDynamicSimulationEvents(UUID studyUuid, UUID nodeUuid, String userId, List<UUID> eventUuids) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
-        notificationService.emitStartEventCrudNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.EVENTS_CRUD_DELETING_IN_PROGRESS);
         try {
             dynamicSimulationEventService.deleteEvents(eventUuids);
         } finally {
-            notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+            notificationService.emitEventsUpdated(studyUuid, nodeUuid, childrenUuids);
         }
         postProcessEventCrud(studyUuid, nodeUuid);
         notificationService.emitElementUpdated(studyUuid, userId);

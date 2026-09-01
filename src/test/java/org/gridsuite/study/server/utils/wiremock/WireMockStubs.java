@@ -241,7 +241,7 @@ public class WireMockStubs {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + ".*/references"))
                 .willReturn(WireMock.ok()
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .withBody("{}"))).getId();
+                        .withBody("[]"))).getId();
     }
 
     public void verifyGetReferencesDataFromGroup(UUID getReferencesUuid) {
@@ -593,6 +593,63 @@ public class WireMockStubs {
             ));
     }
 
+    public UUID stubAsymmetricalLoadRun(String networkUuid, String variantId, String resultUuid) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/asymmetrical-load/networks/" + networkUuid + "/run-and-save.*"))
+                .withQueryParam("variantId", WireMock.equalTo(variantId))
+                .willReturn(WireMock.okJson("\"" + resultUuid + "\""))
+
+        ).getId();
+    }
+
+    public void verifyAsymmetricalLoadRun(UUID stubUuid, String networkUuid, String variantId) {
+        verifyPostRequest(wireMock, stubUuid, "/v1/asymmetrical-load/networks/" + networkUuid + "/run-and-save",
+                Map.of("variantId", WireMock.equalTo(variantId)));
+    }
+
+    public UUID stubAsymmetricalLoadFailed(String networkUuid, String variantId, String resultUuid) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/asymmetrical-load/networks/" + networkUuid + "/run-and-save.*"))
+                .withQueryParam("variantId", WireMock.equalTo(variantId))
+                .willReturn(WireMock.okJson("\"" + resultUuid + "\""))
+        ).getId();
+    }
+
+    public void verifyAsymmetricalLoadFail(UUID stubUuid, String networkUuid, String variantId) {
+        verifyPostRequest(
+                wireMock,
+                stubUuid,
+                "/v1/asymmetrical-load/networks/" + networkUuid + "/run-and-save",
+                true,
+                Map.of("variantId", WireMock.equalTo(variantId)),
+                null,
+                1
+        );
+    }
+
+    public UUID stubPagedAsymmetricalLoadResult(String resultUuid, String responseBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/asymmetrical-load/results/" + resultUuid))
+                .withQueryParam("page", WireMock.equalTo("0"))
+                .withQueryParam("size", WireMock.equalTo("20"))
+                .withQueryParam("sort", WireMock.equalTo("id,DESC"))
+                .withQueryParam("filters", WireMock.equalTo("fakeFilters"))
+                .withQueryParam("globalFilters", WireMock.equalTo("fakeGlobalFilters"))
+                .willReturn(WireMock.okJson(responseBody))
+        ).getId();
+    }
+
+    public void verifyAsymmetricalLoadPagedGet(UUID stubId, String resultUuid) {
+        verifyGetRequest(
+                wireMock,
+                stubId,
+                "/v1/asymmetrical-load/results/" + resultUuid,
+                Map.of(
+                        "page", WireMock.equalTo("0"),
+                        "size", WireMock.equalTo("20"),
+                        "sort", WireMock.equalTo("id,DESC"),
+                        "filters", WireMock.equalTo("fakeFilters"),
+                        "globalFilters", WireMock.equalTo("fakeGlobalFilters")
+                ));
+    }
+
     public UUID stubGenerateSvg(UUID networkUuid, String variantId, String voltageLevelId, String body) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/svg/" + networkUuid + "/" + voltageLevelId))
             .withQueryParam(QUERY_PARAM_VARIANT_ID, WireMock.equalTo(variantId))
@@ -632,6 +689,19 @@ public class WireMockStubs {
                 "globalFilters", WireMock.equalTo("fakeGlobalFilters")
             ),
             1
+        );
+    }
+
+    public void verifyExportAsymmetricalLoadResult(UUID stubId, UUID resultUuid) {
+        verifyPostRequest(
+                wireMock, stubId,
+                "/v1/asymmetrical-load/results/" + resultUuid + "/csv",
+                Map.of(
+                        "sort", WireMock.equalTo("id,DESC"),
+                        "filters", WireMock.equalTo("fakeFilters"),
+                        "globalFilters", WireMock.equalTo("fakeGlobalFilters")
+                ),
+                1
         );
     }
 

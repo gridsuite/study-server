@@ -24,7 +24,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE;
 
 /**
  * @author David Braquart <david.braquart at rte-france.com>
@@ -37,7 +36,9 @@ public class DirectoryService {
     public static final String PARAM_ACCESS_TYPE = "accessType";
     public static final String PARAM_TARGET_DIRECTORY_UUID = "targetDirectoryUuid";
     public static final String PARAM_RECURSIVE_CHECK = "recursiveCheck";
-
+    public static final String PARAM_ORIGIN_REFERENCE_UUID = "originReferenceUuid";
+    public static final String PARAM_TARGET_REFERENCE_UUID = "targetReferenceUuid";
+    public static final String PARAM_TARGET_REFERENCE_TYPE = "targetReferenceType";
     private final RestTemplate restTemplate;
 
     @Setter
@@ -114,11 +115,11 @@ public class DirectoryService {
      * creates references and add them to shared composite modifications stored in directory server
      * @param elementsUuids element uuids of the shared composites in directory server
      * @param userId id of the user who creates the references
-     * @param targetNodeUuid where the new references will point
+     * @param targetReferenceUuid where the new references will point
      */
-    public void createsReferencesToSharedComposites(@NonNull List<UUID> elementsUuids, String userId, UUID targetNodeUuid) {
+    public void createsReferencesToSharedComposites(@NonNull List<UUID> elementsUuids, String userId, UUID targetReferenceUuid, ReferenceAttributes.ReferenceType targetReferenceType) {
         // TODO : instead of multiple calls, an endpoint in directory server should be created to handle multiple references creation
-        // OR if not, turn this into simultaneous asynchrone calls
+        // OR if not, turn this into simultaneous asynchronous calls
         elementsUuids.forEach(elementUuid -> {
             var path = UriComponentsBuilder.fromPath(
                             DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")
@@ -129,7 +130,7 @@ public class DirectoryService {
             headers.set(HEADER_USER_ID, userId);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            ReferenceAttributes referenceAttributes = new ReferenceAttributes(targetNodeUuid, STUDY_NODE);
+            ReferenceAttributes referenceAttributes = new ReferenceAttributes(targetReferenceUuid, targetReferenceType);
 
             HttpEntity<ReferenceAttributes> requestEntity = new HttpEntity<>(referenceAttributes, headers);
             restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.POST, requestEntity, ElementAttributes.class);
@@ -185,5 +186,37 @@ public class DirectoryService {
             .toUriString();
 
         restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.GET, new HttpEntity<>(headers), Void.class);
+    }
+
+    /**
+     * update references of shared composite modifications in directory server
+     * @param elementsUuids element uuids of the shared composites
+     * @param userId id of the user who moves the references
+     * @param originReferenceUuid uuid of the container whose references are updated
+     * @param targetReferenceUuid where the references will point after the update
+     * @param targetReferenceType type where the references will point after the update
+     */
+    public void updateReferencesToSharedComposites(@NonNull List<UUID> elementsUuids, String userId, @NonNull UUID originReferenceUuid,
+            UUID targetReferenceUuid, ReferenceAttributes.ReferenceType targetReferenceType) {
+        Objects.requireNonNull(originReferenceUuid);
+
+        if (elementsUuids.isEmpty()) {
+            return;
+        }
+
+        String path = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/references")
+                .queryParam(PARAM_IDS, elementsUuids)
+                .queryParam(PARAM_ORIGIN_REFERENCE_UUID, originReferenceUuid)
+                .queryParam(PARAM_TARGET_REFERENCE_UUID, targetReferenceUuid)
+                .queryParam(PARAM_TARGET_REFERENCE_TYPE, targetReferenceType)
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+        restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.PUT, requestEntity, Void.class);
     }
 }
