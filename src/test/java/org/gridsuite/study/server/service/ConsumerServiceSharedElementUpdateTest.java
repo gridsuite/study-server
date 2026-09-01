@@ -57,6 +57,8 @@ class ConsumerServiceSharedElementUpdateTest {
     @Mock
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Mock
+    private RootNetworkService rootNetworkService;
+    @Mock
     private DirectoryService directoryService;
     @Mock
     private ComputationParametersService computationParametersService;
@@ -75,7 +77,7 @@ class ConsumerServiceSharedElementUpdateTest {
     void setup() {
         ConsumerService consumerService = new ConsumerService(new ObjectMapper(), notificationService, studyService, caseService,
                 loadFlowRestService, networkModificationTreeService, networkModificationService, studyConfigService,
-                rootNetworkNodeInfoService, directoryService, computationParametersService, userAdminService, loadFlowService,
+                rootNetworkNodeInfoService, rootNetworkService, directoryService, computationParametersService, userAdminService, loadFlowService,
                 nodeActivityRunnerService, nodeActivityService);
         consumeSharedElementUpdate = consumerService.consumeSharedElementUpdate();
     }
