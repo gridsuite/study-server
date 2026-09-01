@@ -97,8 +97,6 @@ public class SupervisionService {
 
     private final RootNetworkService rootNetworkService;
 
-    private final NotificationService notificationService;
-
     private static final String SUPERVISION_USER = "Supervision";
 
     public SupervisionService(StudyService studyService,
@@ -144,7 +142,6 @@ public class SupervisionService {
         this.studyInfosService = studyInfosService;
         this.rootNetworkService = rootNetworkService;
         this.studyRepository = studyRepository;
-        this.notificationService = notificationService;
     }
 
     @Transactional
