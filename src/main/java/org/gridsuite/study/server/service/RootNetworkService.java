@@ -401,6 +401,6 @@ public class RootNetworkService {
 
     @Transactional(readOnly = true)
     public List<UUID> getLoadedStudyIds(List<UUID> studyUuids) {
-        return rootNetworkRepository.findDistinctStudyIdsByStudyIdInAndNetworkLoadStatus(studyUuids, RootNetworkLoadStatus.LOADED);
+        return rootNetworkRepository.findDistinctStudyIdsByStudyIdInAndLoadStatus(studyUuids, RootNetworkLoadStatus.LOADED);
     }
 }
