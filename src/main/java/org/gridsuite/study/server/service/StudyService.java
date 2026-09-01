@@ -1456,10 +1456,6 @@ public class StudyService {
         invalidateNodeTree(studyUuid, nodeUuid, InvalidateNodeTreeParameters.ALL);
     }
 
-    /**
-     * Invalidates {@code nodeUuid} because the shared (referenced) composite modification it points to
-     * changed elsewhere - directory-server is the one that decided this node needed to be told.
-     */
     @Transactional
     public void invalidateNodeTreeWhenSharedModificationChanged(UUID studyUuid, UUID nodeUuid) {
         invalidateNodeTree(studyUuid, nodeUuid, InvalidateNodeTreeParameters.ALL);

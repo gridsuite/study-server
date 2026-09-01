@@ -331,10 +331,14 @@ public class NetworkModificationService {
     }
 
     /**
-     * @return modification uuid -> uuid of the top-level group ultimately containing it, walking up through as
-     * many nested composite modifications as needed; modifications not reachable from any group have no entry
+     * Resolves, for each given modification, the modification group it ultimately belongs to.
+     * @param modificationsUuids the modifications to resolve; each may sit directly in a group or be nested
+     * inside one or more composite modifications
+     * @return a map from modification uuid to the uuid of its enclosing root group (the outermost group,
+     * found by walking up through every level of nested composite modifications). A modification that is
+     * not reachable from any group is absent from the map.
      */
-    public Map<UUID, UUID> findRootGroups(List<UUID> modificationsUuids) {
+    public Map<UUID, UUID> findRootGroupByModification(List<UUID> modificationsUuids) {
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + COMPOSITE_PATH + "root-groups")

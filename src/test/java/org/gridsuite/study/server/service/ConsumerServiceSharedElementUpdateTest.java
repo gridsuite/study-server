@@ -32,9 +32,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * directory-server only knows the flat (id, type) references pointing at a shared element : direct study nodes,
- * and composite modifications it has no visibility into. This consumer is where those composite references get
- * resolved to the node(s) that actually need invalidating.
+ * @author Souissi Maissa <souissi.maissa at rte-france.com>
  */
 @ExtendWith(MockitoExtension.class)
 class ConsumerServiceSharedElementUpdateTest {
@@ -91,7 +89,7 @@ class ConsumerServiceSharedElementUpdateTest {
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(List.of(nodeUuid), List.of()));
 
         verify(studyService).invalidateNodeTreeWhenSharedModificationChanged(studyUuid, nodeUuid);
-        verify(networkModificationService, never()).findRootGroups(anyList());
+        verify(networkModificationService, never()).findRootGroupByModification(anyList());
     }
 
     @Test
@@ -100,7 +98,7 @@ class ConsumerServiceSharedElementUpdateTest {
         UUID groupUuid = UUID.randomUUID();
         UUID nodeUuid = UUID.randomUUID();
         UUID studyUuid = UUID.randomUUID();
-        when(networkModificationService.findRootGroups(List.of(compositeUuid))).thenReturn(Map.of(compositeUuid, groupUuid));
+        when(networkModificationService.findRootGroupByModification(List.of(compositeUuid))).thenReturn(Map.of(compositeUuid, groupUuid));
         when(networkModificationTreeService.getNodeUuidsByModificationGroups(List.of(groupUuid))).thenReturn(Map.of(groupUuid, nodeUuid));
         when(networkModificationTreeService.getStudyUuidForNodeId(nodeUuid)).thenReturn(studyUuid);
 
@@ -115,7 +113,7 @@ class ConsumerServiceSharedElementUpdateTest {
         UUID studyUuid = UUID.randomUUID();
         UUID compositeUuid = UUID.randomUUID();
         UUID groupUuid = UUID.randomUUID();
-        when(networkModificationService.findRootGroups(List.of(compositeUuid))).thenReturn(Map.of(compositeUuid, groupUuid));
+        when(networkModificationService.findRootGroupByModification(List.of(compositeUuid))).thenReturn(Map.of(compositeUuid, groupUuid));
         when(networkModificationTreeService.getNodeUuidsByModificationGroups(List.of(groupUuid))).thenReturn(Map.of(groupUuid, nodeUuid));
         when(networkModificationTreeService.getStudyUuidForNodeId(nodeUuid)).thenReturn(studyUuid);
 
@@ -129,7 +127,7 @@ class ConsumerServiceSharedElementUpdateTest {
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(List.of(), List.of()));
 
         verify(studyService, never()).invalidateNodeTreeWhenSharedModificationChanged(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
-        verify(networkModificationService, never()).findRootGroups(anyList());
+        verify(networkModificationService, never()).findRootGroupByModification(anyList());
     }
 
     private static Message<String> sharedElementUpdateMessage(List<UUID> studyNodeUuids, List<UUID> networkModificationUuids) {

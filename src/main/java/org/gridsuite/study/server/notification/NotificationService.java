@@ -474,8 +474,9 @@ public class NotificationService {
     }
 
     /**
-     * A shared (referenced) element pointed at by modifications of {@code parentNodeUuid} was edited
-     * elsewhere: tells the front to reload that node's modifications so the impacted references refresh.
+     * Notifies the front that a shared element referenced by some of {@code parentNodeUuid}'s network
+     * modifications ({@code networkModificationUuids}) has changed. The front should refresh the
+     * modifications list of that node so the affected modifications display the up-to-date reference.
      */
     @PostCompletion
     public void emitSharedElementUpdated(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> networkModificationUuids) {

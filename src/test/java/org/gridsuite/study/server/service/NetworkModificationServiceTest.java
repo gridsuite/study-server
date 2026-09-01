@@ -163,7 +163,7 @@ class NetworkModificationServiceTest {
     }
 
     @Test
-    void testFindRootGroups() {
+    void testFindRootGroupByModification() {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
         UUID groupUuid = UUID.randomUUID();
@@ -176,7 +176,7 @@ class NetworkModificationServiceTest {
                 Mockito.<ParameterizedTypeReference<Map<UUID, UUID>>>any()))
                 .thenReturn(ResponseEntity.ok(expected));
 
-        assertThat(networkModificationService.findRootGroups(List.of(firstUuid, secondUuid))).isEqualTo(expected);
+        assertThat(networkModificationService.findRootGroupByModification(List.of(firstUuid, secondUuid))).isEqualTo(expected);
     }
 
     @Test

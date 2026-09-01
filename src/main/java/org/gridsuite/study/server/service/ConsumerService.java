@@ -865,7 +865,7 @@ public class ConsumerService {
 
             List<UUID> networkModificationUuids = parseUuidList(networkModificationUuidsStr);
             if (!networkModificationUuids.isEmpty()) {
-                Collection<UUID> rootGroupUuids = networkModificationService.findRootGroups(networkModificationUuids).values();
+                Collection<UUID> rootGroupUuids = networkModificationService.findRootGroupByModification(networkModificationUuids).values();
                 if (!rootGroupUuids.isEmpty()) {
                     nodeUuidsToInvalidate.addAll(networkModificationTreeService.getNodeUuidsByModificationGroups(List.copyOf(rootGroupUuids)).values());
                 }
