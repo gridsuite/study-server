@@ -4,14 +4,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.service.client.dynamicsecurityanalysis;
+package org.gridsuite.study.server.service.dynamicmargincalculation;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.dto.ReportInfos;
-import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
+import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
 import org.gridsuite.study.server.utils.assertions.Assertions;
@@ -32,27 +31,29 @@ import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
 import static org.gridsuite.study.server.service.client.RestClient.DELIMITER;
-import static org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient.*;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
+import static org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService.*;
 import static org.gridsuite.study.server.utils.assertions.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
-class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
+class DynamicMarginCalculationRestServiceTest extends AbstractWireMockRestClientTest {
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final UUID REPORT_UUID = UUID.randomUUID();
     private static final UUID NODE_UUID = UUID.randomUUID();
-    private static final UUID DYNAMIC_SIMULATION_RESULT_UUID = UUID.randomUUID();
+    private static final UUID ROOT_NETWORK_UUID = UUID.randomUUID();
+    private static final UUID DYNAMIC_SIMULATION_PARAMETERS_UUID = UUID.randomUUID();
+    private static final UUID DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_UUID = UUID.randomUUID();
     private static final UUID PARAMETERS_UUID = UUID.randomUUID();
     private static final UUID RESULT_UUID = UUID.randomUUID();
 
-    private static final String PARAMETERS_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
-    private static final String RUN_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN);
-    private static final String RESULT_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RESULT);
+    private static final String PARAMETERS_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_PARAMETER);
+    private static final String RUN_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_RUN);
+    private static final String RESULT_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_RESULT);
     private static final String PARAMETERS_JSON = "parametersJson";
-    private DynamicSecurityAnalysisClient dynamicSecurityAnalysisClient;
+    private DynamicMarginCalculationRestService dynamicMarginCalculationRestService;
     @Autowired
     private RestTemplate restTemplate;
     @Autowired
@@ -63,8 +64,8 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
     @BeforeEach
     void setup() {
         // config client
-        remoteServicesProperties.setServiceUri("dynamic-security-analysis-server", initMockWebServer());
-        dynamicSecurityAnalysisClient = new DynamicSecurityAnalysisClient(remoteServicesProperties, restTemplate);
+        remoteServicesProperties.setServiceUri("dynamic-margin-calculation-server", initMockWebServer());
+        dynamicMarginCalculationRestService = new DynamicMarginCalculationRestService(remoteServicesProperties, restTemplate, objectMapper);
     }
 
     @Test
@@ -81,7 +82,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN_VALUE)
                 ));
         // call service to test
-        String provider = dynamicSecurityAnalysisClient.getProvider(PARAMETERS_UUID);
+        String provider = dynamicMarginCalculationRestService.getProvider(PARAMETERS_UUID);
 
         // check result
         assertThat(provider).isEqualTo(expectedProvider);
@@ -94,7 +95,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         // check result
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> dynamicSecurityAnalysisClient.getProvider(PARAMETERS_UUID)
+            () -> dynamicMarginCalculationRestService.getProvider(PARAMETERS_UUID)
         );
 
         // --- Error --- //
@@ -104,7 +105,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         // check result
         assertThrows(
             HttpServerErrorException.class,
-            () -> dynamicSecurityAnalysisClient.getProvider(PARAMETERS_UUID)
+            () -> dynamicMarginCalculationRestService.getProvider(PARAMETERS_UUID)
         );
     }
 
@@ -122,7 +123,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
         // call service to test
-        String resultParametersJson = dynamicSecurityAnalysisClient.getParameters(PARAMETERS_UUID);
+        String resultParametersJson = dynamicMarginCalculationRestService.getParameters(PARAMETERS_UUID, "userId");
 
         // check result
         assertThat(resultParametersJson).isEqualTo(parametersJson);
@@ -135,7 +136,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         // check result
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> dynamicSecurityAnalysisClient.getParameters(PARAMETERS_UUID)
+            () -> dynamicMarginCalculationRestService.getParameters(PARAMETERS_UUID, "userId")
         );
 
         // --- Error --- //
@@ -145,7 +146,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         // check result
         assertThrows(
             HttpServerErrorException.class,
-            () -> dynamicSecurityAnalysisClient.getParameters(PARAMETERS_UUID)
+            () -> dynamicMarginCalculationRestService.getParameters(PARAMETERS_UUID, "userId")
         );
     }
 
@@ -162,7 +163,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
         // call service to test
-        UUID resultParametersUuid = dynamicSecurityAnalysisClient.createParameters(parameterJson);
+        UUID resultParametersUuid = dynamicMarginCalculationRestService.createParameters(parameterJson);
 
         // check result
         assertThat(resultParametersUuid).isEqualTo(PARAMETERS_UUID);
@@ -175,7 +176,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         // check result
         assertThrows(
             HttpServerErrorException.class,
-            () -> dynamicSecurityAnalysisClient.createParameters(parameterJson)
+            () -> dynamicMarginCalculationRestService.createParameters(parameterJson)
         );
     }
 
@@ -191,7 +192,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                 .withRequestBody(equalTo(parameterJson))
                 .willReturn(WireMock.ok()));
         // call service to test
-        Assertions.assertThatNoException().isThrownBy(() -> dynamicSecurityAnalysisClient.updateParameters(PARAMETERS_UUID, parameterJson));
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicMarginCalculationRestService.updateParameters(PARAMETERS_UUID, parameterJson));
 
         // --- Not Found --- //
         // configure mock server response
@@ -202,7 +203,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         // check result
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> dynamicSecurityAnalysisClient.updateParameters(PARAMETERS_UUID, parameterJson)
+            () -> dynamicMarginCalculationRestService.updateParameters(PARAMETERS_UUID, parameterJson)
         );
 
         // --- Error --- //
@@ -213,7 +214,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         // check result
         assertThrows(
             HttpServerErrorException.class,
-            () -> dynamicSecurityAnalysisClient.updateParameters(PARAMETERS_UUID, parameterJson)
+            () -> dynamicMarginCalculationRestService.updateParameters(PARAMETERS_UUID, parameterJson)
         );
     }
 
@@ -223,36 +224,36 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
 
         // --- Success --- //
         // configure mock server response
-        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(PARAMETERS_BASE_URL + "/" + PARAMETERS_UUID + "/duplicate"))
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID + DELIMITER + "duplicate"))
                     .willReturn(WireMock.ok()
                         .withBody(objectMapper.writeValueAsString(newParameterUuid))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                     ));
         // call service to test
-        UUID resultParametersUuid = dynamicSecurityAnalysisClient.duplicateParameters(PARAMETERS_UUID);
+        UUID resultParametersUuid = dynamicMarginCalculationRestService.duplicateParameters(PARAMETERS_UUID);
 
         // check result
         assertThat(resultParametersUuid).isEqualTo(newParameterUuid);
 
         // --- Not Found --- //
         // configure mock server response
-        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(PARAMETERS_BASE_URL + "/" + PARAMETERS_UUID + "/duplicate"))
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID + DELIMITER + "duplicate"))
                 .willReturn(WireMock.notFound()));
 
         // check result
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> dynamicSecurityAnalysisClient.duplicateParameters(PARAMETERS_UUID)
+            () -> dynamicMarginCalculationRestService.duplicateParameters(PARAMETERS_UUID)
         );
 
         // --- Error --- //
-        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(PARAMETERS_BASE_URL + "/" + PARAMETERS_UUID + "/duplicate"))
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID + DELIMITER + "duplicate"))
                 .willReturn(WireMock.serverError()));
 
         // check result
         assertThrows(
             HttpServerErrorException.class,
-            () -> dynamicSecurityAnalysisClient.duplicateParameters(PARAMETERS_UUID)
+            () -> dynamicMarginCalculationRestService.duplicateParameters(PARAMETERS_UUID)
         );
     }
 
@@ -263,7 +264,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(url))
                 .willReturn(WireMock.ok()));
         // call service to test
-        Assertions.assertThatNoException().isThrownBy(() -> dynamicSecurityAnalysisClient.deleteParameters(PARAMETERS_UUID));
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicMarginCalculationRestService.deleteParameters(PARAMETERS_UUID));
     }
 
     @Test
@@ -278,7 +279,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
         // call service to test
-        UUID resultParametersUuid = dynamicSecurityAnalysisClient.createDefaultParameters();
+        UUID resultParametersUuid = dynamicMarginCalculationRestService.createDefaultParameters();
 
         // check result
         assertThat(resultParametersUuid).isEqualTo(PARAMETERS_UUID);
@@ -290,7 +291,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         // check result
         assertThrows(
             HttpServerErrorException.class,
-            () -> dynamicSecurityAnalysisClient.createDefaultParameters()
+            () -> dynamicMarginCalculationRestService.createDefaultParameters()
         );
     }
 
@@ -301,20 +302,19 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         String url = RUN_BASE_URL + DELIMITER + NETWORK_UUID + DELIMITER + "run";
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(url))
                 .withQueryParam(QUERY_PARAM_VARIANT_ID, equalTo("variantId"))
-                .withQueryParam("dynamicSimulationResultUuid", equalTo(DYNAMIC_SIMULATION_RESULT_UUID.toString()))
+                .withQueryParam("dynamicSecurityAnalysisParametersUuid", equalTo(DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_UUID.toString()))
                 .withQueryParam("parametersUuid", equalTo(PARAMETERS_UUID.toString()))
-                .withQueryParam(QUERY_PARAM_RECEIVER, equalTo("receiver"))
                 .withQueryParam(QUERY_PARAM_REPORT_UUID, equalTo(REPORT_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORTER_ID, equalTo(NODE_UUID.toString()))
-                .withQueryParam(QUERY_PARAM_REPORT_TYPE, equalTo(StudyService.ReportType.DYNAMIC_SECURITY_ANALYSIS.reportKey))
+                .withQueryParam(QUERY_PARAM_REPORT_TYPE, equalTo(StudyService.ReportType.DYNAMIC_MARGIN_CALCULATION.reportKey))
                 .withHeader(HEADER_USER_ID, equalTo("userId"))
                 .willReturn(WireMock.ok()
-                        .withBody(objectMapper.writeValueAsString(expectedResultUuid))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(objectMapper.writeValueAsString(expectedResultUuid))
                 ));
         // call service to test
-        UUID resultUuid = dynamicSecurityAnalysisClient.run("receiver", NETWORK_UUID,
-               "variantId", new ReportInfos(REPORT_UUID, NODE_UUID), DYNAMIC_SIMULATION_RESULT_UUID, PARAMETERS_UUID, "userId", false);
+        UUID resultUuid = dynamicMarginCalculationRestService.runDynamicMarginCalculation(NODE_UUID, ROOT_NETWORK_UUID, NETWORK_UUID,
+               "variantId", REPORT_UUID, DYNAMIC_SIMULATION_PARAMETERS_UUID, DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_UUID, PARAMETERS_UUID, "userId", false);
 
         // check result
         assertThat(resultUuid).isEqualTo(expectedResultUuid);
@@ -322,22 +322,21 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         // --- Error --- //
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(url))
                 .withQueryParam(QUERY_PARAM_VARIANT_ID, absent())
-                .withQueryParam("dynamicSimulationResultUuid", equalTo(DYNAMIC_SIMULATION_RESULT_UUID.toString()))
+                .withQueryParam("provider", absent())
+                .withQueryParam("dynamicSecurityAnalysisParametersUuid", equalTo(DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_UUID.toString()))
                 .withQueryParam("parametersUuid", equalTo(PARAMETERS_UUID.toString()))
-                .withQueryParam(QUERY_PARAM_RECEIVER, equalTo("receiver"))
                 .withQueryParam(QUERY_PARAM_REPORT_UUID, equalTo(REPORT_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORTER_ID, equalTo(NODE_UUID.toString()))
-                .withQueryParam(QUERY_PARAM_REPORT_TYPE, equalTo(StudyService.ReportType.DYNAMIC_SECURITY_ANALYSIS.reportKey))
-                .withHeader(QUERY_PARAM_DEBUG, equalTo("true"))
+                .withQueryParam(QUERY_PARAM_REPORT_TYPE, equalTo(StudyService.ReportType.DYNAMIC_MARGIN_CALCULATION.reportKey))
+                .withQueryParam(QUERY_PARAM_DEBUG, equalTo("true"))
                 .withHeader(HEADER_USER_ID, equalTo("userId"))
                 .willReturn(WireMock.serverError()));
 
         // check result
         assertThrows(
-            HttpClientErrorException.NotFound.class,
-            () -> dynamicSecurityAnalysisClient.run("receiver", NETWORK_UUID, null,
-                new ReportInfos(REPORT_UUID, NODE_UUID), DYNAMIC_SIMULATION_RESULT_UUID, PARAMETERS_UUID,
-                "userId", true)
+                HttpServerErrorException.class,
+            () -> dynamicMarginCalculationRestService.runDynamicMarginCalculation(NODE_UUID, ROOT_NETWORK_UUID, NETWORK_UUID, null,
+                REPORT_UUID, DYNAMIC_SIMULATION_PARAMETERS_UUID, DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_UUID, PARAMETERS_UUID, "userId", true)
         );
     }
 
@@ -347,14 +346,19 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         String url = RESULT_BASE_URL + DELIMITER + RESULT_UUID + "/status";
         wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
                 .willReturn(WireMock.ok()
-                        .withBody(objectMapper.writeValueAsString(DynamicSecurityAnalysisStatus.SUCCEED))
+                        .withBody(objectMapper.writeValueAsString(DynamicMarginCalculationStatus.SUCCEED))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
         // call service to test
-        DynamicSecurityAnalysisStatus status = dynamicSecurityAnalysisClient.getStatus(RESULT_UUID);
+        DynamicMarginCalculationStatus status = dynamicMarginCalculationRestService.getStatus(RESULT_UUID);
 
         // check result
-        assertThat(status).isEqualTo(DynamicSecurityAnalysisStatus.SUCCEED);
+        assertThat(status).isEqualTo(DynamicMarginCalculationStatus.SUCCEED);
+    }
+
+    @Test
+    void testGetStatusWithoutResultUuid() {
+        assertThat(dynamicMarginCalculationRestService.getStatus(null)).isNull();
     }
 
     @Test
@@ -367,7 +371,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                 .withQueryParam("resultUuid", equalTo(RESULT_UUID.toString()))
                 .willReturn(WireMock.ok()));
         // call service to test
-        Assertions.assertThatNoException().isThrownBy(() -> dynamicSecurityAnalysisClient.invalidateStatus(List.of(RESULT_UUID)));
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicMarginCalculationRestService.invalidateStatus(List.of(RESULT_UUID)));
 
         // --- Not Found --- //
         // configure mock server response
@@ -378,7 +382,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         // check result
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> dynamicSecurityAnalysisClient.invalidateStatus(List.of(RESULT_UUID))
+            () -> dynamicMarginCalculationRestService.invalidateStatus(List.of(RESULT_UUID))
         );
 
         // --- Error --- //
@@ -389,7 +393,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         // check result
         assertThrows(
             HttpServerErrorException.class,
-            () -> dynamicSecurityAnalysisClient.invalidateStatus(List.of(RESULT_UUID))
+            () -> dynamicMarginCalculationRestService.invalidateStatus(List.of(RESULT_UUID))
         );
     }
 
@@ -399,7 +403,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(RESULT_BASE_URL + "?resultsUuids=" + RESULT_UUID))
                 .willReturn(WireMock.ok()));
         // call service to test
-        Assertions.assertThatNoException().isThrownBy(() -> dynamicSecurityAnalysisClient.deleteResults(List.of(RESULT_UUID)));
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicMarginCalculationRestService.deleteResults(List.of(RESULT_UUID)));
     }
 
     @Test
@@ -408,7 +412,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(RESULT_BASE_URL + "?resultsUuids"))
                 .willReturn(WireMock.ok()));
         // call service to test
-        Assertions.assertThatNoException().isThrownBy(() -> dynamicSecurityAnalysisClient.deleteResults(null));
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicMarginCalculationRestService.deleteResults(null));
     }
 
     @Test
@@ -421,18 +425,18 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                     .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
         // call service to test
-        Integer resultCount = dynamicSecurityAnalysisClient.getResultsCount();
+        Integer resultCount = dynamicMarginCalculationRestService.getResultsCount();
         assertThat(resultCount).isEqualTo(expectedResultCount);
     }
 
     @Test
     void testGetProviders() {
-        String url = buildEndPointUrl("", DYNAMIC_SECURITY_ANALYSIS_API_VERSION, "providers");
+        String url = buildEndPointUrl("", DYNAMIC_MARGIN_CALCULATION_API_VERSION, "providers");
         String providers = "[\"Dynawo\"]";
         wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
             .willReturn(WireMock.ok().withBody(providers).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
 
-        assertThat(dynamicSecurityAnalysisClient.getProviders()).isEqualTo(providers);
+        assertThat(dynamicMarginCalculationRestService.getProviders()).isEqualTo(providers);
         wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlEqualTo(url)));
     }
 
@@ -442,7 +446,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         String url = RESULT_BASE_URL + DELIMITER + RESULT_UUID + DELIMITER + "download-debug-file";
         wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url)).willReturn(WireMock.ok().withBody(body)));
 
-        var response = dynamicSecurityAnalysisClient.downloadDebugFile(RESULT_UUID);
+        var response = dynamicMarginCalculationRestService.downloadDebugFile(RESULT_UUID);
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(new String(response.getBody().getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)).isEqualTo(body);
         wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlEqualTo(url)));
