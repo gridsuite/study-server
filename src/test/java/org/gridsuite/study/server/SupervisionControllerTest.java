@@ -24,6 +24,7 @@ import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
@@ -39,6 +40,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.MediaType;
+import org.springframework.messaging.Message;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -370,8 +372,12 @@ class SupervisionControllerTest {
 
         List<UUID> allRootNetworkUuids = rootNetworkService.getStudyRootNetworkIds(STUDY_UUID);
         assertThat(allRootNetworkUuids).hasSize(2);
-        assertEquals(RootNetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(firstRootNetworkUuid).orElseThrow().getRootNetworkLoadStatus());
-        assertEquals(RootNetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(secondRootNetworkUuid).orElseThrow().getRootNetworkLoadStatus());
+        assertEquals(RootNetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(firstRootNetworkUuid).orElseThrow().getLoadStatus());
+        assertEquals(RootNetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(secondRootNetworkUuid).orElseThrow().getLoadStatus());
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, ELEMENT_UPDATE_DESTINATION);
+        assertEquals(STUDY_UUID, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
+        assertEquals("Supervision", message.getHeaders().get(NotificationService.HEADER_MODIFIED_BY));
+
         TestUtils.assertQueuesEmptyThenClear(List.of(ELEMENT_UPDATE_DESTINATION), output);
     }
 
@@ -379,7 +385,7 @@ class SupervisionControllerTest {
     void testGetLoadedStudies() throws Exception {
         initStudy();
         UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(STUDY_UUID);
-        assertEquals(RootNetworkLoadStatus.LOADED, rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow().getRootNetworkLoadStatus());
+        assertEquals(RootNetworkLoadStatus.LOADED, rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow().getLoadStatus());
         UUID unknownStudyUuid = UUID.randomUUID();
         MvcResult mvcResult = mockMvc.perform(get("/v1/supervision/studies/loaded")
                         .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
