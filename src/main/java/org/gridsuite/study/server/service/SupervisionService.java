@@ -118,8 +118,7 @@ public class SupervisionService {
                               ElasticsearchOperations elasticsearchOperations,
                               StudyInfosService studyInfosService,
                               RootNetworkService rootNetworkService,
-                              StudyRepository studyRepository,
-                              NotificationService notificationService) {
+                              StudyRepository studyRepository) {
 
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
