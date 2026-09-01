@@ -1335,10 +1335,10 @@ public class StudyService {
                     networkModificationTreeService.invalidateNodeTree(studyUuid, rootNodeUuid, rnId, invalidateNodeTreeParameters, skipDeleteVariants)))
                 .toList();
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
-        boolean atLeastOneRootNetworkLoaded = rootNetworkIds.stream()
+        boolean noneMatchUnloading = rootNetworkIds.stream()
                 .map(rnId -> rootNetworkService.getRootNetwork(rnId).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")))
-                .anyMatch(rootNetwork -> rootNetwork.getLoadStatus() == RootNetworkLoadStatus.LOADED);
-        if (atLeastOneRootNetworkLoaded) {
+                .noneMatch(rootNetwork -> rootNetwork.getLoadStatus() == RootNetworkLoadStatus.UNLOADING);
+        if (noneMatchUnloading) {
             notificationService.emitElementUpdated(studyUuid, userId);
         }
     }
