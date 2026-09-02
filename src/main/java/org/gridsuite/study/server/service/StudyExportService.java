@@ -6,11 +6,18 @@
  */
 package org.gridsuite.study.server.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.apache.commons.collections4.CollectionUtils;
+import org.gridsuite.filter.AbstractFilter;
+import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
+import org.gridsuite.study.server.dto.studyexport.NetworkModificationExportInfos;
 import org.gridsuite.study.server.dto.studyexport.RootNetworkExportInfos;
 import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
 import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.InputStreamResource;
@@ -23,10 +30,7 @@ import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
@@ -41,17 +45,23 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.EXPORT_STU
 public class StudyExportService {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyExportService.class);
     public static final String TREE_JSON_FILE_NAME = "tree.json";
+    public static final String NETWORK_MODIFICATIONS_JSON = "network-modification.json";
+    public static final String NETWORK_MODIFICATION_FILTERS_JSON = "network-modification-filters.json";
+    public static final String NETWORK_MODIFICATION_LOAD_FLOW_PARAMETERS_JSON = "network-modification-load-flow-parameters.json";
     public static final String CASES_FOLDER = "cases";
 
     private final StudyService studyService;
     private final CaseService caseService;
     private final DirectoryService directoryService;
+    private final LoadFlowService loadFlowService;
     private final ObjectMapper objectMapper;
 
-    public StudyExportService(StudyService studyService, CaseService caseService, DirectoryService directoryService, ObjectMapper objectMapper) {
+    public StudyExportService(StudyService studyService, CaseService caseService, DirectoryService directoryService,
+                              LoadFlowService loadFlowService, ObjectMapper objectMapper) {
         this.studyService = studyService;
         this.caseService = caseService;
         this.directoryService = directoryService;
+        this.loadFlowService = loadFlowService;
         this.objectMapper = objectMapper;
     }
 
@@ -95,6 +105,10 @@ public class StudyExportService {
         TreeExportInfos treeExportInfos = studyService.buildTreeExport(studyUuid);
         Path studyJsonPath = tempDir.resolve(TREE_JSON_FILE_NAME);
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(studyJsonPath.toFile(), treeExportInfos);
+        Map<UUID, NetworkModificationExportInfos> modificationsByGroup = studyService.buildNetworkModificationsExport(treeExportInfos.nodeTree());
+        writeNetworkModificationsExport(modificationsByGroup, tempDir);
+        writeNetworkModificationFiltersExport(modificationsByGroup, tempDir);
+        writeLoadFlowParametersExport(modificationsByGroup, tempDir);
         Path casesDir = Files.createDirectories(tempDir.resolve(CASES_FOLDER));
         for (RootNetworkExportInfos rootNetworkInfos : treeExportInfos.rootNetworks()) {
             UUID caseUuid = rootNetworkInfos.caseInfos().getCaseUuid();
@@ -107,6 +121,48 @@ public class StudyExportService {
             writeZipEntries(tempDir, zipOut);
         }
         return zipFile;
+    }
+
+    private void writeNetworkModificationsExport(Map<UUID, NetworkModificationExportInfos> modificationsByGroup, Path tempDir) throws IOException {
+        Map<String, Map<String, Collection<JsonNode>>> root = new LinkedHashMap<>();
+        for (Map.Entry<UUID, NetworkModificationExportInfos> entry : modificationsByGroup.entrySet()) {
+            root.put(entry.getKey().toString(), Map.of("modifications", CollectionUtils.emptyIfNull(entry.getValue().exportedModifications())));
+        }
+        Path networkModificationsJsonPath = tempDir.resolve(NETWORK_MODIFICATIONS_JSON);
+        objectMapper.writerWithDefaultPrettyPrinter().writeValue(networkModificationsJsonPath.toFile(), root);
+    }
+
+    private void writeNetworkModificationFiltersExport(Map<UUID, NetworkModificationExportInfos> modificationsByGroup, Path tempDir) throws IOException {
+        Map<UUID, AbstractFilter> filtersById = new LinkedHashMap<>();
+        for (NetworkModificationExportInfos groupExport : modificationsByGroup.values()) {
+            Map<UUID, List<AbstractFilter>> filtersByModification = groupExport.exportedFilters();
+            if (filtersByModification == null) {
+                continue;
+            }
+            filtersByModification.values().forEach(filtersForModification ->
+                    CollectionUtils.emptyIfNull(filtersForModification).forEach(filter -> filtersById.put(filter.getId(), filter)));
+        }
+        Path filtersJsonPath = tempDir.resolve(NETWORK_MODIFICATION_FILTERS_JSON);
+        objectMapper.writerWithDefaultPrettyPrinter().writeValue(filtersJsonPath.toFile(), filtersById);
+    }
+
+    private void writeLoadFlowParametersExport(Map<UUID, NetworkModificationExportInfos> modificationsByGroup, Path tempDir) throws IOException {
+        Set<UUID> loadFlowParametersIds = new LinkedHashSet<>();
+        for (NetworkModificationExportInfos groupExport : modificationsByGroup.values()) {
+            Map<UUID, UUID> loadFlowParametersByModification = groupExport.exportedLoadFlowParameters();
+            if (loadFlowParametersByModification != null) {
+                loadFlowParametersIds.addAll(loadFlowParametersByModification.values());
+            }
+        }
+        ObjectNode loadFlowParametersRoot = objectMapper.createObjectNode();
+        for (UUID loadFlowParametersId : loadFlowParametersIds) {
+            LoadFlowParametersInfos loadFlowParametersInfos = loadFlowService.getLoadFlowParameters(loadFlowParametersId);
+            if (loadFlowParametersInfos != null) {
+                loadFlowParametersRoot.set(loadFlowParametersId.toString(), objectMapper.valueToTree(loadFlowParametersInfos));
+            }
+        }
+        Path loadFlowParametersJsonPath = tempDir.resolve(NETWORK_MODIFICATION_LOAD_FLOW_PARAMETERS_JSON);
+        objectMapper.writerWithDefaultPrettyPrinter().writeValue(loadFlowParametersJsonPath.toFile(), loadFlowParametersRoot);
     }
 
     private Path createTempWorkDir(UUID studyUuid) {

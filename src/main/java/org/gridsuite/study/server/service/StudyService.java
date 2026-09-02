@@ -28,6 +28,7 @@ import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
+import org.gridsuite.study.server.dto.studyexport.NetworkModificationExportInfos;
 import org.gridsuite.study.server.dto.studyexport.NodeTreeExportInfos;
 import org.gridsuite.study.server.dto.studyexport.RootNetworkExportInfos;
 import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
@@ -521,7 +522,7 @@ public class StudyService {
     }
 
     @Transactional
-    public String getExportedNetworkModifications(UUID studyUuid, UUID nodeUuid) {
+    public NetworkModificationExportInfos getExportedNetworkModifications(UUID studyUuid, UUID nodeUuid) {
         if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
@@ -2836,6 +2837,27 @@ public class StudyService {
         AbstractNode rootNode = networkModificationTreeService.getStudyTree(studyUuid, null);
         NodeTreeExportInfos nodeTree = rootNode != null ? toNodeTreeExportInfos(rootNode) : null;
         return new TreeExportInfos(studyUuid, rootNetworks, nodeTree);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<UUID, NetworkModificationExportInfos> buildNetworkModificationsExport(NodeTreeExportInfos nodeTree) {
+        Set<UUID> modificationGroupUuids = new LinkedHashSet<>();
+        collectModificationGroupUuids(nodeTree, modificationGroupUuids);
+        Map<UUID, NetworkModificationExportInfos> modificationsByGroup = new LinkedHashMap<>();
+        for (UUID modificationGroupUuid : modificationGroupUuids) {
+            modificationsByGroup.put(modificationGroupUuid, networkModificationService.getModificationsToExport(modificationGroupUuid));
+        }
+        return modificationsByGroup;
+    }
+
+    private void collectModificationGroupUuids(NodeTreeExportInfos node, Set<UUID> modificationGroupUuids) {
+        if (node == null) {
+            return;
+        }
+        if (node.modificationGroupUuid() != null) {
+            modificationGroupUuids.add(node.modificationGroupUuid());
+        }
+        CollectionUtils.emptyIfNull(node.children()).forEach(child -> collectModificationGroupUuids(child, modificationGroupUuids));
     }
 
     private RootNetworkExportInfos toRootNetworkExportInfos(RootNetworkInfos rootNetworkInfos, int index) {

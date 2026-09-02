@@ -66,6 +66,8 @@ class TreeExportTest extends StudyTestBase {
                 .willReturn(WireMock.aResponse().withStatus(200)
                         .withHeader("Content-Type", "application/octet-stream")
                         .withBody("dummy case content".getBytes())));
+        // Stub the network modifications export
+        stubNetworkModificationsExport();
         // Export as zip
         MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName").header(HEADER_USER_ID, "testUser"))
                 .andExpect(status().isOk())
@@ -105,6 +107,7 @@ class TreeExportTest extends StudyTestBase {
         assertEquals(List.of(expectedCaseEntry), zipEntryNames.stream().filter(name -> name.startsWith("cases/")).toList());
         // Verify the case content download call
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
+        verifyNetworkModificationsExport();
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
     }
 
@@ -123,6 +126,7 @@ class TreeExportTest extends StudyTestBase {
                         .withHeader("Content-Type", "application/octet-stream")
                         .withHeader("Content-Encoding", "gzip")
                         .withBody(gzipped.toByteArray())));
+        stubNetworkModificationsExport();
 
         MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName").header(HEADER_USER_ID, "testUser"))
                 .andExpect(status().isOk())
@@ -140,6 +144,7 @@ class TreeExportTest extends StudyTestBase {
         }
         assertEquals(caseContent, extractedCaseContent);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
+        verifyNetworkModificationsExport();
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
     }
 
@@ -163,6 +168,7 @@ class TreeExportTest extends StudyTestBase {
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + CASE_UUID))
                 .willReturn(WireMock.aResponse().withStatus(200).withHeader("Content-Type", "application/octet-stream")
                         .withBody("dummy case content".getBytes())));
+        stubNetworkModificationsExport();
         // Capture the real zip file path as it is matched, so the test can clean it up itself:
         // the service's own Files.deleteIfExists call on this path is mocked to fail below.
         AtomicReference<Path> capturedZipFile = new AtomicReference<>();
@@ -193,6 +199,18 @@ class TreeExportTest extends StudyTestBase {
             }
         }
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
+        verifyNetworkModificationsExport();
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
+    }
+
+    private void stubNetworkModificationsExport() {
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/groups/[0-9a-f-]+/network-modifications/export"))
+                .withQueryParam("errorOnGroupNotFound", WireMock.equalTo("false"))
+                .willReturn(WireMock.okJson("{\"modifications\":[],\"filters\":{},\"loadFlowParameters\":{}}")));
+    }
+
+    private void verifyNetworkModificationsExport() {
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/groups/[0-9a-f-]+/network-modifications/export", true,
+                Map.of("errorOnGroupNotFound", WireMock.equalTo("false")), 1);
     }
 }
