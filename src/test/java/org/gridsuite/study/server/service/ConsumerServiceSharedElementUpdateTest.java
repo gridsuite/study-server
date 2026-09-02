@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.gridsuite.study.server.dto.ReferenceAttributes;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.nodeactivity.NodeActivityService;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -21,11 +22,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
+import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION;
+import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -36,9 +41,6 @@ import static org.mockito.Mockito.when;
  */
 @ExtendWith(MockitoExtension.class)
 class ConsumerServiceSharedElementUpdateTest {
-
-    private static final String HEADER_STUDY_NODE_UUIDS = "studyNodeUuids";
-    private static final String HEADER_NETWORK_MODIFICATION_UUIDS = "networkModificationUuids";
 
     @Mock
     private NotificationService notificationService;
@@ -71,7 +73,7 @@ class ConsumerServiceSharedElementUpdateTest {
     @Mock
     private NodeActivityService nodeActivityService;
 
-    private Consumer<Message<String>> consumeSharedElementUpdate;
+    private Consumer<Message<Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>>>> consumeSharedElementUpdate;
 
     @BeforeEach
     void setup() {
@@ -132,14 +134,18 @@ class ConsumerServiceSharedElementUpdateTest {
         verify(networkModificationService, never()).findRootGroupByModification(anyList());
     }
 
-    private static Message<String> sharedElementUpdateMessage(List<UUID> studyNodeUuids, List<UUID> networkModificationUuids) {
-        return MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_NODE_UUIDS, joined(studyNodeUuids))
-                .setHeader(HEADER_NETWORK_MODIFICATION_UUIDS, joined(networkModificationUuids))
-                .build();
+    private static Message<Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>>> sharedElementUpdateMessage(List<UUID> studyNodeUuids, List<UUID> networkModificationUuids) {
+        Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType = new HashMap<>();
+        if (!studyNodeUuids.isEmpty()) {
+            referencesByType.put(STUDY_NODE, toReferenceAttributes(studyNodeUuids, STUDY_NODE));
+        }
+        if (!networkModificationUuids.isEmpty()) {
+            referencesByType.put(NETWORK_MODIFICATION, toReferenceAttributes(networkModificationUuids, NETWORK_MODIFICATION));
+        }
+        return MessageBuilder.withPayload(referencesByType).build();
     }
 
-    private static String joined(List<UUID> uuids) {
-        return uuids.stream().map(UUID::toString).reduce((a, b) -> a + "," + b).orElse("");
+    private static List<ReferenceAttributes> toReferenceAttributes(List<UUID> uuids, ReferenceAttributes.ReferenceType type) {
+        return uuids.stream().map(uuid -> new ReferenceAttributes(uuid, type)).collect(Collectors.toList());
     }
 }

@@ -59,8 +59,6 @@ public class ConsumerService {
     private static final String NETWORK_ID = "networkId";
     private static final String HEADER_CASE_FORMAT = "caseFormat";
     private static final String HEADER_CASE_NAME = "caseName";
-    private static final String HEADER_STUDY_NODE_UUIDS = "studyNodeUuids";
-    private static final String HEADER_NETWORK_MODIFICATION_UUIDS = "networkModificationUuids";
     private static final String HEADER_WITH_RATIO_TAP_CHANGERS = "withRatioTapChangers";
     private static final String HEADER_ERROR_MESSAGE = "errorMessage";
     private static final String HEADER_EXPORT_UUID = "exportUuid";
@@ -862,33 +860,31 @@ public class ConsumerService {
     }
 
     @Bean
-    public Consumer<Message<String>> consumeSharedElementUpdate() {
-        return message -> {
-            String studyNodeUuidsStr = message.getHeaders().get(HEADER_STUDY_NODE_UUIDS, String.class);
-            String networkModificationUuidsStr = message.getHeaders().get(HEADER_NETWORK_MODIFICATION_UUIDS, String.class);
-
-            Set<UUID> nodeUuidsToInvalidate = new LinkedHashSet<>(parseUuidList(studyNodeUuidsStr));
-
-            List<UUID> networkModificationUuids = parseUuidList(networkModificationUuidsStr);
-            if (!networkModificationUuids.isEmpty()) {
-                Collection<UUID> rootGroupUuids = networkModificationService.findRootGroupByModification(networkModificationUuids).values();
-                if (!rootGroupUuids.isEmpty()) {
-                    nodeUuidsToInvalidate.addAll(networkModificationTreeService.getNodeUuidsByModificationGroups(List.copyOf(rootGroupUuids)).values());
-                }
-            }
-
-            nodeUuidsToInvalidate.forEach(nodeUuid -> {
-                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
-                studyService.invalidateNodeTreeWhenSharedModificationChanged(studyUuid, nodeUuid);
-                notificationService.emitSharedElementUpdated(studyUuid, nodeUuid, networkModificationUuids);
-            });
-        };
+    public Consumer<Message<Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>>>> consumeSharedElementUpdate() {
+        return message -> handleSharedElementUpdate(message.getPayload());
     }
 
-    private static List<UUID> parseUuidList(String commaJoinedUuids) {
-        if (StringUtils.isEmpty(commaJoinedUuids)) {
-            return List.of();
+    private void handleSharedElementUpdate(Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType) {
+        List<UUID> studyNodeUuids = extractReferenceIds(referencesByType, ReferenceAttributes.ReferenceType.STUDY_NODE);
+        List<UUID> networkModificationUuids = extractReferenceIds(referencesByType, ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION);
+
+        Set<UUID> nodeUuidsToInvalidate = new LinkedHashSet<>(studyNodeUuids);
+
+        if (!networkModificationUuids.isEmpty()) {
+            Collection<UUID> rootGroupUuids = networkModificationService.findRootGroupByModification(networkModificationUuids).values();
+            if (!rootGroupUuids.isEmpty()) {
+                nodeUuidsToInvalidate.addAll(networkModificationTreeService.getNodeUuidsByModificationGroups(List.copyOf(rootGroupUuids)).values());
+            }
         }
-        return Arrays.stream(commaJoinedUuids.split(",")).map(UUID::fromString).toList();
+
+        nodeUuidsToInvalidate.forEach(nodeUuid -> {
+            UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
+            studyService.invalidateNodeTreeWhenSharedModificationChanged(studyUuid, nodeUuid);
+            notificationService.emitSharedElementUpdated(studyUuid, nodeUuid, networkModificationUuids);
+        });
+    }
+
+    private static List<UUID> extractReferenceIds(Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType, ReferenceAttributes.ReferenceType type) {
+        return referencesByType.getOrDefault(type, List.of()).stream().map(ReferenceAttributes::getReferenceId).toList();
     }
 }
