@@ -2034,15 +2034,14 @@ public class StudyService {
 
         UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
-        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             // the applied modifications are left unchanged : the node does not need to be rebuilt
             networkModificationService.extractCompositeModificationToShare(groupUuid, modificationUuid, name);
             // the composite modification keeps its uuid when extracted, so it is shared under that same uuid
             directoryService.createElement(parentDirectoryUuid, description, modificationUuid, name, DirectoryService.MODIFICATION, userId);
-            directoryService.createsReferencesToSharedComposites(List.of(modificationUuid), userId, nodeUuid);
+            directoryService.createsReferencesToSharedComposites(List.of(modificationUuid), userId, nodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE);
         } finally {
-            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
+            notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
     }

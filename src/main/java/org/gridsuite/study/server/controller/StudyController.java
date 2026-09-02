@@ -717,8 +717,7 @@ public class StudyController {
                                                            @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
                                                            @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
-        studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.shareCompositeNetworkModification(studyUuid, nodeUuid, modificationUuid, name, description, parentDirectoryUuid, userId);
         return ResponseEntity.ok().build();
     }
