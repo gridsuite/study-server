@@ -3497,7 +3497,7 @@ class NetworkModificationTest {
     }
 
     @Test
-    void testUpdateNetworkModificationsActivationForwardsRootNetworkTag() throws Exception {
+    void testUpdateNetworkModificationsActivationOnReference() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyUuid = studyEntity.getId();
@@ -3509,17 +3509,22 @@ class NetworkModificationTest {
         String rootNetworkTag = rootNetworkService.getRootNetworkTag(rootNetworkUuid);
 
         UUID compositeUuid = UUID.randomUUID();
+        UUID sharedUuid = UUID.randomUUID();
 
         // Stub verifyModifications
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(
                         "/v1/groups/" + node.getModificationGroupUuid() + "/network-modifications/verify"))
                 .willReturn(WireMock.ok()));
 
-        // Stub the references lookup: none of the modifications is a reference to a shared modification
+        // Stub the references lookup: the modification is a reference, so a shared modification holds its applicabilities
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/references"))
                 .willReturn(WireMock.ok()
-                        .withBody("[]")
+                        .withBody("[{\"modificationUuid\":\"" + compositeUuid + "\",\"referenceId\":\"" + sharedUuid + "\",\"containerId\":null}]")
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+
+        // Stub the rights check on the shared modification
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/elements/authorized"))
+                .willReturn(WireMock.ok()));
 
         // Stub the applicability update
         wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(
@@ -3545,6 +3550,11 @@ class NetworkModificationTest {
         // the references are looked up to check the rights on the shared modifications, if any
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/references",
                 Map.of("uuids", WireMock.equalTo(compositeUuid.toString())));
+
+        // only a user allowed to write on the shared element may change the applicabilities it holds
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/elements/authorized", Map.of(
+                "ids", WireMock.equalTo(sharedUuid.toString()),
+                "accessType", WireMock.equalTo("WRITE")));
 
         // the applicability is updated for the tag of the root network, the sub modifications of the composite being
         // handled by the network modification server itself
