@@ -74,6 +74,7 @@ import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.data.util.Pair;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
@@ -2187,6 +2188,108 @@ class NetworkModificationTest {
                 "/v1/elements/" + sharedNetModId + "/references",
                 Map.of(),
                 mapper.writeValueAsString(new ReferenceAttributes(nodeUuid1, STUDY_NODE)));
+    }
+
+    @Test
+    void testShareCompositeModification() throws Exception {
+        String userId = "userId";
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "Node 1", userId);
+        UUID nodeUuid1 = node1.getId();
+
+        UUID compositeUuid = UUID.randomUUID();
+        UUID directoryUuid = UUID.randomUUID();
+        String compositeName = "sharedComposite";
+
+        // we are allowed to write in the target directory, where no modification has that name yet
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/elements/authorized"))
+                .willReturn(WireMock.ok()));
+        wireMockServer.stubFor(WireMock.head(WireMock.urlPathEqualTo(
+                        "/v1/directories/" + directoryUuid + "/elements/" + compositeName + "/types/MODIFICATION"))
+                .willReturn(WireMock.aResponse().withStatus(HttpStatus.NO_CONTENT.value())));
+
+        // the composite modification is taken out of the node group, then stored as an element of the directory
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo(
+                        "/v1/network-composite-modifications/" + compositeUuid + "/share"))
+                .willReturn(WireMock.ok()));
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/directories/" + directoryUuid + "/elements"))
+                .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/elements/" + compositeUuid + "/references"))
+                .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuid}/share",
+                        studyUuid, nodeUuid1, compositeUuid)
+                        .queryParam("name", compositeName)
+                        .queryParam("description", "description")
+                        .queryParam("parentDirectoryUuid", directoryUuid.toString())
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isOk());
+
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
+        checkElementUpdatedMessageSent(studyUuid, userId);
+
+        verifyDirectoryWriteChecks(directoryUuid, compositeName);
+        WireMockUtilsCriteria.verifyPostRequest(
+                wireMockServer,
+                "/v1/network-composite-modifications/" + compositeUuid + "/share",
+                Map.of("groupUuid", WireMock.equalTo(node1.getModificationGroupUuid().toString()),
+                        "name", WireMock.equalTo(compositeName)));
+        WireMockUtilsCriteria.verifyPostRequest(
+                wireMockServer,
+                "/v1/directories/" + directoryUuid + "/elements",
+                Map.of());
+        WireMockUtilsCriteria.verifyPostRequest(
+                wireMockServer,
+                "/v1/elements/" + compositeUuid + "/references",
+                Map.of(),
+                mapper.writeValueAsString(new ReferenceAttributes(nodeUuid1, STUDY_NODE)));
+    }
+
+    @Test
+    void testShareCompositeModificationWithAlreadyUsedName() throws Exception {
+        String userId = "userId";
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "Node 1", userId);
+
+        UUID compositeUuid = UUID.randomUUID();
+        UUID directoryUuid = UUID.randomUUID();
+        String compositeName = "sharedComposite";
+
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/elements/authorized"))
+                .willReturn(WireMock.ok()));
+        // an element of that name already exists in the target directory
+        wireMockServer.stubFor(WireMock.head(WireMock.urlPathEqualTo(
+                        "/v1/directories/" + directoryUuid + "/elements/" + compositeName + "/types/MODIFICATION"))
+                .willReturn(WireMock.ok()));
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuid}/share",
+                        studyUuid, node1.getId(), compositeUuid)
+                        .queryParam("name", compositeName)
+                        .queryParam("description", "description")
+                        .queryParam("parentDirectoryUuid", directoryUuid.toString())
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isInternalServerError());
+
+        // nothing has been taken out of the study
+        verifyDirectoryWriteChecks(directoryUuid, compositeName);
+        wireMockServer.verify(0, WireMock.postRequestedFor(WireMock.urlPathEqualTo(
+                "/v1/network-composite-modifications/" + compositeUuid + "/share")));
+    }
+
+    private void verifyDirectoryWriteChecks(UUID directoryUuid, String elementName) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/elements/authorized",
+                Map.of("accessType", WireMock.equalTo("WRITE"),
+                        "targetDirectoryUuid", WireMock.equalTo(directoryUuid.toString()),
+                        "recursiveCheck", WireMock.equalTo("false")));
+        WireMockUtilsCriteria.verifyHeadRequest(wireMockServer,
+                "/v1/directories/" + directoryUuid + "/elements/" + elementName + "/types/MODIFICATION",
+                Map.of(), 1);
     }
 
     @Test
