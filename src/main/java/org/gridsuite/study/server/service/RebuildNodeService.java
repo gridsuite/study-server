@@ -143,9 +143,13 @@ public class RebuildNodeService {
             Stream.of(node1Uuid, node2Uuid).distinct().toList(), action);
 
         rootNetworkUuidsByNodeBuilt.forEach((nodeUuid, rootNetworkUuids) ->
-            rootNetworkUuids.forEach(rootNetworkUuid ->
-                nodeActivityService.runWith(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid),
-                    () -> studyService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId))));
+            rootNetworkUuids.forEach(rootNetworkUuid -> {
+                if (!studyService.isNodeBuilt(nodeUuid, rootNetworkUuid)) {
+                    nodeActivityService.runWith(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+                        () -> studyService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId));
+                }
+            })
+        );
 
         return result;
     }
