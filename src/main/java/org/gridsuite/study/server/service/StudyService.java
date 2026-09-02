@@ -1707,7 +1707,10 @@ public class StudyService {
         // reindex root network for study in elasticsearch
         studyInfosService.recreateStudyInfos(studyInfos);
         RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-
+        if (rootNetwork.getLoadStatus() != RootNetworkLoadStatus.LOADED) {
+            LOGGER.info("Root network '{}' is not loaded, skipping reindexation", rootNetworkUuid);
+            return;
+        }
         // Reset indexation status
         updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.INDEXING_ONGOING);
         try {
