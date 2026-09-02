@@ -1708,7 +1708,7 @@ public class StudyService {
         studyInfosService.recreateStudyInfos(studyInfos);
         RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         if (rootNetwork.getLoadStatus() != RootNetworkLoadStatus.LOADED) {
-            LOGGER.info("Root network '{}' has no loaded network, skipping reindexation", rootNetworkUuid);
+            LOGGER.info("Root network '{}' is not loaded, skipping reindexation", rootNetworkUuid);
             return;
         }
         // Reset indexation status

@@ -22,6 +22,8 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.repository.StudyCreationRequestEntity;
+import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
@@ -137,6 +139,8 @@ class RootNetworkTest {
     private RootNetworkService rootNetworkService;
     @Autowired
     private RootNetworkRequestRepository rootNetworkRequestRepository;
+    @Autowired
+    private StudyCreationRequestRepository studyCreationRequestRepository;
     @Autowired
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Autowired
@@ -877,13 +881,15 @@ class RootNetworkTest {
         StudyEntity sourceStudy = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         sourceStudy.getRootNetworks().getFirst().setLoadStatus(RootNetworkLoadStatus.UNLOADED);
         studyRepository.save(sourceStudy);
+        networkModificationTreeService.createRoot(sourceStudy);
         when(networkService.doesNetworkExist(NETWORK_UUID)).thenReturn(false);
         when(caseService.duplicateCase(CASE_UUID, false)).thenReturn(DUPLICATE_CASE_UUID);
         when(reportService.duplicateReport(REPORT_UUID)).thenReturn(UUID.randomUUID());
-        StudyEntity newStudy = studyRepository.save(StudyEntity.builder().id(UUID.randomUUID()).build());
-        rootNetworkService.duplicateStudyRootNetworks(newStudy, sourceStudy);
+        UUID newStudyUuid = UUID.randomUUID();
+        studyCreationRequestRepository.save(new StudyCreationRequestEntity(newStudyUuid, "firstRootNetworkName"));
+        studyService.duplicateStudyAsync(BasicStudyInfos.builder().id(newStudyUuid).build(), sourceStudy.getId(), USER_ID);
         verify(networkService, never()).getNetworkVariants(any());
-        RootNetworkEntity duplicatedRootNetwork = testUtils.getOneRootNetwork(newStudy.getId());
+        RootNetworkEntity duplicatedRootNetwork = testUtils.getOneRootNetwork(newStudyUuid);
         assertNotEquals(NETWORK_UUID, duplicatedRootNetwork.getNetworkUuid());
         assertEquals(RootNetworkLoadStatus.UNLOADED, duplicatedRootNetwork.getLoadStatus());
         assertEquals(DUPLICATE_CASE_UUID, duplicatedRootNetwork.getCaseUuid());
