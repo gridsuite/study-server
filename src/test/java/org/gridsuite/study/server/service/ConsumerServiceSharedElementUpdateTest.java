@@ -93,6 +93,7 @@ class ConsumerServiceSharedElementUpdateTest {
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(List.of(nodeUuid), List.of()));
 
         verify(studyService).invalidateNodeTreeWhenSharedModificationChanged(studyUuid, nodeUuid);
+        verify(notificationService).emitSharedElementUpdated(studyUuid, nodeUuid, List.of());
         verify(networkModificationService, never()).findRootGroupByModification(anyList());
     }
 
@@ -109,6 +110,7 @@ class ConsumerServiceSharedElementUpdateTest {
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(List.of(), List.of(compositeUuid)));
 
         verify(studyService).invalidateNodeTreeWhenSharedModificationChanged(studyUuid, nodeUuid);
+        verify(notificationService).emitSharedElementUpdated(studyUuid, nodeUuid, List.of(compositeUuid));
     }
 
     @Test
@@ -124,6 +126,7 @@ class ConsumerServiceSharedElementUpdateTest {
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(List.of(nodeUuid), List.of(compositeUuid)));
 
         verify(studyService, org.mockito.Mockito.times(1)).invalidateNodeTreeWhenSharedModificationChanged(studyUuid, nodeUuid);
+        verify(notificationService, org.mockito.Mockito.times(1)).emitSharedElementUpdated(studyUuid, nodeUuid, List.of(compositeUuid));
     }
 
     @Test
@@ -131,6 +134,7 @@ class ConsumerServiceSharedElementUpdateTest {
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(List.of(), List.of()));
 
         verify(studyService, never()).invalidateNodeTreeWhenSharedModificationChanged(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        verify(notificationService, never()).emitSharedElementUpdated(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), anyList());
         verify(networkModificationService, never()).findRootGroupByModification(anyList());
     }
 
