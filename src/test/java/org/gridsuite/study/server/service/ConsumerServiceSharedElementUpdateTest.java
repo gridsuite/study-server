@@ -22,10 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -33,6 +30,7 @@ import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.N
 import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -125,8 +123,8 @@ class ConsumerServiceSharedElementUpdateTest {
 
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(List.of(nodeUuid), List.of(compositeUuid)));
 
-        verify(studyService, org.mockito.Mockito.times(1)).invalidateNodeTreeWhenSharedModificationChanged(studyUuid, nodeUuid);
-        verify(notificationService, org.mockito.Mockito.times(1)).emitSharedElementUpdated(studyUuid, nodeUuid, List.of(compositeUuid));
+        verify(studyService, times(1)).invalidateNodeTreeWhenSharedModificationChanged(studyUuid, nodeUuid);
+        verify(notificationService, times(1)).emitSharedElementUpdated(studyUuid, nodeUuid, List.of(compositeUuid));
     }
 
     @Test
@@ -139,7 +137,7 @@ class ConsumerServiceSharedElementUpdateTest {
     }
 
     private static Message<Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>>> sharedElementUpdateMessage(List<UUID> studyNodeUuids, List<UUID> networkModificationUuids) {
-        Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType = new HashMap<>();
+        Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType = new EnumMap<>(ReferenceAttributes.ReferenceType.class);
         if (!studyNodeUuids.isEmpty()) {
             referencesByType.put(STUDY_NODE, toReferenceAttributes(studyNodeUuids, STUDY_NODE));
         }
