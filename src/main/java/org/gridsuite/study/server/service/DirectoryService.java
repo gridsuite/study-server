@@ -31,6 +31,7 @@ import static org.gridsuite.study.server.StudyConstants.*;
 @Service
 public class DirectoryService {
     public static final String CASE = "CASE";
+    public static final String MODIFICATION = "MODIFICATION";
     public static final String PARAM_IDS = "ids";
     public static final String PARAM_ACCESS_TYPE = "accessType";
     public static final String PARAM_TARGET_DIRECTORY_UUID = "targetDirectoryUuid";
