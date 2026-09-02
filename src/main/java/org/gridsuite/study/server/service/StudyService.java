@@ -434,6 +434,11 @@ public class StudyService {
      */
     public void recreateNetwork(String userId, UUID studyUuid, UUID rootNetworkUuid, String caseFormat) {
         RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        if (rootNetwork.getLoadStatus() == RootNetworkLoadStatus.LOADING) {
+            LOGGER.warn("Root network '{}' is already loading, skipping recreateNetwork", rootNetworkUuid);
+            return;
+        }
+        rootNetwork.setLoadStatus(RootNetworkLoadStatus.LOADING);
         UUID caseUuid = rootNetwork.getCaseUuid();
         UUID originalCaseUuid = rootNetwork.getOriginalCaseUuid();
         RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(rootNetworkUuid).caseInfos(new CaseInfos(caseUuid, originalCaseUuid, null, caseFormat)).build();
