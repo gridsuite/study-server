@@ -875,6 +875,7 @@ class RootNetworkTest {
     @Test
     void testDuplicateStudyRootNetworksWhenNetworkNotLoaded() {
         StudyEntity sourceStudy = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        sourceStudy.getRootNetworks().getFirst().setLoadStatus(RootNetworkLoadStatus.UNLOADED);
         studyRepository.save(sourceStudy);
         when(networkService.doesNetworkExist(NETWORK_UUID)).thenReturn(false);
         when(caseService.duplicateCase(CASE_UUID, false)).thenReturn(DUPLICATE_CASE_UUID);
@@ -883,7 +884,8 @@ class RootNetworkTest {
         rootNetworkService.duplicateStudyRootNetworks(newStudy, sourceStudy);
         verify(networkService, never()).getNetworkVariants(any());
         RootNetworkEntity duplicatedRootNetwork = testUtils.getOneRootNetwork(newStudy.getId());
-        assertEquals(NETWORK_UUID, duplicatedRootNetwork.getNetworkUuid());
+        assertNotEquals(NETWORK_UUID, duplicatedRootNetwork.getNetworkUuid());
+        assertEquals(RootNetworkLoadStatus.UNLOADED, duplicatedRootNetwork.getLoadStatus());
         assertEquals(DUPLICATE_CASE_UUID, duplicatedRootNetwork.getCaseUuid());
     }
 

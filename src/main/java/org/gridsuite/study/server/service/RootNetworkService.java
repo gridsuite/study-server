@@ -192,14 +192,16 @@ public class RootNetworkService {
         List<RootNetworkEntity> rootNetworkEntities = sourceStudyEntity.getRootNetworks();
         rootNetworkEntities.forEach(rootNetworkEntityToDuplicate -> {
             UUID sourceNetworkUuid = rootNetworkEntityToDuplicate.getNetworkUuid();
-            UUID clonedNetworkUuid = sourceNetworkUuid;
-            boolean networkExists = networkService.doesNetworkExist(sourceNetworkUuid);
-            if (networkExists) {
+            UUID clonedNetworkUuid;
+            if (rootNetworkEntityToDuplicate.getLoadStatus() == RootNetworkLoadStatus.LOADED || networkService.doesNetworkExist(sourceNetworkUuid)) {
                 List<VariantInfos> networkVariants = networkService.getNetworkVariants(sourceNetworkUuid);
                 // Clone only the initial variant
                 List<String> targetVariantIds = networkVariants.stream().findFirst().map(VariantInfos::getId).stream().toList();
                 Network clonedNetwork = networkService.cloneNetwork(sourceNetworkUuid, targetVariantIds);
                 clonedNetworkUuid = networkService.getNetworkUuid(clonedNetwork);
+            } else {
+                // source network isn't loaded (or was deleted), generate new network uuid
+                clonedNetworkUuid = UUID.randomUUID();
             }
 
             UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkEntityToDuplicate.getCaseUuid(), false);
@@ -219,10 +221,7 @@ public class RootNetworkService {
                     .tag(rootNetworkEntityToDuplicate.getTag())
                     .build()
             );
-            // source network was unloaded, so mark the new root network as UNLOADED too
-            if (!networkExists) {
-                newRootNetworkEntity.setLoadStatus(RootNetworkLoadStatus.UNLOADED);
-            }
+            newRootNetworkEntity.setLoadStatus(rootNetworkEntityToDuplicate.getLoadStatus());
             }
         );
     }
