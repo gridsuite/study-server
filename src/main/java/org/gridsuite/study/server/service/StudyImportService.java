@@ -64,7 +64,8 @@ public class StudyImportService {
 
         Map<UUID, UUID> modificationGroupUuidMapping = duplicateModificationGroups(treeExportInfos.nodeTree());
 
-        StudyEntity studyEntity = studyService.createStudyEntityWithTree(treeExportInfos.studyUuid(), userId, treeExportInfos.nodeTree(), modificationGroupUuidMapping);
+        StudyEntity studyEntity = studyService.createStudyEntityWithTree(treeExportInfos.studyUuid(), userId, treeExportInfos.nodeTree(), modificationGroupUuidMapping,
+                treeExportInfos.computationParameters());
         studyEntity.setRootNetworkOrder(orderedRootNetworks.stream().map(RootNetworkInfos::getId).toList());
         studyRepository.save(studyEntity);
 

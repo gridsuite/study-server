@@ -88,7 +88,7 @@ class ImportStudyTest extends StudyTestBase {
         TreeExportInfos treeExportInfos = new TreeExportInfos(studyUuid, List.of(
                 rootNetworkExportInfos("rn1", "1", 0, caseUuid1),
                 rootNetworkExportInfos("rn2", "2", 1, caseUuid2)
-        ), nodeTree);
+        ), nodeTree, Map.of());
 
         mockMvc.perform(post(IMPORT_URL).header(HEADER_USER_ID, USER_ID)
                         .contentType("application/json")
@@ -146,7 +146,7 @@ class ImportStudyTest extends StudyTestBase {
         TreeExportInfos treeExportInfos = new TreeExportInfos(studyUuid, List.of(
                 rootNetworkExportInfos("rn1", "1", 0, caseUuid1),
                 rootNetworkExportInfos("rn2", "2", 1, caseUuid2)
-        ), nodeTree);
+        ), nodeTree, Map.of());
 
         mockMvc.perform(post(IMPORT_URL).header(HEADER_USER_ID, USER_ID)
                         .contentType("application/json")
@@ -227,7 +227,7 @@ class ImportStudyTest extends StudyTestBase {
         TreeExportInfos treeExportInfos = new TreeExportInfos(studyUuid, List.of(
                 rootNetworkExportInfos("rn1", "1", 0, caseUuid1),
                 rootNetworkExportInfos("rn2", "2", 1, caseUuid2)
-        ), nodeTree);
+        ), nodeTree, Map.of());
 
         mockMvc.perform(post(IMPORT_URL).header(HEADER_USER_ID, USER_ID)
                         .contentType("application/json")
@@ -266,7 +266,7 @@ class ImportStudyTest extends StudyTestBase {
         ));
         TreeExportInfos treeExportInfos = new TreeExportInfos(studyUuid, List.of(
                 rootNetworkExportInfos("rn1", "1", 0, caseUuid)
-        ), nodeTree);
+        ), nodeTree, Map.of());
 
         MvcResult result = mockMvc.perform(post(IMPORT_URL).header(HEADER_USER_ID, USER_ID)
                         .contentType("application/json")
@@ -293,7 +293,7 @@ class ImportStudyTest extends StudyTestBase {
         ));
         TreeExportInfos treeExportInfos = new TreeExportInfos(studyUuid, List.of(
                 rootNetworkExportInfos("rn1", "1", 0, caseUuid)
-        ), nodeTree);
+        ), nodeTree, Map.of());
 
         MvcResult result = mockMvc.perform(post(IMPORT_URL).header(HEADER_USER_ID, USER_ID)
                         .contentType("application/json")
@@ -314,7 +314,7 @@ class ImportStudyTest extends StudyTestBase {
     @Test
     void testImportStudyWithNoRootNetworks() throws Exception {
         UUID studyUuid = UUID.randomUUID();
-        TreeExportInfos treeExportInfos = new TreeExportInfos(studyUuid, List.of(), new NodeTreeExportInfos("Root", "ROOT", null, null, List.of()));
+        TreeExportInfos treeExportInfos = new TreeExportInfos(studyUuid, List.of(), new NodeTreeExportInfos("Root", "ROOT", null, null, List.of()), Map.of());
 
         MvcResult result = mockMvc.perform(post(IMPORT_URL).header(HEADER_USER_ID, USER_ID)
                         .contentType("application/json")
