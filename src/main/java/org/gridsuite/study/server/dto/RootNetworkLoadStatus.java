@@ -12,5 +12,6 @@ package org.gridsuite.study.server.dto;
 public enum RootNetworkLoadStatus {
     LOADED,
     UNLOADED,
-    UNLOADING
+    UNLOADING,
+    LOADING
 }
