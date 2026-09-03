@@ -438,7 +438,7 @@ public class StudyService {
             LOGGER.warn("Root network '{}' is already loading, skipping recreateNetwork", rootNetworkUuid);
             return;
         }
-        rootNetwork.setLoadStatus(RootNetworkLoadStatus.LOADING);
+        rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADING);
         UUID caseUuid = rootNetwork.getCaseUuid();
         UUID originalCaseUuid = rootNetwork.getOriginalCaseUuid();
         RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(rootNetworkUuid).caseInfos(new CaseInfos(caseUuid, originalCaseUuid, null, caseFormat)).build();
@@ -635,7 +635,7 @@ public class StudyService {
         RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
 
         rootNetworkService.updateNetwork(rootNetworkEntity, networkInfos);
-        rootNetworkEntity.setLoadStatus(RootNetworkLoadStatus.LOADED);
+        rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADED);
 
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
