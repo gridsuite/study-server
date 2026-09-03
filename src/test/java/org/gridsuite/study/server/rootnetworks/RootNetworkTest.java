@@ -43,8 +43,6 @@ import org.gridsuite.study.server.service.stateestimation.StateEstimationRestSer
 import org.gridsuite.study.server.service.voltageinit.VoltageInitRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
-import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
-import org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
