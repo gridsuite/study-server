@@ -15,6 +15,7 @@ import org.gridsuite.study.server.dto.studyexport.NodeTreeExportInfos;
 import org.gridsuite.study.server.dto.studyexport.RootNetworkExportInfos;
 import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
 import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
@@ -43,14 +44,16 @@ public class StudyImportService {
     private final RootNetworkService rootNetworkService;
     private final NetworkModificationService networkModificationService;
     private final CaseService caseService;
+    private final NotificationService notificationService;
 
     public StudyImportService(StudyService studyService, StudyRepository studyRepository, RootNetworkService rootNetworkService,
-                              NetworkModificationService networkModificationService, CaseService caseService) {
+                              NetworkModificationService networkModificationService, CaseService caseService, NotificationService notificationService) {
         this.studyService = studyService;
         this.studyRepository = studyRepository;
         this.rootNetworkService = rootNetworkService;
         this.networkModificationService = networkModificationService;
         this.caseService = caseService;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -77,6 +80,7 @@ public class StudyImportService {
                     .build());
             rootNetworkService.updateNetworkLoadStatus(rootNetworkEntity.getId(), RootNetworkLoadStatus.UNLOADED);
         }
+        notificationService.emitStudyCreationFinished(studyEntity.getId(), userId);
     }
 
     private Map<UUID, UUID> duplicateModificationGroups(NodeTreeExportInfos nodeTree) {
