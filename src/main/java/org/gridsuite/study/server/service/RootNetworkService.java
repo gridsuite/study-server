@@ -171,6 +171,10 @@ public class RootNetworkService {
         return rootNetworkRepository.findById(rootNetworkUuid);
     }
 
+    public String getRootNetworkTag(UUID rootNetworkUuid) {
+        return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getTag).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+    }
+
     public String getCaseName(UUID rootNetworkUuid) {
         return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getCaseName).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
     }

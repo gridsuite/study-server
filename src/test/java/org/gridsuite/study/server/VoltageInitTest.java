@@ -227,6 +227,9 @@ class VoltageInitTest {
     private StudyRepository studyRepository;
 
     @Autowired
+    private RootNetworkService rootNetworkService;
+
+    @Autowired
     private ReportService reportService;
 
     @MockitoSpyBean
@@ -416,6 +419,8 @@ class VoltageInitTest {
                 } else if (path.matches("/v1/parameters/default") && "POST".equals(method)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(VOLTAGE_INIT_PARAMETERS_UUID));
                 } else if (path.matches("/v1/network-modifications/index\\?networkUuid=.*") && "DELETE".equals(method)) {
+                    return new MockResponse(200);
+                } else if (path.matches("/v1/network-modifications/root-network-applicability\\?.*") && "PUT".equals(method)) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/users/.*/quota/.*") && "POST".equals(method)) {
                     return new MockResponse(200);
@@ -929,9 +934,11 @@ class VoltageInitTest {
         // clone and insert voltage-init modification
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyUuid, firstRootNetworkUuid, nodeUuid)
                 .header("userId", "userId")).andExpect(status().isOk());
-        assertTrue(TestUtils.getRequestsDone(3, server).stream().allMatch(r ->
+        assertTrue(TestUtils.getRequestsDone(4, server).stream().allMatch(r ->
                 r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
-                        r.matches("/v1/containers/.*\\?action=COPY&sourceContainerId=.*")
+                        r.matches("/v1/containers/[^?]*\\?action=COPY&sourceContainerId=.*") ||
+                        // the created modification is deactivated on the tag of the other root network
+                        r.matches("/v1/network-modifications/root-network-applicability\\?.*")
         ));
         checkUpdateModelsStatusMessagesReceived(studyUuid, firstRootNetworkUuid);
         checkEquipmentMessagesReceived(studyUuid, nodeUuid, NetworkImpactsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s1")).build());
@@ -939,11 +946,13 @@ class VoltageInitTest {
         checkElementUpdatedMessageSent(studyUuid, "userId");
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid);
 
+        // the voltage-init modification is deactivated on the tags of the other root networks
         ModificationApplicationContext ctx1 = rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, nodeUuid, NETWORK_UUID);
         ModificationApplicationContext ctx2 = rootNetworkNodeInfoService.getNetworkModificationApplicationContext(secondRootNetworkUuid, nodeUuid, SECOND_NETWORK_UUID);
-        assertEquals(0, ctx1.excludedModifications().size());
-        assertEquals(1, ctx2.excludedModifications().size());
-        assertTrue(ctx2.excludedModifications().contains(VOLTAGE_INIT_MODIFICATION_UUID)); // voltage-init modification not activated on 2nd root network
+        assertEquals(rootNetworkService.getRootNetworkTag(firstRootNetworkUuid), ctx1.rootNetworkTag());
+        assertEquals(rootNetworkService.getRootNetworkTag(secondRootNetworkUuid), ctx2.rootNetworkTag());
+        verify(networkModificationService, times(1)).updateRootNetworkApplicability(
+            List.of(VOLTAGE_INIT_MODIFICATION_UUID), rootNetworkService.getRootNetworkTag(secondRootNetworkUuid), false);
 
         // Error case: try to generate the voltageInit modification on the second root network (where no computation has been made)
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyUuid, secondRootNetworkUuid, nodeUuid)
