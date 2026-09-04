@@ -27,6 +27,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -44,6 +45,7 @@ public class StudyExportService {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyExportService.class);
     public static final String TREE_JSON_FILE_NAME = "tree.json";
     public static final String CASES_FOLDER = "cases";
+    public static final String PARAMETERS_FOLDER = "parameters";
 
     private final StudyService studyService;
     private final CaseService caseService;
@@ -68,7 +70,7 @@ public class StudyExportService {
         Path tempDir = createTempWorkDir(studyUuid);
         Path zipFile = null;
         try {
-            zipFile = compressStudyToZip(studyUuid, tempDir);
+            zipFile = compressStudyToZip(studyUuid, userId, tempDir);
             InputStream stream = Files.newInputStream(zipFile, StandardOpenOption.DELETE_ON_CLOSE);
             zipFile = null;
             return new InputStreamResource(stream);
@@ -93,7 +95,7 @@ public class StudyExportService {
     /**
      * Build tree.json and the case files under tempDir, then compress them into a temp zip file
      */
-    private Path compressStudyToZip(UUID studyUuid, Path tempDir) throws IOException {
+    private Path compressStudyToZip(UUID studyUuid, String userId, Path tempDir) throws IOException {
         TreeExportInfos treeExportInfos = studyService.buildTreeExport(studyUuid);
         Path studyJsonPath = tempDir.resolve(TREE_JSON_FILE_NAME);
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(studyJsonPath.toFile(), treeExportInfos);
@@ -103,12 +105,24 @@ public class StudyExportService {
             String caseName = rootNetworkInfos.caseInfos().getCaseName();
             exportCaseFile(caseUuid, caseName, casesDir);
         }
+        exportComputationParameters(studyUuid, userId, tempDir);
         Path zipFile = createTempExportFile(studyUuid);
         try (OutputStream fos = Files.newOutputStream(zipFile);
              ZipOutputStream zipOut = new ZipOutputStream(fos)) {
             writeZipEntries(tempDir, zipOut);
         }
         return zipFile;
+    }
+
+    private void exportComputationParameters(UUID studyUuid, String userId, Path tempDir) throws IOException {
+        Map<String, String> parametersByFileName = studyService.exportComputationParameters(studyUuid, userId);
+        if (parametersByFileName.isEmpty()) {
+            return;
+        }
+        Path parametersDir = Files.createDirectories(tempDir.resolve(PARAMETERS_FOLDER));
+        for (Map.Entry<String, String> entry : parametersByFileName.entrySet()) {
+            Files.writeString(parametersDir.resolve(entry.getKey()), entry.getValue());
+        }
     }
 
     private Path createTempWorkDir(UUID studyUuid) {

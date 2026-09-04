@@ -2877,6 +2877,11 @@ public class StudyService {
         return new TreeExportInfos(studyUuid, rootNetworks, nodeTree);
     }
 
+    public Map<String, String> exportComputationParameters(UUID studyUuid, String userId) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        return computationParametersService.exportParameters(studyEntity, userId);
+    }
+
     private RootNetworkExportInfos toRootNetworkExportInfos(RootNetworkInfos rootNetworkInfos, int index) {
         return new RootNetworkExportInfos(
                 rootNetworkInfos.getName(),
