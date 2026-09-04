@@ -67,7 +67,6 @@ public class ConsumerService {
 
     private final NotificationService notificationService;
     private final StudyService studyService;
-    private final StudyImportService studyImportService;
     private final CaseService caseService;
     private final LoadFlowRestService loadFlowRestService;
     private final NetworkModificationTreeService networkModificationTreeService;
@@ -83,7 +82,6 @@ public class ConsumerService {
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
                            StudyService studyService,
-                           StudyImportService studyImportService,
                            CaseService caseService,
                            LoadFlowRestService loadFlowRestService,
                            NetworkModificationTreeService networkModificationTreeService,
@@ -98,7 +96,6 @@ public class ConsumerService {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
-        this.studyImportService = studyImportService;
         this.caseService = caseService;
         this.loadFlowRestService = loadFlowRestService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -261,20 +258,6 @@ public class ConsumerService {
                     .networkInfos(networkInfos)
                     .importParameters(importParameters)
                     .build());
-                case ROOT_NETWORK_CREATION_FOR_STUDY_IMPORT -> {
-                    try {
-                        studyService.createRootNetwork(studyUuid, RootNetworkInfos.builder()
-                            .id(rootNetworkUuid)
-                            .caseInfos(caseInfos)
-                            .reportUuid(importReportUuid)
-                            .networkInfos(networkInfos)
-                            .importParameters(importParameters)
-                            .build());
-                    } finally {
-                        studyService.deleteRootNetworkRequest(rootNetworkUuid);
-                        studyImportService.checkFinishedStudyImport(studyUuid, userId);
-                    }
-                }
                 case NETWORK_RECREATION -> studyService.updateNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
                 case ROOT_NETWORK_MODIFICATION -> studyService.modifyRootNetwork(studyUuid, RootNetworkInfos.builder()
                     .id(rootNetworkUuid)
@@ -353,10 +336,6 @@ public class ConsumerService {
         }
         if (receiver.getCaseImportAction() == CaseImportAction.NETWORK_RECREATION) {
             rootNetworkService.updateNetworkLoadStatus(receiver.getRootNetworkUuid(), RootNetworkLoadStatus.UNLOADED);
-        }
-        if (receiver.getCaseImportAction() == CaseImportAction.ROOT_NETWORK_CREATION_FOR_STUDY_IMPORT) {
-            studyService.deleteRootNetworkRequest(receiver.getRootNetworkUuid());
-            studyImportService.checkFinishedStudyImport(receiver.getStudyUuid(), receiver.getUserId());
         }
         notificationService.emitRootNetworksUpdateFailed(receiver.getStudyUuid(), errorMessage);
     }
