@@ -14,6 +14,8 @@ import org.gridsuite.study.server.error.StudyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
@@ -71,7 +73,7 @@ public class StudyExportService {
             zipFile = null;
             return new InputStreamResource(stream);
         } catch (IOException e) {
-            throw new StudyException(EXPORT_STUDY_ERROR, e.getMessage());
+            throw new StudyException(EXPORT_STUDY_ERROR, "Failed to export study: " + studyUuid);
         } finally {
             try {
                 deleteDirectory(tempDir);
@@ -125,8 +127,8 @@ public class StudyExportService {
                 PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString(permissions));
         try {
             return creator.apply(attr);
-        } catch (IOException e) {
-            throw new StudyException(EXPORT_STUDY_ERROR, e.getMessage());
+        } catch (IOException _) {
+            throw new StudyException(EXPORT_STUDY_ERROR, "Failed to create " + errorContext + " for study: " + studyUuid);
         }
     }
 
@@ -136,20 +138,30 @@ public class StudyExportService {
     }
 
     /**
-     * Export a case file from the case-server, streaming it directly to disk
-     * so the whole case content is never buffered in the heap.
+     * Export a case file from the case-server
      */
     private void exportCaseFile(UUID caseUuid, String caseName, Path casesDir) throws IOException {
-        Path caseDir = casesDir.resolve(caseUuid.toString());
-        Files.createDirectories(caseDir);
-        Path caseFile = caseDir.resolve(caseName);
-        caseService.streamCaseContent(caseUuid, (contentEncoding, body) -> {
-            // plain file cases are gzip'd by the case-server and need to be decompressed
-            try (InputStream in = "gzip".equalsIgnoreCase(contentEncoding) ? new GZIPInputStream(body) : body;
-                 OutputStream out = Files.newOutputStream(caseFile)) {
-                in.transferTo(out);
+        ResponseEntity<byte[]> response = caseService.getCaseContent(caseUuid);
+        byte[] body = response.getBody();
+        if (body != null) {
+            Path caseDir = casesDir.resolve(caseUuid.toString());
+            Files.createDirectories(caseDir);
+            String contentEncoding = response.getHeaders().getFirst(HttpHeaders.CONTENT_ENCODING);
+            // plain file cases are gzip by the case-server and need to be decompressed
+            if ("gzip".equalsIgnoreCase(contentEncoding)) {
+                body = decompressGzip(body);
             }
-        });
+            Path caseFile = caseDir.resolve(caseName);
+            Files.write(caseFile, body);
+        }
+    }
+
+    private static byte[] decompressGzip(byte[] data) throws IOException {
+        try (GZIPInputStream gzipIn = new GZIPInputStream(new ByteArrayInputStream(data));
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            gzipIn.transferTo(out);
+            return out.toByteArray();
+        }
     }
 
     private void writeZipEntries(Path directory, ZipOutputStream zipOut) throws IOException {

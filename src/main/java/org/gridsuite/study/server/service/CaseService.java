@@ -16,16 +16,12 @@ import org.gridsuite.study.server.error.StudyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
@@ -100,26 +96,11 @@ public class CaseService {
         return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
     }
 
-    public void streamCaseContent(UUID caseUuid, CaseContentHandler handler) throws IOException {
+    public ResponseEntity<byte[]> getCaseContent(UUID caseUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}")
                 .buildAndExpand(caseUuid)
                 .toUriString();
 
-        try {
-            restTemplate.execute(caseServerBaseUri + path, HttpMethod.GET, null, (ClientHttpResponse response) -> {
-                handler.handle(response.getHeaders().getFirst(HttpHeaders.CONTENT_ENCODING), response.getBody());
-                return null;
-            });
-        } catch (ResourceAccessException e) {
-            if (e.getCause() instanceof IOException ioException) {
-                throw ioException;
-            }
-            throw e;
-        }
-    }
-
-    @FunctionalInterface
-    public interface CaseContentHandler {
-        void handle(String contentEncoding, InputStream body) throws IOException;
+        return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.GET, null, byte[].class);
     }
 }
