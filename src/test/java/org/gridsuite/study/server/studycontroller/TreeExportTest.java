@@ -20,7 +20,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -29,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -101,6 +104,41 @@ class TreeExportTest extends StudyTestBase {
         String expectedCaseEntry = "cases/" + rootNetworkCaseUuid + "/" + rootNetworkCaseName;
         assertEquals(List.of(expectedCaseEntry), zipEntryNames.stream().filter(name -> name.startsWith("cases/")).toList());
         // Verify the case content download call
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
+        wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
+    }
+
+    @Test
+    void testExportStudyDecompressesGzipCaseContent() throws Exception {
+        UUID studyUuid = createStudyWithStubs("testUser", CASE_UUID);
+        ReflectionTestUtils.setField(caseService, "caseServerBaseUri", wireMockServer.baseUrl());
+        wireMockStubs.directoryServer.stubCheckPermission(List.of(studyUuid), null, "testUser", PermissionType.READ, false, HttpStatus.OK.value());
+        String caseContent = "dummy case content";
+        ByteArrayOutputStream gzipped = new ByteArrayOutputStream();
+        try (GZIPOutputStream gzipOut = new GZIPOutputStream(gzipped)) {
+            gzipOut.write(caseContent.getBytes(StandardCharsets.UTF_8));
+        }
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + CASE_UUID))
+                .willReturn(WireMock.aResponse().withStatus(200)
+                        .withHeader("Content-Type", "application/octet-stream")
+                        .withHeader("Content-Encoding", "gzip")
+                        .withBody(gzipped.toByteArray())));
+
+        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName").header(HEADER_USER_ID, "testUser"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        byte[] archiveContent = result.getResponse().getContentAsByteArray();
+        String extractedCaseContent = null;
+        try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(archiveContent))) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                if (entry.getName().startsWith("cases/")) {
+                    extractedCaseContent = new String(zis.readAllBytes(), StandardCharsets.UTF_8);
+                }
+            }
+        }
+        assertEquals(caseContent, extractedCaseContent);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
     }

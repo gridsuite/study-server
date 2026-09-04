@@ -23,6 +23,7 @@ import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
+import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.exception.PartialResultException;
@@ -70,6 +71,7 @@ public class StudyController {
     private final NodeActivityRunnerService nodeActivityRunnerService;
     private final NodeActivityService nodeActivityService;
     private final StudyExportService studyExportService;
+    private final StudyImportService studyImportService;
 
     public StudyController(StudyService studyService,
                            NetworkService networkStoreService,
@@ -82,7 +84,8 @@ public class StudyController {
                            RebuildNodeService rebuildNodeService,
                            NodeActivityRunnerService nodeActivityRunnerService,
                            NodeActivityService nodeActivityService,
-                           StudyExportService studyExportService) {
+                           StudyExportService studyExportService,
+                           StudyImportService studyImportService) {
         this.nodeActivityService = nodeActivityService;
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -95,6 +98,7 @@ public class StudyController {
         this.rebuildNodeService = rebuildNodeService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
         this.studyExportService = studyExportService;
+        this.studyImportService = studyImportService;
     }
 
     @InitBinder
@@ -1652,5 +1656,14 @@ public class StudyController {
         headers.setContentDisposition(contentDisposition);
         headers.setContentType(MediaType.parseMediaType("application/zip"));
         return ResponseEntity.ok().headers(headers).body(studyExportService.exportStudy(studyUuid, userId));
+    }
+
+    @PostMapping(value = "/studies/import")
+    @Operation(summary = "Create a study and its root networks from a previously exported study archive")
+    @ApiResponse(responseCode = "200", description = "Study import initiated successfully")
+    public ResponseEntity<Void> importStudy(@RequestBody TreeExportInfos treeExportInfos,
+                                            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyImportService.importStudy(treeExportInfos, userId);
+        return ResponseEntity.ok().build();
     }
 }
