@@ -12,6 +12,8 @@ import lombok.NonNull;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
+import java.util.UUID;
+
 /**
  * @author Maissa Souissi <maissa.souissi at rte-france.com>
  */
@@ -19,13 +21,7 @@ import lombok.experimental.SuperBuilder;
 @Setter
 @NoArgsConstructor
 @SuperBuilder
-public class ReferenceAttributes {
-    public enum ReferenceType {
-        STUDY_NODE,                         // rootContainerId : studyId;       containerId : nodeId
-        STUDY_NODE_NETWORK_MODIFICATION,    // rootContainerId : nodeId;        containerId : parentCompositeId
-        DIRECTORY_NETWORK_MODIFICATION,     // rootContainerId : directoryId;   containerId : parentCompositeId
-    }
-
-    @NonNull private ReferenceId referenceId;
-    @NonNull private ReferenceType referenceType;
+public class ReferenceId {
+    @NonNull private UUID rootContainerId;
+    @NonNull private UUID containerId;
 }

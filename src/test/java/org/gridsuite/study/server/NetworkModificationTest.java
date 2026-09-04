@@ -89,8 +89,8 @@ import java.util.stream.Collectors;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.HEADER_ERROR_MESSAGE;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
-import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION;
 import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE;
+import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAX_NODE_BUILDS_EXCEEDED;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.utils.ImpactUtils.createModificationResultWithElementImpact;
@@ -2187,7 +2187,10 @@ class NetworkModificationTest {
                 wireMockServer,
                 "/v1/elements/" + sharedNetModId + "/references",
                 Map.of(),
-                mapper.writeValueAsString(new ReferenceAttributes(nodeUuid1, STUDY_NODE)));
+                mapper.writeValueAsString(ReferenceAttributes.builder()
+                        .referenceId(ReferenceId.builder().rootContainerId(studyUuid).containerId(nodeUuid1).build())
+                        .referenceType(STUDY_NODE)
+                        .build()));
     }
 
     @Test
@@ -2245,7 +2248,10 @@ class NetworkModificationTest {
                 wireMockServer,
                 "/v1/elements/" + compositeUuid + "/references",
                 Map.of(),
-                mapper.writeValueAsString(new ReferenceAttributes(nodeUuid1, STUDY_NODE)));
+                mapper.writeValueAsString(ReferenceAttributes.builder()
+                        .referenceId(ReferenceId.builder().rootContainerId(studyUuid).containerId(nodeUuid1).build())
+                        .referenceType(STUDY_NODE)
+                        .build()));
     }
 
     @Test
@@ -2507,7 +2513,7 @@ class NetworkModificationTest {
     void testDuplicateModificationCreatesReferencesToSharedComposites() throws Exception {
         // Verifies createReferencesToSharedComposites correctly splits references in two:
         // - a duplicated modification that IS itself a reference -> new reference points to the target node (STUDY_NODE)
-        // - a reference nested inside a duplicated composite -> new reference points to the composite's copy (NETWORK_MODIFICATION)
+        // - a reference nested inside a duplicated composite -> new reference points to the composite's copy (STUDY_NODE_NETWORK_MODIFICATION)
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyUuid = studyEntity.getId();
@@ -2594,14 +2600,20 @@ class NetworkModificationTest {
                 wireMockServer,
                 "/v1/elements/" + sharedComposite1 + "/references",
                 Map.of(),
-                mapper.writeValueAsString(new ReferenceAttributes(nodeUuid1, STUDY_NODE)));
+                mapper.writeValueAsString(ReferenceAttributes.builder()
+                        .referenceId(ReferenceId.builder().rootContainerId(studyUuid).containerId(nodeUuid1).build())
+                        .referenceType(STUDY_NODE)
+                        .build()));
 
         // originalChild's reference is nested inside modification2 -> new reference targets modification2's copy
         WireMockUtilsCriteria.verifyPostRequest(
                 wireMockServer,
                 "/v1/elements/" + sharedComposite2 + "/references",
                 Map.of(),
-                mapper.writeValueAsString(new ReferenceAttributes(copy2, NETWORK_MODIFICATION)));
+                mapper.writeValueAsString(ReferenceAttributes.builder()
+                        .referenceId(ReferenceId.builder().rootContainerId(nodeUuid1).containerId(copy2).build())
+                        .referenceType(STUDY_NODE_NETWORK_MODIFICATION)
+                        .build()));
     }
 
     @Test
@@ -3661,8 +3673,10 @@ class NetworkModificationTest {
         // directory-server endpoint that moves the node reference - ids is modification1 itself
         UUID updateReferencesStubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/elements/references"))
                 .withQueryParam("ids", WireMock.equalTo(modification1.toString()))
-                .withQueryParam("originReferenceUuid", WireMock.equalTo(nodeUuid1.toString()))
-                .withQueryParam("targetReferenceUuid", WireMock.equalTo(nodeUuid2.toString()))
+                .withQueryParam("originRootContainerId", WireMock.equalTo(studyUuid.toString()))
+                .withQueryParam("originContainerId", WireMock.equalTo(nodeUuid1.toString()))
+                .withQueryParam("targetRootContainerId", WireMock.equalTo(studyUuid.toString()))
+                .withQueryParam("targetContainerId", WireMock.equalTo(nodeUuid2.toString()))
                 .withHeader(USER_ID_HEADER, WireMock.equalTo(userId))
                 .willReturn(WireMock.ok())
         ).getId();
@@ -3702,8 +3716,10 @@ class NetworkModificationTest {
 
         WireMockUtils.verifyPutRequest(wireMockServer, updateReferencesStubId, "/v1/elements/references", true,
                 Map.of("ids", WireMock.equalTo(modification1.toString()),
-                        "originReferenceUuid", WireMock.equalTo(nodeUuid1.toString()),
-                        "targetReferenceUuid", WireMock.equalTo(nodeUuid2.toString())),
+                        "originRootContainerId", WireMock.equalTo(studyUuid.toString()),
+                        "originContainerId", WireMock.equalTo(nodeUuid1.toString()),
+                        "targetRootContainerId", WireMock.equalTo(studyUuid.toString()),
+                        "targetContainerId", WireMock.equalTo(nodeUuid2.toString())),
                 null);
     }
 
