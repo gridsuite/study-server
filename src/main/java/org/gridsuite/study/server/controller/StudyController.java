@@ -279,17 +279,15 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @RequestMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", method = RequestMethod.HEAD)
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network")
     @Operation(summary = "check study root network existence")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The network does exist"),
         @ApiResponse(responseCode = "204", description = "The network doesn't exist")})
-    public ResponseEntity<Void> checkNetworkExistence(@PathVariable("studyUuid") UUID studyUuid, @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
+    public ResponseEntity<RootNetworkExistence> checkNetworkExistence(@PathVariable("studyUuid") UUID studyUuid, @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
         UUID networkUUID = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-        return networkStoreService.doesNetworkExist(networkUUID)
-            ? ResponseEntity.ok().build()
-            : ResponseEntity.noContent().build();
-
+        return ResponseEntity.ok().body(new RootNetworkExistence(networkStoreService.doesNetworkExist(networkUUID),
+                rootNetworkService.getRootNetworkLoadStatus(rootNetworkUuid)));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", params = {"caseUuid"})

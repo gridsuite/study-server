@@ -89,6 +89,11 @@ public class RootNetworkService {
         return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
     }
 
+    public RootNetworkLoadStatus getRootNetworkLoadStatus(UUID networkUuid) {
+        Optional<RootNetworkEntity> rootNetworkEntity = getRootNetwork(networkUuid);
+        return rootNetworkEntity.map(RootNetworkEntity::getLoadStatus).orElse(null);
+    }
+
     public UUID getRootReportUuid(UUID rootNetworkUuid) {
         return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getReportUuid).orElse(null);
     }
