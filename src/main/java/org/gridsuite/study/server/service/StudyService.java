@@ -326,7 +326,6 @@ public class StudyService {
         StudyEntity studyEntity = getStudy(studyUuid);
 
         rootNetworkInfos.setId(UUID.randomUUID());
-
         RootNetworkRequestEntity rootNetworkCreationRequestEntity = rootNetworkService.insertCreationRequest(studyEntity.getId(), rootNetworkInfos, userId);
         try {
             UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkInfos.getCaseInfos().getOriginalCaseUuid(), true);

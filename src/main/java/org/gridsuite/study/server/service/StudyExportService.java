@@ -72,7 +72,7 @@ public class StudyExportService {
             InputStream stream = Files.newInputStream(zipFile, StandardOpenOption.DELETE_ON_CLOSE);
             zipFile = null;
             return new InputStreamResource(stream);
-        } catch (IOException e) {
+        } catch (IOException _) {
             throw new StudyException(EXPORT_STUDY_ERROR, "Failed to export study: " + studyUuid);
         } finally {
             try {
