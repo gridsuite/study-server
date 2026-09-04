@@ -70,6 +70,7 @@ public class ConsumerService {
     private final CaseService caseService;
     private final LoadFlowRestService loadFlowRestService;
     private final NetworkModificationTreeService networkModificationTreeService;
+    private final NetworkModificationService networkModificationService;
     private final StudyConfigService studyConfigService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final RootNetworkService rootNetworkService;
@@ -86,6 +87,7 @@ public class ConsumerService {
                            CaseService caseService,
                            LoadFlowRestService loadFlowRestService,
                            NetworkModificationTreeService networkModificationTreeService,
+                           NetworkModificationService networkModificationService,
                            StudyConfigService studyConfigService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            RootNetworkService rootNetworkService,
@@ -101,6 +103,7 @@ public class ConsumerService {
         this.caseService = caseService;
         this.loadFlowRestService = loadFlowRestService;
         this.networkModificationTreeService = networkModificationTreeService;
+        this.networkModificationService = networkModificationService;
         this.studyConfigService = studyConfigService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.rootNetworkService = rootNetworkService;
@@ -855,5 +858,34 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeNetworkExportFinished() {
         return this::consumeNetworkExportFinished;
+    }
+
+    @Bean
+    public Consumer<Message<Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>>>> consumeSharedElementUpdate() {
+        return message -> handleSharedElementUpdate(message.getPayload());
+    }
+
+    private void handleSharedElementUpdate(Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType) {
+        List<UUID> studyNodeUuids = extractReferenceIds(referencesByType, ReferenceAttributes.ReferenceType.STUDY_NODE);
+        List<UUID> networkModificationUuids = extractReferenceIds(referencesByType, ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION);
+
+        Set<UUID> nodeUuidsToInvalidate = new LinkedHashSet<>(studyNodeUuids);
+
+        if (!networkModificationUuids.isEmpty()) {
+            Collection<UUID> rootGroupUuids = networkModificationService.findRootGroupByModification(networkModificationUuids).values();
+            if (!rootGroupUuids.isEmpty()) {
+                nodeUuidsToInvalidate.addAll(networkModificationTreeService.getNodeUuidsByModificationGroups(List.copyOf(rootGroupUuids)).values());
+            }
+        }
+
+        nodeUuidsToInvalidate.forEach(nodeUuid -> {
+            UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
+            studyService.invalidateNodeTreeWhenSharedModificationChanged(studyUuid, nodeUuid);
+            notificationService.emitSharedElementUpdated(studyUuid, nodeUuid, networkModificationUuids);
+        });
+    }
+
+    private static List<UUID> extractReferenceIds(Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType, ReferenceAttributes.ReferenceType type) {
+        return referencesByType.getOrDefault(type, List.of()).stream().map(ReferenceAttributes::getReferenceId).toList();
     }
 }

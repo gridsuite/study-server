@@ -211,7 +211,7 @@ public class NetworkModificationService {
         return restTemplate.exchange(path, HttpMethod.POST, httpEntity, NetworkModificationsResult.class).getBody();
     }
 
-    public void updateModification(String createEquipmentAttributes, UUID modificationUuid) {
+    public void updateModification(String createEquipmentAttributes, UUID modificationUuid, String userId) {
         Objects.requireNonNull(createEquipmentAttributes);
 
         var path = UriComponentsBuilder
@@ -221,6 +221,7 @@ public class NetworkModificationService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HEADER_USER_ID, userId);
 
         HttpEntity<String> httpEntity = new HttpEntity<>(createEquipmentAttributes, headers);
 
@@ -245,7 +246,7 @@ public class NetworkModificationService {
         restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
-    public void updateModificationsMetadata(UUID groupUUid, List<UUID> modificationsUuids, NetworkModificationMetadata metadata) {
+    public void updateModificationsMetadata(UUID groupUUid, List<UUID> modificationsUuids, NetworkModificationMetadata metadata, String userId) {
         Objects.requireNonNull(groupUUid);
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
@@ -257,6 +258,7 @@ public class NetworkModificationService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HEADER_USER_ID, userId);
 
         HttpEntity<NetworkModificationMetadata> httpEntity = new HttpEntity<>(metadata, headers);
         restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
@@ -313,6 +315,35 @@ public class NetworkModificationService {
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + COMPOSITE_PATH + "parent-composites")
+                .queryParam(UUIDS, modificationsUuids)
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
+
+        return restTemplate.exchange(
+                path,
+                HttpMethod.GET,
+                httpEntity,
+                new ParameterizedTypeReference<Map<UUID, UUID>>() { }
+        ).getBody();
+    }
+
+    /**
+     * Resolves, for each given modification, the modification group it ultimately belongs to.
+     * @param modificationsUuids the modifications to resolve; each may sit directly in a group or be nested
+     * inside one or more composite modifications
+     * @return a map from modification uuid to the uuid of its enclosing root group (the outermost group,
+     * found by walking up through every level of nested composite modifications). A modification that is
+     * not reachable from any group is absent from the map.
+     */
+    public Map<UUID, UUID> findRootGroupByModification(List<UUID> modificationsUuids) {
+        Objects.requireNonNull(modificationsUuids);
+        var path = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + COMPOSITE_PATH + "root-groups")
                 .queryParam(UUIDS, modificationsUuids)
                 .buildAndExpand()
                 .toUriString();

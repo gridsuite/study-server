@@ -1219,7 +1219,7 @@ public class StudyService {
     public void updateNetworkModification(UUID studyUuid, String updateModificationAttributes, UUID nodeUuid, UUID modificationUuid, String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         try {
-            networkModificationService.updateModification(updateModificationAttributes, modificationUuid);
+            networkModificationService.updateModification(updateModificationAttributes, modificationUuid, userId);
             invalidateNodeTree(studyUuid, nodeUuid);
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
@@ -1467,6 +1467,11 @@ public class StudyService {
     }
 
     @Transactional
+    public void invalidateNodeTreeWhenSharedModificationChanged(UUID studyUuid, UUID nodeUuid) {
+        invalidateNodeTree(studyUuid, nodeUuid, InvalidateNodeTreeParameters.ALL);
+    }
+
+    @Transactional
     public boolean invalidateNodeTreeWhenMoveModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid) {
         boolean isTargetInDifferentNodeTree = !targetNodeUuid.equals(originNodeUuid)
             && !networkModificationTreeService.isAChild(originNodeUuid, targetNodeUuid);
@@ -1562,7 +1567,7 @@ public class StudyService {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.updateModificationsMetadata(groupId, modificationsUuids, metadata);
+            networkModificationService.updateModificationsMetadata(groupId, modificationsUuids, metadata, userId);
             if (metadata.getActivated() != null || metadata.getName() != null) {
                 invalidateNodeTree(studyUuid, nodeUuid);
             }

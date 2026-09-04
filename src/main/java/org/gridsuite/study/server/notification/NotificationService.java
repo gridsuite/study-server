@@ -40,6 +40,7 @@ public class NotificationService {
     public static final String HEADER_NODE = "node";
     public static final String HEADER_ROOT_NETWORK_UUID = "rootNetworkUuid";
     public static final String HEADER_NODES = "nodes";
+    public static final String HEADER_NETWORK_MODIFICATION_UUIDS = "networkModificationUuids";
     public static final String HEADER_ROOT_NETWORKS_UUIDS = "rootNetworksUuids";
     public static final String HEADER_STUDY_UUID = "studyUuid";
     public static final String HEADER_UPDATE_TYPE = "updateType";
@@ -124,6 +125,7 @@ public class NotificationService {
 
     public static final String MODIFICATIONS_UPDATING_FINISHED = "UPDATE_FINISHED";
     public static final String MODIFICATIONS_DELETING_FINISHED = "DELETE_FINISHED";
+    public static final String SHARED_ELEMENT_UPDATED = "sharedElementUpdate";
 
     public static final String EVENTS_CRUD_FINISHED = "EVENT_CRUD_FINISHED";
 
@@ -468,6 +470,19 @@ public class NotificationService {
         sendStudyUpdateMessage(studyUuid, MODIFICATIONS_DELETING_FINISHED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
                 .setHeader(HEADER_NODES, childrenUuids)
+        );
+    }
+
+    /**
+     * Notifies the front that a shared element referenced by some of {@code parentNodeUuid}'s network
+     * modifications ({@code networkModificationUuids}) has changed. The front should refresh the
+     * modifications list of that node so the affected modifications display the up-to-date reference.
+     */
+    @PostCompletion
+    public void emitSharedElementUpdated(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> networkModificationUuids) {
+        sendStudyUpdateMessage(studyUuid, SHARED_ELEMENT_UPDATED, MessageBuilder.withPayload("")
+                .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
+                .setHeader(HEADER_NETWORK_MODIFICATION_UUIDS, networkModificationUuids)
         );
     }
 
