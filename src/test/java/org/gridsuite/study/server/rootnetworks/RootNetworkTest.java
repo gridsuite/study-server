@@ -43,7 +43,6 @@ import org.gridsuite.study.server.service.stateestimation.StateEstimationRestSer
 import org.gridsuite.study.server.service.voltageinit.VoltageInitRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
-import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -68,6 +67,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAXIMUM_RO
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.gridsuite.study.server.utils.TestUtils.synchronizeStudyServerExecutionService;
+import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyPostRequest;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -224,7 +224,7 @@ class RootNetworkTest {
                 .andReturn().getResponse().getContentAsString();
         RootNetworkRequestInfos result = objectMapper.readValue(response, RootNetworkRequestInfos.class);
 
-        WireMockUtils.verifyPostRequest(wireMockServer, stubId, "/v1/networks",
+        verifyPostRequest(wireMockServer, stubId, "/v1/networks",
             false,
             Map.of("caseUuid", WireMock.equalTo(DUPLICATE_CASE_UUID.toString()),
                 "caseFormat", WireMock.equalTo(caseFormat),
@@ -275,7 +275,7 @@ class RootNetworkTest {
                .header("content-type", "application/json"))
             .andExpect(status().isInternalServerError());
 
-        WireMockUtils.verifyPostRequest(wireMockServer, stubId, "/v1/networks",
+        verifyPostRequest(wireMockServer, stubId, "/v1/networks",
             false,
             Map.of("caseUuid", WireMock.equalTo(DUPLICATE_CASE_UUID.toString()),
                 "caseFormat", WireMock.equalTo(caseFormat),
@@ -732,7 +732,7 @@ class RootNetworkTest {
         verify(rootNetworkService, times(1)).insertModificationRequest(eq(studyEntity.getId()), rootNetworkInfosCaptor.capture(), eq(USER_ID));
         rootNetworkInfosCaptor.getValue().getCaseInfos().setCaseUuid(null);
         assertThat(rootNetworkInfosCaptor.getValue()).usingRecursiveComparison().isEqualTo(rootNetworkUpdateInfos);
-        WireMockUtils.verifyPostRequest(wireMockServer, stubId, "/v1/networks",
+        verifyPostRequest(wireMockServer, stubId, "/v1/networks",
                 false,
                 Map.of(
                         "caseUuid", WireMock.equalTo(DUPLICATE_CASE_UUID.toString()),
@@ -893,6 +893,43 @@ class RootNetworkTest {
         assertNotEquals(NETWORK_UUID, duplicatedRootNetwork.getNetworkUuid());
         assertEquals(RootNetworkLoadStatus.UNLOADED, duplicatedRootNetwork.getLoadStatus());
         assertEquals(DUPLICATE_CASE_UUID, duplicatedRootNetwork.getCaseUuid());
+    }
+
+    @Test
+    void testRecreateNetworkSkippedWhileLoadStatusAlreadyLoading() throws Exception {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+        UUID rootNetworkUuid = testUtils.getOneRootNetworkUuid(studyEntity.getId());
+
+        UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks")).willReturn(WireMock.ok())).getId();
+
+        // 1st recreation request : moves the root network to LOADING and sends the network import request
+        studyService.recreateNetwork(USER_ID, studyEntity.getId(), rootNetworkUuid, CASE_FORMAT2);
+        assertEquals(RootNetworkLoadStatus.LOADING, rootNetworkRepository.findById(rootNetworkUuid).orElseThrow().getLoadStatus());
+
+        // 2nd recreation request for the same root network arrives while the 1st one is still loading
+        studyService.recreateNetwork(USER_ID, studyEntity.getId(), rootNetworkUuid, CASE_FORMAT2);
+        verify(rootNetworkService, times(1)).updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADING);
+        assertEquals(RootNetworkLoadStatus.LOADING, rootNetworkRepository.findById(rootNetworkUuid).orElseThrow().getLoadStatus());
+
+        // only one network import request has actually been sent to network-conversion-server
+        verifyPostRequest(wireMockServer, stubId, "/v1/networks", true,
+            Map.of("caseUuid", WireMock.equalTo(CASE_UUID.toString()), "caseFormat", WireMock.equalTo(CASE_FORMAT2)), 1);
+
+        // simulate the consumer receiving the caseImportSucceeded notification for the 1st recreation
+        RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(rootNetworkUuid)
+            .caseInfos(new CaseInfos(CASE_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT2))
+            .networkInfos(new NetworkInfos(NETWORK_UUID, "netId"))
+            .reportUuid(REPORT_UUID)
+            .build();
+        createAndConsumeMessageCaseImport(studyEntity.getId(), rootNetworkInfos, CaseImportAction.NETWORK_RECREATION);
+        assertEquals(RootNetworkLoadStatus.LOADED, rootNetworkRepository.findById(rootNetworkUuid).orElseThrow().getLoadStatus());
+
+        // a 3rd recreation request is now accepted since the root network is no longer loading
+        studyService.recreateNetwork(USER_ID, studyEntity.getId(), rootNetworkUuid, CASE_FORMAT2);
+        assertEquals(RootNetworkLoadStatus.LOADING, rootNetworkRepository.findById(rootNetworkUuid).orElseThrow().getLoadStatus());
+        verifyPostRequest(wireMockServer, stubId, "/v1/networks", true,
+            Map.of("caseUuid", WireMock.equalTo(CASE_UUID.toString()), "caseFormat", WireMock.equalTo(CASE_FORMAT2)), 1);
     }
 
     private Map<String, Object> createConsumeCaseImportSucceededHeaders(
