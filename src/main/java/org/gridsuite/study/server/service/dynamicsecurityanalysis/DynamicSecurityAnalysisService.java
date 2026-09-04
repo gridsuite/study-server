@@ -8,7 +8,6 @@
 package org.gridsuite.study.server.service.dynamicsecurityanalysis;
 
 import lombok.NonNull;
-import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.error.StudyException;
@@ -90,7 +89,7 @@ public class DynamicSecurityAnalysisService extends AbstractComputationService {
 
         UUID result = handleDynamicSecurityAnalysisRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
 
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(DYNAMIC_SECURITY_ANALYSIS), result);
+        handleQuotaStart(userId, result, DYNAMIC_SECURITY_ANALYSIS);
         return result;
     }
 

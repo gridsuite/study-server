@@ -438,7 +438,7 @@ public class ConsumerService {
 
                     // free quota
                     if (userId != null && resultUuid != null) {
-                        userAdminService.endOperationWithQuota(userId, QuotaType.mapFromComputationType(computationType), resultUuid);
+                        handleQuotaEnd(computationType, userId, resultUuid);
                     }
 
                     // send notification for failed computation
@@ -446,6 +446,12 @@ public class ConsumerService {
                 }
             }
         }
+    }
+
+    private void handleQuotaEnd(ComputationType computationType, String userId, UUID resultUuid) {
+        QuotaType quotaType = QuotaType.mapFromComputationType(computationType);
+        userAdminService.endOperationWithQuota(userId, quotaType, resultUuid);
+        notificationService.emitQuotaChange(userId, quotaType);
     }
 
     public void consumeCalculationStopped(Message<String> msg, ComputationType computationType) {
@@ -467,7 +473,7 @@ public class ConsumerService {
                 String userId = msg.getHeaders().get(HEADER_USER_ID, String.class);
                 if (resultId != null && userId != null) {
                     UUID resultUuid = UUID.fromString(resultId);
-                    userAdminService.endOperationWithQuota(userId, QuotaType.mapFromComputationType(computationType), resultUuid);
+                    handleQuotaEnd(computationType, userId, resultUuid);
                 }
 
                 LOGGER.info("{} stopped for node '{}'", computationType.getLabel(), receiverObj.getNodeUuid());
@@ -551,7 +557,7 @@ public class ConsumerService {
                 // free quota
                 String userId = msg.getHeaders().get(HEADER_USER_ID, String.class);
                 if (userId != null) {
-                    userAdminService.endOperationWithQuota(userId, QuotaType.mapFromComputationType(computationType), resultUuid);
+                    handleQuotaEnd(computationType, userId, resultUuid);
                 }
 
                 // send notifications
