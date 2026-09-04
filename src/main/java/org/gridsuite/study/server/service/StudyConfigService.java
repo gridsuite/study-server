@@ -415,16 +415,6 @@ public class StudyConfigService {
         return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public void deleteWorkspacePanelNadConfig(UUID configId, UUID workspaceId, UUID panelId) {
-        Objects.requireNonNull(configId);
-        Objects.requireNonNull(workspaceId);
-        Objects.requireNonNull(panelId);
-        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_WITH_ID_URI + WORKSPACE_WITH_ID_URI + WORKSPACE_PANELS_URI
-                + "/{panelId}/current-nad-config")
-                .buildAndExpand(configId, workspaceId, panelId).toUriString();
-        restTemplate.delete(studyConfigServerBaseUri + path);
-    }
-
     public String getComputationResultGlobalFilters(UUID computationResultFiltersId, String computationType) {
         Objects.requireNonNull(computationResultFiltersId);
         Map<String, Object> uriVariables = Map.of(COMPUTATION_RESULT_FILTERS_ID, computationResultFiltersId, COMPUTATION_TYPE, computationType);
