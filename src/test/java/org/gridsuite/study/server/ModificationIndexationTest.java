@@ -19,6 +19,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.service.NetworkModificationService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.StudyServerExecutionService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,12 +29,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
+import static org.gridsuite.study.server.utils.TestUtils.synchronizeStudyServerExecutionService;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -72,6 +75,9 @@ class ModificationIndexationTest {
     @MockitoBean
     private OutputDestination output;
 
+    @MockitoSpyBean
+    private StudyServerExecutionService studyServerExecutionService;
+
     StudyEntity studyEntity;
     RootNetworkEntity rootNetworkEntity;
 
@@ -96,6 +102,7 @@ class ModificationIndexationTest {
          * () means the node is built
          */
         createStudyAndNodesWithIndexedModification();
+        synchronizeStudyServerExecutionService(studyServerExecutionService);
         SQLStatementCountValidator.reset();
     }
 
