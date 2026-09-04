@@ -17,11 +17,14 @@ import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
+import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.Message;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -79,7 +82,12 @@ class ImportStudyTest extends StudyTestBase {
                         .content(objectMapper.writeValueAsString(treeExportInfos)))
                 .andExpect(status().isOk());
 
-        // Import is fully synchronous: no study-update / element-update notifications are sent
+        // Import is fully synchronous, the only notification sent is the study creation finished one
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
+        assertNotNull(message);
+        assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(USER_ID, message.getHeaders().get(HEADER_USER_ID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_FINISHED, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertNull(output.receive(TIMEOUT, studyUpdateDestination));
         assertNull(output.receive(TIMEOUT, elementUpdateDestination));
 
