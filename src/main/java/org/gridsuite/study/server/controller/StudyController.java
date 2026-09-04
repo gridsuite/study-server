@@ -710,6 +710,22 @@ public class StudyController {
         return ResponseEntity.ok().body(newCompositeUuid);
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuid}/share")
+    @Operation(summary = "Move a composite modification of the node into a directory, replacing it by a reference to it")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The composite modification has been shared.")})
+    public ResponseEntity<Void> shareCompositeModification(@PathVariable("studyUuid") UUID studyUuid,
+                                                           @PathVariable("nodeUuid") UUID nodeUuid,
+                                                           @PathVariable("modificationUuid") UUID modificationUuid,
+                                                           @RequestParam("name") String name,
+                                                           @RequestParam(value = "description", required = false) String description,
+                                                           @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
+                                                           @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.shareCompositeNetworkModification(studyUuid, nodeUuid, modificationUuid, name, description, parentDirectoryUuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/composite-modifications", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "For a list of composite network modifications passed in body, insert them into the target node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The composite modification list has been inserted.")})

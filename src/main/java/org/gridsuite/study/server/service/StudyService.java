@@ -436,6 +436,11 @@ public class StudyService {
      */
     public void recreateNetwork(String userId, UUID studyUuid, UUID rootNetworkUuid, String caseFormat) {
         RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        if (rootNetwork.getLoadStatus() == RootNetworkLoadStatus.LOADING) {
+            LOGGER.warn("Root network '{}' is already loading, skipping recreateNetwork", rootNetworkUuid);
+            return;
+        }
+        rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADING);
         UUID caseUuid = rootNetwork.getCaseUuid();
         UUID originalCaseUuid = rootNetwork.getOriginalCaseUuid();
         RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(rootNetworkUuid).caseInfos(new CaseInfos(caseUuid, originalCaseUuid, null, caseFormat)).build();
@@ -632,7 +637,7 @@ public class StudyService {
         RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
 
         rootNetworkService.updateNetwork(rootNetworkEntity, networkInfos);
-        rootNetworkEntity.setLoadStatus(RootNetworkLoadStatus.LOADED);
+        rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADED);
 
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
@@ -1709,7 +1714,10 @@ public class StudyService {
         // reindex root network for study in elasticsearch
         studyInfosService.recreateStudyInfos(studyInfos);
         RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-
+        if (rootNetwork.getLoadStatus() != RootNetworkLoadStatus.LOADED) {
+            LOGGER.info("Root network '{}' is not loaded, skipping reindexation", rootNetworkUuid);
+            return;
+        }
         // Reset indexation status
         updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.INDEXING_ONGOING);
         try {
@@ -2013,6 +2021,39 @@ public class StudyService {
         }
         notificationService.emitElementUpdated(targetStudyUuid, userId);
         return newCompositeUuid;
+    }
+
+    /**
+     * Moves a composite modification of a node out of the study : it is stored as an element in the directory server,
+     * and replaced in the node by a reference to this now shared composite modification.
+     */
+    @Transactional(readOnly = true)
+    public void shareCompositeNetworkModification(
+        UUID studyUuid,
+        UUID nodeUuid,
+        UUID modificationUuid,
+        String name,
+        String description,
+        UUID parentDirectoryUuid,
+        String userId) {
+        // checks we can write in the target directory before touching anything
+        directoryService.checkPermission(List.of(), parentDirectoryUuid, userId, PermissionType.WRITE, false);
+        if (directoryService.elementExists(parentDirectoryUuid, name, DirectoryService.MODIFICATION)) {
+            throw new StudyException(ELEMENT_ALREADY_EXISTS, "composite modification name " + name + " already exists in directory", Map.of("fileName", name));
+        }
+
+        UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+        List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
+        try {
+            // the applied modifications are left unchanged : the node does not need to be rebuilt
+            networkModificationService.extractCompositeModificationToShare(groupUuid, modificationUuid, name);
+            // the composite modification keeps its uuid when extracted, so it is shared under that same uuid
+            directoryService.createElement(parentDirectoryUuid, description, modificationUuid, name, DirectoryService.MODIFICATION, userId);
+            directoryService.createsReferencesToSharedComposites(List.of(modificationUuid), userId, nodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE);
+        } finally {
+            notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
+        }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
