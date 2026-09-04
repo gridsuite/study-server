@@ -1134,6 +1134,17 @@ public class StudyController {
                 .body(networkModificationTreeService.getNodesInfos(nodeUuids));
     }
 
+    @GetMapping(value = "/nodes/uuids-by-network-modification", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "For each given network modification, find the study node whose modification group ultimately contains it")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Network modification uuid -> node uuid, unresolved modifications are omitted"),
+    })
+    public ResponseEntity<Map<UUID, UUID>> getNodeUuidsByNetworkModification(
+            @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
+                .body(studyService.getNodeUuidsByNetworkModifications(networkModificationUuids));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
     @Operation(summary = "Create a node as before / after the given node ID")
     @ApiResponses(value = {

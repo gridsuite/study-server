@@ -2888,6 +2888,25 @@ public class StudyService {
         );
     }
 
+    /**
+     * For each given network modification, find the study node whose modification group ultimately contains it
+     * (walking up through as many nested composite modifications as needed).
+     *
+     * @return network modification uuid -> node uuid; modifications not reachable from any node's modification
+     * group are omitted
+     */
+    public Map<UUID, UUID> getNodeUuidsByNetworkModifications(List<UUID> networkModificationUuids) {
+        Map<UUID, UUID> rootGroupByModification = networkModificationService.findRootGroups(networkModificationUuids);
+        if (rootGroupByModification.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, UUID> nodeByGroup = networkModificationTreeService.getNodeUuidsByModificationGroups(
+                rootGroupByModification.values().stream().distinct().toList());
+        return rootGroupByModification.entrySet().stream()
+                .filter(entry -> nodeByGroup.containsKey(entry.getValue()))
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> nodeByGroup.get(entry.getValue())));
+    }
+
     private NodeTreeExportInfos toNodeTreeExportInfos(AbstractNode node) {
         List<NodeTreeExportInfos> children = CollectionUtils.emptyIfNull(node.getChildren()).stream().map(this::toNodeTreeExportInfos).toList();
         UUID modificationGroupUuid = null;
