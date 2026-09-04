@@ -18,7 +18,6 @@ import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
@@ -192,8 +191,7 @@ public class StudyController {
     public ResponseEntity<RootNetworkRequestInfos> createRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
                                                                      @RequestBody RootNetworkInfos rootNetworkInfos,
                                                                      @RequestHeader(HEADER_USER_ID) String userId) {
-        rootNetworkInfos.setId(null);
-        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, rootNetworkInfos, userId, CaseImportAction.ROOT_NETWORK_CREATION));
+        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, rootNetworkInfos, userId));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}")

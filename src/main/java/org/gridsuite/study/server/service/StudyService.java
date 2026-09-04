@@ -321,17 +321,17 @@ public class StudyService {
     }
 
     @Transactional
-    public RootNetworkRequestInfos createRootNetworkRequest(UUID studyUuid, RootNetworkInfos rootNetworkInfos, String userId, CaseImportAction caseImportAction) {
+    public RootNetworkRequestInfos createRootNetworkRequest(UUID studyUuid, RootNetworkInfos rootNetworkInfos, String userId) {
         rootNetworkService.assertCanCreateRootNetwork(studyUuid, rootNetworkInfos.getName(), rootNetworkInfos.getTag());
         StudyEntity studyEntity = getStudy(studyUuid);
-        if (rootNetworkInfos.getId() == null) {
-            rootNetworkInfos.setId(UUID.randomUUID());
-        }
+
+        rootNetworkInfos.setId(UUID.randomUUID());
+
         RootNetworkRequestEntity rootNetworkCreationRequestEntity = rootNetworkService.insertCreationRequest(studyEntity.getId(), rootNetworkInfos, userId);
         try {
             UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkInfos.getCaseInfos().getOriginalCaseUuid(), true);
             rootNetworkInfos.getCaseInfos().setCaseUuid(clonedCaseUuid);
-            persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkInfos.getImportParameters(), caseImportAction, UUID.randomUUID());
+            persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkInfos.getImportParameters(), CaseImportAction.ROOT_NETWORK_CREATION, UUID.randomUUID());
         } catch (Exception e) {
             rootNetworkService.deleteRootNetworkRequest(rootNetworkCreationRequestEntity);
             throw e;
