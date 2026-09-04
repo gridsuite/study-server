@@ -3525,13 +3525,13 @@ class NetworkModificationTest {
         UUID modification1 = UUID.randomUUID();
         String modificationUuidListBody = mapper.writeValueAsString(List.of(new ModificationMoveOrCopyInfos(modification1, null)));
 
-        UUID childrenStubId = wireMockServer.stubFor(
+        wireMockServer.stubFor(
                 WireMock.get(WireMock.urlPathEqualTo("/v1/network-composite-modifications/children-uuids"))
                         .withQueryParam("uuids", WireMock.containing(modification1.toString()))
                         .willReturn(WireMock.ok()
                                 .withBody(mapper.writeValueAsString(List.of()))
                                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
-        ).getId();
+        );
 
         // source omitted -> studyService looks up the modification's parent composite; modification1 sits directly
         // in node1's own group, so no entry is returned and the fallback (node1's group) is used

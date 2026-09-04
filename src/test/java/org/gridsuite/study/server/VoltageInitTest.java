@@ -936,7 +936,7 @@ class VoltageInitTest {
                 .header("userId", "userId")).andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(4, server).stream().allMatch(r ->
                 r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
-                        r.matches("/v1/containers/.*\\?action=COPY&sourceContainerId=.*") ||
+                        r.matches("/v1/containers/[^?]*\\?action=COPY&sourceContainerId=.*") ||
                         // the created modification is deactivated on the tag of the other root network
                         r.matches("/v1/network-modifications/root-network-applicability\\?.*")
         ));

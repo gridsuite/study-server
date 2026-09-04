@@ -624,7 +624,7 @@ public class NetworkModificationService {
 
         String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + DELIMITER + "index")
             .queryParam("networkUuid", networkUuid)
-            .queryParam("groupUuids", groupUuids)
+            .queryParam(QUERY_PARAM_GROUP_UUIDS, groupUuids)
             .toUriString();
 
         restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.DELETE, null, Void.class);
