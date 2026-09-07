@@ -65,7 +65,7 @@ class ImportStudyTest extends StudyTestBase {
         stubDefaultParametersCreation();
         wireMockStubs.caseServer.stubDuplicateCaseWithBody(caseUuid1.toString(), objectMapper.writeValueAsString(duplicatedCaseUuid1));
         wireMockStubs.caseServer.stubDuplicateCaseWithBody(caseUuid2.toString(), objectMapper.writeValueAsString(duplicatedCaseUuid2));
-        UUID stubDuplicateModificationGroupId = wireMockStubs.stubDuplicateModificationGroup(objectMapper.writeValueAsString(Map.of()));
+        UUID stubDuplicateModificationGroupId = wireMockStubs.stubDuplicateModificationGroup();
 
         NodeTreeExportInfos nodeTree = new NodeTreeExportInfos("Root", "ROOT", null, null, List.of(
                 new NodeTreeExportInfos("N1", "NETWORK_MODIFICATION", modificationGroupUuid1, "SECURITY", List.of(
@@ -140,7 +140,7 @@ class ImportStudyTest extends StudyTestBase {
         UUID modificationGroupUuid1 = UUID.randomUUID();
         UUID modificationGroupUuid2 = UUID.randomUUID();
 
-        UUID stubDuplicateModificationGroupId = wireMockStubs.stubDuplicateModificationGroup(objectMapper.writeValueAsString(Map.of()));
+        UUID stubDuplicateModificationGroupId = wireMockStubs.stubDuplicateModificationGroup();
         UUID stubDeleteGroupId = wireMockStubs.stubNetworkModificationDeleteGroup();
 
         NodeTreeExportInfos nodeTree = new NodeTreeExportInfos("Root", "ROOT", null, null, List.of(
