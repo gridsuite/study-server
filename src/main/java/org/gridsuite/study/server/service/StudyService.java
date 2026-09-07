@@ -1472,6 +1472,13 @@ public class StudyService {
     }
 
     @Transactional
+    public void sharedElementUpdatedNotification(UUID nodeUuid, List<UUID> networkModificationUuids) {
+        UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
+        invalidateNodeTree(studyUuid, nodeUuid);
+        notificationService.emitSharedElementUpdated(studyUuid, nodeUuid, networkModificationUuids);
+    }
+
+    @Transactional
     public boolean invalidateNodeTreeWhenMoveModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid) {
         boolean isTargetInDifferentNodeTree = !targetNodeUuid.equals(originNodeUuid)
             && !networkModificationTreeService.isAChild(originNodeUuid, targetNodeUuid);
@@ -1505,11 +1512,11 @@ public class StudyService {
         invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, invalidateNodeTreeParameters);
     }
 
-    public void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
+    private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
         invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ALL);
     }
 
-    public void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
+    private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
         networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters, false);
     }
 

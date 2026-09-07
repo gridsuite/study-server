@@ -865,11 +865,12 @@ public class ConsumerService {
         return message -> handleSharedElementUpdate(message.getPayload());
     }
 
+    // TODO need to handle by type and not group modifications list
     private void handleSharedElementUpdate(Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType) {
         List<UUID> studyNodeUuids = extractReferenceIds(referencesByType, ReferenceAttributes.ReferenceType.STUDY_NODE);
         List<UUID> networkModificationUuids = extractReferenceIds(referencesByType, ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION);
 
-        Set<UUID> nodeUuidsToInvalidate = new LinkedHashSet<>(studyNodeUuids);
+        Set<UUID> nodeUuidsToInvalidate = new HashSet<>(studyNodeUuids);
 
         if (!networkModificationUuids.isEmpty()) {
             Collection<UUID> rootGroupUuids = networkModificationService.findRootGroupByModification(networkModificationUuids).values();
@@ -879,9 +880,7 @@ public class ConsumerService {
         }
 
         nodeUuidsToInvalidate.forEach(nodeUuid -> {
-            UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
-            studyService.invalidateNodeTreeWhenSharedModificationChanged(studyUuid, nodeUuid);
-            notificationService.emitSharedElementUpdated(studyUuid, nodeUuid, networkModificationUuids);
+            studyService.sharedElementUpdatedNotification(nodeUuid, networkModificationUuids);
         });
     }
 
