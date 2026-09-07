@@ -588,7 +588,7 @@ public class RootNetworkNodeInfoService {
                 rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, ROOT_NETWORK_NOT_FOUND));
         String variantId = rootNetworkNodeInfoEntity.getVariantId();
         UUID reportUuid = rootNetworkNodeInfoEntity.getModificationReports().get(nodeUuid);
-        return new ModificationApplicationContext(networkUuid, variantId, reportUuid, nodeUuid, rootNetworkNodeInfoEntity.getRootNetwork().getTag());
+        return new ModificationApplicationContext(networkUuid, variantId, reportUuid, nodeUuid, rootNetworkNodeInfoEntity.getRootNetwork().getApplicabilityTag());
     }
 
     private List<UUID> getReportUuids(RootNetworkNodeInfo rootNetworkNodeInfo) {

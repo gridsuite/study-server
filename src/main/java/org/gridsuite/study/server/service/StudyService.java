@@ -367,13 +367,23 @@ public class StudyService {
             rootNetworkService.createRootNetwork(studyEntity, rootNetworkInfos);
             rootNetworkService.deleteRootNetworkRequest(rootNetworkCreationRequestEntityOpt.get());
             //update study entity to multi root
-            if (studyEntity.getRootNetworks().size() > 1) {
+            if (studyEntity.isMonoRoot()) {
                 studyEntity.setMonoRoot(false);
+                invalidatePreviousRootNetworkNodeTree(studyEntity);
             }
         } else {
             rootNetworkService.deleteRootNetworks(studyEntity, List.of(rootNetworkInfos));
         }
         notificationService.emitRootNetworksUpdated(studyUuid);
+    }
+
+    /**
+     * The nodes built while the study was mono root network ignored the applicabilities, so they have to be built
+     * again now that these are taken into account.
+     */
+    private void invalidatePreviousRootNetworkNodeTree(StudyEntity studyEntity) {
+        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyEntity.getId());
+        invalidateNodeTree(studyEntity.getId(), rootNodeUuid, studyEntity.getRootNetworks().getFirst().getId());
     }
 
     private void updateRootNetworkBasicInfos(UUID studyUuid, RootNetworkInfos rootNetworkInfos, boolean updateCase) {
