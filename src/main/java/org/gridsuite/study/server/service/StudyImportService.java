@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -67,18 +68,38 @@ public class StudyImportService {
         List<RootNetworkExportInfos> orderedRootNetworks = treeExportInfos.rootNetworks().stream()
                 .sorted(Comparator.comparing(RootNetworkExportInfos::index))
                 .toList();
-        for (RootNetworkExportInfos rootNetworkInfos : orderedRootNetworks) {
-            UUID newCaseUuid = caseService.duplicateCase(rootNetworkInfos.caseInfos().getCaseUuid(), true);
-            RootNetworkEntity rootNetworkEntity = rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder()
-                    .id(UUID.randomUUID())
-                    .name(rootNetworkInfos.name())
-                    .tag(rootNetworkInfos.tag())
-                    .caseInfos(new CaseInfos(newCaseUuid, rootNetworkInfos.caseInfos().getOriginalCaseUuid(),
-                            rootNetworkInfos.caseInfos().getCaseName(), rootNetworkInfos.caseInfos().getCaseFormat()))
-                    .importParameters(rootNetworkInfos.importParameters())
-                    .networkInfos(new NetworkInfos(UUID.randomUUID(), ""))
-                    .build());
-            rootNetworkService.updateNetworkLoadStatus(rootNetworkEntity.getId(), RootNetworkLoadStatus.UNLOADED);
+        List<UUID> duplicatedCaseUuids = new ArrayList<>();
+        try {
+            for (RootNetworkExportInfos rootNetworkInfos : orderedRootNetworks) {
+                UUID newCaseUuid = caseService.duplicateCase(rootNetworkInfos.caseInfos().getCaseUuid(), true);
+                duplicatedCaseUuids.add(newCaseUuid);
+                RootNetworkEntity rootNetworkEntity = rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder()
+                        .id(UUID.randomUUID())
+                        .name(rootNetworkInfos.name())
+                        .tag(rootNetworkInfos.tag())
+                        .caseInfos(new CaseInfos(newCaseUuid, rootNetworkInfos.caseInfos().getOriginalCaseUuid(),
+                                rootNetworkInfos.caseInfos().getCaseName(), rootNetworkInfos.caseInfos().getCaseFormat()))
+                        .importParameters(rootNetworkInfos.importParameters())
+                        .networkInfos(new NetworkInfos(UUID.randomUUID(), ""))
+                        .build());
+                rootNetworkService.updateNetworkLoadStatus(rootNetworkEntity.getId(), RootNetworkLoadStatus.UNLOADED);
+            }
+        } catch (Exception e) {
+            modificationGroupUuidMapping.values().forEach(newGroupUuid -> {
+                try {
+                    networkModificationService.deleteModifications(newGroupUuid);
+                } catch (Exception exception) {
+                    LOGGER.error(String.format("Could not clean up orphaned modification group '%s' after import failure", newGroupUuid), exception);
+                }
+            });
+            duplicatedCaseUuids.forEach(caseUuid -> {
+                try {
+                    caseService.deleteCase(caseUuid);
+                } catch (Exception exception) {
+                    LOGGER.error(String.format("Could not clean up orphaned case '%s' after import failure", caseUuid), exception);
+                }
+            });
+            throw e;
         }
         notificationService.emitStudyCreationFinished(studyEntity.getId(), userId);
     }
