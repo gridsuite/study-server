@@ -23,6 +23,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -121,5 +122,39 @@ class NetworkModificationServiceTest {
         networkModificationService.updateNetworkModificationsMetadata(List.of(firstUuid, secondUuid), RESPONSE);
 
         verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+    }
+
+    @Test
+    void testRenameRootNetworkTag() {
+        UUID firstGroupUuid = UUID.randomUUID();
+        UUID secondGroupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
+                + "?groupUuids=" + firstGroupUuid + "&groupUuids=" + secondGroupUuid + "&oldTag=PH1&newTag=PH2";
+
+        networkModificationService.renameRootNetworkTag(List.of(firstGroupUuid, secondGroupUuid), "PH1", "PH2");
+
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+
+        // there is nothing to rename without a group
+        networkModificationService.renameRootNetworkTag(List.of(), "PH1", "PH2");
+
+        verifyNoMoreInteractions(restTemplate);
+    }
+
+    @Test
+    void testDeleteRootNetworkTags() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
+                + "?groupUuids=" + groupUuid + "&rootNetworkTags=PH1&rootNetworkTags=PH2";
+
+        networkModificationService.deleteRootNetworkTags(List.of(groupUuid), List.of("PH1", "PH2"));
+
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.DELETE), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+
+        // there is nothing to drop without a group or without a tag
+        networkModificationService.deleteRootNetworkTags(List.of(), List.of("PH1"));
+        networkModificationService.deleteRootNetworkTags(List.of(groupUuid), List.of());
+
+        verifyNoMoreInteractions(restTemplate);
     }
 }
