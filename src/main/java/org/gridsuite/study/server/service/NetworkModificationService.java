@@ -289,7 +289,7 @@ public class NetworkModificationService {
     /**
      * @return references data of the modificationsUuids found among modificationsUuids
      */
-    public List<ReferenceData> getReferences(List<UUID> modificationsUuids) {
+    public List<ReferenceData> getModificationReferences(List<UUID> modificationsUuids) {
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + "references")
