@@ -12,7 +12,7 @@ import lombok.Setter;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ElementAttributes;
 import org.gridsuite.study.server.dto.ReferenceAttributes;
-import org.gridsuite.study.server.dto.ReferenceId;
+import org.gridsuite.study.server.dto.ReferenceContainer;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
@@ -125,20 +125,23 @@ public class DirectoryService {
             UUID targetRootContainerId, UUID targetContainerId, ReferenceAttributes.ReferenceType targetReferenceType) {
         // TODO : instead of multiple calls, an endpoint in directory server should be created to handle multiple references creation
         // OR if not, turn this into simultaneous asynchronous calls
-        ReferenceAttributes referenceAttributes = ReferenceAttributes.builder()
-                .referenceId(ReferenceId.builder()
-                        .rootContainerId(targetRootContainerId)
-                        .containerId(targetContainerId)
-                        .build())
-                .referenceType(targetReferenceType)
+        ReferenceContainer referenceContainer = ReferenceContainer.builder()
+                .rootContainerId(targetRootContainerId)
+                .containerId(targetContainerId)
                 .build();
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<ReferenceAttributes> requestEntity = new HttpEntity<>(referenceAttributes, headers);
 
         elementsUuids.forEach(elementUuid -> {
+            ReferenceAttributes referenceAttributes = ReferenceAttributes.builder()
+                    .referenceId(elementUuid)
+                    .referenceContainer(referenceContainer)
+                    .referenceType(targetReferenceType)
+                    .build();
+            HttpEntity<ReferenceAttributes> requestEntity = new HttpEntity<>(referenceAttributes, headers);
+
             var path = UriComponentsBuilder.fromPath(
                             DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")
                     .buildAndExpand(elementUuid)

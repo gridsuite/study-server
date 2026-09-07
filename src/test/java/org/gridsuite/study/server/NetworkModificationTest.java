@@ -2188,7 +2188,8 @@ class NetworkModificationTest {
                 "/v1/elements/" + sharedNetModId + "/references",
                 Map.of(),
                 mapper.writeValueAsString(ReferenceAttributes.builder()
-                        .referenceId(ReferenceId.builder().rootContainerId(studyUuid).containerId(nodeUuid1).build())
+                        .referenceId(sharedNetModId)
+                        .referenceContainer(ReferenceContainer.builder().rootContainerId(studyUuid).containerId(nodeUuid1).build())
                         .referenceType(STUDY_NODE)
                         .build()));
     }
@@ -2249,7 +2250,8 @@ class NetworkModificationTest {
                 "/v1/elements/" + compositeUuid + "/references",
                 Map.of(),
                 mapper.writeValueAsString(ReferenceAttributes.builder()
-                        .referenceId(ReferenceId.builder().rootContainerId(studyUuid).containerId(nodeUuid1).build())
+                        .referenceId(compositeUuid)
+                        .referenceContainer(ReferenceContainer.builder().rootContainerId(studyUuid).containerId(nodeUuid1).build())
                         .referenceType(STUDY_NODE)
                         .build()));
     }
@@ -2601,7 +2603,8 @@ class NetworkModificationTest {
                 "/v1/elements/" + sharedComposite1 + "/references",
                 Map.of(),
                 mapper.writeValueAsString(ReferenceAttributes.builder()
-                        .referenceId(ReferenceId.builder().rootContainerId(studyUuid).containerId(nodeUuid1).build())
+                        .referenceId(sharedComposite1)
+                        .referenceContainer(ReferenceContainer.builder().rootContainerId(studyUuid).containerId(nodeUuid1).build())
                         .referenceType(STUDY_NODE)
                         .build()));
 
@@ -2611,7 +2614,8 @@ class NetworkModificationTest {
                 "/v1/elements/" + sharedComposite2 + "/references",
                 Map.of(),
                 mapper.writeValueAsString(ReferenceAttributes.builder()
-                        .referenceId(ReferenceId.builder().rootContainerId(nodeUuid1).containerId(copy2).build())
+                        .referenceId(sharedComposite2)
+                        .referenceContainer(ReferenceContainer.builder().rootContainerId(nodeUuid1).containerId(copy2).build())
                         .referenceType(STUDY_NODE_NETWORK_MODIFICATION)
                         .build()));
     }
