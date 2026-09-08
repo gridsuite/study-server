@@ -383,7 +383,7 @@ public class StudyService {
      */
     private void invalidatePreviousRootNetworkNodeTree(StudyEntity studyEntity) {
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyEntity.getId());
-        invalidateNodeTree(studyEntity.getId(), rootNodeUuid, studyEntity.getRootNetworks().getFirst().getId());
+        invalidateNodeTree(studyEntity.getId(), rootNodeUuid, studyEntity.getFirstRootNetwork().getId());
     }
 
     private void updateRootNetworkBasicInfos(UUID studyUuid, RootNetworkInfos rootNetworkInfos, boolean updateCase) {
