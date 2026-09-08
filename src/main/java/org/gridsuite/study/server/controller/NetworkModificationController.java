@@ -70,4 +70,9 @@ public class NetworkModificationController {
         networkModificationService.updateNetworkModificationsMetadata(networkModificationUuids, metadata);
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping(value = "/containers/references/exists")
+    public ResponseEntity<Boolean> hasReferences(@RequestParam("uuids") List<UUID> containerUuids) {
+        return ResponseEntity.ok().body(networkModificationService.hasReferences(containerUuids));
+    }
 }

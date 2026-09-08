@@ -676,4 +676,11 @@ public class NetworkModificationService {
                 new ParameterizedTypeReference<List<UUID>>() { }
         ).getBody();
     }
+
+    public boolean hasReferences(List<UUID> containerUuids) {
+        String path = UriComponentsBuilder.fromPath("containers/references/exists")
+                .queryParam(UUIDS, containerUuids)
+                .build().toUriString();
+        return Boolean.TRUE.equals(restTemplate.getForObject(getNetworkModificationServerURI(false) + path, Boolean.class));
+    }
 }
