@@ -3571,11 +3571,7 @@ class NetworkModificationTest {
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
         ).getId();
 
-        // directory-server endpoint that moves the node reference - ids is modification1 itself
-        UUID updateReferencesStubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/elements/references"))
-                .withQueryParam("ids", WireMock.equalTo(modification1.toString()))
-                .withQueryParam("originReferenceUuid", WireMock.equalTo(nodeUuid1.toString()))
-                .withQueryParam("targetReferenceUuid", WireMock.equalTo(nodeUuid2.toString()))
+        UUID updateReferencesStubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/elements/" + modification1 + "/references/" + modification1))
                 .withHeader(USER_ID_HEADER, WireMock.equalTo(userId))
                 .willReturn(WireMock.ok())
         ).getId();
@@ -3609,11 +3605,13 @@ class NetworkModificationTest {
         WireMockUtils.verifyGetRequest(wireMockServer, parentCompositesStubId, "/v1/network-composite-modifications/parent-composites",
                 Map.of("uuids", WireMock.containing(modification1.toString())));
 
-        WireMockUtils.verifyPutRequest(wireMockServer, updateReferencesStubId, "/v1/elements/references", true,
-                Map.of("ids", WireMock.equalTo(modification1.toString()),
-                        "originReferenceUuid", WireMock.equalTo(nodeUuid1.toString()),
-                        "targetReferenceUuid", WireMock.equalTo(nodeUuid2.toString())),
-                null);
+        WireMockUtils.verifyPutRequest(wireMockServer, updateReferencesStubId, "/v1/elements/" + modification1 + "/references/" + modification1, false,
+                Map.of(),
+                mapper.writeValueAsString(ReferenceAttributes.builder()
+                        .referenceId(modification1)
+                        .referenceContainer(ReferenceContainer.builder().rootContainerId(studyUuid).containerId(nodeUuid2).build())
+                        .referenceType(STUDY_NODE)
+                        .build()));
     }
 
     @Test
