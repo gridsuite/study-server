@@ -1555,7 +1555,7 @@ public class StudyService {
 
     private void removeReferences(List<ReferenceData> references, String userId, UUID nodeUuid) {
         references.forEach(reference ->
-                directoryService.removeReference(reference.containerId() != null ? reference.containerId() : nodeUuid, userId, reference.referenceId())
+                directoryService.removeElementReference(reference.containerId() != null ? reference.containerId() : nodeUuid, reference.modificationUuid(), userId)
         );
     }
 
@@ -1872,14 +1872,14 @@ public class StudyService {
             return;
         }
         if (source.type() == ModificationContainerType.GROUP && target.type() == ModificationContainerType.COMPOSITE) {
-            updateReferenceWhenMoveModification(referencesToMove, userId, originNodeUuid, target.id(), ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION);
+            updateReferenceWhenMoveModification(referencesToMove, userId, originNodeUuid, target.id(), ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION);
         }
         if (target.type() == ModificationContainerType.GROUP && source.type() == ModificationContainerType.COMPOSITE) {
             updateReferenceWhenMoveModification(referencesToMove, userId, source.id(), targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE);
         }
         if (source.type() == ModificationContainerType.COMPOSITE && target.type() == ModificationContainerType.COMPOSITE
                 && !source.id().equals(target.id())) {
-            updateReferenceWhenMoveModification(referencesToMove, userId, source.id(), target.id(), ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION);
+            updateReferenceWhenMoveModification(referencesToMove, userId, source.id(), target.id(), ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION);
         }
         // shared composites: the moved occurrence's node reference is updated, not duplicated
         if (result != null && isTargetDifferentNode && originNodeUuid != null) {
@@ -1894,7 +1894,7 @@ public class StudyService {
     private void updateReferenceWhenMoveModification(List<ReferenceData> referenceTargets, String userId, UUID originReferenceUuid,
                                                      UUID targetReferenceUuid, ReferenceAttributes.ReferenceType targetReferenceType) {
         List<UUID> referenceModificationsUuids = referenceTargets.stream()
-                .map(ReferenceData::referenceId)
+                .map(ReferenceData::modificationUuid)
                 .collect(Collectors.toList());
         directoryService.updateReferencesToSharedComposites(
                 referenceModificationsUuids,
@@ -1964,69 +1964,40 @@ public class StudyService {
             String userId) {
         duplicateModificationsOrInsertComposites(targetStudyUuid, targetNodeUuid,
                 (groupUuid, modificationApplicationContexts) -> {
-                    // fetched BEFORE the duplication. getReferences() only tells us whether a given modification IS
-                    // itself a modification-reference - it does not descend into composites - so a reference nested
-                    // inside a copied composite (e.g. X's child R, pointing at shared element S) is invisible unless
-                    // its own uuid is included in the lookup; hence querying modificationsUuids' children too.
-                    List<UUID> originalChildrenUuids = networkModificationService.findAllChildrenUuids(modificationsUuids);
-                    List<UUID> allOriginalUuids = new ArrayList<>(modificationsUuids);
-                    allOriginalUuids.addAll(originalChildrenUuids);
-                    List<ReferenceData> referenceTargets = networkModificationService.getReferences(allOriginalUuids);
-
-                    NetworkModificationsResult networkModificationResults = networkModificationService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts));
-                    Map<UUID, UUID> mappingModificationsUuids = buildModificationsUuidMapping(modificationsUuids, originalChildrenUuids, networkModificationResults);
-                    createReferencesToSharedComposites(referenceTargets, modificationsUuids, mappingModificationsUuids, userId, targetNodeUuid);
-                    return networkModificationResults;
+                    NetworkModificationsResult result = networkModificationService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts));
+                    createElementsReferences(collectReferences(result.modificationUuids()), targetStudyUuid, targetNodeUuid, userId);
+                    return result;
                 },
                 userId);
     }
 
     /**
-     * @return old modification uuid -> new (copied) modification uuid, for every modification duplicated by
-     * {@code networkModificationResults} - root-level ones as well as those nested in a duplicated composite
+     * References among {@code modificationUuids} and among the modifications nested in them: getReferences() does not
+     * descend into composites, so a reference sitting inside a copied/inserted composite must be looked up explicitly.
      */
-    private Map<UUID, UUID> buildModificationsUuidMapping(List<UUID> copiedUuids, List<UUID> copiedChildrenUuids, NetworkModificationsResult networkModificationResults) {
-        Map<UUID, UUID> mappingModificationsUuids = new HashMap<>();
-        List<UUID> copyUuids = networkModificationResults.modificationUuids();
-
-        // Map root-level modifications
-        for (int i = 0; i < copiedUuids.size(); i++) {
-            mappingModificationsUuids.put(copiedUuids.get(i), copyUuids.get(i));
-        }
-
-        List<UUID> copyChildren = networkModificationService.findAllChildrenUuids(copyUuids);
-        for (int i = 0; i < copiedChildrenUuids.size(); i++) {
-            mappingModificationsUuids.put(copiedChildrenUuids.get(i), copyChildren.get(i));
-        }
-
-        return mappingModificationsUuids;
+    private List<ReferenceData> collectReferences(List<UUID> modificationUuids) {
+        List<UUID> uuids = new ArrayList<>(modificationUuids);
+        uuids.addAll(networkModificationService.findAllChildrenUuids(modificationUuids));
+        return networkModificationService.getReferences(uuids);
     }
 
-    /**
-     * one new reference is created per pasted modification-reference occurrence: even if several of them target the
-     * same shared composite, each occurrence must get its own reference row in directory-server (symmetric with
-     * {@link #removeReferences}, which likewise issues one removal per occurrence on delete) - so this must NOT be
-     * deduplicated by referenceId.
-     */
-    private void createReferencesToSharedComposites(List<ReferenceData> references, List<UUID> modificationsUuids,
-                                                    Map<UUID, UUID> mappingModificationsUuids, String userId, UUID targetNodeUuid) {
-        Set<UUID> requestedUuids = new HashSet<>(modificationsUuids);
 
-        List<UUID> directlyRequestedReferenceIds = references.stream()
-                .filter(reference -> requestedUuids.contains(reference.modificationUuid()))
-                .map(ReferenceData::referenceId)
-                .toList();
-        if (!directlyRequestedReferenceIds.isEmpty()) {
-            directoryService.createsReferencesToSharedComposites(directlyRequestedReferenceIds, userId, targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE);
-        }
-
-        Map<UUID, List<UUID>> nestedReferenceIdsByNewComposite = references.stream()
-                .filter(reference -> !requestedUuids.contains(reference.modificationUuid()))
-                .collect(Collectors.groupingBy(
-                        reference -> mappingModificationsUuids.get(reference.containerId()),
-                        Collectors.mapping(ReferenceData::referenceId, Collectors.toList())));
-        nestedReferenceIdsByNewComposite.forEach((newCompositeUuid, referenceIds) ->
-                directoryService.createsReferencesToSharedComposites(referenceIds, userId, newCompositeUuid, ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION));
+    private void createElementsReferences(List<ReferenceData> references, UUID studyUuid, UUID nodeUuid, String userId) {
+        references.forEach(ref -> {
+            boolean nested = ref.containerId() != null;
+            ReferenceAttributes attributes = ReferenceAttributes.builder()
+                    .referenceId(ref.modificationUuid())
+                    .referenceContainer(ReferenceContainer.builder()
+                            // nested in a composite: (nodeId, composite uuid); at node root: (studyId, nodeId)
+                            .rootContainerId(nested ? nodeUuid : studyUuid)
+                            .containerId(nested ? ref.containerId() : nodeUuid)
+                            .build())
+                    .referenceType(nested
+                            ? ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION
+                            : ReferenceAttributes.ReferenceType.STUDY_NODE)
+                    .build();
+            directoryService.createElementReference(ref.referenceId(), attributes, userId);
+        });
     }
 
     @Transactional
@@ -2073,7 +2044,12 @@ public class StudyService {
             networkModificationService.extractCompositeModificationToShare(groupUuid, modificationUuid, name);
             // the composite modification keeps its uuid when extracted, so it is shared under that same uuid
             directoryService.createElement(parentDirectoryUuid, description, modificationUuid, name, DirectoryService.MODIFICATION, userId);
-            directoryService.createsReferencesToSharedComposites(List.of(modificationUuid), userId, nodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE);
+            // extraction replaced the local composite by a new reference-modification pointing at modificationUuid
+            // (the only such reference, since that composite was local until now): register it on the shared element
+            List<ReferenceData> newReference = networkModificationService.getReferencesFromGroup(groupUuid).stream()
+                    .filter(ref -> modificationUuid.equals(ref.referenceId()))
+                    .toList();
+            createElementsReferences(newReference, studyUuid, nodeUuid, userId);
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
         }
@@ -2087,22 +2063,37 @@ public class StudyService {
         List<CompositeInfos> compositesInfos,
         String userId,
         StudyConstants.CompositeModificationsActionType action) {
-        // is some of the inserted modifications are shared, references have to be created in directory server
-        List<UUID> sharedCompositeUuids = compositesInfos.stream()
-                .filter(CompositeInfos::isShared)
-                .map(CompositeInfos::id)
-                .toList();
-        if (action == StudyConstants.CompositeModificationsActionType.INSERT && !sharedCompositeUuids.isEmpty()) {
-            directoryService.createsReferencesToSharedComposites(sharedCompositeUuids, userId, targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE);
-        }
-
         duplicateModificationsOrInsertComposites(
                 targetStudyUuid,
                 targetNodeUuid,
-                (groupUuid, modificationApplicationContexts) ->
-                        networkModificationService.insertCompositeModifications(groupUuid, action, Pair.of(compositesInfos, modificationApplicationContexts)),
+                (groupUuid, modificationApplicationContexts) -> {
+                    NetworkModificationsResult result = networkModificationService.insertCompositeModifications(groupUuid, action, Pair.of(compositesInfos, modificationApplicationContexts));
+                     if (action == StudyConstants.CompositeModificationsActionType.INSERT) {
+                        createSharedCompositesReferences(compositesInfos, result.modificationUuids(), targetStudyUuid, targetNodeUuid, userId);
+                    }
+                    return result;
+                },
                 userId
         );
+    }
+
+    private void createSharedCompositesReferences(List<CompositeInfos> compositesInfos, List<UUID> insertedModificationUuids,
+                                                  UUID studyUuid, UUID nodeUuid, String userId) {
+        for (int i = 0; i < compositesInfos.size(); i++) {
+            CompositeInfos composite = compositesInfos.get(i);
+            if (!composite.isShared()) {
+                continue;
+            }
+            ReferenceAttributes attributes = ReferenceAttributes.builder()
+                    .referenceId(insertedModificationUuids.get(i))
+                    .referenceContainer(ReferenceContainer.builder()
+                            .rootContainerId(studyUuid)
+                            .containerId(nodeUuid)
+                            .build())
+                    .referenceType(ReferenceAttributes.ReferenceType.STUDY_NODE)
+                    .build();
+            directoryService.createElementReference(composite.id(), attributes, userId);
+        }
     }
 
     private void duplicateModificationsOrInsertComposites(

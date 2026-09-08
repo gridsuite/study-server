@@ -15,23 +15,19 @@ import lombok.experimental.SuperBuilder;
 import java.util.UUID;
 
 /**
+ * ReferenceContainer represents the information that makes it easy to locate the reference where it is used.
+ * It depends on the type of reference:
+ * STUDY_NODE: rootContainerId: studyId; containerId: nodeId
+ * STUDY_NODE_NETWORK_MODIFICATION: rootContainerId: nodeId; containerId: parentCompositeId
+ * DIRECTORY_NETWORK_MODIFICATION: rootContainerId: directoryId; containerId: parentCompositeId
+ *
  * @author Maissa Souissi <maissa.souissi at rte-france.com>
  */
 @Getter
 @Setter
 @NoArgsConstructor
 @SuperBuilder
-public class ReferenceAttributes {
-    public enum ReferenceType {
-        STUDY_NODE,
-        STUDY_NODE_NETWORK_MODIFICATION,
-        DIRECTORY_NETWORK_MODIFICATION,
-    }
-
-    // id of the reference modification
-    @NonNull private UUID referenceId;
-    // Container where the reference is used (see ReferenceType for the meaning of its ids)
-    @NonNull private ReferenceContainer referenceContainer;
-    @NonNull private ReferenceType referenceType;
+public class ReferenceContainer {
+    @NonNull private UUID rootContainerId;
+    @NonNull private UUID containerId;
 }
-

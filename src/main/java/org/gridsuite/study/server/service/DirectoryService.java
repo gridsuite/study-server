@@ -111,30 +111,19 @@ public class DirectoryService {
         return response.getStatusCode() == HttpStatus.OK;
     }
 
-    /**
-     * creates references and add them to shared composite modifications stored in directory server
-     * @param elementsUuids element uuids of the shared composites in directory server
-     * @param userId id of the user who creates the references
-     * @param targetReferenceUuid where the new references will point
-     */
-    public void createsReferencesToSharedComposites(@NonNull List<UUID> elementsUuids, String userId, UUID targetReferenceUuid, ReferenceAttributes.ReferenceType targetReferenceType) {
-        // TODO : instead of multiple calls, an endpoint in directory server should be created to handle multiple references creation
-        // OR if not, turn this into simultaneous asynchronous calls
-        elementsUuids.forEach(elementUuid -> {
-            var path = UriComponentsBuilder.fromPath(
-                            DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")
-                    .buildAndExpand(elementUuid)
-                    .toUriString();
+    public void createElementReference(@NonNull UUID elementUuid, @NonNull ReferenceAttributes referenceAttributes, String userId) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.set(HEADER_USER_ID, userId);
-            headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<ReferenceAttributes> requestEntity = new HttpEntity<>(referenceAttributes, headers);
 
-            ReferenceAttributes referenceAttributes = new ReferenceAttributes(targetReferenceUuid, targetReferenceType);
+        var path = UriComponentsBuilder.fromPath(
+                DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")
+            .buildAndExpand(elementUuid)
+            .toUriString();
 
-            HttpEntity<ReferenceAttributes> requestEntity = new HttpEntity<>(referenceAttributes, headers);
-            restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.POST, requestEntity, ElementAttributes.class);
-        });
+        restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.POST, requestEntity, ElementAttributes.class);
     }
 
     /**
@@ -143,7 +132,7 @@ public class DirectoryService {
      * @param userId id of the user who caused the unreferencing
      * @param sharedElementUuid uuid of the referenced shared element in the directory-server
      */
-    public void removeReference(UUID referenceUuid, String userId, UUID sharedElementUuid) {
+    public void removeElementReference(UUID referenceUuid, UUID sharedElementUuid, String userId) {
         Objects.requireNonNull(referenceUuid);
         Objects.requireNonNull(sharedElementUuid);
 
