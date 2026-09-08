@@ -283,8 +283,8 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitWorkspaceNadConfigUpdated(UUID studyUuid, UUID workspaceId, UUID panelId, UUID workspaceNadConfigUuid, String clientId) {
-        MessageBuilder<String> builder = MessageBuilder.withPayload(workspaceNadConfigUuid.toString())
+    public void emitWorkspaceNadConfigUpdated(UUID studyUuid, UUID workspaceId, UUID panelId, String clientId) {
+        MessageBuilder<String> builder = MessageBuilder.withPayload("")
                 .setHeader(HEADER_WORKSPACE_UUID, workspaceId.toString())
                 .setHeader(HEADER_PANEL_ID, panelId.toString());
         if (clientId != null) {

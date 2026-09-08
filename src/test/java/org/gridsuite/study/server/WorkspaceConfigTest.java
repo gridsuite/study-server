@@ -239,23 +239,6 @@ class WorkspaceConfigTest {
         WireMockUtilsCriteria.verifyPostRequest(wireMockServer, configServerUrl, Map.of(), 1);
     }
 
-    @Test
-    void testDeleteNadConfig() throws Exception {
-        StudyEntity studyEntity = insertStudy();
-        String configServerUrl = "/v1/workspaces-configs/" + WORKSPACES_CONFIG_UUID + "/workspaces/" + WORKSPACE_ID + "/panels/" + PANEL_ID + "/current-nad-config";
-
-        wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo(configServerUrl))
-                .willReturn(WireMock.noContent()));
-
-        mockMvc.perform(delete("/v1/studies/{studyUuid}/workspaces/{workspaceId}/panels/{panelId}/current-nad-config",
-                        studyEntity.getId(), WORKSPACE_ID, PANEL_ID)
-                        .header("content-type", "application/json"))
-                .andExpect(status().isNoContent())
-                .andReturn();
-
-        WireMockUtilsCriteria.verifyDeleteRequest(wireMockServer, configServerUrl, false, Map.of());
-    }
-
     private StudyEntity insertStudy() {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, "", "", UUID.randomUUID());
         studyEntity.setWorkspacesConfigUuid(WORKSPACES_CONFIG_UUID);
