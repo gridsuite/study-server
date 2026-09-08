@@ -677,7 +677,7 @@ public class NetworkModificationService {
         ).getBody();
     }
 
-    public boolean hasReferences(List<UUID> containerUuids) {
+    public boolean hasModificationReferences(List<UUID> containerUuids) {
         String path = UriComponentsBuilder.fromPath("containers/references/exists")
                 .queryParam(UUIDS, containerUuids)
                 .build().toUriString();
