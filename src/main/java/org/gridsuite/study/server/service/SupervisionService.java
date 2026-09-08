@@ -403,16 +403,16 @@ public class SupervisionService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         rootNetworkService.getStudyRootNetworkIds(studyUuid).forEach(rnId -> {
-                try {
-                    rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADING);
-                    // remove all stashed nodes and network modifications
-                    networkModificationTreeService.deleteAllStashedElements(studyUuid);
-                    studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER, false);
-                    rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADED);
-                } catch (Exception e) {
-                    rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.LOADED);
-                    LOGGER.error("Error while invalidating study root network", e);
-                }
+            try {
+                rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADING);
+                // remove all stashed nodes and network modifications
+                networkModificationTreeService.deleteAllStashedElements(studyUuid);
+                studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER, false);
+                rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADED);
+            } catch (Exception e) {
+                rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.LOADED);
+                LOGGER.error("Error while invalidating study root network", e);
+            }
         });
         LOGGER.trace("Study {} nodes builds deleted and root node invalidated in : {} milliseconds", studyUuid, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime.get()));
     }
