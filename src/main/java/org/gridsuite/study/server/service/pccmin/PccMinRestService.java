@@ -34,7 +34,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
 /**
@@ -133,13 +132,6 @@ public class PccMinRestService extends AbstractComputationRestService implements
         String path = UriComponentsBuilder
             .fromPath(PCC_MIN_URI + DELIMITER + "supervision/results-count").toUriString();
         return restTemplate.getForObject(baseUri + path, Integer.class);
-    }
-
-    public void assertPccMinNotRunning(UUID resultUuid) {
-        String status = getPccMinStatus(resultUuid);
-        if (PccMinStatus.RUNNING.name().equals(status)) {
-            throw new StudyException(COMPUTATION_RUNNING);
-        }
     }
 
     public void invalidatePccMinStatus(List<UUID> uuids) {

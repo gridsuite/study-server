@@ -18,6 +18,7 @@ public enum QuotaType {
     SHORT_CIRCUIT,
     VOLTAGE_INITIALIZATION,
     PCC_MIN,
+    ASYMMETRICAL_LOAD,
     STATE_ESTIMATION,
     BALANCE_ADJUSTMENT,
     DYNAMIC_SIMULATION,
@@ -36,6 +37,7 @@ public enum QuotaType {
             case STATE_ESTIMATION -> QuotaType.STATE_ESTIMATION;
             case PCC_MIN -> QuotaType.PCC_MIN;
             case SHORT_CIRCUIT, SHORT_CIRCUIT_ONE_BUS -> QuotaType.SHORT_CIRCUIT;
+            case ASYMMETRICAL_LOAD -> QuotaType.ASYMMETRICAL_LOAD;
         };
     }
 }

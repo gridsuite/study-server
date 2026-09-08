@@ -14,7 +14,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
-import org.gridsuite.study.server.dto.ShortCircuitStatus;
 import org.gridsuite.study.server.dto.VariantInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.service.StudyService;
@@ -241,14 +240,6 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/supervision/results-count").toUriString();
         return restTemplate.getForObject(baseUri + path, Integer.class);
-    }
-
-    public void assertShortCircuitAnalysisNotRunning(UUID scsResultUuid, UUID oneBusScsResultUuid) {
-        String scs = getShortCircuitAnalysisStatus(scsResultUuid);
-        String oneBusScs = getShortCircuitAnalysisStatus(oneBusScsResultUuid);
-        if (ShortCircuitStatus.RUNNING.name().equals(scs) || ShortCircuitStatus.RUNNING.name().equals(oneBusScs)) {
-            throw new StudyException(COMPUTATION_RUNNING);
-        }
     }
 
     public void invalidateShortCircuitStatus(List<UUID> uuids) {

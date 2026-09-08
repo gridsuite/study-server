@@ -36,6 +36,7 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -76,6 +77,7 @@ class SupervisionControllerTest {
     private static final UUID CASE_UUID = UUID.randomUUID();
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final UUID STUDY_UUID = UUID.randomUUID();
+    private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
 
     private static final UUID SECOND_NETWORK_UUID = UUID.randomUUID();
     private static final UUID SECOND_CASE_UUID = UUID.randomUUID();
@@ -118,6 +120,9 @@ class SupervisionControllerTest {
 
     @Autowired
     private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
+
+    @Autowired
+    private OutputDestination output;
 
     private static EquipmentInfos toEquipmentInfos(Identifiable<?> i) {
         return EquipmentInfos.builder()
@@ -342,6 +347,7 @@ class SupervisionControllerTest {
     @Test
     void testInvalidateStudy() throws Exception {
         initStudy();
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(STUDY_UUID);
         UUID secondRootNetworkUuid = UUID.randomUUID();
         addSecondRootNetwork(secondRootNetworkUuid, SECOND_NETWORK_UUID);
         when(rootNetworkService.getNetworkUuid(secondRootNetworkUuid)).thenReturn(SECOND_NETWORK_UUID);
@@ -362,12 +368,32 @@ class SupervisionControllerTest {
         assertIndexationStatus(STUDY_UUID, RootNetworkIndexationStatus.NOT_INDEXED.name());
         assertIndexationCount(0, 0);
 
-        // Check that all nodes aren't blocked
-        Mockito.verify(studyService, Mockito.times(1)).unblockNodeTree(eq(STUDY_UUID), any());
         List<UUID> allRootNetworkUuids = rootNetworkService.getStudyRootNetworkIds(STUDY_UUID);
         assertThat(allRootNetworkUuids).hasSize(2);
-        allRootNetworkUuids.forEach(rootNetworkUuid ->
-                rootNetworkNodeInfoRepository.findAllByRootNetworkId(rootNetworkUuid)
-                        .forEach(info -> assertThat(info.getBlockedNode()).isFalse()));
+        assertEquals(RootNetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(firstRootNetworkUuid).orElseThrow().getLoadStatus());
+        assertEquals(RootNetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(secondRootNetworkUuid).orElseThrow().getLoadStatus());
+        // While invalidating the root network set to UNLOADING so doUnbuildNodeTree
+        // noneMatch(UNLOADING) check never holds and no element.update notification is emitted
+        TestUtils.assertQueuesEmptyThenClear(List.of(ELEMENT_UPDATE_DESTINATION), output);
+    }
+
+    @Test
+    void testGetLoadedStudies() throws Exception {
+        initStudy();
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(STUDY_UUID);
+        assertEquals(RootNetworkLoadStatus.LOADED, rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow().getLoadStatus());
+        UUID unknownStudyUuid = UUID.randomUUID();
+        MvcResult mvcResult = mockMvc.perform(get("/v1/supervision/studies/loaded")
+                        .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
+        List<UUID> loadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        assertEquals(List.of(STUDY_UUID), loadedStudyUuids);
+        mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/invalidate", STUDY_UUID))
+                .andExpect(status().isOk());
+        mvcResult = mockMvc.perform(get("/v1/supervision/studies/loaded")
+                        .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
+        loadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        assertThat(loadedStudyUuids).isEmpty();
     }
 }

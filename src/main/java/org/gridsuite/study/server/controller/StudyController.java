@@ -27,6 +27,10 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.nodeactivity.NodeActivityInfos;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityType;
 import org.gridsuite.study.server.service.*;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
@@ -40,9 +44,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.beans.PropertyEditorSupport;
 import java.util.*;
+import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MOVE_NETWORK_MODIFICATION_FORBIDDEN;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.*;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -61,6 +67,8 @@ public class StudyController {
     private final RemoteServicesInspector remoteServicesInspector;
     private final RootNetworkService rootNetworkService;
     private final RebuildNodeService rebuildNodeService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
+    private final NodeActivityService nodeActivityService;
     private final StudyExportService studyExportService;
 
     public StudyController(StudyService studyService,
@@ -72,7 +80,10 @@ public class StudyController {
                            RemoteServicesInspector remoteServicesInspector,
                            RootNetworkService rootNetworkService,
                            RebuildNodeService rebuildNodeService,
+                           NodeActivityRunnerService nodeActivityRunnerService,
+                           NodeActivityService nodeActivityService,
                            StudyExportService studyExportService) {
+        this.nodeActivityService = nodeActivityService;
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
@@ -82,6 +93,7 @@ public class StudyController {
         this.remoteServicesInspector = remoteServicesInspector;
         this.rootNetworkService = rootNetworkService;
         this.rebuildNodeService = rebuildNodeService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
         this.studyExportService = studyExportService;
     }
 
@@ -186,8 +198,15 @@ public class StudyController {
                                                   @RequestBody RootNetworkInfos rootNetworkInfos,
                                                   @RequestHeader(HEADER_USER_ID) String userId) {
         caseService.assertCaseExists(rootNetworkInfos.getCaseInfos() != null ? rootNetworkInfos.getCaseInfos().getOriginalCaseUuid() : null);
-        studyService.assertNoBlockedNodeInTree(networkModificationTreeService.getStudyRootNodeUuid(studyUuid), rootNetworkUuid);
-        studyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, userId);
+        if (rootNetworkInfos.hasCaseToImport()) {
+            // the reimport unbuilds the whole tree of this root network, so it is held on the root node
+            UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+            nodeActivityRunnerService.runWith(REIMPORT_CASE, studyUuid, rootNetworkUuid, List.of(rootNodeUuid),
+                () -> studyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, userId));
+        } else {
+            // only the basic infos (name, tag) are updated, the tree is left untouched
+            studyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, userId);
+        }
         return ResponseEntity.ok().build();
     }
 
@@ -235,8 +254,8 @@ public class StudyController {
                                                   @RequestParam(name = "insertMode") InsertMode insertMode,
                                               @RequestHeader(HEADER_USER_ID) String userId) {
         //if the source study is not set we assume it's the same as the target study
-        studyService.assertNoBlockedNodeInStudy(targetStudyUuid, referenceNodeUuid);
-        studyService.duplicateStudyNode(sourceStudyUuid == null ? targetStudyUuid : sourceStudyUuid, targetStudyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode, userId);
+        nodeActivityRunnerService.runWith(EDIT_TREE, targetStudyUuid, insertMode.isChild() ? List.of() : List.of(referenceNodeUuid),
+            () -> studyService.duplicateStudyNode(sourceStudyUuid == null ? targetStudyUuid : sourceStudyUuid, targetStudyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode, userId));
         return ResponseEntity.ok().build();
     }
 
@@ -252,9 +271,11 @@ public class StudyController {
                                               @Parameter(description = "The position where the node will be pasted relative to the reference node")
                                                     @RequestParam(name = "insertMode") InsertMode insertMode,
                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertNoBlockedNodeInStudy(studyUuid, nodeToCutUuid);
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeToCutUuid);
-        studyService.moveStudyNode(studyUuid, nodeToCutUuid, referenceNodeUuid, insertMode, userId);
+        studyService.assertIsNodeNotReadOnly(nodeToCutUuid);
+        // the node leaves its former parent, so its own children are reparented there whatever the insert mode
+        List<UUID> heldNodes = Stream.concat(Stream.of(nodeToCutUuid), insertMode.isChild() ? Stream.empty() : Stream.of(referenceNodeUuid)).distinct().toList();
+        nodeActivityRunnerService.runWith(EDIT_TREE, studyUuid, heldNodes,
+            () -> studyService.moveStudyNode(studyUuid, nodeToCutUuid, referenceNodeUuid, insertMode, userId));
         return ResponseEntity.ok().build();
     }
 
@@ -322,9 +343,10 @@ public class StudyController {
                                                 @Parameter(description = "The parent node of the subtree we want to cut") @RequestParam("subtreeToCutParentNodeUuid") UUID subtreeToCutParentNodeUuid,
                                                 @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
                                                 @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertNoBlockedNodeInStudy(studyUuid, subtreeToCutParentNodeUuid);
-        studyService.assertCanUpdateNodeInStudy(studyUuid, subtreeToCutParentNodeUuid);
-        studyService.moveStudySubtree(studyUuid, subtreeToCutParentNodeUuid, referenceNodeUuid, userId);
+        studyService.assertIsNodeNotReadOnly(subtreeToCutParentNodeUuid);
+        // a subtree always attaches as a child at the destination, reparenting nothing there
+        nodeActivityRunnerService.runWith(EDIT_TREE, studyUuid, List.of(subtreeToCutParentNodeUuid),
+            () -> studyService.moveStudySubtree(studyUuid, subtreeToCutParentNodeUuid, referenceNodeUuid, userId));
         return ResponseEntity.ok().build();
     }
 
@@ -340,7 +362,7 @@ public class StudyController {
                                                      @RequestParam("subtreeToCopyParentNodeUuid") UUID subtreeToCopyParentNodeUuid,
                                                  @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
                                                  @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertNoBlockedNodeInStudy(targetStudyUuid, referenceNodeUuid);
+        // added as a child of the reference, and the origin subtree is only read: nothing to hold
         studyService.duplicateStudySubtree(sourceStudyUuid, targetStudyUuid, subtreeToCopyParentNodeUuid, referenceNodeUuid, userId);
         return ResponseEntity.ok().build();
     }
@@ -636,8 +658,7 @@ public class StudyController {
             @PathVariable("modificationUuid") UUID modificationUuid,
             @RequestBody MoveModificationInfos moveModificationInfos,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
-        studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
         rebuildNodeService.moveNetworkModification(studyUuid, nodeUuid, modificationUuid, moveModificationInfos, userId);
         return ResponseEntity.ok().build();
     }
@@ -650,23 +671,22 @@ public class StudyController {
                                                          @RequestParam("action") ModificationsActionType action,
                                                          @RequestParam("originStudyUuid") UUID originStudyUuid,
                                                          @RequestParam("originNodeUuid") UUID originNodeUuid,
-                                                         @RequestBody List<UUID> modificationsToCopyUuidList,
+                                                         @RequestBody List<ModificationMoveOrCopyInfos> modificationInfos,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertIsStudyAndNodeExist(originStudyUuid, originNodeUuid);
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        List<UUID> modificationsToCopyUuidList = modificationInfos.stream().map(ModificationMoveOrCopyInfos::modificationUuid).toList();
         switch (action) {
             case COPY:
-                handleDuplicateNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
+                handleDuplicateNetworkModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId);
                 break;
             case MOVE:
                 // we don't cut - paste modifications from different studies
                 if (!studyUuid.equals(originStudyUuid)) {
                     throw new StudyException(MOVE_NETWORK_MODIFICATION_FORBIDDEN);
                 }
-                studyService.assertNoBlockedNodeInStudy(studyUuid, originNodeUuid);
-                studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
-                rebuildNodeService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
+                rebuildNodeService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationInfos, userId);
                 break;
         }
         return ResponseEntity.ok().build();
@@ -681,10 +701,25 @@ public class StudyController {
             @RequestBody List<UUID> modificationsUuids,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
-        studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
         UUID newCompositeUuid = rebuildNodeService.assembleModificationsIntoComposite(studyUuid, nodeUuid, modificationsUuids, userId);
         return ResponseEntity.ok().body(newCompositeUuid);
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuid}/share")
+    @Operation(summary = "Move a composite modification of the node into a directory, replacing it by a reference to it")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The composite modification has been shared.")})
+    public ResponseEntity<Void> shareCompositeModification(@PathVariable("studyUuid") UUID studyUuid,
+                                                           @PathVariable("nodeUuid") UUID nodeUuid,
+                                                           @PathVariable("modificationUuid") UUID modificationUuid,
+                                                           @RequestParam("name") String name,
+                                                           @RequestParam(value = "description", required = false) String description,
+                                                           @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
+                                                           @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.shareCompositeNetworkModification(studyUuid, nodeUuid, modificationUuid, name, description, parentDirectoryUuid, userId);
+        return ResponseEntity.ok().build();
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/composite-modifications", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -696,7 +731,7 @@ public class StudyController {
                                                          @RequestBody List<CompositeInfos> compositeInfos,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
         handleInsertCompositeNetworkModifications(studyUuid, nodeUuid, compositeInfos, userId, action);
         return ResponseEntity.ok().build();
     }
@@ -707,23 +742,13 @@ public class StudyController {
             List<CompositeInfos> compositeInfos,
             String userId,
             CompositeModificationsActionType action) {
-        studyService.assertNoBlockedNodeInStudy(targetStudyUuid, targetNodeUuid);
-        studyService.invalidateNodeTreeWithLF(targetStudyUuid, targetNodeUuid);
-        try {
-            studyService.insertCompositeNetworkModifications(targetStudyUuid, targetNodeUuid, compositeInfos, userId, action);
-        } finally {
-            studyService.unblockNodeTree(targetStudyUuid, targetNodeUuid);
-        }
+        nodeActivityRunnerService.runWith(EDIT_MODIFICATIONS, targetStudyUuid, List.of(targetNodeUuid),
+            () -> studyService.insertCompositeNetworkModifications(targetStudyUuid, targetNodeUuid, compositeInfos, userId, action));
     }
 
-    private void handleDuplicateNetworkModifications(UUID targetStudyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationsToCopyUuidList, String userId) {
-        studyService.assertNoBlockedNodeInStudy(targetStudyUuid, targetNodeUuid);
-        studyService.invalidateNodeTreeWithLF(targetStudyUuid, targetNodeUuid);
-        try {
-            studyService.duplicateNetworkModifications(targetStudyUuid, targetNodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
-        } finally {
-            studyService.unblockNodeTree(targetStudyUuid, targetNodeUuid);
-        }
+    private void handleDuplicateNetworkModifications(UUID targetStudyUuid, UUID targetNodeUuid, List<UUID> modificationsToCopyUuidList, String userId) {
+        nodeActivityRunnerService.runWith(EDIT_MODIFICATIONS, targetStudyUuid, List.of(targetNodeUuid),
+            () -> studyService.duplicateNetworkModifications(targetStudyUuid, targetNodeUuid, modificationsToCopyUuidList, userId));
     }
 
     @GetMapping(value = "/export-network-formats")
@@ -954,17 +979,6 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getExportedNetworkModifications(studyUuid, nodeUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/excluded-network-modifications", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get excluded network modifications from a node")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The excluded network modifications were returned"), @ApiResponse(responseCode = "404",
-            description = "The study/node is not found")})
-    public ResponseEntity<List<ExcludedNetworkModifications>> getNetworkModificationsToExclude(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                                       @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
-
-        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.getModificationsToExclude(nodeUuid));
-    }
-
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications")
     @Operation(summary = "Create a network modification for a node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modification was created"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
@@ -972,8 +986,7 @@ public class StudyController {
                                                           @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                           @RequestBody String modificationAttributes,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
-        studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
         rebuildNodeService.createNetworkModification(studyUuid, nodeUuid, modificationAttributes, userId);
         return ResponseEntity.ok().build();
     }
@@ -986,8 +999,7 @@ public class StudyController {
                                                           @Parameter(description = "Network modification UUID") @PathVariable("uuid") UUID networkModificationUuid,
                                                           @RequestBody String modificationAttributes,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
-        studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
         rebuildNodeService.updateNetworkModification(studyUuid, modificationAttributes, nodeUuid, networkModificationUuid, userId);
         return ResponseEntity.ok().build();
     }
@@ -999,7 +1011,7 @@ public class StudyController {
                                                            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                            @Parameter(description = "Network modification UUIDs") @RequestParam(name = "uuids", required = false) List<UUID> networkModificationUuids,
                                                            @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.deleteNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
 
         return ResponseEntity.ok().build();
@@ -1014,8 +1026,7 @@ public class StudyController {
                                                                @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
                                                                @Parameter(description = "Stashed Modification") @RequestParam(name = "stashed", required = true) Boolean stashed,
                                                                @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
-        studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
         if (stashed.booleanValue()) {
             rebuildNodeService.stashNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
         } else {
@@ -1033,25 +1044,23 @@ public class StudyController {
                                                                    @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
                                                                    @RequestBody NetworkModificationMetadata metadata,
                                                                    @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
-        studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
         rebuildNodeService.updateNetworkModificationsMetadata(studyUuid, nodeUuid, networkModificationUuids, userId, metadata);
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", params = "activated")
-    @Operation(summary = "Update 'activated' value for a network modifications for a node in a specific root network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Update the activation status for network modifications on a node in a specific root network"),
+    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", params = "applicable")
+    @Operation(summary = "Update the applicability of network modifications for a node on a specific root network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Update the applicability of network modifications on a node in a specific root network"),
         @ApiResponse(responseCode = "404", description = "The study/root network/node is not found")})
-    public ResponseEntity<Void> updateNetworkModificationsActivation(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Void> updateNetworkModificationsApplicability(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                      @Parameter(description = "Root network UUID") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                      @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                      @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") Set<UUID> networkModificationUuids,
-                                                                     @Parameter(description = "New activated value") @RequestParam(name = "activated") Boolean activated,
+                                                                     @Parameter(description = "New applicability value") @RequestParam(name = "applicable") Boolean applicable,
                                                                      @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
-        studyService.assertNoBlockedNodeInTree(nodeUuid, rootNetworkUuid);
-        rebuildNodeService.updateNetworkModificationsActivation(studyUuid, nodeUuid, rootNetworkUuid, networkModificationUuids, userId, activated);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        rebuildNodeService.updateNetworkModificationsApplicability(studyUuid, nodeUuid, rootNetworkUuid, networkModificationUuids, userId, applicable);
         return ResponseEntity.ok().build();
     }
 
@@ -1097,6 +1106,12 @@ public class StudyController {
                 .body(studyService.searchModifications(rootNetworkUuid, userInput));
     }
 
+    private void buildNewNode(UUID studyUuid, UUID referenceId, NetworkModificationNode createdNode, String userId) {
+        studyService.getRootNetworksToBuildNewNode(studyUuid, referenceId, createdNode).forEach(rootNetworkUuid ->
+            nodeActivityRunnerService.runWith(BUILD, studyUuid, rootNetworkUuid, List.of(createdNode.getId()),
+                () -> studyService.buildNode(studyUuid, createdNode.getId(), rootNetworkUuid, userId)));
+    }
+
     @GetMapping(value = "/nodes/infos", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get the name and the study of each given node")
     @ApiResponses(value = {
@@ -1120,8 +1135,9 @@ public class StudyController {
                                                                  defaultValue = "CHILD") InsertMode insertMode,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
 
-        NetworkModificationNode newNode = studyService.createNode(studyUuid, referenceId, node, insertMode, userId);
-        studyService.createNodePostAction(studyUuid, referenceId, newNode, userId);
+        NetworkModificationNode newNode = nodeActivityRunnerService.runWith(EDIT_TREE, studyUuid, insertMode.isChild() ? List.of() : List.of(referenceId),
+            () -> studyService.createNode(studyUuid, referenceId, node, insertMode, userId));
+        buildNewNode(studyUuid, referenceId, newNode, userId);
 
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(newNode);
     }
@@ -1136,8 +1152,9 @@ public class StudyController {
                                                               @Parameter(description = "parent id of the node created") @PathVariable(name = "id") UUID referenceId,
                                                               @Parameter(description = "sequence to create") @RequestParam("sequenceType") NodeSequenceType nodeSequenceType,
                                                               @RequestHeader(HEADER_USER_ID) String userId) {
+        // a sequence is added as a child at every level, so it reparents nothing and holds nothing
         NetworkModificationNode sequenceParentNode = studyService.createSequence(studyUuid, referenceId, nodeSequenceType, userId);
-        studyService.createSequencePostAction(studyUuid, sequenceParentNode.getId(), nodeSequenceType, userId);
+        buildNewNode(studyUuid, referenceId, sequenceParentNode, userId);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(sequenceParentNode);
     }
 
@@ -1150,8 +1167,8 @@ public class StudyController {
                                            @Parameter(description = "ids of children to remove") @RequestParam("ids") List<UUID> nodeIds,
                                            @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren,
                                            @RequestHeader(HEADER_USER_ID) String userId) {
-        nodeIds.stream().forEach(nodeId -> studyService.assertNoBlockedNodeInStudy(studyUuid, nodeId));
-        studyService.deleteNodes(studyUuid, nodeIds, deleteChildren, userId);
+        nodeActivityRunnerService.runWith(DELETE_NODES, studyUuid, nodeIds,
+            () -> studyService.deleteNodes(studyUuid, nodeIds, deleteChildren, userId));
         return ResponseEntity.ok().build();
     }
 
@@ -1165,9 +1182,9 @@ public class StudyController {
                                                  @Parameter(description = "id of child to delete (move to trash)") @PathVariable("id") UUID nodeId,
                                                  @Parameter(description = "to stash a node with its children") @RequestParam(value = "stashChildren", defaultValue = "false") boolean stashChildren,
                                                  @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertNoBlockedNodeInStudy(studyUuid, nodeId);
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeId);
-        studyService.stashNode(studyUuid, nodeId, stashChildren, userId);
+        studyService.assertIsNodeNotReadOnly(nodeId);
+        nodeActivityRunnerService.runWith(DELETE_NODES, studyUuid, List.of(nodeId),
+            () -> studyService.stashNode(studyUuid, nodeId, stashChildren, userId));
         return ResponseEntity.ok().build();
     }
 
@@ -1187,7 +1204,9 @@ public class StudyController {
                                             @Parameter(description = "ids of nodes to restore") @RequestParam("ids") List<UUID> nodeIds,
                                             @Parameter(description = "id of node below which the node will be restored") @RequestParam("anchorNodeId") UUID anchorNodeId,
                                             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.restoreNodes(studyUuid, nodeIds, anchorNodeId, userId);
+        // the restored nodes land under the anchor, so it is held exactly as an insertion under it would be
+        nodeActivityRunnerService.runWith(EDIT_TREE, studyUuid, List.of(anchorNodeId),
+            () -> studyService.restoreNodes(studyUuid, nodeIds, anchorNodeId, userId));
         return ResponseEntity.ok().build();
     }
 
@@ -1202,6 +1221,14 @@ public class StudyController {
         return rootNode != null ?
             ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNode)
             : ResponseEntity.notFound().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/tree/node-activities")
+    @Operation(summary = "Get the activities running in a study")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "The running activities, empty when the study is idle"))
+    public ResponseEntity<List<NodeActivityInfos>> getNodeActivities(
+            @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(nodeActivityService.getActivities(studyUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/subtree")
@@ -1287,9 +1314,11 @@ public class StudyController {
                                           @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertNoBlockedNodeInTree(nodeUuid, rootNetworkUuid);
-        studyService.assertNoBuildingNode(rootNetworkUuid, nodeUuid);
-        studyService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId);
+        if (studyService.isNodeBuilt(nodeUuid, rootNetworkUuid)) {
+            return ResponseEntity.ok().build();
+        }
+        nodeActivityRunnerService.runWith(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+            () -> studyService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }
 
@@ -1302,9 +1331,11 @@ public class StudyController {
                                           @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertNoBlockedNodeInTree(nodeUuid, rootNetworkUuid);
-        studyService.assertNoBuildingNode(rootNetworkUuid, nodeUuid);
-        studyService.unbuildStudyNode(studyUuid, nodeUuid, rootNetworkUuid, userId);
+        // unbuildStudyNode only reaches the children of a security node whose loadflow has run
+        NodeActivityType unbuildType = studyService.isSecurityNodeWithLoadflowDone(nodeUuid, rootNetworkUuid)
+            ? UNBUILD_CHILDREN : UNBUILD;
+        nodeActivityRunnerService.runWith(unbuildType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+            () -> studyService.unbuildStudyNode(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }
 
@@ -1315,12 +1346,8 @@ public class StudyController {
     public ResponseEntity<Void> unbuildAllNodes(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                 @RequestHeader(HEADER_USER_ID) String userId) {
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-        try {
-            studyService.assertNoBlockedNodeInStudy(studyUuid, rootNodeUuid);
-            studyService.unbuildNodeTree(studyUuid, rootNodeUuid, true, userId);
-        } finally {
-            studyService.unblockNodeTree(studyUuid, rootNodeUuid);
-        }
+        nodeActivityRunnerService.runWith(UNBUILD_ALL, studyUuid, List.of(rootNodeUuid),
+            () -> studyService.unbuildNodeTree(studyUuid, rootNodeUuid, userId));
         return ResponseEntity.ok().build();
     }
 
@@ -1391,9 +1418,9 @@ public class StudyController {
                                                                @PathVariable("nodeUuid") UUID nodeUuid,
                                                                @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
-        studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
-        studyService.insertVoltageInitModifications(studyUuid, nodeUuid, rootNetworkUuid, userId);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        nodeActivityRunnerService.runWith(EDIT_MODIFICATIONS, studyUuid, List.of(nodeUuid),
+            () -> studyService.insertVoltageInitModifications(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }
 

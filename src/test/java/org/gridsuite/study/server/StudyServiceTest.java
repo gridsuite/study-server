@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server;
 
-import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.error.StudyException;
@@ -33,11 +32,8 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAX_OPERATION_TYPE_EXCEEDED;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest
@@ -84,22 +80,25 @@ class StudyServiceTest {
          */
 
         // quota not reached, all first level children of N1 will be built
+        doNothing().when(networkModificationTreeService).buildNode(any(UUID.class), any(UUID.class), any(UUID.class), eq(userId), isNull());
         doReturn(Map.of(QuotaType.BUILD, 10)).when(userAdminService).getUserMaxQuota(userId);
         doReturn(0L).when(networkModificationTreeService).countBuiltNodes(studyUuid, rootNetworkUuid);
 
         mockNodeBuild(node2.getIdNode(), rootNetworkUuid);
         mockNodeBuild(node3.getIdNode(), rootNetworkUuid);
 
-        studyService.buildFirstLevelChildren(studyUuid, node1.getIdNode(), rootNetworkUuid, userId);
+        studyService.buildNodes(studyUuid,
+            studyService.getFirstLevelChildrenToBuild(studyUuid, node1.getIdNode(), rootNetworkUuid, userId),
+            rootNetworkUuid, userId);
 
-        verifyNodeBuild(node2.getIdNode(), rootNetworkUuid);
-        verifyNodeBuild(node3.getIdNode(), rootNetworkUuid);
+        verify(networkModificationTreeService, times(1)).buildNode(eq(studyUuid), eq(node2.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
+        verify(networkModificationTreeService, times(1)).buildNode(eq(studyUuid), eq(node3.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
         // check n4 has actually not been built
-        verify(networkModificationService, times(0)).buildNode(eq(node4.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
+        verify(networkModificationTreeService, times(0)).buildNode(eq(studyUuid), eq(node4.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
 
         // 1 to check how many children will be built, then 1 for each built children
-        verify(userAdminService, times(3)).getUserMaxQuota(userId);
-        verify(networkModificationTreeService, times(3)).countBuiltNodes(studyUuid, rootNetworkUuid);
+        verify(userAdminService, times(1)).getUserMaxQuota(userId);
+        verify(networkModificationTreeService, times(1)).countBuiltNodes(studyUuid, rootNetworkUuid);
     }
 
     @Test
@@ -128,7 +127,9 @@ class StudyServiceTest {
         doReturn(Map.of(QuotaType.BUILD, 10)).when(userAdminService).getUserMaxQuota(userId);
         doReturn(10L).when(networkModificationTreeService).countBuiltNodes(studyUuid, rootNetworkUuid);
 
-        studyService.buildFirstLevelChildren(studyUuid, node1.getIdNode(), rootNetworkUuid, userId);
+        studyService.buildNodes(studyUuid,
+            studyService.getFirstLevelChildrenToBuild(studyUuid, node1.getIdNode(), rootNetworkUuid, userId),
+            rootNetworkUuid, userId);
 
         verify(networkModificationService, times(0)).buildNode(eq(node2.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
         verify(networkModificationService, times(0)).buildNode(eq(node3.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
@@ -161,20 +162,23 @@ class StudyServiceTest {
          */
 
         // quota will be reached, only one child will be built
+        doNothing().when(networkModificationTreeService).buildNode(any(UUID.class), any(UUID.class), any(UUID.class), eq(userId), isNull());
         doReturn(Map.of(QuotaType.BUILD, 10)).when(userAdminService).getUserMaxQuota(userId);
         doReturn(9L).when(networkModificationTreeService).countBuiltNodes(studyUuid, rootNetworkUuid);
 
         mockNodeBuild(node2.getIdNode(), rootNetworkUuid);
 
-        studyService.buildFirstLevelChildren(studyUuid, node1.getIdNode(), rootNetworkUuid, userId);
+        studyService.buildNodes(studyUuid,
+            studyService.getFirstLevelChildrenToBuild(studyUuid, node1.getIdNode(), rootNetworkUuid, userId),
+            rootNetworkUuid, userId);
 
-        verifyNodeBuild(node2.getIdNode(), rootNetworkUuid);
-        verify(networkModificationService, times(0)).buildNode(eq(node3.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
-        verify(networkModificationService, times(0)).buildNode(eq(node4.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
+        verify(networkModificationTreeService, times(1)).buildNode(eq(studyUuid), eq(node2.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
+        verify(networkModificationTreeService, times(0)).buildNode(eq(studyUuid), eq(node3.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
+        verify(networkModificationTreeService, times(0)).buildNode(eq(studyUuid), eq(node4.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
 
         // 1 to check how many children will be built, then 1 for each built children
-        verify(userAdminService, times(2)).getUserMaxQuota(userId);
-        verify(networkModificationTreeService, times(2)).countBuiltNodes(studyUuid, rootNetworkUuid);
+        verify(userAdminService, times(1)).getUserMaxQuota(userId);
+        verify(networkModificationTreeService, times(1)).countBuiltNodes(studyUuid, rootNetworkUuid);
     }
 
     @Test
@@ -260,14 +264,7 @@ class StudyServiceTest {
     }
 
     private void mockNodeBuild(UUID nodeUuid, UUID rootNetworkUuid) {
-        doReturn(new BuildInfos()).when(networkModificationTreeService).getBuildInfos(nodeUuid, rootNetworkUuid);
-        doNothing().when(networkModificationTreeService).setModificationReports(eq(nodeUuid), eq(rootNetworkUuid), any());
-        doNothing().when(networkModificationTreeService).updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
         doReturn(NodeBuildStatus.from(BuildStatus.NOT_BUILT)).when(networkModificationTreeService).getNodeBuildStatus(nodeUuid, rootNetworkUuid);
     }
 
-    private void verifyNodeBuild(UUID nodeUuid, UUID rootNetworkUuid) {
-        verify(networkModificationTreeService, times(1)).updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
-        verify(networkModificationService, times(1)).buildNode(eq(nodeUuid), eq(rootNetworkUuid), any(), eq(null));
-    }
 }

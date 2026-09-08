@@ -36,10 +36,6 @@ public class DynamicMappingService {
         this.restTemplate = restTemplate;
     }
 
-    public void setDynamicMappingServerBaseUri(String dynamicMappingServerBaseUri) {
-        this.dynamicMappingServerBaseUri = dynamicMappingServerBaseUri;
-    }
-
     public String getNetworkValues(UUID networkUuid) {
         String networkBasePath = buildEndPointUrl(dynamicMappingServerBaseUri, API_VERSION, DYNAMIC_MAPPING_END_POINT_NETWORK);
         String url = UriComponentsBuilder.fromUriString(networkBasePath + NETWORK_VALUES_URI)

@@ -35,11 +35,9 @@ import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
 @Service
 public class SecurityAnalysisService extends AbstractComputationService {
 
-    private final SecurityAnalysisRestService securityAnalysisRestService;
-    private final NetworkModificationTreeService networkModificationTreeService;
     private final ObjectMapper objectMapper;
-    private final RootNetworkService rootNetworkService;
-    private final UserAdminService userAdminService;
+
+    private final SecurityAnalysisRestService securityAnalysisRestService;
 
     public SecurityAnalysisService(StudyRepository studyRepository,
                                    ComputationParametersService computationParametersService,
@@ -50,12 +48,10 @@ public class SecurityAnalysisService extends AbstractComputationService {
                                    RootNetworkService rootNetworkService,
                                    RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                    UserAdminService userAdminService) {
-        super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService,
+            rootNetworkService, computationParametersService, userAdminService);
         this.securityAnalysisRestService = securityAnalysisRestService;
-        this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
-        this.rootNetworkService = rootNetworkService;
-        this.userAdminService = userAdminService;
     }
 
     @Transactional
@@ -67,7 +63,6 @@ public class SecurityAnalysisService extends AbstractComputationService {
     @Transactional
     public UUID runSecurityAnalysis(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
         StudyEntity study = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
         UUID result = handleSecurityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId);
 
@@ -115,13 +110,9 @@ public class SecurityAnalysisService extends AbstractComputationService {
                 securityAnalysisRestService::createSecurityAnalysisParameters,
                 securityAnalysisRestService::updateSecurityAnalysisParameters,
                 SECURITY_ANALYSIS,
-                List.of(this::invalidateSecurityAnalysisStatusOnAllNodes),
+                List.of(rootNetworkNodeInfoService::invalidateSecurityAnalysisStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS
         );
-    }
-
-    public void invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        securityAnalysisRestService.invalidateSaStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SECURITY_ANALYSIS));
     }
 
     public String getProviders() {

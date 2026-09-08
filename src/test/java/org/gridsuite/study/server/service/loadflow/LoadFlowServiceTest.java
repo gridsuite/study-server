@@ -9,7 +9,9 @@ package org.gridsuite.study.server.service.loadflow;
 import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
+import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,12 +41,17 @@ class LoadFlowServiceTest {
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Mock
     private ComputationParametersService computationParametersService;
-
+    @Mock
+    private NetworkModificationTreeService networkModificationTreeService;
+    @Mock
+    private RootNetworkService rootNetworkService;
+    @Mock
     private LoadFlowService loadFlowService;
 
     @BeforeEach
     void setUp() {
-        loadFlowService = new LoadFlowService(studyRepository, loadFlowRestService, notificationService, rootNetworkNodeInfoService, computationParametersService);
+        loadFlowService = new LoadFlowService(studyRepository, loadFlowRestService, notificationService, computationParametersService,
+            rootNetworkNodeInfoService, networkModificationTreeService, rootNetworkService, null);
     }
 
     @Test

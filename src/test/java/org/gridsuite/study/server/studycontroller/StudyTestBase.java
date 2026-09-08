@@ -37,9 +37,9 @@ import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
-import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
-import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
+import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
@@ -263,13 +263,13 @@ class StudyTestBase {
     protected ShortCircuitRestService shortCircuitService;
 
     @Autowired
-    protected DynamicSimulationClient dynamicSimulationClient;
+    protected DynamicSimulationRestService dynamicSimulationRestService;
 
     @Autowired
-    protected DynamicSecurityAnalysisClient dynamicSecurityAnalysisClient;
+    protected DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
 
     @Autowired
-    protected DynamicMarginCalculationClient dynamicMarginCalculationClient;
+    protected DynamicMarginCalculationRestService dynamicMarginCalculationRestService;
 
     @Autowired
     protected StateEstimationRestService stateEstimationService;
@@ -386,9 +386,9 @@ class StudyTestBase {
         voltageInitService.setBaseUri(baseUrl);
         loadflowRestService.setBaseUri(baseUrl);
         shortCircuitService.setBaseUri(baseUrl);
-        dynamicSimulationClient.setBaseUri(baseUrl);
-        dynamicSecurityAnalysisClient.setBaseUri(baseUrl);
-        dynamicMarginCalculationClient.setBaseUri(baseUrl);
+        dynamicSimulationRestService.setBaseUri(baseUrl);
+        dynamicSecurityAnalysisRestService.setBaseUri(baseUrl);
+        dynamicMarginCalculationRestService.setBaseUri(baseUrl);
         stateEstimationService.setBaseUri(baseUrl);
         pccMinService.setBaseUri(baseUrl);
         studyConfigService.setStudyConfigServerBaseUri(baseUrl);
@@ -480,7 +480,7 @@ class StudyTestBase {
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
         checkElementUpdatedMessageSent(studyUuid, userId);
-        var mess = output.receive(TIMEOUT, studyUpdateDestination);
+        var mess = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
@@ -496,7 +496,7 @@ class StudyTestBase {
         Assertions.assertTrue(studyRepository.findById(studyUuid).isPresent());
 
         // assert that the broker message has been sent a study creation request message
-        Message<byte[]> message = output.receive(StudyTest.TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination, StudyTest.TIMEOUT);
 
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
@@ -505,7 +505,7 @@ class StudyTestBase {
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_STARTED, headers.get(StudyTest.HEADER_UPDATE_TYPE));
 
         // assert that the broker message has been sent when the study is ready
-        message = output.receive(StudyTest.TIMEOUT, studyUpdateDestination);
+        message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination, StudyTest.TIMEOUT);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
@@ -516,7 +516,7 @@ class StudyTestBase {
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
         // assert that the broker message has been sent for updating model status
-        Message<byte[]> messageStatus = output.receive(StudyTest.TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStatus = TestUtils.receiveStudyUpdate(output, studyUpdateDestination, StudyTest.TIMEOUT);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
@@ -536,19 +536,9 @@ class StudyTestBase {
         assertEquals(userId, message.getHeaders().get(NotificationService.HEADER_MODIFIED_BY));
     }
 
-    protected void checkEquipmentCreatingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
-        // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals("", new String(messageStudyUpdate.getPayload()));
-        MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
-        assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(nodeUuid, headersStudyUpdate.get(NotificationService.HEADER_PARENT_NODE));
-        assertEquals(NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
-    }
-
     protected void checkEquipmentUpdatingFinishedMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
