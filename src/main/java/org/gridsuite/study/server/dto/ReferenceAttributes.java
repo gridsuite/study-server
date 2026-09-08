@@ -33,5 +33,13 @@ public class ReferenceAttributes {
     // Container where the reference is used (see ReferenceType for the meaning of its ids)
     @NonNull private ReferenceContainer referenceContainer;
     @NonNull private ReferenceType referenceType;
+
+    public static ReferenceAttributes createReferenceAttributes(UUID referenceId, UUID rootContainerId, UUID containerId, ReferenceType referenceType) {
+        return ReferenceAttributes.builder()
+                .referenceId(referenceId)
+                .referenceContainer(ReferenceContainer.builder().rootContainerId(rootContainerId).containerId(containerId).build())
+                .referenceType(referenceType)
+                .build();
+    }
 }
 

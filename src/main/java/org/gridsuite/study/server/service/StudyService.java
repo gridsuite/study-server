@@ -1894,15 +1894,8 @@ public class StudyService {
      */
     private void moveReferences(List<ReferenceData> references, String userId, UUID rootContainerId, UUID containerId,
                                 ReferenceAttributes.ReferenceType targetReferenceType) {
-        ReferenceContainer targetContainer = ReferenceContainer.builder()
-                .rootContainerId(rootContainerId)
-                .containerId(containerId)
-                .build();
-        references.forEach(ref -> directoryService.updateElementReference(ref.referenceId(), ref.modificationUuid(), ReferenceAttributes.builder()
-                .referenceId(ref.modificationUuid())
-                .referenceContainer(targetContainer)
-                .referenceType(targetReferenceType)
-                .build(), userId));
+        references.forEach(ref -> directoryService.updateElementReference(ref.referenceId(), ref.modificationUuid(),
+                ReferenceAttributes.createReferenceAttributes(ref.modificationUuid(), rootContainerId, containerId, targetReferenceType), userId));
     }
 
     private Map<ModificationContainerInfos, List<UUID>> resolveAndGroupBySource(List<ModificationMoveOrCopyInfos> modificationInfos, UUID fallbackSourceNodeUuid) {
@@ -1975,7 +1968,7 @@ public class StudyService {
      * References among {@code modificationUuids} and among the modifications nested in them: getReferences() does not
      * descend into composites, so a reference sitting inside a copied/inserted composite must be looked up explicitly.
      */
-    //TODO fetch references for modifications ans its children
+    //TODO fetch references for modifications and its children
     private List<ReferenceData> collectReferences(List<UUID> modificationUuids) {
         List<UUID> uuids = new ArrayList<>(modificationUuids);
         uuids.addAll(networkModificationService.findAllChildrenUuids(modificationUuids));
@@ -1984,17 +1977,13 @@ public class StudyService {
 
     private void createElementsReferences(List<ReferenceData> references, UUID studyUuid, UUID nodeUuid, String userId) {
         references.forEach(ref -> {
-            boolean nested = ref.containerId() != null;
-            ReferenceAttributes referenceAttributes = ReferenceAttributes.builder()
-                    .referenceId(ref.modificationUuid())
-                    .referenceContainer(ReferenceContainer.builder()
-                            .rootContainerId(nested ? nodeUuid : studyUuid)
-                            .containerId(nested ? ref.containerId() : nodeUuid)
-                            .build())
-                    .referenceType(nested
-                            ? ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION
-                            : ReferenceAttributes.ReferenceType.STUDY_NODE)
-                    .build();
+            boolean insideComposite = ref.containerId() != null;
+            ReferenceAttributes referenceAttributes = ReferenceAttributes.createReferenceAttributes(
+                    ref.modificationUuid(),
+                    insideComposite ? nodeUuid : studyUuid,
+                    insideComposite ? ref.containerId() : nodeUuid,
+                    insideComposite ? ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION
+                            : ReferenceAttributes.ReferenceType.STUDY_NODE);
             directoryService.createElementReference(ref.referenceId(), referenceAttributes, userId);
         });
     }
@@ -2083,15 +2072,8 @@ public class StudyService {
             if (!composite.isShared()) {
                 continue;
             }
-            ReferenceAttributes attributes = ReferenceAttributes.builder()
-                    .referenceId(insertedModificationUuids.get(i))
-                    .referenceContainer(ReferenceContainer.builder()
-                            .rootContainerId(studyUuid)
-                            .containerId(nodeUuid)
-                            .build())
-                    .referenceType(ReferenceAttributes.ReferenceType.STUDY_NODE)
-                    .build();
-            directoryService.createElementReference(composite.id(), attributes, userId);
+            directoryService.createElementReference(composite.id(), ReferenceAttributes.createReferenceAttributes(
+                    insertedModificationUuids.get(i), studyUuid, nodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE), userId);
         }
     }
 
