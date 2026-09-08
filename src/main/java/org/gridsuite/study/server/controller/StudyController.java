@@ -284,9 +284,9 @@ public class StudyController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The network does exist"),
         @ApiResponse(responseCode = "204", description = "The network doesn't exist")})
-    public ResponseEntity<RootNetworkExistence> checkNetworkExistence(@PathVariable("studyUuid") UUID studyUuid, @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
+    public ResponseEntity<RootNetworkStatusInfos> checkNetworkExistence(@PathVariable("studyUuid") UUID studyUuid, @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
         UUID networkUUID = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-        return ResponseEntity.ok().body(new RootNetworkExistence(networkStoreService.doesNetworkExist(networkUUID),
+        return ResponseEntity.ok().body(new RootNetworkStatusInfos(networkStoreService.doesNetworkExist(networkUUID),
                 rootNetworkService.getRootNetworkLoadStatus(rootNetworkUuid)));
     }
 
