@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -57,7 +58,9 @@ public class LoadFlowStudyParametersController {
     @Operation(summary = "Get loadflow parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters")})
     public ResponseEntity<String> getLoadFlowParameters(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(loadFlowService.getLoadFlowParametersValues(studyUuid));
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(loadFlowService.getLoadFlowParametersValues(studyUuid));
     }
 
     @GetMapping(value = "/parameters/id")
