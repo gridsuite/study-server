@@ -6,11 +6,9 @@
  */
 package org.gridsuite.study.server.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import lombok.Setter;
-import lombok.experimental.SuperBuilder;
 
 import java.util.UUID;
 
@@ -18,9 +16,7 @@ import java.util.UUID;
  * @author Maissa Souissi <maissa.souissi at rte-france.com>
  */
 @Getter
-@Setter
-@NoArgsConstructor
-@SuperBuilder
+@AllArgsConstructor
 public class ReferenceAttributes {
     public enum ReferenceType {
         STUDY_NODE,
@@ -29,17 +25,16 @@ public class ReferenceAttributes {
     }
 
     // id of the reference modification
-    @NonNull private UUID referenceId;
+    @NonNull
+    private UUID referenceId;
     // Container where the reference is used (see ReferenceType for the meaning of its ids)
-    @NonNull private ReferenceContainer referenceContainer;
-    @NonNull private ReferenceType referenceType;
+    @NonNull
+    private ReferenceContainer referenceContainer;
+    @NonNull
+    private ReferenceType referenceType;
 
     public static ReferenceAttributes createReferenceAttributes(UUID referenceId, UUID rootContainerId, UUID containerId, ReferenceType referenceType) {
-        return ReferenceAttributes.builder()
-                .referenceId(referenceId)
-                .referenceContainer(ReferenceContainer.builder().rootContainerId(rootContainerId).containerId(containerId).build())
-                .referenceType(referenceType)
-                .build();
+        return new ReferenceAttributes(referenceId, ReferenceContainer.builder().rootContainerId(rootContainerId).containerId(containerId).build(), referenceType);
     }
 }
 

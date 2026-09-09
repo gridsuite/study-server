@@ -179,11 +179,10 @@ public class DirectoryService {
      * the row to update is identified by {@code elementUuid} (the referenced shared element) and
      * {@code referenceUuid} (the modification-reference itself); {@code referenceAttributes} carries the new location.
      * @param elementUuid uuid of the referenced shared element in the directory-server
-     * @param referenceUuid uuid of the modification-reference to update
      * @param referenceAttributes new attributes of the modification-reference
      * @param userId id of the user who moves the reference
      */
-    public void updateElementReference(@NonNull UUID elementUuid, @NonNull UUID referenceUuid, @NonNull ReferenceAttributes referenceAttributes, String userId) {
+    public void updateElementReference(@NonNull UUID elementUuid, @NonNull ReferenceAttributes referenceAttributes, String userId) {
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -192,7 +191,7 @@ public class DirectoryService {
 
         var path = UriComponentsBuilder.fromPath(
                 DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references/{referenceUuid}")
-            .buildAndExpand(elementUuid, referenceUuid)
+            .buildAndExpand(elementUuid, referenceAttributes.getReferenceId())
             .toUriString();
 
         restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.PUT, requestEntity, Void.class);

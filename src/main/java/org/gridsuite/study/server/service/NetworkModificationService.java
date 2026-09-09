@@ -13,8 +13,8 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.BuildInfos;
+import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.ReferenceData;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -289,7 +289,7 @@ public class NetworkModificationService {
     /**
      * @return references data of the modificationsUuids found among modificationsUuids
      */
-    public List<ReferenceData> getModificationReferences(List<UUID> modificationsUuids) {
+    public List<ModificationReference> getModificationReferences(List<UUID> modificationsUuids) {
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + "references")
@@ -306,7 +306,7 @@ public class NetworkModificationService {
                 path,
                 HttpMethod.GET,
                 httpEntity,
-                new ParameterizedTypeReference<List<ReferenceData>>() { }
+                new ParameterizedTypeReference<List<ModificationReference>>() { }
         ).getBody();
     }
 
@@ -340,20 +340,20 @@ public class NetworkModificationService {
      * - element uuid in directory server
      * - uuid of its mother composite (null if the modification is at the root level)
      */
-    public List<ReferenceData> getReferencesFromGroup(UUID groupUuid) {
+    public List<ModificationReference> getModificationReferences(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "references");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<List<ReferenceData>> httpEntity = new HttpEntity<>(headers);
+        HttpEntity<List<ModificationReference>> httpEntity = new HttpEntity<>(headers);
 
         return restTemplate.exchange(
                 getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(),
                 HttpMethod.GET,
                 httpEntity,
-                new ParameterizedTypeReference<List<ReferenceData>>() { }
+                new ParameterizedTypeReference<List<ModificationReference>>() { }
         ).getBody();
     }
 
