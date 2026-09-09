@@ -634,7 +634,7 @@ public class StudyService {
     private void deleteModificationsFromGroup(Pair<UUID, UUID> groupUuidNodeUuid, String userId) {
         // fetch the references data in order to remove those references from directory-server
         List<ModificationReference> referencesToBeDeleted = networkModificationService.getModificationReferences(groupUuidNodeUuid.getFirst());
-        removeReferences(referencesToBeDeleted, userId, groupUuidNodeUuid.getSecond());
+        removeReferences(referencesToBeDeleted, userId);
 
         networkModificationService.deleteModifications(groupUuidNodeUuid.getFirst());
     }
@@ -1556,16 +1556,16 @@ public class StudyService {
             List<ModificationReference> referencesToBeDeleted = networkModificationService.getModificationReferences(modificationsUuids);
             networkModificationService.deleteModifications(groupId, modificationsUuids);
             // if there are unstashed references modifications in the deleted netmods, those references have to be removed from directory server
-            removeReferences(referencesToBeDeleted, userId, nodeUuid);
+            removeReferences(referencesToBeDeleted, userId);
         } finally {
             notificationService.emitModificationsDeleted(studyUuid, nodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    private void removeReferences(List<ModificationReference> references, String userId, UUID nodeUuid) {
+    private void removeReferences(List<ModificationReference> references, String userId) {
         references.forEach(reference ->
-                directoryService.removeElementReference(reference.containerId() != null ? reference.containerId() : nodeUuid, reference.modificationUuid(), userId)
+                directoryService.removeElementReference(reference.referencedId(), reference.modificationUuid(), userId)
         );
     }
 
@@ -1842,7 +1842,7 @@ public class StudyService {
                 ModificationContainerInfos source = entry.getKey();
                 List<UUID> modificationUuidsToMove = entry.getValue();
                 UUID originNodeUuid = originNodeBySource.get(source);
-                boolean isTargetDifferentNode = !targetNodeUuid.equals(originNodeUuid);
+                boolean isSameNode = targetNodeUuid.equals(originNodeUuid);
                 Set<UUID> modificationUuidsToMoveSet = new HashSet<>(modificationUuidsToMove);
                 List<ModificationReference> referencesToMove = allReferencesToMove.stream()
                         .filter(reference -> modificationUuidsToMoveSet.contains(reference.modificationUuid()))
@@ -1857,7 +1857,7 @@ public class StudyService {
                     emitNetworkModificationImpactsForAllRootNetworks(result.modificationResults(), studyEntity, targetNodeUuid);
                 }
 
-                moveElementReferences(source, resolvedTarget, referencesToMove, userId, studyUuid, targetNodeUuid, isTargetDifferentNode);
+                moveElementReferences(source, resolvedTarget, referencesToMove, userId, studyUuid, targetNodeUuid, isSameNode);
             }
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, targetNodeUuid, targetChildrenUuids);
@@ -1878,25 +1878,21 @@ public class StudyService {
     private void moveElementReferences(ModificationContainerInfos containerSource, ModificationContainerInfos containerTarget,
                                        List<ModificationReference> modificationReferences,
                                        String userId, UUID studyUuid,
-                                       UUID targetNodeUuid, boolean isTargetDifferentNode) {
+                                       UUID targetNodeUuid, boolean isSameNode) {
         if (modificationReferences.isEmpty()) {
             return;
         }
 
-        // Node -> composite
-        if (containerTarget.isComposite() && containerSource.isGroup()) {
-            updateElementsReferences(modificationReferences, targetNodeUuid, containerTarget.id(), ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION, userId);
-        }
-        // Composite -> node
-        if (containerTarget.isGroup() && containerSource.isComposite()) {
-            updateElementsReferences(modificationReferences, studyUuid, targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE, userId);
-        }
-        // Composite -> composite
-        if (containerTarget.isComposite() && containerSource.isComposite() && !containerSource.id().equals(containerTarget.id())) {
-            updateElementsReferences(modificationReferences, targetNodeUuid, containerTarget.id(), ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION, userId);
-        }
-        // Node  -> Node
-        if (isTargetDifferentNode) {
+        if (isSameNode) {
+            // Node -> composite
+            if (containerTarget.isComposite() && containerSource.isGroup()) {
+                updateElementsReferences(modificationReferences, targetNodeUuid, containerTarget.id(), ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION, userId);
+            } else if (containerTarget.isGroup() && containerSource.isComposite()) {        // Composite -> node
+                updateElementsReferences(modificationReferences, studyUuid, targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE, userId);
+            } else if (containerTarget.isComposite() && containerSource.isComposite() && !containerSource.id().equals(containerTarget.id())) { // Composite -> composite
+                updateElementsReferences(modificationReferences, targetNodeUuid, containerTarget.id(), ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION, userId);
+            }
+        } else { // Node  -> Node
             updateElementsReferences(modificationReferences, studyUuid, targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE, userId);
         }
     }
@@ -1967,21 +1963,10 @@ public class StudyService {
         duplicateModificationsOrInsertComposites(targetStudyUuid, targetNodeUuid,
                 (groupUuid, modificationApplicationContexts) -> {
                     NetworkModificationsResult result = networkModificationService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts));
-                    createElementsReferences(collectReferences(result.modificationUuids()), targetStudyUuid, targetNodeUuid, userId);
+                    createElementsReferences(networkModificationService.getChildrenModificationsReferences(result.modificationUuids()), targetStudyUuid, targetNodeUuid, userId);
                     return result;
                 },
                 userId);
-    }
-
-    /**
-     * References among {@code modificationUuids} and among the modifications nested in them: getReferences() does not
-     * descend into composites, so a reference sitting inside a copied/inserted composite must be looked up explicitly.
-     */
-    //TODO fetch references for modifications and its children
-    private List<ModificationReference> collectReferences(List<UUID> modificationUuids) {
-        List<UUID> uuids = new ArrayList<>(modificationUuids);
-        uuids.addAll(networkModificationService.findAllChildrenUuids(modificationUuids));
-        return networkModificationService.getModificationReferences(uuids);
     }
 
     private void createElementsReferences(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, String userId) {

@@ -676,4 +676,16 @@ public class NetworkModificationService {
                 new ParameterizedTypeReference<List<UUID>>() { }
         ).getBody();
     }
+
+    /**
+     * References among {@code modificationUuids} and among the modifications nested in them: getReferences() does not
+     * descend into composites, so a reference sitting inside a copied/inserted composite must be looked up explicitly.
+     */
+    //TODO fetch references for modifications and its children
+    // Tranfertt this in network modification server
+    public List<ModificationReference> getChildrenModificationsReferences(List<UUID> modificationUuids) {
+        List<UUID> uuids = new ArrayList<>(modificationUuids);
+        uuids.addAll(findAllChildrenUuids(modificationUuids));
+        return getModificationReferences(uuids);
+    }
 }

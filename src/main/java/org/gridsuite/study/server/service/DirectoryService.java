@@ -129,7 +129,7 @@ public class DirectoryService {
      * @param userId id of the user who caused the unreferencing
      * @param sharedElementUuid uuid of the referenced shared element in the directory-server
      */
-    public void removeElementReference(UUID referenceUuid, UUID sharedElementUuid, String userId) {
+    public void removeElementReference(UUID sharedElementUuid, UUID referenceUuid, String userId) {
         Objects.requireNonNull(referenceUuid);
         Objects.requireNonNull(sharedElementUuid);
 
