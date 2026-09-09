@@ -40,7 +40,7 @@ public class LoadFlowParametersController {
 
     @GetMapping(value = "/parameters/{parameterUuid}")
     public ResponseEntity<String> getLoadFlowParameters(@PathVariable UUID parameterUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(loadFlowService.getLoadFlowParameters(parameterUuid));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(loadFlowService.getLoadFlowCommonParameters(parameterUuid));
     }
 
     @PutMapping(value = "/parameters/{parameterUuid}")

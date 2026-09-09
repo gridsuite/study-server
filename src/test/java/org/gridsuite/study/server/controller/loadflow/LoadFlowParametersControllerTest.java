@@ -82,14 +82,14 @@ class LoadFlowParametersControllerTest {
     @Test
     void testGetLoadFlowParameters() throws Exception {
         UUID parameterUuid = UUID.randomUUID();
-        when(loadFlowService.getLoadFlowParameters(parameterUuid)).thenReturn(PARAMETERS);
+        when(loadFlowService.getLoadFlowCommonParameters(parameterUuid)).thenReturn(PARAMETERS);
 
         mockMvc.perform(get(BASE_URL + "/parameters/{parameterUuid}", parameterUuid))
             .andExpect(status().isOk())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
             .andExpect(content().json(PARAMETERS));
 
-        verify(loadFlowService).getLoadFlowParameters(parameterUuid);
+        verify(loadFlowService).getLoadFlowCommonParameters(parameterUuid);
     }
 
     @Test
