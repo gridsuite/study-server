@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.controller.loadflow;
 
-import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +23,6 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
@@ -84,12 +82,12 @@ class LoadFlowParametersControllerTest {
     @Test
     void testGetLoadFlowParameters() throws Exception {
         UUID parameterUuid = UUID.randomUUID();
-        when(loadFlowService.getLoadFlowParameters(parameterUuid)).thenReturn(LoadFlowParametersInfos.builder().provider("OpenLoadFlow").build());
+        when(loadFlowService.getLoadFlowParameters(parameterUuid)).thenReturn(PARAMETERS);
 
         mockMvc.perform(get(BASE_URL + "/parameters/{parameterUuid}", parameterUuid))
             .andExpect(status().isOk())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.provider").value("OpenLoadFlow"));
+            .andExpect(content().json(PARAMETERS));
 
         verify(loadFlowService).getLoadFlowParameters(parameterUuid);
     }

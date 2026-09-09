@@ -8,7 +8,9 @@
 package org.gridsuite.study.server.service.loadflow;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.loadflow.LoadFlowParameters;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.*;
@@ -214,11 +216,16 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
             }).getBody();
     }
 
-    public LoadFlowParametersInfos getLoadFlowParameters(UUID parametersUuid) {
-
+    public LoadFlowParameters getCommonParameters(UUID parametersUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(parametersUuid).toUriString();
-        return restTemplate.getForObject(baseUri + path, LoadFlowParametersInfos.class);
+        String parameters = restTemplate.getForObject(baseUri + path, String.class);
+        try {
+            JsonNode commonParametersNode = objectMapper.readTree(parameters).get("commonParameters");
+            return objectMapper.treeToValue(commonParametersNode, LoadFlowParameters.class);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     public UUID createLoadFlowParameters(String parameters) {
@@ -316,9 +323,9 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
         return restTemplate.getForObject(getBaseUri() + DELIMITER + LOADFLOW_API_VERSION + "/parameters/default-limit-reductions", String.class);
     }
 
-    public LoadFlowParametersInfos getParameters(UUID parameterUuid) {
+    public String getParameters(UUID parameterUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
-        return restTemplate.getForObject(getBaseUri() + path, LoadFlowParametersInfos.class);
+        return restTemplate.getForObject(getBaseUri() + path, String.class);
     }
 
     public void updateParameters(UUID parameterUuid, @Nullable String parameters) {

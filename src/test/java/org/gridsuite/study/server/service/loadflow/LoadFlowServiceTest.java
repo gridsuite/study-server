@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.service.loadflow;
 
-import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
@@ -79,10 +78,9 @@ class LoadFlowServiceTest {
 
     @Test
     void testGetLoadFlowParameters() {
-        LoadFlowParametersInfos parameters = new LoadFlowParametersInfos();
-        when(loadFlowRestService.getParameters(PARAMETERS_UUID)).thenReturn(parameters);
+        when(loadFlowRestService.getParameters(PARAMETERS_UUID)).thenReturn(PARAMETERS);
 
-        assertThat(loadFlowService.getLoadFlowParameters(PARAMETERS_UUID)).isEqualTo(parameters);
+        assertThat(loadFlowService.getLoadFlowParameters(PARAMETERS_UUID)).isEqualTo(PARAMETERS);
     }
 
     @Test

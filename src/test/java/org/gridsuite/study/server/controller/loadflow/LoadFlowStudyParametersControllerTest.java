@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.controller.loadflow;
 
-import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
@@ -110,13 +109,13 @@ class LoadFlowStudyParametersControllerTest {
     @Test
     void testGetLoadflowParameters() throws Exception {
         UUID studyUuid = UUID.randomUUID();
-        when(loadFlowService.getLoadFlowParametersInfos(studyUuid)).thenReturn(LoadFlowParametersInfos.builder().provider("OpenLoadFlow").build());
+        when(loadFlowService.getLoadFlowParametersValues(studyUuid)).thenReturn(PARAMETERS);
 
         mockMvc.perform(get(BASE_URL + "/parameters", studyUuid))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.provider").value("OpenLoadFlow"));
+            .andExpect(content().json(PARAMETERS));
 
-        verify(loadFlowService).getLoadFlowParametersInfos(studyUuid);
+        verify(loadFlowService).getLoadFlowParametersValues(studyUuid);
     }
 
     @Test
