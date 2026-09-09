@@ -1857,7 +1857,7 @@ public class StudyService {
                     emitNetworkModificationImpactsForAllRootNetworks(result.modificationResults(), studyEntity, targetNodeUuid);
                 }
 
-                moveElementReferences(source, resolvedTarget, referencesToMove, userId, studyUuid, originNodeUuid, targetNodeUuid, isTargetDifferentNode);
+                moveElementReferences(source, resolvedTarget, referencesToMove, userId, studyUuid, targetNodeUuid, isTargetDifferentNode);
             }
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, targetNodeUuid, targetChildrenUuids);
@@ -1878,7 +1878,7 @@ public class StudyService {
     private void moveElementReferences(ModificationContainerInfos containerSource, ModificationContainerInfos containerTarget,
                                        List<ModificationReference> modificationReferences,
                                        String userId, UUID studyUuid,
-                                       UUID originNodeUuid, UUID targetNodeUuid, boolean isTargetDifferentNode) {
+                                       UUID targetNodeUuid, boolean isTargetDifferentNode) {
         if (modificationReferences.isEmpty()) {
             return;
         }
