@@ -1150,12 +1150,9 @@ public class StudyService {
                 indexationStatus);
     }
 
-    private StudyEntity saveStudyThenCreateBasicTree(UUID studyUuid, NetworkInfos networkInfos,
-                                                    CaseInfos caseInfos, ComputationParameterUUIDs computationParameterUUIDs,
-                                                    UUID networkVisualizationParametersUuid, UUID spreadsheetConfigCollectionUuid,
-                                                    UUID workspacesConfigUuid, Map<String, Object> importParameters, UUID importReportUuid) {
-
-        StudyEntity studyEntity = StudyEntity.builder()
+    private StudyEntity buildStudyEntity(UUID studyUuid, ComputationParameterUUIDs computationParameterUUIDs, UUID networkVisualizationParametersUuid,
+                                         UUID spreadsheetConfigCollectionUuid, UUID workspacesConfigUuid) {
+        return StudyEntity.builder()
                 .id(studyUuid)
                 .loadFlowParametersUuid(computationParameterUUIDs.loadFlowParametersUuid())
                 .shortCircuitParametersUuid(computationParameterUUIDs.shortCircuitParametersUuid())
@@ -1173,7 +1170,14 @@ public class StudyService {
                 .workspacesConfigUuid(workspacesConfigUuid)
                 .monoRoot(true)
                 .build();
+    }
 
+    private StudyEntity saveStudyThenCreateBasicTree(UUID studyUuid, NetworkInfos networkInfos,
+                                                    CaseInfos caseInfos, ComputationParameterUUIDs computationParameterUUIDs,
+                                                    UUID networkVisualizationParametersUuid, UUID spreadsheetConfigCollectionUuid,
+                                                    UUID workspacesConfigUuid, Map<String, Object> importParameters, UUID importReportUuid) {
+
+        StudyEntity studyEntity = buildStudyEntity(studyUuid, computationParameterUUIDs, networkVisualizationParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid);
         var study = studyRepository.save(studyEntity);
         // if the StudyCreationRequestEntity has no firstRootNetworkName then the first root network's name is the case file name with the extension.
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
@@ -2932,57 +2936,26 @@ public class StudyService {
         );
     }
 
-    NetworkModificationNodeType toNetworkModificationNodeType(String nodeType) {
-        if (nodeType == null) {
-            throw new StudyException(BAD_NODE_TYPE, "Missing node type in imported tree");
-        }
-        try {
-            return NetworkModificationNodeType.valueOf(nodeType);
-        } catch (IllegalArgumentException e) {
-            throw new StudyException(BAD_NODE_TYPE, e.getMessage());
-        }
-    }
-
     @Transactional
-    public StudyEntity createStudyEntityWithTree(UUID studyUuid, String userId, NodeTreeExportInfos nodeTree, Map<UUID, UUID> modificationGroupUuidMapping) {
+    public StudyEntity createStudyEntityWithTree(UUID studyUuid, String userId, NodeTreeExportInfos nodeTree) {
         UserProfileInfos userProfileInfos = getUserProfile(userId);
         ComputationParameterUUIDs computationParameterUUIDs = computationParametersService.createDefaultComputationParameters(userId, userProfileInfos);
         UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
         UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
         UUID workspacesConfigUuid = createWorkspacesConfig(userProfileInfos);
-
-        StudyEntity studyEntity = studyRepository.save(StudyEntity.builder()
-                .id(studyUuid)
-                .loadFlowParametersUuid(computationParameterUUIDs.loadFlowParametersUuid())
-                .shortCircuitParametersUuid(computationParameterUUIDs.shortCircuitParametersUuid())
-                .voltageInitParametersUuid(computationParameterUUIDs.voltageInitParametersUuid())
-                .securityAnalysisParametersUuid(computationParameterUUIDs.securityAnalysisParametersUuid())
-                .sensitivityAnalysisParametersUuid(computationParameterUUIDs.sensitivityAnalysisParametersUuid())
-                .voltageInitParameters(new StudyVoltageInitParametersEntity())
-                .networkVisualizationParametersUuid(networkVisualizationParametersUuid)
-                .dynamicSimulationParametersUuid(computationParameterUUIDs.dynamicSimulationParametersUuid())
-                .dynamicSecurityAnalysisParametersUuid(computationParameterUUIDs.dynamicSecurityAnalysisParametersUuid())
-                .dynamicMarginCalculationParametersUuid(computationParameterUUIDs.dynamicMarginCalculationParametersUuid())
-                .stateEstimationParametersUuid(computationParameterUUIDs.stateEstimationParametersUuid())
-                .pccMinParametersUuid(computationParameterUUIDs.pccMinParametersUuid())
-                .spreadsheetConfigCollectionUuid(spreadsheetConfigCollectionUuid)
-                .workspacesConfigUuid(workspacesConfigUuid)
-                .monoRoot(true)
-                .build());
-
+        StudyEntity studyEntity = studyRepository.save(buildStudyEntity(studyUuid, computationParameterUUIDs,
+                networkVisualizationParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid));
         UUID rootNodeUuid = networkModificationTreeService.createRoot(studyEntity).getIdNode();
         if (nodeTree != null && !nodeTree.children().isEmpty()) {
-            nodeTree.children().forEach(child -> createNodeRecursively(studyEntity, rootNodeUuid, child, userId, modificationGroupUuidMapping));
+            nodeTree.children().forEach(child -> createNodeRecursively(studyEntity, rootNodeUuid, child, userId));
         }
-
         studyInfosService.add(toCreatedStudyBasicInfos(studyEntity));
-
         return studyEntity;
     }
 
-    private void createNodeRecursively(StudyEntity studyEntity, UUID parentNodeUuid, NodeTreeExportInfos exportNode, String userId, Map<UUID, UUID> modificationGroupUuidMapping) {
-        NetworkModificationNodeType nodeType = toNetworkModificationNodeType(exportNode.nodeType());
-        UUID newGroupUuid = exportNode.modificationGroupUuid() != null ? modificationGroupUuidMapping.get(exportNode.modificationGroupUuid()) : null;
+    private void createNodeRecursively(StudyEntity studyEntity, UUID parentNodeUuid, NodeTreeExportInfos exportNode, String userId) {
+        NetworkModificationNodeType nodeType = NetworkModificationNodeType.valueOf(exportNode.nodeType());
+        UUID newGroupUuid = exportNode.modificationGroupUuid() != null ? UUID.randomUUID() : null;
         NetworkModificationNode newNode = networkModificationTreeService.createNode(
                 studyEntity,
                 parentNodeUuid,
@@ -2995,11 +2968,12 @@ public class StudyService {
                 InsertMode.CHILD,
                 userId
         );
-        CollectionUtils.emptyIfNull(exportNode.children()).forEach(child -> createNodeRecursively(studyEntity, newNode.getId(), child, userId, modificationGroupUuidMapping));
+        CollectionUtils.emptyIfNull(exportNode.children()).forEach(child -> createNodeRecursively(studyEntity, newNode.getId(), child, userId));
     }
 
     UUID createDefaultNetworkVisualizationParameters(String userId, UserProfileInfos userProfileInfos) {
         if (userProfileInfos != null && userProfileInfos.getNetworkVisualizationParameterId() != null) {
+            // try to access/duplicate the user profile network visualization parameters
             try {
                 return studyConfigService.duplicateNetworkVisualizationParameters(userProfileInfos.getNetworkVisualizationParameterId());
             } catch (Exception e) {
@@ -3010,6 +2984,7 @@ public class StudyService {
         try {
             return studyConfigService.createDefaultNetworkVisualizationParameters();
         } catch (final Exception e) {
+            // TODO try to report a log in Root subreporter ?
             LOGGER.error("Error while creating network visualization default parameters", e);
             return null;
         }
@@ -3032,10 +3007,12 @@ public class StudyService {
         }
     }
 
+    @SuppressWarnings("checkstyle:LambdaBodyLength")
     UUID createWorkspacesConfig(UserProfileInfos userProfileInfos) {
         try {
             List<UUID> workspaceIds = new ArrayList<>();
             if (userProfileInfos != null && userProfileInfos.getWorkspaceId() != null) {
+                // Create config with profile workspace as first, and two empty workspaces
                 workspaceIds.add(userProfileInfos.getWorkspaceId());
                 workspaceIds.add(null);
                 workspaceIds.add(null);

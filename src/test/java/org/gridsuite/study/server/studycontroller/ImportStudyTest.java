@@ -65,7 +65,6 @@ class ImportStudyTest extends StudyTestBase {
         stubDefaultParametersCreation();
         wireMockStubs.caseServer.stubDuplicateCaseWithBody(caseUuid1.toString(), objectMapper.writeValueAsString(duplicatedCaseUuid1));
         wireMockStubs.caseServer.stubDuplicateCaseWithBody(caseUuid2.toString(), objectMapper.writeValueAsString(duplicatedCaseUuid2));
-        UUID stubDuplicateModificationGroupId = wireMockStubs.stubDuplicateModificationGroup();
 
         NodeTreeExportInfos nodeTree = new NodeTreeExportInfos("Root", "ROOT", null, null, List.of(
                 new NodeTreeExportInfos("N1", "NETWORK_MODIFICATION", modificationGroupUuid1, "SECURITY", List.of(
@@ -105,7 +104,6 @@ class ImportStudyTest extends StudyTestBase {
         assertEquals("CONSTRUCTION", ((NetworkModificationNode) n2).getNodeType().name());
         assertNotEquals(modificationGroupUuid1, ((NetworkModificationNode) n1).getModificationGroupUuid());
         assertNotEquals(modificationGroupUuid2, ((NetworkModificationNode) n2).getModificationGroupUuid());
-        wireMockStubs.verifyDuplicateModificationGroup(stubDuplicateModificationGroupId, 2);
 
         // Root networks are created directly synchronously
         assertEquals(0, rootNetworkRequestRepository.countAllByStudyUuid(studyUuid));
@@ -139,10 +137,6 @@ class ImportStudyTest extends StudyTestBase {
         UUID caseUuid = UUID.randomUUID();
         UUID modificationGroupUuid1 = UUID.randomUUID();
         UUID modificationGroupUuid2 = UUID.randomUUID();
-
-        UUID stubDuplicateModificationGroupId = wireMockStubs.stubDuplicateModificationGroup();
-        UUID stubDeleteGroupId = wireMockStubs.stubNetworkModificationDeleteGroup();
-
         NodeTreeExportInfos nodeTree = new NodeTreeExportInfos("Root", "ROOT", null, null, List.of(
                 new NodeTreeExportInfos("N1", "NETWORK_MODIFICATION", modificationGroupUuid1, "SECURITY", List.of(
                         new NodeTreeExportInfos("N2", "NETWORK_MODIFICATION", modificationGroupUuid2, null, List.of())
@@ -159,9 +153,6 @@ class ImportStudyTest extends StudyTestBase {
                 .andReturn();
         PowsyblWsProblemDetail problemDetail = objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
         assertEquals(BAD_NODE_TYPE.value(), problemDetail.getBusinessErrorCode());
-        wireMockStubs.verifyDuplicateModificationGroup(stubDuplicateModificationGroupId, 1);
-        wireMockStubs.verifyNetworkModificationDeleteGroup(stubDeleteGroupId, false);
-
         assertTrue(studyRepository.findById(studyUuid).isEmpty());
         assertEquals(0, rootNetworkRequestRepository.countAllByStudyUuid(studyUuid));
     }
