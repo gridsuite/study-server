@@ -104,9 +104,7 @@ public class StateEstimationController {
     public ResponseEntity<String> computeLogicalControls(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                    @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                    @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid); // can be rm ?
         // no quota on this small synchronous computation
-        String result = stateEstimationService.computeLogicalControls(studyUuid, nodeUuid, rootNetworkUuid);
-        return result != null ? ResponseEntity.ok().body(result) : ResponseEntity.noContent().build();
+        return ResponseEntity.ok().body(stateEstimationService.computeLogicalControls(studyUuid, nodeUuid, rootNetworkUuid));
     }
 }
