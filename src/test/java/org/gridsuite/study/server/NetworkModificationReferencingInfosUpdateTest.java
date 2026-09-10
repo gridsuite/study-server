@@ -123,6 +123,7 @@ class NetworkModificationReferencingInfosUpdateTest {
                                              ModificationContainerInfos targetContainer, ReferenceAttributes referenceAttributesExpected) {
         final String userId = "userId";
         boolean isTargetInDifferentNodeTree = false;
+        reset(directoryService);
 
         ModificationMoveOrCopyInfos modificationMoveInfos = new ModificationMoveOrCopyInfos(modificationReferenceToMoveUuid, sourceContainer);
         studyService.moveNetworkModifications(studyUuid, sourceNodeUuid, targetNodeUuid, List.of(modificationMoveInfos), targetContainer,
@@ -130,7 +131,6 @@ class NetworkModificationReferencingInfosUpdateTest {
 
         ArgumentCaptor<ReferenceAttributes> referenceAttributesCaptor = ArgumentCaptor.forClass(ReferenceAttributes.class);
         ArgumentCaptor<UUID> sharedModificationUuidCaptor = ArgumentCaptor.forClass(UUID.class);
-        reset(directoryService);
         verify(directoryService, times(1)).updateElementReference(sharedModificationUuidCaptor.capture(), referenceAttributesCaptor.capture(), anyString());
 
         assertEquals(sharedModificationUuid, sharedModificationUuidCaptor.getValue());
