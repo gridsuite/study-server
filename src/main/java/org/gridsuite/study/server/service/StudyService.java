@@ -1808,9 +1808,9 @@ public class StudyService {
     @Transactional
     public void moveNetworkModifications(
             @NonNull UUID studyUuid,
+            UUID sourceNodeUuid,
             @NonNull UUID targetNodeUuid,
             @NonNull List<ModificationMoveOrCopyInfos> modificationInfos,
-            UUID sourceNodeUuid,
             ModificationContainerInfos targetModificationContainer,
             UUID beforeUuid,
             boolean isTargetInDifferentNodeTree,
@@ -1883,15 +1883,18 @@ public class StudyService {
         }
 
         if (isSameNode) {
-            // Node -> composite
             if (containerTarget.isComposite() && containerSource.isGroup()) {
+                // Node -> composite
                 updateElementsReferences(modificationReferences, targetNodeUuid, containerTarget.id(), ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION, userId);
-            } else if (containerTarget.isGroup() && containerSource.isComposite()) {        // Composite -> node
+            } else if (containerTarget.isGroup() && containerSource.isComposite()) {
+                // Composite -> node
                 updateElementsReferences(modificationReferences, studyUuid, targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE, userId);
-            } else if (containerTarget.isComposite() && containerSource.isComposite() && !containerSource.id().equals(containerTarget.id())) { // Composite -> composite
+            } else if (containerTarget.isComposite() && containerSource.isComposite() && !containerSource.id().equals(containerTarget.id())) {
+                // Composite -> composite
                 updateElementsReferences(modificationReferences, targetNodeUuid, containerTarget.id(), ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION, userId);
             }
-        } else { // Node  -> Node
+        } else {
+            // Node  -> Node
             updateElementsReferences(modificationReferences, studyUuid, targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE, userId);
         }
     }
