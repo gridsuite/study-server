@@ -1842,7 +1842,6 @@ public class StudyService {
                 ModificationContainerInfos source = entry.getKey();
                 List<UUID> modificationUuidsToMove = entry.getValue();
                 UUID originNodeUuid = originNodeBySource.get(source);
-                boolean isSameNode = targetNodeUuid.equals(originNodeUuid);
                 Set<UUID> modificationUuidsToMoveSet = new HashSet<>(modificationUuidsToMove);
                 List<ModificationReference> referencesToMove = allReferencesToMove.stream()
                         .filter(reference -> modificationUuidsToMoveSet.contains(reference.modificationUuid()))
@@ -1856,7 +1855,7 @@ public class StudyService {
                 if (result != null && isTargetInDifferentNodeTree) {
                     emitNetworkModificationImpactsForAllRootNetworks(result.modificationResults(), studyEntity, targetNodeUuid);
                 }
-
+                boolean isSameNode = targetNodeUuid.equals(originNodeUuid) || originNodeUuid == null;
                 moveElementReferences(source, resolvedTarget, referencesToMove, userId, studyUuid, targetNodeUuid, isSameNode);
             }
         } finally {
