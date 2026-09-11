@@ -89,6 +89,11 @@ public class RootNetworkService {
         return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
     }
 
+    public RootNetworkLoadStatus getRootNetworkLoadStatus(UUID networkUuid) {
+        Optional<RootNetworkEntity> rootNetworkEntity = getRootNetwork(networkUuid);
+        return rootNetworkEntity.map(RootNetworkEntity::getLoadStatus).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+    }
+
     public UUID getRootReportUuid(UUID rootNetworkUuid) {
         return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getReportUuid).orElse(null);
     }
@@ -169,6 +174,15 @@ public class RootNetworkService {
 
     public Optional<RootNetworkEntity> getRootNetwork(UUID rootNetworkUuid) {
         return rootNetworkRepository.findById(rootNetworkUuid);
+    }
+
+    public String getRootNetworkTag(UUID rootNetworkUuid) {
+        return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getTag).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+    }
+
+    // Mono-root returns null tag, and the applicability for this tag is then ignored
+    public String getApplicabilityTag(UUID rootNetworkUuid) {
+        return getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")).getApplicabilityTag();
     }
 
     public String getCaseName(UUID rootNetworkUuid) {

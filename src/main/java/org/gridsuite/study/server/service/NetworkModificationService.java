@@ -9,11 +9,12 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
+import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.BuildInfos;
+import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.ReferenceData;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,6 +53,10 @@ public class NetworkModificationService {
     private static final String QUERY_PARAM_ACTION = "action";
     private static final String QUERY_PARAM_NAME = "name";
     private static final String QUERY_PARAM_GROUP_UUID = "groupUuid";
+    private static final String QUERY_PARAM_ROOT_NETWORK_TAG = "rootNetworkTag";
+    private static final String QUERY_PARAM_GROUP_UUIDS = "groupUuids";
+    private static final String QUERY_PARAM_ROOT_NETWORK_TAGS = "rootNetworkTags";
+    private static final String ROOT_NETWORK_TAG_PATH = "root-network-tag";
     private static final String PARAM_USER_INPUT = "userInput";
 
     private final RestTemplate restTemplate;
@@ -286,7 +291,7 @@ public class NetworkModificationService {
     /**
      * @return references data of the modificationsUuids found among modificationsUuids
      */
-    public List<ReferenceData> getReferences(List<UUID> modificationsUuids) {
+    public List<ModificationReference> getModificationReferences(List<UUID> modificationsUuids) {
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + "references")
@@ -303,7 +308,7 @@ public class NetworkModificationService {
                 path,
                 HttpMethod.GET,
                 httpEntity,
-                new ParameterizedTypeReference<List<ReferenceData>>() { }
+                new ParameterizedTypeReference<List<ModificationReference>>() { }
         ).getBody();
     }
 
@@ -366,21 +371,81 @@ public class NetworkModificationService {
      * - element uuid in directory server
      * - uuid of its mother composite (null if the modification is at the root level)
      */
-    public List<ReferenceData> getReferencesFromGroup(UUID groupUuid) {
+    public List<ModificationReference> getModificationReferences(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "references");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<List<ReferenceData>> httpEntity = new HttpEntity<>(headers);
+        HttpEntity<List<ModificationReference>> httpEntity = new HttpEntity<>(headers);
 
         return restTemplate.exchange(
                 getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(),
                 HttpMethod.GET,
                 httpEntity,
-                new ParameterizedTypeReference<List<ReferenceData>>() { }
+                new ParameterizedTypeReference<List<ModificationReference>>() { }
         ).getBody();
+    }
+
+    public void updateRootNetworkApplicability(List<UUID> modificationsUuids, String rootNetworkTag, boolean applicable) {
+        Objects.requireNonNull(modificationsUuids);
+        Objects.requireNonNull(rootNetworkTag);
+        var path = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + "root-network-applicability")
+                .queryParam(UUIDS, modificationsUuids)
+                .queryParam(QUERY_PARAM_ROOT_NETWORK_TAG, rootNetworkTag)
+                .queryParam(QUERY_PARAM_APPLICABLE, applicable)
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        restTemplate.exchange(path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
+    }
+
+    /**
+     * Renames a root network tag in the applicabilities held by the modifications of the given groups.
+     */
+    public void renameRootNetworkTag(List<UUID> groupUuids, String oldTag, String newTag) {
+        Objects.requireNonNull(oldTag);
+        Objects.requireNonNull(newTag);
+        if (CollectionUtils.isEmpty(groupUuids)) {
+            return;
+        }
+        var path = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + ROOT_NETWORK_TAG_PATH)
+                .queryParam(QUERY_PARAM_GROUP_UUIDS, groupUuids)
+                .queryParam("oldTag", oldTag)
+                .queryParam("newTag", newTag)
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        restTemplate.exchange(path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
+    }
+
+    /**
+     * Drops root network tags from the applicabilities held by the modifications of the given groups.
+     */
+    public void deleteRootNetworkTags(List<UUID> groupUuids, List<String> rootNetworkTags) {
+        if (CollectionUtils.isEmpty(groupUuids) || CollectionUtils.isEmpty(rootNetworkTags)) {
+            return;
+        }
+        var path = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + ROOT_NETWORK_TAG_PATH)
+                .queryParam(QUERY_PARAM_GROUP_UUIDS, groupUuids)
+                .queryParam(QUERY_PARAM_ROOT_NETWORK_TAGS, rootNetworkTags)
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        restTemplate.exchange(path, HttpMethod.DELETE, new HttpEntity<>(headers), Void.class);
     }
 
     public void buildNode(@NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull BuildInfos buildInfos, AbstractWorkflowInfos workflowInfos) {
@@ -526,7 +591,7 @@ public class NetworkModificationService {
         ).getBody();
     }
 
-    public Map<UUID, UUID> duplicateModificationsGroup(UUID sourceGroupUuid, UUID groupUuid) {
+    public void duplicateModificationsGroup(UUID sourceGroupUuid, UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(sourceGroupUuid);
         var path = UriComponentsBuilder.fromPath("groups/{uuid}/duplicate")
@@ -537,12 +602,12 @@ public class NetworkModificationService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        return restTemplate.exchange(
+        restTemplate.exchange(
             getNetworkModificationServerURI(false) + path,
             HttpMethod.POST,
             new HttpEntity<>(headers),
-            new ParameterizedTypeReference<Map<UUID, UUID>>() { }
-        ).getBody();
+            Void.class
+        );
     }
 
     public NetworkModificationsResult duplicateModificationsFromGroup(UUID groupUuid, UUID originGroupUuid, Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos) {
@@ -590,7 +655,7 @@ public class NetworkModificationService {
 
         String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + DELIMITER + "index")
             .queryParam("networkUuid", networkUuid)
-            .queryParam("groupUuids", groupUuids)
+            .queryParam(QUERY_PARAM_GROUP_UUIDS, groupUuids)
             .toUriString();
 
         restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.DELETE, null, Void.class);
@@ -641,5 +706,17 @@ public class NetworkModificationService {
                 null,
                 new ParameterizedTypeReference<List<UUID>>() { }
         ).getBody();
+    }
+
+    /**
+     * References among {@code modificationUuids} and among the modifications nested in them: getReferences() does not
+     * descend into composites, so a reference sitting inside a copied/inserted composite must be looked up explicitly.
+     */
+    //TODO fetch references for modifications and its children
+    // Tranfertt this in network modification server
+    public List<ModificationReference> getChildrenModificationsReferences(List<UUID> modificationUuids) {
+        List<UUID> uuids = new ArrayList<>(modificationUuids);
+        uuids.addAll(findAllChildrenUuids(modificationUuids));
+        return getModificationReferences(uuids);
     }
 }

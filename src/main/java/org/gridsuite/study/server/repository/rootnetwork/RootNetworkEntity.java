@@ -88,6 +88,10 @@ public class RootNetworkEntity {
     @Column(name = "tag", nullable = false)
     private String tag;
 
+    public String getApplicabilityTag() {
+        return study.isMonoRoot() ? null : tag;
+    }
+
     public void addRootNetworkNodeInfo(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
         rootNetworkNodeInfoEntity.setRootNetwork(this);
         rootNetworkNodeInfos.add(rootNetworkNodeInfoEntity);

@@ -254,11 +254,10 @@ class LoadFlowTest {
         LIMIT_VIOLATIONS_JSON = objectMapper.writeValueAsString(limitViolations);
         COMPUTING_STATUS_JSON = objectMapper.writeValueAsString(List.of("CONVERGED", "FAILED"));
 
-        LoadFlowParametersInfos loadFlowParametersInfos = LoadFlowParametersInfos.builder()
-                .provider(PROVIDER)
-                .commonParameters(LoadFlowParameters.load())
-                .specificParametersPerProvider(Map.of())
-                .build();
+        Map<String, Object> loadFlowParametersInfos = Map.of(
+                "provider", PROVIDER,
+                "commonParameters", LoadFlowParameters.load(),
+                "specificParametersPerProvider", Map.of());
         LOADFLOW_DEFAULT_PARAMETERS_JSON = objectMapper.writeValueAsString(loadFlowParametersInfos);
     }
 

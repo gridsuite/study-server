@@ -868,7 +868,7 @@ public class ConsumerService {
     // TODO need to handle by type and not group modifications list
     private void handleSharedElementUpdate(Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType) {
         List<UUID> studyNodeUuids = extractReferenceIds(referencesByType, ReferenceAttributes.ReferenceType.STUDY_NODE);
-        List<UUID> networkModificationUuids = extractReferenceIds(referencesByType, ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION);
+        List<UUID> networkModificationUuids = extractReferenceIds(referencesByType, ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION);
 
         Set<UUID> nodeUuidsToInvalidate = new HashSet<>(studyNodeUuids);
 

@@ -8,7 +8,7 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.dto.ReferenceData;
+import org.gridsuite.study.server.dto.ModificationReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -134,15 +135,15 @@ class NetworkModificationServiceTest {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/references?uuids=" + firstUuid + "&uuids=" + secondUuid;
-        List<ReferenceData> expected = List.of(new ReferenceData(firstUuid, UUID.randomUUID(), null));
+        List<ModificationReference> expected = List.of(new ModificationReference(firstUuid, UUID.randomUUID(), null));
         when(restTemplate.exchange(
                 eq(expectedUrl),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
-                Mockito.<ParameterizedTypeReference<List<ReferenceData>>>any()))
+                Mockito.<ParameterizedTypeReference<List<ModificationReference>>>any()))
                 .thenReturn(ResponseEntity.ok(expected));
 
-        assertThat(networkModificationService.getReferences(List.of(firstUuid, secondUuid))).isEqualTo(expected);
+        assertThat(networkModificationService.getModificationReferences(List.of(firstUuid, secondUuid))).isEqualTo(expected);
     }
 
     @Test
@@ -183,14 +184,48 @@ class NetworkModificationServiceTest {
     void testGetReferencesFromGroup() {
         UUID groupUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/" + groupUuid + "/references";
-        List<ReferenceData> expected = List.of(new ReferenceData(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()));
+        List<ModificationReference> expected = List.of(new ModificationReference(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()));
         when(restTemplate.exchange(
                 eq(expectedUrl),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
-                Mockito.<ParameterizedTypeReference<List<ReferenceData>>>any()))
+                Mockito.<ParameterizedTypeReference<List<ModificationReference>>>any()))
                 .thenReturn(ResponseEntity.ok(expected));
 
-        assertThat(networkModificationService.getReferencesFromGroup(groupUuid)).isEqualTo(expected);
+        assertThat(networkModificationService.getModificationReferences(groupUuid)).isEqualTo(expected);
+    }
+
+    @Test
+    void testRenameRootNetworkTag() {
+        UUID firstGroupUuid = UUID.randomUUID();
+        UUID secondGroupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
+                + "?groupUuids=" + firstGroupUuid + "&groupUuids=" + secondGroupUuid + "&oldTag=PH1&newTag=PH2";
+
+        networkModificationService.renameRootNetworkTag(List.of(firstGroupUuid, secondGroupUuid), "PH1", "PH2");
+
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+
+        // there is nothing to rename without a group
+        networkModificationService.renameRootNetworkTag(List.of(), "PH1", "PH2");
+
+        verifyNoMoreInteractions(restTemplate);
+    }
+
+    @Test
+    void testDeleteRootNetworkTags() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
+                + "?groupUuids=" + groupUuid + "&rootNetworkTags=PH1&rootNetworkTags=PH2";
+
+        networkModificationService.deleteRootNetworkTags(List.of(groupUuid), List.of("PH1", "PH2"));
+
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.DELETE), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+
+        // there is nothing to drop without a group or without a tag
+        networkModificationService.deleteRootNetworkTags(List.of(), List.of("PH1"));
+        networkModificationService.deleteRootNetworkTags(List.of(groupUuid), List.of());
+
+        verifyNoMoreInteractions(restTemplate);
     }
 }
