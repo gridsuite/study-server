@@ -25,6 +25,7 @@ import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParamet
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -126,6 +127,17 @@ class NodeActivityServiceTest {
         grandChildUuid = grandChild.getIdNode();
 
         output.clear(STUDY_UPDATE_DESTINATION);
+    }
+
+    @AfterEach
+    void tearDown() {
+        nodeActivityRepository.deleteAll();
+        rootNetworkNodeInfoRepository.deleteAll();
+        rootNodeInfoRepository.deleteAll();
+        networkModificationNodeInfoRepository.deleteAll();
+        nodeRepository.deleteAll();
+        rootNetworkRepository.deleteAll();
+        studyRepository.deleteAll();
     }
 
     @Test
