@@ -24,7 +24,6 @@ import org.springframework.messaging.Message;
 
 import java.util.*;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE;
 import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION;
@@ -32,7 +31,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 /**
  * @author Souissi Maissa <souissi.maissa at rte-france.com>
@@ -83,39 +82,38 @@ class ConsumerServiceSharedElementUpdateTest {
     }
 
     @Test
-    void directNodeReferenceInvalidatesThatNodeWithoutResolvingModifications() {
+    void directNodeReferenceInvalidatesItsNodeWithoutAnyLookup() {
         UUID nodeUuid = UUID.randomUUID();
+        UUID modificationUuid = UUID.randomUUID();
 
-        consumeSharedElementUpdate.accept(sharedElementUpdateMessage(List.of(nodeUuid), List.of()));
+        consumeSharedElementUpdate.accept(sharedElementUpdateMessage(
+                List.of(studyNodeReference(modificationUuid, nodeUuid)), List.of()));
 
-        verify(studyService).sharedElementUpdatedNotification(nodeUuid, List.of());
-        verify(networkModificationService, never()).findRootGroupByModification(anyList());
+        verify(studyService).sharedElementUpdatedNotification(nodeUuid, List.of(modificationUuid));
     }
 
     @Test
-    void compositeReferenceIsResolvedThroughItsRootGroupToItsNode() {
-        UUID compositeUuid = UUID.randomUUID();
-        UUID groupUuid = UUID.randomUUID();
+    void compositeReferenceInvalidatesTheNodeCarriedByItsContainer() {
+        UUID compositeModificationUuid = UUID.randomUUID();
         UUID nodeUuid = UUID.randomUUID();
-        when(networkModificationService.findRootGroupByModification(List.of(compositeUuid))).thenReturn(Map.of(compositeUuid, groupUuid));
-        when(networkModificationTreeService.getNodeUuidsByModificationGroups(List.of(groupUuid))).thenReturn(Map.of(groupUuid, nodeUuid));
 
-        consumeSharedElementUpdate.accept(sharedElementUpdateMessage(List.of(), List.of(compositeUuid)));
+        consumeSharedElementUpdate.accept(sharedElementUpdateMessage(
+                List.of(), List.of(compositeReference(compositeModificationUuid, nodeUuid))));
 
-        verify(studyService).sharedElementUpdatedNotification(nodeUuid, List.of(compositeUuid));
+        verify(studyService).sharedElementUpdatedNotification(nodeUuid, List.of(compositeModificationUuid));
     }
 
     @Test
-    void sameNodeReachedDirectlyAndThroughACompositeIsInvalidatedOnce() {
+    void sameNodeReachedDirectlyAndThroughACompositeIsInvalidatedOnceWithBothModifications() {
         UUID nodeUuid = UUID.randomUUID();
-        UUID compositeUuid = UUID.randomUUID();
-        UUID groupUuid = UUID.randomUUID();
-        when(networkModificationService.findRootGroupByModification(List.of(compositeUuid))).thenReturn(Map.of(compositeUuid, groupUuid));
-        when(networkModificationTreeService.getNodeUuidsByModificationGroups(List.of(groupUuid))).thenReturn(Map.of(groupUuid, nodeUuid));
+        UUID directModificationUuid = UUID.randomUUID();
+        UUID compositeModificationUuid = UUID.randomUUID();
 
-        consumeSharedElementUpdate.accept(sharedElementUpdateMessage(List.of(nodeUuid), List.of(compositeUuid)));
+        consumeSharedElementUpdate.accept(sharedElementUpdateMessage(
+                List.of(studyNodeReference(directModificationUuid, nodeUuid)),
+                List.of(compositeReference(compositeModificationUuid, nodeUuid))));
 
-        verify(studyService, times(1)).sharedElementUpdatedNotification(nodeUuid, List.of(compositeUuid));
+        verify(studyService, times(1)).sharedElementUpdatedNotification(nodeUuid, List.of(directModificationUuid, compositeModificationUuid));
     }
 
     @Test
@@ -123,23 +121,28 @@ class ConsumerServiceSharedElementUpdateTest {
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(List.of(), List.of()));
 
         verify(studyService, never()).sharedElementUpdatedNotification(org.mockito.ArgumentMatchers.any(), anyList());
-        verify(networkModificationService, never()).findRootGroupByModification(anyList());
+        verifyNoMoreInteractions(networkModificationService, networkModificationTreeService);
     }
 
-    private static Message<Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>>> sharedElementUpdateMessage(List<UUID> studyNodeUuids, List<UUID> networkModificationUuids) {
+    private static ReferenceAttributes studyNodeReference(UUID modificationUuid, UUID nodeUuid) {
+        // STUDY_NODE: rootContainerId = studyId, containerId = nodeId
+        return ReferenceAttributes.createReferenceAttributes(modificationUuid, UUID.randomUUID(), nodeUuid, STUDY_NODE);
+    }
+
+    private static ReferenceAttributes compositeReference(UUID modificationUuid, UUID nodeUuid) {
+        // STUDY_NODE_NETWORK_MODIFICATION: rootContainerId = nodeId, containerId = parentCompositeId
+        return ReferenceAttributes.createReferenceAttributes(modificationUuid, nodeUuid, UUID.randomUUID(), STUDY_NODE_NETWORK_MODIFICATION);
+    }
+
+    private static Message<Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>>> sharedElementUpdateMessage(
+            List<ReferenceAttributes> studyNodeReferences, List<ReferenceAttributes> networkModificationReferences) {
         Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType = new EnumMap<>(ReferenceAttributes.ReferenceType.class);
-        if (!studyNodeUuids.isEmpty()) {
-            referencesByType.put(STUDY_NODE, toReferenceAttributes(studyNodeUuids, STUDY_NODE));
+        if (!studyNodeReferences.isEmpty()) {
+            referencesByType.put(STUDY_NODE, studyNodeReferences);
         }
-        if (!networkModificationUuids.isEmpty()) {
-            referencesByType.put(STUDY_NODE_NETWORK_MODIFICATION, toReferenceAttributes(networkModificationUuids, STUDY_NODE_NETWORK_MODIFICATION));
+        if (!networkModificationReferences.isEmpty()) {
+            referencesByType.put(STUDY_NODE_NETWORK_MODIFICATION, networkModificationReferences);
         }
         return MessageBuilder.withPayload(referencesByType).build();
-    }
-
-    private static List<ReferenceAttributes> toReferenceAttributes(List<UUID> uuids, ReferenceAttributes.ReferenceType type) {
-        return uuids.stream()
-                .map(uuid -> ReferenceAttributes.createReferenceAttributes(uuid, UUID.randomUUID(), UUID.randomUUID(), type))
-                .collect(Collectors.toList());
     }
 }

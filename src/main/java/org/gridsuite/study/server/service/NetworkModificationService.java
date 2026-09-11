@@ -338,35 +338,6 @@ public class NetworkModificationService {
     }
 
     /**
-     * Resolves, for each given modification, the modification group it ultimately belongs to.
-     * @param modificationsUuids the modifications to resolve; each may sit directly in a group or be nested
-     * inside one or more composite modifications
-     * @return a map from modification uuid to the uuid of its enclosing root group (the outermost group,
-     * found by walking up through every level of nested composite modifications). A modification that is
-     * not reachable from any group is absent from the map.
-     */
-    public Map<UUID, UUID> findRootGroupByModification(List<UUID> modificationsUuids) {
-        Objects.requireNonNull(modificationsUuids);
-        var path = UriComponentsBuilder
-                .fromUriString(getNetworkModificationServerURI(false) + COMPOSITE_PATH + "root-groups")
-                .queryParam(UUIDS, modificationsUuids)
-                .buildAndExpand()
-                .toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
-
-        return restTemplate.exchange(
-                path,
-                HttpMethod.GET,
-                httpEntity,
-                new ParameterizedTypeReference<Map<UUID, UUID>>() { }
-        ).getBody();
-    }
-
-    /**
      * @return references data of the modifications in the group :
      * - element uuid in directory server
      * - uuid of its mother composite (null if the modification is at the root level)

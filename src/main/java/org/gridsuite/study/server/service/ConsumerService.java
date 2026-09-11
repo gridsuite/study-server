@@ -871,26 +871,17 @@ public class ConsumerService {
         return message -> handleSharedElementUpdate(message.getPayload());
     }
 
-    // TODO need to handle by type and not group modifications list
     private void handleSharedElementUpdate(Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType) {
-        List<UUID> studyNodeUuids = extractReferenceIds(referencesByType, ReferenceAttributes.ReferenceType.STUDY_NODE);
-        List<UUID> networkModificationUuids = extractReferenceIds(referencesByType, ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION);
+        Map<UUID, List<UUID>> modificationUuidsByNode = new HashMap<>();
 
-        Set<UUID> nodeUuidsToInvalidate = new HashSet<>(studyNodeUuids);
+        referencesByType.getOrDefault(ReferenceAttributes.ReferenceType.STUDY_NODE, List.of())
+            .forEach(ref -> modificationUuidsByNode.computeIfAbsent(ref.getReferenceContainer().getContainerId(), k -> new ArrayList<>())
+                .add(ref.getReferenceId()));
 
-        if (!networkModificationUuids.isEmpty()) {
-            Collection<UUID> rootGroupUuids = networkModificationService.findRootGroupByModification(networkModificationUuids).values();
-            if (!rootGroupUuids.isEmpty()) {
-                nodeUuidsToInvalidate.addAll(networkModificationTreeService.getNodeUuidsByModificationGroups(List.copyOf(rootGroupUuids)).values());
-            }
-        }
+        referencesByType.getOrDefault(ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION, List.of())
+            .forEach(ref -> modificationUuidsByNode.computeIfAbsent(ref.getReferenceContainer().getRootContainerId(), k -> new ArrayList<>())
+                .add(ref.getReferenceId()));
 
-        nodeUuidsToInvalidate.forEach(nodeUuid -> {
-            studyService.sharedElementUpdatedNotification(nodeUuid, networkModificationUuids);
-        });
-    }
-
-    private static List<UUID> extractReferenceIds(Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType, ReferenceAttributes.ReferenceType type) {
-        return referencesByType.getOrDefault(type, List.of()).stream().map(ReferenceAttributes::getReferenceId).toList();
+        modificationUuidsByNode.forEach(studyService::sharedElementUpdatedNotification);
     }
 }
