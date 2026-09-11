@@ -66,7 +66,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
 
         UUID result = handleSecurityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId);
 
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(SECURITY_ANALYSIS), result);
+        handleQuotaStart(userId, result, SECURITY_ANALYSIS);
         return result;
     }
 
