@@ -23,7 +23,6 @@ import mockwebserver3.RecordedRequest;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
-import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -162,11 +161,8 @@ class SingleLineDiagramTest {
         when(networkStoreService.getVariantsInfos(UUID.fromString(NETWORK_UUID_VARIANT_ERROR_STRING)))
             .thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0)));
 
-        when(loadFlowRestService.getLoadFlowParameters(LOADFLOW_PARAMETERS_UUID))
-            .thenReturn(LoadFlowParametersInfos.builder()
-                .commonParameters(LoadFlowParameters.load())
-                .specificParametersPerProvider(Map.of())
-                .build());
+        when(loadFlowRestService.getCommonParameters(LOADFLOW_PARAMETERS_UUID))
+            .thenReturn(LoadFlowParameters.load());
 
         when(loadFlowRestService.getLoadFlowParametersOrDefaultsUuid(any()))
             .thenReturn(LOADFLOW_PARAMETERS_UUID);
