@@ -6,33 +6,35 @@
  */
 package org.gridsuite.study.server.dto;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.experimental.SuperBuilder;
+import lombok.NonNull;
 
 import java.util.UUID;
 
 /**
- * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
- * attributes of the references to the shared composites stored in directory server
+ * @author Maissa Souissi <maissa.souissi at rte-france.com>
  */
 @Getter
-@Setter
-@NoArgsConstructor
 @AllArgsConstructor
-@SuperBuilder
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ReferenceAttributes {
     public enum ReferenceType {
         STUDY_NODE,
-        NETWORK_MODIFICATION,
-        DIRECTORY_ELEMENT
+        STUDY_NODE_NETWORK_MODIFICATION,
+        DIRECTORY_NETWORK_MODIFICATION,
     }
 
+    // id of the reference modification
+    @NonNull
     private UUID referenceId;
+    // Container where the reference is used (see ReferenceType for the meaning of its ids)
+    @NonNull
+    private ReferenceContainer referenceContainer;
+    @NonNull
     private ReferenceType referenceType;
+
+    public static ReferenceAttributes createReferenceAttributes(UUID referenceId, UUID rootContainerId, UUID containerId, ReferenceType referenceType) {
+        return new ReferenceAttributes(referenceId, ReferenceContainer.builder().rootContainerId(rootContainerId).containerId(containerId).build(), referenceType);
+    }
 }
 

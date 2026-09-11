@@ -16,4 +16,12 @@ import java.util.UUID;
 public record ModificationContainerInfos(
         @Schema(description = "container UUID; omitted only for GROUP, where node's group is used") UUID id,
         @Schema(description = "container type") ModificationContainerType type) {
+
+    public boolean isGroup() {
+        return ModificationContainerType.GROUP.equals(type);
+    }
+
+    public boolean isComposite() {
+        return ModificationContainerType.COMPOSITE.equals(type);
+    }
 }
