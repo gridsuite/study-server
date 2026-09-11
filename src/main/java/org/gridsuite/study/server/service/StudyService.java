@@ -2946,8 +2946,8 @@ public class StudyService {
         StudyEntity studyEntity = studyRepository.save(buildStudyEntity(studyUuid, computationParameterUUIDs,
                 networkVisualizationParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid));
         UUID rootNodeUuid = networkModificationTreeService.createRoot(studyEntity).getIdNode();
-        if (nodeTree != null && !nodeTree.children().isEmpty()) {
-            nodeTree.children().forEach(child -> createNodeRecursively(studyEntity, rootNodeUuid, child, userId));
+        if (nodeTree != null) {
+            CollectionUtils.emptyIfNull(nodeTree.children()).forEach(child -> createNodeRecursively(studyEntity, rootNodeUuid, child, userId));
         }
         studyInfosService.add(toCreatedStudyBasicInfos(studyEntity));
         return studyEntity;
