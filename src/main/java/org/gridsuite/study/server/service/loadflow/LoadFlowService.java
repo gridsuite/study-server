@@ -112,7 +112,7 @@ public class LoadFlowService extends AbstractComputationService {
     }
 
     @Transactional
-    public LoadFlowParameters getLoadFlowCommonParameters(StudyEntity studyEntity) {
+    public LoadFlowParameters getCommonParameters(StudyEntity studyEntity) {
         UUID loadFlowParamsUuid = loadflowRestService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
         return loadflowRestService.getCommonParameters(loadFlowParamsUuid);
     }
@@ -145,7 +145,7 @@ public class LoadFlowService extends AbstractComputationService {
         return loadflowRestService.getDefaultLimitReductions();
     }
 
-    public String getLoadFlowCommonParameters(UUID parameterUuid) {
+    public String getCommonParameters(UUID parameterUuid) {
         return loadflowRestService.getParameters(parameterUuid);
     }
 
