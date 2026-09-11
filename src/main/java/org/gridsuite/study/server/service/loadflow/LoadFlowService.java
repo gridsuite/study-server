@@ -105,20 +105,16 @@ public class LoadFlowService extends AbstractComputationService {
     }
 
     @Transactional
-    public LoadFlowParametersInfos getLoadFlowParametersInfos(UUID studyUuid) {
+    public String getLoadFlowParametersValues(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        return getLoadFlowParametersInfos(studyEntity);
-    }
-
-    private LoadFlowParametersInfos getLoadFlowParametersInfos(StudyEntity studyEntity) {
         UUID loadFlowParamsUuid = loadflowRestService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
-        return loadflowRestService.getLoadFlowParameters(loadFlowParamsUuid);
+        return loadflowRestService.getParameters(loadFlowParamsUuid);
     }
 
     @Transactional
-    public LoadFlowParameters getLoadFlowParameters(StudyEntity studyEntity) {
-        LoadFlowParametersInfos lfParameters = getLoadFlowParametersInfos(studyEntity);
-        return lfParameters.getCommonParameters();
+    public LoadFlowParameters getCommonParameters(StudyEntity studyEntity) {
+        UUID loadFlowParamsUuid = loadflowRestService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
+        return loadflowRestService.getCommonParameters(loadFlowParamsUuid);
     }
 
     @Transactional
@@ -149,7 +145,7 @@ public class LoadFlowService extends AbstractComputationService {
         return loadflowRestService.getDefaultLimitReductions();
     }
 
-    public LoadFlowParametersInfos getLoadFlowParameters(UUID parameterUuid) {
+    public String getCommonParameters(UUID parameterUuid) {
         return loadflowRestService.getParameters(parameterUuid);
     }
 

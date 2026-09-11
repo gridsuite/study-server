@@ -25,7 +25,6 @@ import okhttp3.HttpUrl;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
-import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -182,10 +181,9 @@ class NetworkMapTest {
                 IdentifiableInfos.builder().id("BUSBAR_SECTION_1").name("BUSBAR_SECTION_1").build(),
                 IdentifiableInfos.builder().id("BUSBAR_SECTION_2").name("BUSBAR_SECTION_2").build()));
 
-        LoadFlowParametersInfos loadFlowParametersInfos = LoadFlowParametersInfos.builder()
-                .commonParameters(LoadFlowParameters.load())
-                .specificParametersPerProvider(Map.of())
-                .build();
+        Map<String, Object> loadFlowParametersInfos = Map.of(
+                "commonParameters", LoadFlowParameters.load(),
+                "specificParametersPerProvider", Map.of());
         String loadFlowParameters = objectMapper.writeValueAsString(loadFlowParametersInfos);
 
         final Dispatcher dispatcher = new Dispatcher() {
