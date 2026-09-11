@@ -1084,7 +1084,7 @@ public class NetworkModificationTreeService {
                 throw new StudyException(BAD_NODE_TYPE, "The node " + entity.getIdNode() + " is not a modification node");
             } else {
                 buildInfos.setDestinationVariantId(self.getVariantId(nodeUuid, rootNetworkUuid));
-                buildInfos.setRootNetworkTag(rootNetworkService.getRootNetworkTag(rootNetworkUuid));
+                buildInfos.setRootNetworkTag(rootNetworkService.getApplicabilityTag(rootNetworkUuid));
                 getBuildInfos(entity, rootNetworkUuid, buildInfos, nodeUuid);
             }
         }, () -> {
