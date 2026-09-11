@@ -840,7 +840,7 @@ public class StudyService {
                                           List<Double> nominalVoltages) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         StudyEntity studyEntity = getStudy(studyUuid);
-        LoadFlowParameters loadFlowParameters = loadFlowService.getLoadFlowParameters(studyEntity);
+        LoadFlowParameters loadFlowParameters = loadFlowService.getCommonParameters(studyEntity);
         return networkMapService.getElementsInfos(
             rootNetworkService.getNetworkUuid(rootNetworkUuid),
             networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid),
@@ -861,7 +861,7 @@ public class StudyService {
                                          boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         StudyEntity studyEntity = getStudy(studyUuid);
-        LoadFlowParameters loadFlowParameters = loadFlowService.getLoadFlowParameters(studyEntity);
+        LoadFlowParameters loadFlowParameters = loadFlowService.getCommonParameters(studyEntity);
         return networkMapService.getElementInfos(
             rootNetworkService.getNetworkUuid(rootNetworkUuid),
             networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid),
@@ -949,7 +949,7 @@ public class StudyService {
     @Transactional
     public String getAllMapData(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, List<String> substationsIds) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        LoadFlowParameters loadFlowParameters = loadFlowService.getLoadFlowParameters(studyEntity);
+        LoadFlowParameters loadFlowParameters = loadFlowService.getCommonParameters(studyEntity);
         Map<String, Map<String, String>> optionalParameters = new HashMap<>();
         Stream.of(
             String.valueOf(ElementType.BRANCH),
@@ -2529,7 +2529,7 @@ public class StudyService {
         // Get the requested info for the filtered equipment ids
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, true);
         StudyEntity studyEntity = getStudy(studyUuid);
-        LoadFlowParameters loadFlowParameters = loadFlowService.getLoadFlowParameters(studyEntity);
+        LoadFlowParameters loadFlowParameters = loadFlowService.getCommonParameters(studyEntity);
 
         return networkMapService.getElementsInfosByIds(
             rootNetworkService.getNetworkUuid(rootNetworkUuid),
