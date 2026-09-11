@@ -52,6 +52,7 @@ public class NetworkModificationService {
     private static final String NETWORK_MODIFICATIONS_COUNT_PATH = "network-modifications-count";
     private static final String QUERY_PARAM_ACTION = "action";
     private static final String QUERY_PARAM_NAME = "name";
+    private static final String QUERY_PARAM_DESCRIPTION = "description";
     private static final String QUERY_PARAM_GROUP_UUID = "groupUuid";
     private static final String QUERY_PARAM_ROOT_NETWORK_TAG = "rootNetworkTag";
     private static final String QUERY_PARAM_GROUP_UUIDS = "groupUuids";
@@ -506,9 +507,10 @@ public class NetworkModificationService {
      * by a reference to it, so that it can be stored as an element in the directory server. The composite modification
      * keeps its own uuid.
      */
-    public void extractCompositeModificationToShare(@NonNull UUID groupUuid, @NonNull UUID modificationUuid, @NonNull String name) {
+    public void extractCompositeModificationToShare(@NonNull UUID groupUuid, @NonNull UUID modificationUuid, @NonNull String name, String description) {
         String path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + "{modificationUuid}" + DELIMITER + "share")
                 .queryParam(QUERY_PARAM_NAME, name)
+                .queryParam(QUERY_PARAM_DESCRIPTION, description)
                 .queryParam(QUERY_PARAM_GROUP_UUID, groupUuid)
                 .buildAndExpand(modificationUuid)
                 .toUriString();
