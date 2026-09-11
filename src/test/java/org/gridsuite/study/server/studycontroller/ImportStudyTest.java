@@ -78,6 +78,22 @@ class ImportStudyTest extends StudyTestBase {
                 .andExpect(status().isOk());
 
         // Import is fully synchronous, the only notification sent is the study creation finished one
+        assertStudyCreatedAndNotified(studyUuid);
+        assertImportedNodeTree(studyUuid, modificationGroupUuid1, modificationGroupUuid2);
+
+        // Root networks are created (unloaded) synchronously
+        assertEquals(0, rootNetworkRequestRepository.countAllByStudyUuid(studyUuid));
+        List<RootNetworkEntity> rootNetworks = rootNetworkRepository.findAllByStudyId(studyUuid);
+        assertEquals(2, rootNetworks.size());
+        assertRootNetworkCreated(studyUuid, "rn1", "1", duplicatedCaseUuid1);
+        assertRootNetworkCreated(studyUuid, "rn2", "2", duplicatedCaseUuid2);
+
+        verifyDuplicateCaseRequest(caseUuid1);
+        verifyDuplicateCaseRequest(caseUuid2);
+        verifyDefaultParametersCreation();
+    }
+
+    private void assertStudyCreatedAndNotified(UUID studyUuid) {
         Message<byte[]> message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertNotNull(message);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -85,8 +101,10 @@ class ImportStudyTest extends StudyTestBase {
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_FINISHED, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertNull(output.receive(TIMEOUT, studyUpdateDestination));
         assertNull(output.receive(TIMEOUT, elementUpdateDestination));
-
         assertTrue(studyRepository.findById(studyUuid).isPresent());
+    }
+
+    private void assertImportedNodeTree(UUID studyUuid, UUID modificationGroupUuid1, UUID modificationGroupUuid2) {
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid, null);
         assertNotNull(rootNode);
         assertEquals(1, rootNode.getChildren().size());
@@ -100,31 +118,17 @@ class ImportStudyTest extends StudyTestBase {
         assertEquals("CONSTRUCTION", ((NetworkModificationNode) n2).getNodeType().name());
         assertNotEquals(modificationGroupUuid1, ((NetworkModificationNode) n1).getModificationGroupUuid());
         assertNotEquals(modificationGroupUuid2, ((NetworkModificationNode) n2).getModificationGroupUuid());
+    }
 
-        // Root networks are created directly synchronously
-        assertEquals(0, rootNetworkRequestRepository.countAllByStudyUuid(studyUuid));
-        List<RootNetworkEntity> rootNetworks = rootNetworkRepository.findAllByStudyId(studyUuid);
-        assertEquals(2, rootNetworks.size());
-
-        RootNetworkEntity rn1 = rootNetworkRepository.findByNameAndStudyId("rn1", studyUuid).orElseThrow();
-        assertEquals("1", rn1.getTag());
-        assertEquals(duplicatedCaseUuid1, rn1.getCaseUuid());
-        assertNull(rn1.getOriginalCaseUuid());
-        assertEquals(RootNetworkLoadStatus.UNLOADED, rn1.getLoadStatus());
-        // Network is not actually imported during a study import: networkInfos is only a placeholder,
-        // the real network will be loaded later on demand to recreate network
-        assertNotNull(rn1.getNetworkUuid());
-        assertEquals("", rn1.getNetworkId());
-
-        RootNetworkEntity rn2 = rootNetworkRepository.findByNameAndStudyId("rn2", studyUuid).orElseThrow();
-        assertEquals("2", rn2.getTag());
-        assertEquals(duplicatedCaseUuid2, rn2.getCaseUuid());
-        assertNull(rn2.getOriginalCaseUuid());
-        assertEquals(RootNetworkLoadStatus.UNLOADED, rn2.getLoadStatus());
-
-        verifyDuplicateCaseRequest(caseUuid1);
-        verifyDuplicateCaseRequest(caseUuid2);
-        verifyDefaultParametersCreation();
+    private void assertRootNetworkCreated(UUID studyUuid, String name, String tag, UUID duplicatedCaseUuid) {
+        RootNetworkEntity rootNetwork = rootNetworkRepository.findByNameAndStudyId(name, studyUuid).orElseThrow();
+        assertEquals(tag, rootNetwork.getTag());
+        assertEquals(duplicatedCaseUuid, rootNetwork.getCaseUuid());
+        assertNull(rootNetwork.getOriginalCaseUuid());
+        assertEquals(RootNetworkLoadStatus.UNLOADED, rootNetwork.getLoadStatus());
+        // network will be loaded later on demand to recreate network
+        assertNotNull(rootNetwork.getNetworkUuid());
+        assertEquals("", rootNetwork.getNetworkId());
     }
 
     private RootNetworkExportInfos rootNetworkExportInfos(String name, String tag, int index, UUID caseUuid) {
