@@ -13,6 +13,7 @@ import org.gridsuite.study.server.dto.modification.ModificationApplicationContex
 import org.gridsuite.study.server.dto.modification.ModificationContainerInfos;
 import org.gridsuite.study.server.dto.modification.ModificationContainerType;
 import org.gridsuite.study.server.dto.modification.ModificationMoveOrCopyInfos;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
@@ -52,6 +53,8 @@ class NetworkModificationReferencingInfosUpdateTest {
     private NetworkModificationService networkModificationService;
     @MockitoBean
     private DirectoryService directoryService;
+    @MockitoBean
+    NotificationService notificationService;
 
     @MockitoSpyBean
     private StudyService studyService;
