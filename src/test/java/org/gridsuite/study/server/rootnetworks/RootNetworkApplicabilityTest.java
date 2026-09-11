@@ -12,8 +12,10 @@ import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -39,7 +41,10 @@ import java.util.*;
 
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -85,6 +90,8 @@ class RootNetworkApplicabilityTest {
     private StudyService studyService;
     @Autowired
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    @Autowired
+    private RootNetworkService rootNetworkService;
     @Autowired
     private MockMvc mockMvc;
     @Autowired
@@ -159,7 +166,7 @@ class RootNetworkApplicabilityTest {
 
         // the modification is a reference to a shared modification the user is not allowed to write on
         UUID sharedModificationUuid = UUID.randomUUID();
-        doReturn(List.of(new ReferenceData(MODIFICATION_1, sharedModificationUuid, null))).when(networkModificationService).getReferences(List.of(MODIFICATION_1));
+        doReturn(List.of(new ModificationReference(MODIFICATION_1, sharedModificationUuid, null))).when(networkModificationService).getModificationReferences(List.of(MODIFICATION_1));
         doThrow(HttpClientErrorException.create(HttpStatus.FORBIDDEN, "Forbidden", null, null, null))
             .when(directoryService).checkPermission(List.of(sharedModificationUuid), null, USER_ID, PermissionType.WRITE, false);
 
@@ -176,6 +183,7 @@ class RootNetworkApplicabilityTest {
     @Test
     void testBuildInfosCarryRootNetworkTag() {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyEntity.setMonoRoot(false);
         studyRepository.save(studyEntity);
         UUID rootNetworkUuid = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).getFirst().rootNetworkUuid();
 
@@ -194,6 +202,7 @@ class RootNetworkApplicabilityTest {
     @Test
     void testApplicationContextCarriesRootNetworkTag() {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyEntity.setMonoRoot(false);
         studyRepository.save(studyEntity);
         RootNetworkEntity rootNetworkEntity = studyEntity.getRootNetworks().getFirst();
 
@@ -201,6 +210,52 @@ class RootNetworkApplicabilityTest {
         NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
 
         assertEquals(ROOT_NETWORK_TAG_1, rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), firstNode.getId(), NETWORK_UUID).rootNetworkTag());
+    }
+
+    @Test
+    void testMonoRootStudyCarriesNoRootNetworkTag() {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyEntity.setMonoRoot(true);
+        studyRepository.save(studyEntity);
+        RootNetworkEntity rootNetworkEntity = studyEntity.getRootNetworks().getFirst();
+
+        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
+        NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
+
+        networkModificationTreeService.buildNode(studyEntity.getId(), firstNode.getId(), rootNetworkEntity.getId(), USER_ID, null);
+
+        ArgumentCaptor<BuildInfos> buildInfosCaptor = ArgumentCaptor.captor();
+        verify(networkModificationService).buildNode(any(UUID.class), any(UUID.class), buildInfosCaptor.capture(), isNull());
+        assertNull(buildInfosCaptor.getValue().getRootNetworkTag());
+        assertNull(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), firstNode.getId(), NETWORK_UUID).rootNetworkTag());
+    }
+
+    @Test
+    void testTurningMultiRootNetworkInvalidatesWhatWasBuiltBefore() {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyEntity.setMonoRoot(true);
+        studyRepository.save(studyEntity);
+        UUID rootNetworkUuid = studyEntity.getRootNetworks().getFirst().getId();
+
+        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
+        NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
+        networkModificationTreeService.updateNodeBuildStatus(firstNode.getId(), rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILT));
+        assertTrue(networkModificationTreeService.getNodeBuildStatus(firstNode.getId(), rootNetworkUuid).isBuilt());
+
+        RootNetworkInfos secondRootNetworkInfos = RootNetworkInfos.builder()
+            .id(UUID.randomUUID())
+            .name("secondRootNetworkName")
+            .caseInfos(new CaseInfos(UUID.randomUUID(), UUID.randomUUID(), CASE_NAME, CASE_FORMAT))
+            .networkInfos(new NetworkInfos(UUID.randomUUID(), UUID.randomUUID().toString()))
+            .reportUuid(UUID.randomUUID())
+            .tag(ROOT_NETWORK_TAG_2)
+            .build();
+        rootNetworkService.insertCreationRequest(studyEntity.getId(), secondRootNetworkInfos, USER_ID);
+        studyService.createRootNetwork(studyEntity.getId(), secondRootNetworkInfos);
+
+        // the node was built while the applicabilities were ignored, it has to be built again now they are not
+        assertFalse(studyRepository.findById(studyEntity.getId()).orElseThrow().isMonoRoot());
+        assertFalse(networkModificationTreeService.getNodeBuildStatus(firstNode.getId(), rootNetworkUuid).isBuilt());
     }
 
     @Test
