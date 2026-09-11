@@ -7,20 +7,19 @@
 package org.gridsuite.study.server.notification;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.gridsuite.study.server.dto.QuotaType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.messaging.Message;
 
 import java.util.List;
 import java.util.UUID;
-
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
 /**
@@ -30,6 +29,7 @@ import static org.mockito.Mockito.verify;
 class NotificationServiceTest {
 
     private static final String STUDY_UPDATE_DESTINATION = "publishStudyUpdate-out-0";
+    private static final String USER_ID = "userId";
 
     @Mock
     private StreamBridge updatePublisher;
@@ -44,7 +44,7 @@ class NotificationServiceTest {
     }
 
     @Test
-    void emitSharedElementUpdatedSendsMessageWithParentNodeAndModificationUuids() {
+     void emitSharedElementUpdatedSendsMessageWithParentNodeAndModificationUuids() {
         UUID studyUuid = UUID.randomUUID();
         UUID parentNodeUuid = UUID.randomUUID();
         List<UUID> networkModificationUuids = List.of(UUID.randomUUID(), UUID.randomUUID());
@@ -74,5 +74,17 @@ class NotificationServiceTest {
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.SHARED_ELEMENT_UPDATED)
                 .containsEntry(NotificationService.HEADER_PARENT_NODE, parentNodeUuid)
                 .containsEntry(NotificationService.HEADER_NETWORK_MODIFICATION_UUIDS, List.of());
+    }
+
+    @Test
+    void testEmitQuotaChange() {
+        notificationService.emitQuotaChange(USER_ID, QuotaType.SHORT_CIRCUIT);
+
+        ArgumentCaptor<Message<String>> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(updatePublisher).send(eq("publishQuotaUpdate-out-0"), messageCaptor.capture());
+
+        Message<String> message = messageCaptor.getValue();
+        assertThat(message.getHeaders().get(NotificationService.HEADER_USER_ID)).isEqualTo(USER_ID);
+        assertThat(message.getHeaders().get(NotificationService.HEADER_QUOTA_TYPE)).isEqualTo(QuotaType.SHORT_CIRCUIT);
     }
 }

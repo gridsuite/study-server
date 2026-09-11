@@ -26,6 +26,8 @@ spring:
         consumeSharedElementUpdate-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}element.shared.update
           group: studySharedElementUpdateGroup
+        publishQuotaUpdate-out-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}quota.update
         consumeSaResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.result
           group: studySaResultGroup
