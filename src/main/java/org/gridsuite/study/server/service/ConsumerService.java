@@ -72,6 +72,7 @@ public class ConsumerService {
     private final NetworkModificationTreeService networkModificationTreeService;
     private final StudyConfigService studyConfigService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    private final RootNetworkService rootNetworkService;
     private final DirectoryService directoryService;
     private final ComputationParametersService computationParametersService;
     private final UserAdminService userAdminService;
@@ -87,6 +88,7 @@ public class ConsumerService {
                            NetworkModificationTreeService networkModificationTreeService,
                            StudyConfigService studyConfigService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                           RootNetworkService rootNetworkService,
                            DirectoryService directoryService,
                            ComputationParametersService computationParametersService,
                            UserAdminService userAdminService,
@@ -101,6 +103,7 @@ public class ConsumerService {
         this.networkModificationTreeService = networkModificationTreeService;
         this.studyConfigService = studyConfigService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.rootNetworkService = rootNetworkService;
         this.directoryService = directoryService;
         this.computationParametersService = computationParametersService;
         this.userAdminService = userAdminService;
@@ -129,7 +132,6 @@ public class ConsumerService {
         UUID rootNetworkUuid = receiverObj.getRootNetworkUuid();
         Optional<RerunLoadFlowInfos> rerunLoadFlowInfos = getRerunLoadFlowInfos(message);
         UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
-        studyService.handleBuildSuccess(studyUuid, nodeUuid, rootNetworkUuid, message.getPayload());
 
         if (rerunLoadFlowInfos.isPresent()) {
             RerunLoadFlowInfos workflowInfos = rerunLoadFlowInfos.get();
@@ -138,6 +140,8 @@ public class ConsumerService {
             // a rerun's loadflow removes the activity when its own result arrives
             nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
         }
+
+        studyService.handleBuildSuccess(studyUuid, nodeUuid, rootNetworkUuid, message.getPayload());
     }
 
     private Optional<RerunLoadFlowInfos> getRerunLoadFlowInfos(Message<?> message) throws JsonProcessingException {
@@ -390,6 +394,9 @@ public class ConsumerService {
         }
         if (receiver.getCaseImportAction() == CaseImportAction.ROOT_NETWORK_MODIFICATION) {
             removeReimportCaseActivity(receiver.getStudyUuid(), receiver.getRootNetworkUuid());
+        }
+        if (receiver.getCaseImportAction() == CaseImportAction.NETWORK_RECREATION) {
+            rootNetworkService.updateNetworkLoadStatus(receiver.getRootNetworkUuid(), RootNetworkLoadStatus.UNLOADED);
         }
         notificationService.emitRootNetworksUpdateFailed(receiver.getStudyUuid(), errorMessage);
     }

@@ -313,7 +313,15 @@ public class StudyService {
         }
         notificationService.emitRootNetworksDeletionStarted(studyUuid, rootNetworksUuids);
 
+        List<String> deletedTags = allRootNetworkEntities.stream()
+                .filter(rootNetworkEntity -> rootNetworksUuids.contains(rootNetworkEntity.getId()))
+                .map(RootNetworkEntity::getTag)
+                .filter(Objects::nonNull)
+                .toList();
+
         rootNetworkService.deleteRootNetworks(studyEntity, rootNetworksUuids.stream());
+
+        networkModificationService.deleteRootNetworkTags(getStudyModificationGroupUuids(studyUuid), deletedTags);
 
         notificationService.emitRootNetworksUpdated(studyUuid);
         notificationService.emitElementUpdated(studyUuid, userId);
@@ -359,8 +367,9 @@ public class StudyService {
             rootNetworkService.createRootNetwork(studyEntity, rootNetworkInfos);
             rootNetworkService.deleteRootNetworkRequest(rootNetworkCreationRequestEntityOpt.get());
             //update study entity to multi root
-            if (studyEntity.getRootNetworks().size() > 1) {
+            if (studyEntity.isMonoRoot()) {
                 studyEntity.setMonoRoot(false);
+                invalidatePreviousRootNetworkNodeTree(studyEntity);
             }
         } else {
             rootNetworkService.deleteRootNetworks(studyEntity, List.of(rootNetworkInfos));
@@ -368,9 +377,35 @@ public class StudyService {
         notificationService.emitRootNetworksUpdated(studyUuid);
     }
 
+    /**
+     * The nodes built while the study was mono root network ignored the applicabilities, so they have to be built
+     * again now that these are taken into account.
+     */
+    private void invalidatePreviousRootNetworkNodeTree(StudyEntity studyEntity) {
+        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyEntity.getId());
+        invalidateNodeTree(studyEntity.getId(), rootNodeUuid, studyEntity.getFirstRootNetwork().getId());
+    }
+
     private void updateRootNetworkBasicInfos(UUID studyUuid, RootNetworkInfos rootNetworkInfos, boolean updateCase) {
+        String previousTag = rootNetworkService.getRootNetworkTag(rootNetworkInfos.getId());
         rootNetworkService.updateRootNetwork(rootNetworkInfos, updateCase);
+        // the entity says what the tag really became, unlike the DTO
+        String newTag = rootNetworkService.getRootNetworkTag(rootNetworkInfos.getId());
+        renameRootNetworkTagInApplicabilities(studyUuid, previousTag, newTag);
         postRootNetworkUpdate(studyUuid, rootNetworkInfos.getId(), updateCase);
+    }
+
+    private void renameRootNetworkTagInApplicabilities(UUID studyUuid, String previousTag, String newTag) {
+        if (previousTag == null || previousTag.equals(newTag)) {
+            return;
+        }
+        networkModificationService.renameRootNetworkTag(getStudyModificationGroupUuids(studyUuid), previousTag, newTag);
+    }
+
+    private List<UUID> getStudyModificationGroupUuids(UUID studyUuid) {
+        return networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid).stream()
+                .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
+                .toList();
     }
 
     @Transactional
@@ -434,6 +469,11 @@ public class StudyService {
      */
     public void recreateNetwork(String userId, UUID studyUuid, UUID rootNetworkUuid, String caseFormat) {
         RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        if (rootNetwork.getLoadStatus() == RootNetworkLoadStatus.LOADING) {
+            LOGGER.warn("Root network '{}' is already loading, skipping recreateNetwork", rootNetworkUuid);
+            return;
+        }
+        rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADING);
         UUID caseUuid = rootNetwork.getCaseUuid();
         UUID originalCaseUuid = rootNetwork.getOriginalCaseUuid();
         RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(rootNetworkUuid).caseInfos(new CaseInfos(caseUuid, originalCaseUuid, null, caseFormat)).build();
@@ -448,7 +488,6 @@ public class StudyService {
             : importParameters;
 
         persistNetwork(rootNetworkInfos, studyUuid, null, userId, importParametersToUse, CaseImportAction.NETWORK_RECREATION, reportId);
-        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public UUID duplicateStudy(UUID sourceStudyUuid, String userId) {
@@ -594,8 +633,8 @@ public class StudyService {
 
     private void deleteModificationsFromGroup(Pair<UUID, UUID> groupUuidNodeUuid, String userId) {
         // fetch the references data in order to remove those references from directory-server
-        List<ReferenceData> referencesToBeDeleted = networkModificationService.getReferencesFromGroup(groupUuidNodeUuid.getFirst());
-        removeReferences(referencesToBeDeleted, userId, groupUuidNodeUuid.getSecond());
+        List<ModificationReference> referencesToBeDeleted = networkModificationService.getModificationReferences(groupUuidNodeUuid.getFirst());
+        removeReferences(referencesToBeDeleted, userId);
 
         networkModificationService.deleteModifications(groupUuidNodeUuid.getFirst());
     }
@@ -631,6 +670,7 @@ public class StudyService {
         RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
 
         rootNetworkService.updateNetwork(rootNetworkEntity, networkInfos);
+        rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADED);
 
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
@@ -1335,7 +1375,12 @@ public class StudyService {
                     networkModificationTreeService.invalidateNodeTree(studyUuid, rootNodeUuid, rnId, invalidateNodeTreeParameters, skipDeleteVariants)))
                 .toList();
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
-        notificationService.emitElementUpdated(studyUuid, userId);
+        boolean noneMatchUnloading = rootNetworkIds.stream()
+                .map(rnId -> rootNetworkService.getRootNetwork(rnId).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")))
+                .noneMatch(rootNetwork -> rootNetwork.getLoadStatus() == RootNetworkLoadStatus.UNLOADING);
+        if (noneMatchUnloading) {
+            notificationService.emitElementUpdated(studyUuid, userId);
+        }
     }
 
     public void stopBuild(@NonNull UUID nodeUuid, UUID rootNetworkUuid) {
@@ -1500,31 +1545,27 @@ public class StudyService {
 
     @Transactional
     public void deleteNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
+        assertIsStudyExist(studyUuid);
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
-        StudyEntity studyEntity = getStudy(studyUuid);
         try {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
 
-            List<ReferenceData> referencesToBeDeleted = networkModificationService.getReferences(modificationsUuids);
+            List<ModificationReference> referencesToBeDeleted = networkModificationService.getModificationReferences(modificationsUuids);
             networkModificationService.deleteModifications(groupId, modificationsUuids);
             // if there are unstashed references modifications in the deleted netmods, those references have to be removed from directory server
-            removeReferences(referencesToBeDeleted, userId, nodeUuid);
-
-            // for each root network, remove modifications from excluded ones
-            studyEntity.getRootNetworks().forEach(rootNetworkEntity -> rootNetworkNodeInfoService.updateModificationsToExclude(nodeUuid, rootNetworkEntity.getId(), new HashSet<>(modificationsUuids),
-                    true));
+            removeReferences(referencesToBeDeleted, userId);
         } finally {
             notificationService.emitModificationsDeleted(studyUuid, nodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    private void removeReferences(List<ReferenceData> references, String userId, UUID nodeUuid) {
+    private void removeReferences(List<ModificationReference> references, String userId) {
         references.forEach(reference ->
-                directoryService.removeReference(reference.containerId() != null ? reference.containerId() : nodeUuid, userId, reference.referenceId())
+                directoryService.removeElementReference(reference.referencedId(), reference.modificationUuid(), userId)
         );
     }
 
@@ -1562,17 +1603,33 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
+    /**
+     * A shared modification holds the applicabilities used by every study referencing it: only a user allowed to write
+     * on the shared element may change them.
+     */
+    private void assertCanUpdateSharedModifications(List<UUID> modificationsUuids, String userId) {
+        List<UUID> sharedModificationsUuids = networkModificationService.getModificationReferences(modificationsUuids).stream()
+            .map(ModificationReference::referencedId)
+            .distinct()
+            .toList();
+        if (!sharedModificationsUuids.isEmpty()) {
+            directoryService.checkPermission(sharedModificationsUuids, null, userId, PermissionType.WRITE, false);
+        }
+    }
+
     @Transactional
-    public void updateNetworkModificationsActivationInRootNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Set<UUID> modificationsUuids, String userId, boolean activated) {
+    public void updateNetworkModificationsApplicabilityInRootNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Set<UUID> modificationsUuids, String userId, boolean applicable) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         networkModificationService.verifyModifications(networkModificationTreeService.getModificationGroupUuid(nodeUuid), modificationsUuids);
         try {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
             }
-            Set<UUID> modificationsToExclude = new HashSet<>(modificationsUuids);
-            modificationsToExclude.addAll(networkModificationService.expandToLeafUuids(new ArrayList<>(modificationsUuids)));
-            rootNetworkNodeInfoService.updateModificationsToExclude(nodeUuid, rootNetworkUuid, modificationsToExclude, activated);
+            // the applicability of a reference modification is held by its parent (the shared modification itself),
+            // so changing it requires the right to write on it
+            assertCanUpdateSharedModifications(new ArrayList<>(modificationsUuids), userId);
+            networkModificationService.updateRootNetworkApplicability(new ArrayList<>(modificationsUuids),
+                    rootNetworkService.getRootNetworkTag(rootNetworkUuid), applicable);
             invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid);
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, nodeUuid, Optional.of(rootNetworkUuid), childrenUuids);
@@ -1702,7 +1759,10 @@ public class StudyService {
         // reindex root network for study in elasticsearch
         studyInfosService.recreateStudyInfos(studyInfos);
         RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-
+        if (rootNetwork.getLoadStatus() != RootNetworkLoadStatus.LOADED) {
+            LOGGER.info("Root network '{}' is not loaded, skipping reindexation", rootNetworkUuid);
+            return;
+        }
         // Reset indexation status
         updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.INDEXING_ONGOING);
         try {
@@ -1748,9 +1808,9 @@ public class StudyService {
     @Transactional
     public void moveNetworkModifications(
             @NonNull UUID studyUuid,
+            UUID sourceNodeUuid,
             @NonNull UUID targetNodeUuid,
             @NonNull List<ModificationMoveOrCopyInfos> modificationInfos,
-            UUID sourceNodeUuid,
             ModificationContainerInfos targetModificationContainer,
             UUID beforeUuid,
             boolean isTargetInDifferentNodeTree,
@@ -1776,15 +1836,14 @@ public class StudyService {
                     .map(rn -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rn.getId(), targetNodeUuid, rn.getNetworkUuid()))
                     .toList();
             List<UUID> allModificationUuids = modificationInfos.stream().map(ModificationMoveOrCopyInfos::modificationUuid).toList();
-            List<ReferenceData> allReferencesToMove = networkModificationService.getReferences(allModificationUuids);
+            List<ModificationReference> allReferencesToMove = networkModificationService.getModificationReferences(allModificationUuids);
 
             for (Map.Entry<ModificationContainerInfos, List<UUID>> entry : modificationUuidsBySource.entrySet()) {
                 ModificationContainerInfos source = entry.getKey();
                 List<UUID> modificationUuidsToMove = entry.getValue();
                 UUID originNodeUuid = originNodeBySource.get(source);
-                boolean isTargetDifferentNode = !targetNodeUuid.equals(originNodeUuid);
                 Set<UUID> modificationUuidsToMoveSet = new HashSet<>(modificationUuidsToMove);
-                List<ReferenceData> referencesToMove = allReferencesToMove.stream()
+                List<ModificationReference> referencesToMove = allReferencesToMove.stream()
                         .filter(reference -> modificationUuidsToMoveSet.contains(reference.modificationUuid()))
                         .toList();
 
@@ -1796,13 +1855,8 @@ public class StudyService {
                 if (result != null && isTargetInDifferentNodeTree) {
                     emitNetworkModificationImpactsForAllRootNetworks(result.modificationResults(), studyEntity, targetNodeUuid);
                 }
-
-                if (result != null && originNodeUuid != null) {
-                    Set<UUID> allMovedUuids = networkModificationService.expandToLeafUuids(result.modificationUuids());
-                    rootNetworkNodeInfoService.moveModificationsToExclude(originNodeUuid, targetNodeUuid, new ArrayList<>(allMovedUuids));
-                }
-
-                updateSharedCompositeReferencesForMove(result, source, resolvedTarget, referencesToMove, userId, originNodeUuid, targetNodeUuid, isTargetDifferentNode);
+                boolean isSameNode = targetNodeUuid.equals(originNodeUuid) || originNodeUuid == null;
+                moveElementReferences(source, resolvedTarget, referencesToMove, userId, studyUuid, targetNodeUuid, isSameNode);
             }
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, targetNodeUuid, targetChildrenUuids);
@@ -1820,44 +1874,35 @@ public class StudyService {
      *   since a composite's own identity - not the node it happens to be attached to - is what the reference tracks)
      * - moved to a different node (from a node-level group): the existing reference is repointed, not duplicated
      */
-    private void updateSharedCompositeReferencesForMove(NetworkModificationsResult result, ModificationContainerInfos source, ModificationContainerInfos target,
-                                                        List<ReferenceData> referencesToMove, String userId,
-                                                        UUID originNodeUuid, UUID targetNodeUuid, boolean isTargetDifferentNode) {
-        if (referencesToMove.isEmpty()) {
+    private void moveElementReferences(ModificationContainerInfos containerSource, ModificationContainerInfos containerTarget,
+                                       List<ModificationReference> modificationReferences,
+                                       String userId, UUID studyUuid,
+                                       UUID targetNodeUuid, boolean isSameNode) {
+        if (modificationReferences.isEmpty()) {
             return;
         }
-        if (source.type() == ModificationContainerType.GROUP && target.type() == ModificationContainerType.COMPOSITE) {
-            updateReferenceWhenMoveModification(referencesToMove, userId, originNodeUuid, target.id(), ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION);
-        }
-        if (target.type() == ModificationContainerType.GROUP && source.type() == ModificationContainerType.COMPOSITE) {
-            updateReferenceWhenMoveModification(referencesToMove, userId, source.id(), targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE);
-        }
-        if (source.type() == ModificationContainerType.COMPOSITE && target.type() == ModificationContainerType.COMPOSITE
-                && !source.id().equals(target.id())) {
-            updateReferenceWhenMoveModification(referencesToMove, userId, source.id(), target.id(), ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION);
-        }
-        // shared composites: the moved occurrence's node reference is updated, not duplicated
-        if (result != null && isTargetDifferentNode && originNodeUuid != null) {
-            updateReferenceWhenMoveModification(referencesToMove, userId, originNodeUuid, targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE);
+
+        if (isSameNode) {
+            if (containerTarget.isComposite() && containerSource.isGroup()) {
+                // Node -> composite
+                updateElementsReferences(modificationReferences, targetNodeUuid, containerTarget.id(), ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION, userId);
+            } else if (containerTarget.isGroup() && containerSource.isComposite()) {
+                // Composite -> node
+                updateElementsReferences(modificationReferences, studyUuid, targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE, userId);
+            } else if (containerTarget.isComposite() && containerSource.isComposite() && !containerSource.id().equals(containerTarget.id())) {
+                // Composite -> composite
+                updateElementsReferences(modificationReferences, targetNodeUuid, containerTarget.id(), ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION, userId);
+            }
+        } else {
+            // Node  -> Node
+            updateElementsReferences(modificationReferences, studyUuid, targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE, userId);
         }
     }
 
-    /**
-     * updates, for each moved shared composite, the existing node-reference so that it points
-     * to the target
-     */
-    private void updateReferenceWhenMoveModification(List<ReferenceData> referenceTargets, String userId, UUID originReferenceUuid,
-                                                     UUID targetReferenceUuid, ReferenceAttributes.ReferenceType targetReferenceType) {
-        List<UUID> referenceModificationsUuids = referenceTargets.stream()
-                .map(ReferenceData::referenceId)
-                .collect(Collectors.toList());
-        directoryService.updateReferencesToSharedComposites(
-                referenceModificationsUuids,
-                userId,
-                originReferenceUuid,
-                targetReferenceUuid,
-                targetReferenceType
-        );
+    private void updateElementsReferences(List<ModificationReference> modificationReferences, UUID rootContainerId, UUID containerId,
+                                          ReferenceAttributes.ReferenceType targetReferenceType, String userId) {
+        modificationReferences.forEach(ref -> directoryService.updateElementReference(ref.referencedId(),
+                ReferenceAttributes.createReferenceAttributes(ref.modificationUuid(), rootContainerId, containerId, targetReferenceType), userId));
     }
 
     private Map<ModificationContainerInfos, List<UUID>> resolveAndGroupBySource(List<ModificationMoveOrCopyInfos> modificationInfos, UUID fallbackSourceNodeUuid) {
@@ -1915,79 +1960,28 @@ public class StudyService {
     public void duplicateNetworkModifications(
             UUID targetStudyUuid,
             UUID targetNodeUuid,
-            UUID originNodeUuid,
             List<UUID> modificationsUuids,
             String userId) {
         duplicateModificationsOrInsertComposites(targetStudyUuid, targetNodeUuid,
                 (groupUuid, modificationApplicationContexts) -> {
-                    // fetched BEFORE the duplication. getReferences() only tells us whether a given modification IS
-                    // itself a modification-reference - it does not descend into composites - so a reference nested
-                    // inside a copied composite (e.g. X's child R, pointing at shared element S) is invisible unless
-                    // its own uuid is included in the lookup; hence querying modificationsUuids' children too.
-                    List<UUID> originalChildrenUuids = networkModificationService.findAllChildrenUuids(modificationsUuids);
-                    List<UUID> allOriginalUuids = new ArrayList<>(modificationsUuids);
-                    allOriginalUuids.addAll(originalChildrenUuids);
-                    List<ReferenceData> referenceTargets = networkModificationService.getReferences(allOriginalUuids);
-
-                    NetworkModificationsResult networkModificationResults = networkModificationService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts));
-                    Map<UUID, UUID> mappingModificationsUuids = buildModificationsUuidMapping(modificationsUuids, originalChildrenUuids, networkModificationResults);
-                    copyModificationsToExclude(originNodeUuid, targetNodeUuid, mappingModificationsUuids);
-                    createReferencesToSharedComposites(referenceTargets, modificationsUuids, mappingModificationsUuids, userId, targetNodeUuid);
-                    return networkModificationResults;
+                    NetworkModificationsResult result = networkModificationService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts));
+                    createElementsReferences(networkModificationService.getChildrenModificationsReferences(result.modificationUuids()), targetStudyUuid, targetNodeUuid, userId);
+                    return result;
                 },
                 userId);
     }
 
-    /**
-     * @return old modification uuid -> new (copied) modification uuid, for every modification duplicated by
-     * {@code networkModificationResults} - root-level ones as well as those nested in a duplicated composite
-     */
-    private Map<UUID, UUID> buildModificationsUuidMapping(List<UUID> copiedUuids, List<UUID> copiedChildrenUuids, NetworkModificationsResult networkModificationResults) {
-        Map<UUID, UUID> mappingModificationsUuids = new HashMap<>();
-        List<UUID> copyUuids = networkModificationResults.modificationUuids();
-
-        // Map root-level modifications
-        for (int i = 0; i < copiedUuids.size(); i++) {
-            mappingModificationsUuids.put(copiedUuids.get(i), copyUuids.get(i));
-        }
-
-        List<UUID> copyChildren = networkModificationService.findAllChildrenUuids(copyUuids);
-        for (int i = 0; i < copiedChildrenUuids.size(); i++) {
-            mappingModificationsUuids.put(copiedChildrenUuids.get(i), copyChildren.get(i));
-        }
-
-        return mappingModificationsUuids;
-    }
-
-    private void copyModificationsToExclude(UUID originNodeUuid, UUID targetNodeUuid, Map<UUID, UUID> mappingModificationsUuids) {
-        rootNetworkNodeInfoService.copyModificationsToExcludeFromTags(originNodeUuid, targetNodeUuid, mappingModificationsUuids);
-    }
-
-    /**
-     * one new reference is created per pasted modification-reference occurrence: even if several of them target the
-     * same shared composite, each occurrence must get its own reference row in directory-server (symmetric with
-     * {@link #removeReferences}, which likewise issues one removal per occurrence on delete) - so this must NOT be
-     * deduplicated by referenceId.
-     */
-    private void createReferencesToSharedComposites(List<ReferenceData> references, List<UUID> modificationsUuids,
-                                                    Map<UUID, UUID> mappingModificationsUuids, String userId, UUID targetNodeUuid) {
-        Set<UUID> requestedUuids = new HashSet<>(modificationsUuids);
-
-        List<UUID> directlyRequestedReferenceIds = references.stream()
-                .filter(reference -> requestedUuids.contains(reference.modificationUuid()))
-                .map(ReferenceData::referenceId)
-                .toList();
-        if (!directlyRequestedReferenceIds.isEmpty()) {
-            directoryService.createsReferencesToSharedComposites(directlyRequestedReferenceIds, userId, targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE);
-        }
-
-        Map<UUID, List<UUID>> nestedReferenceIdsByNewComposite = references.stream()
-                .filter(reference -> !requestedUuids.contains(reference.modificationUuid()))
-                .collect(Collectors.groupingBy(
-                        reference -> mappingModificationsUuids.get(reference.containerId()),
-                        Collectors.mapping(ReferenceData::referenceId, Collectors.toList())));
-        nestedReferenceIdsByNewComposite.forEach((newCompositeUuid, referenceIds) ->
-                directoryService.createsReferencesToSharedComposites(referenceIds, userId, newCompositeUuid, ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION));
+    private void createElementsReferences(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, String userId) {
+        references.forEach(ref -> {
+            boolean insideComposite = ref.containerId() != null;
+            ReferenceAttributes referenceAttributes = ReferenceAttributes.createReferenceAttributes(
+                    ref.modificationUuid(),
+                    insideComposite ? nodeUuid : studyUuid,
+                    insideComposite ? ref.containerId() : nodeUuid,
+                    insideComposite ? ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION
+                            : ReferenceAttributes.ReferenceType.STUDY_NODE);
+            directoryService.createElementReference(ref.referencedId(), referenceAttributes, userId);
+        });
     }
 
     @Transactional
@@ -2008,6 +2002,44 @@ public class StudyService {
         return newCompositeUuid;
     }
 
+    /**
+     * Moves a composite modification of a node out of the study : it is stored as an element in the directory server,
+     * and replaced in the node by a reference to this now shared composite modification.
+     */
+    @Transactional(readOnly = true)
+    public void shareCompositeNetworkModification(
+        UUID studyUuid,
+        UUID nodeUuid,
+        UUID modificationUuid,
+        String name,
+        String description,
+        UUID parentDirectoryUuid,
+        String userId) {
+        // checks we can write in the target directory before touching anything
+        directoryService.checkPermission(List.of(), parentDirectoryUuid, userId, PermissionType.WRITE, false);
+        if (directoryService.elementExists(parentDirectoryUuid, name, DirectoryService.MODIFICATION)) {
+            throw new StudyException(ELEMENT_ALREADY_EXISTS, "composite modification name " + name + " already exists in directory", Map.of("fileName", name));
+        }
+
+        UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+        List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
+        try {
+            // the applied modifications are left unchanged : the node does not need to be rebuilt
+            networkModificationService.extractCompositeModificationToShare(groupUuid, modificationUuid, name);
+            // the composite modification keeps its uuid when extracted, so it is shared under that same uuid
+            directoryService.createElement(parentDirectoryUuid, description, modificationUuid, name, DirectoryService.MODIFICATION, userId);
+            // extraction replaced the local composite by a new reference-modification pointing at modificationUuid
+            // (the only such reference, since that composite was local until now): register it on the shared element
+            List<ModificationReference> newReference = networkModificationService.getModificationReferences(groupUuid).stream()
+                    .filter(ref -> modificationUuid.equals(ref.referencedId()))
+                    .toList();
+            createElementsReferences(newReference, studyUuid, nodeUuid, userId);
+        } finally {
+            notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
+        }
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
     @Transactional
     public void insertCompositeNetworkModifications(
         UUID targetStudyUuid,
@@ -2015,22 +2047,30 @@ public class StudyService {
         List<CompositeInfos> compositesInfos,
         String userId,
         StudyConstants.CompositeModificationsActionType action) {
-        // is some of the inserted modifications are shared, references have to be created in directory server
-        List<UUID> sharedCompositeUuids = compositesInfos.stream()
-                .filter(CompositeInfos::isShared)
-                .map(CompositeInfos::id)
-                .toList();
-        if (action == StudyConstants.CompositeModificationsActionType.INSERT && !sharedCompositeUuids.isEmpty()) {
-            directoryService.createsReferencesToSharedComposites(sharedCompositeUuids, userId, targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE);
-        }
-
         duplicateModificationsOrInsertComposites(
                 targetStudyUuid,
                 targetNodeUuid,
-                (groupUuid, modificationApplicationContexts) ->
-                        networkModificationService.insertCompositeModifications(groupUuid, action, Pair.of(compositesInfos, modificationApplicationContexts)),
+                (groupUuid, modificationApplicationContexts) -> {
+                    NetworkModificationsResult result = networkModificationService.insertCompositeModifications(groupUuid, action, Pair.of(compositesInfos, modificationApplicationContexts));
+                    if (action == StudyConstants.CompositeModificationsActionType.INSERT) {
+                        createCompositesReferences(compositesInfos, result.modificationUuids(), targetStudyUuid, targetNodeUuid, userId);
+                    }
+                    return result;
+                },
                 userId
         );
+    }
+
+    private void createCompositesReferences(List<CompositeInfos> compositesInfos, List<UUID> insertedModificationUuids,
+                                            UUID studyUuid, UUID nodeUuid, String userId) {
+        for (int i = 0; i < compositesInfos.size(); i++) {
+            CompositeInfos composite = compositesInfos.get(i);
+            if (!composite.isShared()) {
+                continue;
+            }
+            directoryService.createElementReference(composite.id(), ReferenceAttributes.createReferenceAttributes(
+                    insertedModificationUuids.get(i), studyUuid, nodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE), userId);
+        }
     }
 
     private void duplicateModificationsOrInsertComposites(
@@ -2432,12 +2472,12 @@ public class StudyService {
             // - after creation, we deactivate the new modification for all other root networks
             List<RootNetworkEntity> studyRootNetworkEntities = rootNetworkService.getStudyRootNetworks(studyUuid);
             List<ModificationApplicationContext> modificationApplicationContexts = new ArrayList<>();
-            List<UUID> rootNetworkToDeactivateUuids = new ArrayList<>();
+            List<String> rootNetworkTagsToDeactivate = new ArrayList<>();
             studyRootNetworkEntities.forEach(rootNetworkEntity -> {
                 if (rootNetworkUuid.equals(rootNetworkEntity.getId())) {
                     modificationApplicationContexts.add(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), nodeUuid, rootNetworkEntity.getNetworkUuid()));
                 } else {
-                    rootNetworkToDeactivateUuids.add(rootNetworkEntity.getId());
+                    rootNetworkTagsToDeactivate.add(rootNetworkEntity.getTag());
                 }
             });
             // duplicate the modification created by voltageInit server into the current node
@@ -2446,9 +2486,9 @@ public class StudyService {
 
             // We expect a single voltageInit modification in the result list
             if (networkModificationResults != null && networkModificationResults.modificationUuids().size() == 1) {
-                for (UUID otherRootNetwork : rootNetworkToDeactivateUuids) {
-                    rootNetworkNodeInfoService.updateModificationsToExclude(nodeUuid, otherRootNetwork, Set.of(networkModificationResults.modificationUuids().getFirst()), false);
-                }
+                List<UUID> createdModificationUuids = List.of(networkModificationResults.modificationUuids().getFirst());
+                rootNetworkTagsToDeactivate.forEach(rootNetworkTag ->
+                    networkModificationService.updateRootNetworkApplicability(createdModificationUuids, rootNetworkTag, false));
                 // The modification was applied only on rootNetworkUuid, so the single result must be attributed to it
                 networkModificationResults.modificationResults().getFirst()
                     .ifPresent(result -> emitNetworkModificationImpacts(studyUuid, nodeUuid, rootNetworkUuid, result));

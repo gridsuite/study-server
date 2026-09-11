@@ -48,6 +48,11 @@ public class RootNetworkEntity {
     @Builder.Default
     private RootNetworkIndexationStatus indexationStatus = RootNetworkIndexationStatus.NOT_INDEXED;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "load_status")
+    @Builder.Default
+    private RootNetworkLoadStatus loadStatus = RootNetworkLoadStatus.LOADED;
+
     @OneToMany(orphanRemoval = true, mappedBy = "rootNetwork", cascade = CascadeType.ALL)
     @Builder.Default
     private List<RootNetworkNodeInfoEntity> rootNetworkNodeInfos = new ArrayList<>();
@@ -82,6 +87,10 @@ public class RootNetworkEntity {
 
     @Column(name = "tag", nullable = false)
     private String tag;
+
+    public String getApplicabilityTag() {
+        return study.isMonoRoot() ? null : tag;
+    }
 
     public void addRootNetworkNodeInfo(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
         rootNetworkNodeInfoEntity.setRootNetwork(this);

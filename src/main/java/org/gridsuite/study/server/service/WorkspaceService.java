@@ -102,17 +102,8 @@ public class WorkspaceService {
             panelId,
             nadConfigData
         );
-        notificationService.emitWorkspaceNadConfigUpdated(studyUuid, workspaceId, panelId, configUuid, clientId);
+        notificationService.emitWorkspaceNadConfigUpdated(studyUuid, workspaceId, panelId, clientId);
         return configUuid;
     }
 
-    @Transactional
-    public void deleteNadConfig(UUID studyUuid, UUID workspaceId, UUID panelId) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        studyConfigService.deleteWorkspacePanelNadConfig(
-            studyEntity.getWorkspacesConfigUuid(),
-            workspaceId,
-            panelId
-        );
-    }
 }
