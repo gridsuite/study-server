@@ -202,6 +202,15 @@ public class ComputationServerStubs {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/" + prefix + "parameters/" + paramUuid, Map.of());
     }
 
+    public void stubGetParametersAny(String responseBody) {
+        wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/parameters/.*"))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody)));
+    }
+
+    public void verifyParametersGetAny(int nbRequests) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/parameters/.*", true, Map.of(), nbRequests);
+    }
+
     public void stubCreateParameter(String responseBody) {
         wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/v1/parameters"))
                 .atPriority(10)

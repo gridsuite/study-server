@@ -6,9 +6,12 @@
  */
 package org.gridsuite.study.server.service.common;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.dto.computation.ComputationParameterUUIDs;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
@@ -25,10 +28,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Function;
+
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.EXPORT_STUDY_ERROR;
 
 /**
  * @author Abdelsalem HEDHILI <abdelsalem.hedhili at rte-france.com>
@@ -40,15 +49,17 @@ public class ComputationParametersService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ComputationParametersService.class);
 
     private final UserAdminService userAdminService;
+    private final ObjectMapper objectMapper;
     private final List<ComputationParametersDefinition> computationParametersDefinitions;
 
-    // this is useful to avoid repetitive calls when doing operation on all computation types (duplicate, delete)
+    // this is useful to avoid repetitive calls when doing operation on all computation types (duplicate, delete, export)
     private record ComputationParametersDefinition(
             ComputationType type,
             Function<StudyEntity, UUID> studyParameterGetter,
             Function<UserProfileInfos, UUID> profileParameterGetter,
             ComputationParameters service,
-            BiConsumer<ComputationParameterUUIDs.ComputationParameterUUIDsBuilder, UUID> parametersSetter
+            BiConsumer<ComputationParameterUUIDs.ComputationParameterUUIDsBuilder, UUID> parametersSetter,
+            BiFunction<UUID, String, ?> parametersFetcher
     ) {
     }
 
@@ -62,70 +73,82 @@ public class ComputationParametersService {
                                         DynamicMarginCalculationRestService dynamicMarginCalculationRestService,
                                         StateEstimationRestService stateEstimationService,
                                         PccMinRestService pccMinService,
-                                        UserAdminService userAdminService) {
+                                        UserAdminService userAdminService,
+                                        ObjectMapper objectMapper) {
 
         this.userAdminService = userAdminService;
+        this.objectMapper = objectMapper;
         this.computationParametersDefinitions = List.of(
                 new ComputationParametersDefinition(
                         ComputationType.LOAD_FLOW,
                         StudyEntity::getLoadFlowParametersUuid,
                         UserProfileInfos::getLoadFlowParameterId,
                     loadFlowRestService,
-                        ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::loadFlowParametersUuid),
+                        ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::loadFlowParametersUuid,
+                        (uuid, userId) -> loadFlowRestService.getParameters(uuid)),
                 new ComputationParametersDefinition(
                         ComputationType.SHORT_CIRCUIT,
                         StudyEntity::getShortCircuitParametersUuid,
                         UserProfileInfos::getShortcircuitParameterId,
                         shortCircuitService,
-                        ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::shortCircuitParametersUuid),
+                        ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::shortCircuitParametersUuid,
+                        (uuid, userId) -> shortCircuitService.getParameters(uuid)),
                 new ComputationParametersDefinition(
                         ComputationType.DYNAMIC_SIMULATION,
                         StudyEntity::getDynamicSimulationParametersUuid,
                         UserProfileInfos::getDynamicSimulationParameterId,
                         dynamicSimulationRestService,
-                        ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::dynamicSimulationParametersUuid),
+                        ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::dynamicSimulationParametersUuid,
+                        (uuid, userId) -> dynamicSimulationRestService.getParameters(uuid)),
                 new ComputationParametersDefinition(
                         ComputationType.VOLTAGE_INITIALIZATION,
                         StudyEntity::getVoltageInitParametersUuid,
                         UserProfileInfos::getVoltageInitParameterId,
                         voltageInitService,
-                        ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::voltageInitParametersUuid),
+                        ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::voltageInitParametersUuid,
+                        (uuid, userId) -> voltageInitService.getParameters(uuid)),
                 new ComputationParametersDefinition(
                         ComputationType.SECURITY_ANALYSIS,
                         StudyEntity::getSecurityAnalysisParametersUuid,
                         UserProfileInfos::getSecurityAnalysisParameterId,
                         securityAnalysisService,
-                        ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::securityAnalysisParametersUuid),
+                        ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::securityAnalysisParametersUuid,
+                        (uuid, userId) -> securityAnalysisService.getParameters(uuid)),
                 new ComputationParametersDefinition(
                         ComputationType.SENSITIVITY_ANALYSIS,
                         StudyEntity::getSensitivityAnalysisParametersUuid,
                         UserProfileInfos::getSensitivityAnalysisParameterId,
                         sensitivityAnalysisService,
-                        ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::sensitivityAnalysisParametersUuid),
+                        ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::sensitivityAnalysisParametersUuid,
+                        (uuid, userId) -> sensitivityAnalysisService.getParameters(uuid)),
                 new ComputationParametersDefinition(
                         ComputationType.DYNAMIC_SECURITY_ANALYSIS,
                         StudyEntity::getDynamicSecurityAnalysisParametersUuid,
                         UserProfileInfos::getDynamicSecurityAnalysisParameterId,
                         dynamicSecurityAnalysisRestService,
-                        ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::dynamicSecurityAnalysisParametersUuid),
+                        ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::dynamicSecurityAnalysisParametersUuid,
+                        (uuid, userId) -> dynamicSecurityAnalysisRestService.getParameters(uuid)),
                 new ComputationParametersDefinition(
                         ComputationType.DYNAMIC_MARGIN_CALCULATION,
                         StudyEntity::getDynamicMarginCalculationParametersUuid,
                         UserProfileInfos::getDynamicMarginCalculationParameterId,
                         dynamicMarginCalculationRestService,
-                        ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::dynamicMarginCalculationParametersUuid),
+                        ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::dynamicMarginCalculationParametersUuid,
+                        dynamicMarginCalculationRestService::getParameters),
                 new ComputationParametersDefinition(
                         ComputationType.STATE_ESTIMATION,
                         StudyEntity::getStateEstimationParametersUuid,
                         userProfileInfos -> null,
                         stateEstimationService,
-                        ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::stateEstimationParametersUuid),
+                        ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::stateEstimationParametersUuid,
+                        (uuid, userId) -> stateEstimationService.getStateEstimationParameters(uuid)),
                 new ComputationParametersDefinition(
                         ComputationType.PCC_MIN,
                         StudyEntity::getPccMinParametersUuid,
                         UserProfileInfos::getPccMinParameterId,
                         pccMinService,
-                        ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::pccMinParametersUuid)
+                        ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::pccMinParametersUuid,
+                        (uuid, userId) -> pccMinService.getParameters(uuid))
         );
     }
 
@@ -217,6 +240,36 @@ public class ComputationParametersService {
             studyParameterSetter.accept(studyEntity, newParametersUuid);
         } else {
             updateParameters.accept(existingParametersUuid, parameters);
+        }
+    }
+
+    public Map<String, String> exportParameters(StudyEntity studyEntity, String userId) {
+        Map<String, String> parametersByFileName = new LinkedHashMap<>();
+        computationParametersDefinitions.forEach(definition -> {
+            UUID parametersUuid = definition.studyParameterGetter().apply(studyEntity);
+            if (parametersUuid == null) {
+                return;
+            }
+            try {
+                Object parameters = definition.parametersFetcher().apply(parametersUuid, userId);
+                String fileName = toFileName(definition.type());
+                parametersByFileName.put(fileName, parameters instanceof String json ? json : writeAsJson(fileName, parameters));
+            } catch (Exception e) {
+                LOGGER.warn("Failed to fetch {} parameters (uuid={}) for study export", definition.type().getLabel(), parametersUuid, e);
+            }
+        });
+        return parametersByFileName;
+    }
+
+    private static String toFileName(ComputationType type) {
+        return type.name().toLowerCase(Locale.ROOT).replace('_', '-') + ".json";
+    }
+
+    private String writeAsJson(String fileName, Object parameters) {
+        try {
+            return objectMapper.writeValueAsString(parameters);
+        } catch (JsonProcessingException e) {
+            throw new StudyException(EXPORT_STUDY_ERROR, "Failed to serialize computation parameters " + fileName);
         }
     }
 
