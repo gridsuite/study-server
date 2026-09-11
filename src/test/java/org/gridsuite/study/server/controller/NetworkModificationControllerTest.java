@@ -158,4 +158,17 @@ class NetworkModificationControllerTest {
 
         verify(networkModificationService).updateNetworkModificationsMetadata(List.of(firstUuid, secondUuid), metadata);
     }
+
+    @Test
+    void testhasModificationReference() throws Exception {
+        UUID firstUuid = UUID.randomUUID();
+        UUID secondUuid = UUID.randomUUID();
+
+        mockMvc.perform(get(BASE_URL + "/containers/references/exists")
+                        .param("uuids", firstUuid.toString(), secondUuid.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().string("false"));
+        verify(networkModificationService).hasModificationReferences(List.of(firstUuid, secondUuid));
+    }
 }

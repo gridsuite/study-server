@@ -677,6 +677,13 @@ public class NetworkModificationService {
         ).getBody();
     }
 
+    public boolean hasModificationReferences(List<UUID> containerUuids) {
+        String path = UriComponentsBuilder.fromPath("containers/references/exists")
+                .queryParam(UUIDS, containerUuids)
+                .build().toUriString();
+        return Boolean.TRUE.equals(restTemplate.getForObject(getNetworkModificationServerURI(false) + path, Boolean.class));
+    }
+
     /**
      * References among {@code modificationUuids} and among the modifications nested in them: getReferences() does not
      * descend into composites, so a reference sitting inside a copied/inserted composite must be looked up explicitly.
