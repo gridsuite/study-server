@@ -1902,8 +1902,10 @@ public class StudyService {
 
     private void updateElementsReferences(List<ModificationReference> modificationReferences, UUID rootContainerId, UUID containerId,
                                           ReferenceAttributes.ReferenceType targetReferenceType, String userId) {
-        modificationReferences.forEach(ref -> directoryService.updateElementReference(ref.referencedId(),
-                ReferenceAttributes.createReferenceAttributes(ref.modificationUuid(), rootContainerId, containerId, targetReferenceType), userId));
+        modificationReferences.forEach(ref -> directoryService.updateElementReference(
+                ref.referencedId(),
+                ReferenceAttributes.createReferenceAttributes(ref.modificationUuid(), rootContainerId, containerId, targetReferenceType), userId)
+        );
     }
 
     private Map<ModificationContainerInfos, List<UUID>> resolveAndGroupBySource(List<ModificationMoveOrCopyInfos> modificationInfos, UUID fallbackSourceNodeUuid) {
@@ -1995,7 +1997,15 @@ public class StudyService {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
         try {
             checkStudyContainsNode(targetStudyUuid, targetNodeUuid);
+            List<ModificationReference> referenceMods = networkModificationService.getModificationReferences(modificationsUuids);
             newCompositeUuid = networkModificationService.assembleModificationsIntoComposite(modificationsUuids);
+            // if some of the assembled modifications are shared, their container is now the newly created composite
+            updateElementsReferences(
+                    referenceMods,
+                    targetNodeUuid,
+                    newCompositeUuid,
+                    ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION,
+                    userId);
         } finally {
             notificationService.emitModificationsUpdated(targetStudyUuid, targetNodeUuid, childrenUuids);
         }
