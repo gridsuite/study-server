@@ -617,7 +617,7 @@ public class NetworkModificationService {
         return json;
     }
 
-    public void deleteStashedModificationsGroups(List<UUID> groupUuids) {
+    public void deleteStashedModificationsFromGroups(List<UUID> groupUuids) {
         Objects.requireNonNull(groupUuids);
         if (groupUuids.isEmpty()) {
             return;

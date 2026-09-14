@@ -495,10 +495,10 @@ public class NetworkModificationTreeService {
         // remove stashed modification on not stashed nodes
         List<NetworkModificationNodeInfoEntity> networkModificationNodeInfos = networkModificationNodeInfoRepository
                 .findAllById(notStashedNodes.stream().map(NodeEntity::getIdNode).toList());
-        List<UUID> stashedModificationGroupUuids = networkModificationNodeInfos.stream()
+        List<UUID> notStashedModificationGroupUuids = networkModificationNodeInfos.stream()
                 .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
                 .toList();
-        networkModificationService.deleteStashedModificationsGroups(stashedModificationGroupUuids);
+        networkModificationService.deleteStashedModificationsFromGroups(notStashedModificationGroupUuids);
 
         // remove modification on stashed nodes
         List<NetworkModificationNodeInfoEntity> networkModificationNodeInfosToDelete = networkModificationNodeInfoRepository

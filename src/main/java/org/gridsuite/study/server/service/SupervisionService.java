@@ -405,7 +405,7 @@ public class SupervisionService {
         rootNetworkService.getStudyRootNetworkIds(studyUuid).forEach(rnId -> {
             try {
                 rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADING);
-                // remove all stashed nodes and network modifications
+                // remove all stashed nodes and stashed network modifications
                 networkModificationTreeService.deleteAllStashedElements(studyUuid);
                 studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER, false);
                 rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADED);

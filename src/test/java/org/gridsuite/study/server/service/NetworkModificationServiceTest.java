@@ -149,7 +149,7 @@ class NetworkModificationServiceTest {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        networkModificationService.deleteStashedModificationsGroups(List.of(firstUuid, secondUuid));
+        networkModificationService.deleteStashedModificationsFromGroups(List.of(firstUuid, secondUuid));
         HttpEntity<String> httpEntity = new HttpEntity<>("[\"" + firstUuid + "\",\"" + secondUuid + "\"]", headers);
         verify(restTemplate).exchange(expectedUrl, HttpMethod.DELETE, httpEntity, new ParameterizedTypeReference<Map<UUID, UUID>>() { });
     }
