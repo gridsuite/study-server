@@ -11,6 +11,7 @@ import org.gridsuite.study.server.controller.loadflow.LoadFlowController;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.InvalidateNodeInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
+import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
@@ -137,6 +138,26 @@ class LoadFLowUnitTest {
         verify(loadFlowService, times(1)).createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, false);
         verify(loadFlowService, times(1)).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId);
         verify(studyService, times(1)).assertCanRunOnConstructionNode(eq(studyUuid), eq(nodeUuid), any(), any());
+    }
+
+    @Test
+    void testSendLoadflowRequestStartsQuotaAndEmitsQuotaChange() {
+        StudyEntity studyEntity = new StudyEntity();
+        studyEntity.setId(studyUuid);
+
+        when(studyRepository.findById(studyUuid)).thenReturn(Optional.of(studyEntity));
+        doReturn(false).when(networkModificationTreeService).isSecurityNode(nodeUuid);
+        doReturn(Map.of()).when(networkModificationTreeService).getComputationReports(nodeUuid, rootNetworkUuid);
+        doReturn(variantId).when(networkModificationTreeService).getVariantId(nodeUuid, rootNetworkUuid);
+        when(rootNetworkService.getNetworkUuid(rootNetworkUuid)).thenReturn(networkUuid);
+        when(loadFlowRestService.runLoadFlow(any(), any(), any(), any(), any(), anyString())).thenReturn(loadflowResultUuid);
+
+        loadFlowService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId);
+
+        verify(userAdminService, times(1)).startOperationWithQuota(userId, QuotaType.LOAD_FLOW, loadflowResultUuid);
+        verify(notificationService, times(1)).emitQuotaChange(userId, QuotaType.LOAD_FLOW);
+        verify(notificationService, times(1)).emitStudyChanged(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), anyString());
+        verify(notificationService, times(1)).emitElementUpdated(studyUuid, userId);
     }
 
     @Test
