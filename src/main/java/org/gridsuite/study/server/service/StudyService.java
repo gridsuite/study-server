@@ -1786,7 +1786,7 @@ public class StudyService {
         reindexRootNetwork(getStudy(studyUuid), rootNetworkUuid);
     }
 
-    private StudyEntity getStudy(UUID studyUuid) {
+    StudyEntity getStudy(UUID studyUuid) {
         return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(NOT_FOUND, STUDY_NOT_FOUND));
     }
 

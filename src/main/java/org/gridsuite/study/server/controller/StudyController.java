@@ -1647,7 +1647,7 @@ public class StudyController {
 
     @PostMapping(value = "/studies/import")
     @Operation(summary = "Create a study and its root networks from a previously exported study archive")
-    @ApiResponse(responseCode = "200", description = "Study import initiated successfully")
+    @ApiResponse(responseCode = "200", description = "Study imported successfully")
     public ResponseEntity<Void> importStudy(@RequestBody TreeExportInfos treeExportInfos,
                                             @RequestHeader(HEADER_USER_ID) String userId) {
         studyImportService.importStudy(treeExportInfos, userId);
