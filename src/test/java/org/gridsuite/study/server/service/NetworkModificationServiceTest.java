@@ -86,15 +86,6 @@ class NetworkModificationServiceTest {
     }
 
     @Test
-    void testContainsSharedModification() {
-        UUID compositeUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-composite-modifications/" + compositeUuid + "/contains-shared-modification";
-        when(restTemplate.getForObject(expectedUrl, Boolean.class)).thenReturn(true);
-
-        assertThat(networkModificationService.containsSharedModification(compositeUuid)).isTrue();
-    }
-
-    @Test
     void testGetNetworkModification() {
         UUID modificationUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid;
@@ -165,5 +156,14 @@ class NetworkModificationServiceTest {
         networkModificationService.deleteRootNetworkTags(List.of(groupUuid), List.of());
 
         verifyNoMoreInteractions(restTemplate);
+    }
+
+    @Test
+    void testHasModificationReferences() {
+        UUID modificationUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/references/exists?uuids=" + modificationUuid;
+
+        networkModificationService.hasModificationReferences(List.of(modificationUuid));
+        verify(restTemplate).getForObject(eq(expectedUrl), eq(Boolean.class));
     }
 }

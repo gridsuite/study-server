@@ -13,8 +13,8 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.BuildInfos;
+import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.ReferenceData;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -112,12 +112,6 @@ public class NetworkModificationService {
             .queryParam("onlyMetadata", onlyMetadata)
             .build().toUriString();
         return restTemplate.getForObject(getNetworkModificationServerURI(false) + path, String.class);
-    }
-
-    public Boolean containsSharedModification(UUID compositeModificationUuid) {
-        String path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + "{uuid}" + DELIMITER + "contains-shared-modification")
-            .buildAndExpand(compositeModificationUuid).toUriString();
-        return restTemplate.getForObject(getNetworkModificationServerURI(false) + path, Boolean.class);
     }
 
     public String getNetworkModification(UUID networkModificationUuid) {
@@ -295,7 +289,7 @@ public class NetworkModificationService {
     /**
      * @return references data of the modificationsUuids found among modificationsUuids
      */
-    public List<ReferenceData> getReferences(List<UUID> modificationsUuids) {
+    public List<ModificationReference> getModificationReferences(List<UUID> modificationsUuids) {
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + "references")
@@ -312,7 +306,7 @@ public class NetworkModificationService {
                 path,
                 HttpMethod.GET,
                 httpEntity,
-                new ParameterizedTypeReference<List<ReferenceData>>() { }
+                new ParameterizedTypeReference<List<ModificationReference>>() { }
         ).getBody();
     }
 
@@ -346,20 +340,20 @@ public class NetworkModificationService {
      * - element uuid in directory server
      * - uuid of its mother composite (null if the modification is at the root level)
      */
-    public List<ReferenceData> getReferencesFromGroup(UUID groupUuid) {
+    public List<ModificationReference> getModificationReferences(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "references");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<List<ReferenceData>> httpEntity = new HttpEntity<>(headers);
+        HttpEntity<List<ModificationReference>> httpEntity = new HttpEntity<>(headers);
 
         return restTemplate.exchange(
                 getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(),
                 HttpMethod.GET,
                 httpEntity,
-                new ParameterizedTypeReference<List<ReferenceData>>() { }
+                new ParameterizedTypeReference<List<ModificationReference>>() { }
         ).getBody();
     }
 
@@ -512,10 +506,10 @@ public class NetworkModificationService {
      * by a reference to it, so that it can be stored as an element in the directory server. The composite modification
      * keeps its own uuid.
      *
-     * @return the container the composite modification has been taken out of, now containing the reference to it :
-     * either the group of the node or a parent composite
+     * @return the reference-modification left in place of the composite modification, either in the group of the node
+     * or in a parent composite
      */
-    public ModificationContainerInfos extractCompositeModificationToShare(@NonNull UUID groupUuid, @NonNull UUID modificationUuid, @NonNull String name) {
+    public ModificationReference extractCompositeModificationToShare(@NonNull UUID groupUuid, @NonNull UUID modificationUuid, @NonNull String name) {
         String path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + "{modificationUuid}" + DELIMITER + "share")
                 .queryParam(QUERY_PARAM_NAME, name)
                 .queryParam(QUERY_PARAM_GROUP_UUID, groupUuid)
@@ -526,7 +520,7 @@ public class NetworkModificationService {
                 getNetworkModificationServerURI(false) + path,
                 HttpMethod.POST,
                 null,
-                ModificationContainerInfos.class
+                ModificationReference.class
         ).getBody();
     }
 
@@ -684,5 +678,24 @@ public class NetworkModificationService {
                 null,
                 new ParameterizedTypeReference<List<UUID>>() { }
         ).getBody();
+    }
+
+    public boolean hasModificationReferences(List<UUID> containerUuids) {
+        String path = UriComponentsBuilder.fromPath("containers/references/exists")
+                .queryParam(UUIDS, containerUuids)
+                .build().toUriString();
+        return Boolean.TRUE.equals(restTemplate.getForObject(getNetworkModificationServerURI(false) + path, Boolean.class));
+    }
+
+    /**
+     * References among {@code modificationUuids} and among the modifications nested in them: getReferences() does not
+     * descend into composites, so a reference sitting inside a copied/inserted composite must be looked up explicitly.
+     */
+    //TODO fetch references for modifications and its children
+    // Tranfertt this in network modification server
+    public List<ModificationReference> getChildrenModificationsReferences(List<UUID> modificationUuids) {
+        List<UUID> uuids = new ArrayList<>(modificationUuids);
+        uuids.addAll(findAllChildrenUuids(modificationUuids));
+        return getModificationReferences(uuids);
     }
 }

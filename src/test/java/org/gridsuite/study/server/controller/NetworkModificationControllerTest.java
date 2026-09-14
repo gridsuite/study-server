@@ -101,18 +101,6 @@ class NetworkModificationControllerTest {
     }
 
     @Test
-    void testContainsSharedModification() throws Exception {
-        UUID compositeUuid = UUID.randomUUID();
-        when(networkModificationService.containsSharedModification(compositeUuid)).thenReturn(true);
-
-        mockMvc.perform(get(BASE_URL + "/network-composite-modifications/{uuid}/contains-shared-modification", compositeUuid))
-            .andExpect(status().isOk())
-            .andExpect(content().string("true"));
-
-        verify(networkModificationService).containsSharedModification(compositeUuid);
-    }
-
-    @Test
     void testGetNetworkModification() throws Exception {
         UUID modificationUuid = UUID.randomUUID();
         when(networkModificationService.getNetworkModification(modificationUuid)).thenReturn(RESPONSE);
@@ -169,5 +157,18 @@ class NetworkModificationControllerTest {
             .andExpect(content().string(""));
 
         verify(networkModificationService).updateNetworkModificationsMetadata(List.of(firstUuid, secondUuid), metadata);
+    }
+
+    @Test
+    void testhasModificationReference() throws Exception {
+        UUID firstUuid = UUID.randomUUID();
+        UUID secondUuid = UUID.randomUUID();
+
+        mockMvc.perform(get(BASE_URL + "/containers/references/exists")
+                        .param("uuids", firstUuid.toString(), secondUuid.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().string("false"));
+        verify(networkModificationService).hasModificationReferences(List.of(firstUuid, secondUuid));
     }
 }

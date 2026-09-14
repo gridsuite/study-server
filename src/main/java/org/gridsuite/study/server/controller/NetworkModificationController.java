@@ -47,11 +47,6 @@ public class NetworkModificationController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationService.getNetworkModificationsFromComposite(compositeModificationUuids, onlyMetadata));
     }
 
-    @GetMapping(value = "/network-composite-modifications/{uuid}/contains-shared-modification")
-    public ResponseEntity<Boolean> containsSharedModification(@PathVariable UUID uuid) {
-        return ResponseEntity.ok().body(networkModificationService.containsSharedModification(uuid));
-    }
-
     @GetMapping(value = "/network-modifications/{uuid}")
     public ResponseEntity<String> getNetworkModification(@PathVariable UUID uuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationService.getNetworkModification(uuid));
@@ -74,5 +69,10 @@ public class NetworkModificationController {
     public ResponseEntity<Void> updateNetworkModificationsMetadata(@RequestParam("uuids") List<UUID> networkModificationUuids, @RequestBody String metadata) {
         networkModificationService.updateNetworkModificationsMetadata(networkModificationUuids, metadata);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/containers/references/exists")
+    public ResponseEntity<Boolean> hasModificationReferences(@RequestParam("uuids") List<UUID> containerUuids) {
+        return ResponseEntity.ok().body(networkModificationService.hasModificationReferences(containerUuids));
     }
 }
