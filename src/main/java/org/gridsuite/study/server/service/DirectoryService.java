@@ -108,12 +108,12 @@ public class DirectoryService {
         return response.getStatusCode() == HttpStatus.OK;
     }
 
-    public void createElementReference(@NonNull UUID elementUuid, @NonNull ReferenceAttributes referenceAttributes, String userId) {
+    public void createElementReferences(@NonNull UUID elementUuid, @NonNull List<ReferenceAttributes> referencesAttributes, String userId) {
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<ReferenceAttributes> requestEntity = new HttpEntity<>(referenceAttributes, headers);
+        HttpEntity<List<ReferenceAttributes>> requestEntity = new HttpEntity<>(referencesAttributes, headers);
 
         var path = UriComponentsBuilder.fromPath(
                 DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")
@@ -124,25 +124,25 @@ public class DirectoryService {
     }
 
     /**
-     * remove reference from the shared modification in directory server
-     * @param referenceUuid uuid of the composite or group where the 'Modification reference' is located
+     * remove references from the shared modification in directory server in a single call
+     * @param referenceUuids uuids of the composites or group where the 'Modification reference' is located
      * @param userId id of the user who caused the unreferencing
      * @param sharedElementUuid uuid of the referenced shared element in the directory-server
      */
-    public void removeElementReference(UUID sharedElementUuid, UUID referenceUuid, String userId) {
-        Objects.requireNonNull(referenceUuid);
+    public void removeElementReferences(UUID sharedElementUuid, List<UUID> referenceUuids, String userId) {
+        Objects.requireNonNull(referenceUuids);
         Objects.requireNonNull(sharedElementUuid);
 
         var path = UriComponentsBuilder.fromPath(
-                        DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references/{referenceUuid}")
-                .buildAndExpand(sharedElementUuid, referenceUuid)
+                        DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")
+                .buildAndExpand(sharedElementUuid)
                 .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<Object> requestEntity = new HttpEntity<>(headers);
+        HttpEntity<List<UUID>> requestEntity = new HttpEntity<>(referenceUuids, headers);
         restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.DELETE, requestEntity, ElementAttributes.class);
     }
 
@@ -175,23 +175,24 @@ public class DirectoryService {
     }
 
     /**
-     * update a modification-reference in directory server so it points to a new container after a move.
-     * the row to update is identified by {@code elementUuid} (the referenced shared element) and
-     * {@code referenceUuid} (the modification-reference itself); {@code referenceAttributes} carries the new location.
+     * update modification-references in directory server in a single call, so they point to a new container after a move.
+     * the rows to update are identified by {@code elementUuid} (the referenced shared element) and, for each entry,
+     * the {@code referenceId} carried by its {@code ReferenceAttributes} (the modification-reference itself); each
+     * {@code ReferenceAttributes} also carries the new location.
      * @param elementUuid uuid of the referenced shared element in the directory-server
-     * @param referenceAttributes new attributes of the modification-reference
-     * @param userId id of the user who moves the reference
+     * @param referencesAttributes new attributes of the modification-references
+     * @param userId id of the user who moves the references
      */
-    public void updateElementReference(@NonNull UUID elementUuid, @NonNull ReferenceAttributes referenceAttributes, String userId) {
+    public void updateElementReferences(@NonNull UUID elementUuid, @NonNull List<ReferenceAttributes> referencesAttributes, String userId) {
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<ReferenceAttributes> requestEntity = new HttpEntity<>(referenceAttributes, headers);
+        HttpEntity<List<ReferenceAttributes>> requestEntity = new HttpEntity<>(referencesAttributes, headers);
 
         var path = UriComponentsBuilder.fromPath(
-                DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references/{referenceUuid}")
-            .buildAndExpand(elementUuid, referenceAttributes.getReferenceId())
+                DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")
+            .buildAndExpand(elementUuid)
             .toUriString();
 
         restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.PUT, requestEntity, Void.class);
