@@ -31,7 +31,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import java.util.List;
 import java.util.UUID;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -132,15 +132,45 @@ class NetworkModificationReferencingInfosUpdateTest {
         studyService.moveNetworkModifications(studyUuid, sourceNodeUuid, targetNodeUuid, List.of(modificationMoveInfos), targetContainer,
             UUID.randomUUID(), isTargetInDifferentNodeTree, userId);
 
-        ArgumentCaptor<ReferenceAttributes> referenceAttributesCaptor = ArgumentCaptor.forClass(ReferenceAttributes.class);
+        ArgumentCaptor<List<ReferenceAttributes>> referencesAttributesCaptor = ArgumentCaptor.forClass(List.class);
         ArgumentCaptor<UUID> sharedModificationUuidCaptor = ArgumentCaptor.forClass(UUID.class);
-        verify(directoryService, times(1)).updateElementReference(sharedModificationUuidCaptor.capture(), referenceAttributesCaptor.capture(), anyString());
+        verify(directoryService, times(1)).updateElementReferences(sharedModificationUuidCaptor.capture(), referencesAttributesCaptor.capture(), anyString());
 
         assertEquals(sharedModificationUuid, sharedModificationUuidCaptor.getValue());
 
-        assertNotNull(referenceAttributesCaptor.getValue());
-        assertThat(referenceAttributesCaptor.getValue())
+        assertNotNull(referencesAttributesCaptor.getValue());
+        assertThat(referencesAttributesCaptor.getValue())
             .usingRecursiveComparison()
-            .isEqualTo(referenceAttributesExpected);
+            .isEqualTo(List.of(referenceAttributesExpected));
+    }
+
+    @Test
+    void testDeleteModificationsGroupedRemoval() {
+        String userId = "userId";
+        UUID modif1Uuid = UUID.randomUUID();
+        UUID modif2Uuid = UUID.randomUUID();
+        UUID otherModifUuid = UUID.randomUUID();
+        UUID otherSharedElementUuid = UUID.randomUUID();
+        List<UUID> modificationsUuids = List.of(modif1Uuid, modif2Uuid, otherModifUuid);
+
+        List<ModificationReference> references = List.of(
+            new ModificationReference(modif1Uuid, sharedModificationUuid, null),
+            new ModificationReference(modif2Uuid, sharedModificationUuid, null),
+            new ModificationReference(otherModifUuid, otherSharedElementUuid, null)
+        );
+        when(networkModificationTreeService.getModificationGroupUuid(node1Uuid)).thenReturn(group1Uuid);
+        when(networkModificationService.getModificationReferences(modificationsUuids)).thenReturn(references);
+
+        studyService.deleteNetworkModifications(studyUuid, node1Uuid, modificationsUuids, userId);
+
+        ArgumentCaptor<UUID> referencedElementCaptor = ArgumentCaptor.forClass(UUID.class);
+        ArgumentCaptor<List<UUID>> referenceUuidsCaptor = ArgumentCaptor.forClass(List.class);
+
+        verify(directoryService, times(2)).removeElementReferences(referencedElementCaptor.capture(), referenceUuidsCaptor.capture(), anyString());
+
+        assertThat(referencedElementCaptor.getAllValues()).containsExactlyInAnyOrder(sharedModificationUuid, otherSharedElementUuid);
+        assertThat(referenceUuidsCaptor.getAllValues())
+            .anySatisfy(batch -> assertThat(batch).containsExactlyInAnyOrder(modif1Uuid, modif2Uuid))
+            .anySatisfy(batch -> assertThat(batch).containsExactly(otherModifUuid));
     }
 }
