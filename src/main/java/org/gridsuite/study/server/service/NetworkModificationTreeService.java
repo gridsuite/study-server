@@ -11,6 +11,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
 import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
@@ -1445,5 +1446,12 @@ public class NetworkModificationTreeService {
     public UUID getNodeUuidByModificationGroup(UUID groupUuid) {
         var node = networkModificationNodeInfoRepository.findByModificationGroupUuidIn(List.of(groupUuid));
         return node.isEmpty() ? null : node.getFirst().getIdNode();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ModificationMoveInfos> resolveNodeGroups(List<ModificationMoveInfos> modificationInfos, UUID originNodeUuid, UUID targetNodeUuid) {
+        UUID originGroupUuid = getModificationGroupUuid(originNodeUuid);
+        UUID targetGroupUuid = originNodeUuid.equals(targetNodeUuid) ? originGroupUuid : getModificationGroupUuid(targetNodeUuid);
+        return modificationInfos.stream().map(info -> info.fillGroupsUuid(originGroupUuid, targetGroupUuid)).toList();
     }
 }

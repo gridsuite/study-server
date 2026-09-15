@@ -24,4 +24,8 @@ public record ModificationContainerInfos(
     public boolean isComposite() {
         return ModificationContainerType.COMPOSITE.equals(type);
     }
+
+    public ModificationContainerInfos fillGroup(UUID groupUuid) {
+        return id != null ? this : new ModificationContainerInfos(groupUuid, ModificationContainerType.GROUP);
+    }
 }

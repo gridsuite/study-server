@@ -6,9 +6,8 @@
  */
 package org.gridsuite.study.server.studycontroller;
 
-import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.controller.StudyController;
-import org.gridsuite.study.server.dto.modification.ModificationMoveOrCopyInfos;
+import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
@@ -25,12 +24,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -88,9 +92,9 @@ class StudyControllerRebuildNodeTest {
 
     @Test
     void testMoveNetworkModifications() {
-        List<ModificationMoveOrCopyInfos> modificationInfos = List.of(new ModificationMoveOrCopyInfos(UUID.randomUUID(), null));
+        List<ModificationMoveInfos> modificationInfos = List.of(new ModificationMoveInfos(UUID.randomUUID(), null, null, null));
         UUID originNodeUuid = UUID.randomUUID();
-        studyController.moveOrCopyModifications(studyUuid, nodeUuid, StudyConstants.ModificationsActionType.MOVE, studyUuid, originNodeUuid, modificationInfos, userId);
+        studyController.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationInfos, userId);
 
         verify(rebuildNodeService, times(1)).moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationInfos, userId);
         verify(studyService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
