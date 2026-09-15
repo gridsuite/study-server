@@ -403,7 +403,11 @@ public class SupervisionService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         // remove all stashed nodes and stashed network modifications
-        networkModificationTreeService.deleteAllStashedElements(studyUuid);
+        try {
+            networkModificationTreeService.deleteAllStashedElements(studyUuid);
+        } catch (Exception e) {
+            LOGGER.error("Error while deleting stashed elements", e);
+        }
         rootNetworkService.getStudyRootNetworkIds(studyUuid).forEach(rnId -> {
             try {
                 rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADING);
