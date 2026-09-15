@@ -8,11 +8,19 @@
 package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.dto.QuotaState;
 import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.dto.UserProfileInfos;
+import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.repository.QuotaConsumptionEntity;
+import org.gridsuite.study.server.repository.QuotaConsumptionRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -21,25 +29,30 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.USER_ADMIN_API_VERSION;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAX_OPERATION_TYPE_EXCEEDED;
 
 /**
  * @author David Braquart <david.braquart at rte-france.com>
  */
 @Service
 public class UserAdminService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserAdminService.class);
+
     private static final String USERS_PROFILE_URI = "/users/{sub}/profile";
     private static final String USERS_QUOTA_URI = "/users/{sub}/quota";
-    private static final String USERS_MAX_QUOTA_URI = USERS_QUOTA_URI + "/max";
-    private static final String USERS_CURRENT_QUOTA_URI = USERS_QUOTA_URI + "/current";
-    private static final String USERS_START_QUOTA_URI = USERS_QUOTA_URI + "/{operation}/{operation_id}/start";
-    private static final String USERS_END_QUOTA_URI = USERS_QUOTA_URI + "/{operation}/{operation_id}/end";
+    private static final String USERS_QUOTA_STATE_URI = USERS_QUOTA_URI + "/state";
+    private static final String USERS_CONSUME_QUOTA_URI = USERS_QUOTA_URI + "/{operation}/consume";
+    private static final String USERS_RELEASE_QUOTA_URI = USERS_QUOTA_URI + "/{quotaId}/release";
 
     private final RestTemplate restTemplate;
+    private final QuotaConsumptionRepository quotaConsumptionRepository;
     private String userAdminServerBaseUri;
 
-    public UserAdminService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
+    public UserAdminService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate,
+                            QuotaConsumptionRepository quotaConsumptionRepository) {
         this.userAdminServerBaseUri = remoteServicesProperties.getServiceUri("user-admin-server");
         this.restTemplate = restTemplate;
+        this.quotaConsumptionRepository = quotaConsumptionRepository;
     }
 
     public void setUserAdminServerBaseUri(String serverBaseUri) {
@@ -52,39 +65,88 @@ public class UserAdminService {
         return restTemplate.getForObject(userAdminServerBaseUri + path, UserProfileInfos.class);
     }
 
-    public Map<QuotaType, Integer> getUserMaxQuota(String sub) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_MAX_QUOTA_URI)
+    /**
+     * Returns, for every operation type, the user's current usage and max allowed quota (via the single
+     * {@code /quota/state} endpoint exposed by user-admin-server; there is no separate "max"-only or
+     * "current"-only endpoint).
+     */
+    public Map<QuotaType, QuotaState> getUserQuotaState(String sub) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_QUOTA_STATE_URI)
                 .buildAndExpand(sub).toUriString();
         return restTemplate.exchange(
                 userAdminServerBaseUri + path,
                 HttpMethod.GET,
                 null,
-                new ParameterizedTypeReference<Map<QuotaType, Integer>>() {
+                new ParameterizedTypeReference<Map<QuotaType, QuotaState>>() {
                 }).getBody();
     }
 
-    public Map<QuotaType, Integer> getUserCurrentQuota(String sub) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_CURRENT_QUOTA_URI)
-                .buildAndExpand(sub).toUriString();
-        return restTemplate.exchange(
-                userAdminServerBaseUri + path,
-                HttpMethod.GET,
-                null,
-                new ParameterizedTypeReference<Map<QuotaType, Integer>>() {
-                }).getBody();
+    /**
+     * Atomically checks the user's quota availability for the given operation type and consumes it in a single
+     * remote call to user-admin-server, closing the check-then-consume race window that used to exist between
+     * a separate quota check and the actual quota consumption (which used to happen only after the computation
+     * had already been launched).
+     *
+     * @return the quotaId generated by user-admin-server for this consumption
+     * @throws StudyException with {@link org.gridsuite.study.server.error.StudyBusinessErrorCode#MAX_OPERATION_TYPE_EXCEEDED}
+     *                         if the user's quota for this operation type is already exhausted
+     */
+    public UUID consumeQuota(String sub, QuotaType quotaType) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_CONSUME_QUOTA_URI)
+                .buildAndExpand(sub, quotaType)
+                .toUriString();
+        try {
+            return restTemplate.postForObject(userAdminServerBaseUri + path, null, UUID.class);
+        } catch (HttpClientErrorException.BadRequest e) {
+            throw new StudyException(MAX_OPERATION_TYPE_EXCEEDED, "Max number of " + quotaType.name() + " already reached");
+        }
     }
 
-    public void startOperationWithQuota(String sub, QuotaType quotaType, UUID operationId) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_START_QUOTA_URI)
-                .buildAndExpand(sub, quotaType, operationId)
+    /**
+     * Directly releases a quota unit previously consumed via {@link #consumeQuota}, identified by its quotaId.
+     * Used to roll back a quota consumption when the computation could not actually be launched (e.g. a
+     * pre-condition check failed after the quota was consumed but before the computation started), in which case
+     * no result UUID/local mapping exists yet.
+     */
+    public void releaseQuotaId(String sub, UUID quotaId) {
+        if (quotaId == null) {
+            return;
+        }
+        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_RELEASE_QUOTA_URI)
+                .buildAndExpand(sub, quotaId)
                 .toUriString();
-        restTemplate.postForEntity(userAdminServerBaseUri + path, null, Void.class);
+        try {
+            restTemplate.postForEntity(userAdminServerBaseUri + path, null, Void.class);
+        } catch (Exception e) {
+            LOGGER.error("Could not release quota '{}' for user '{}'", quotaId, sub, e);
+        }
     }
 
-    public void endOperationWithQuota(String sub, QuotaType quotaType, UUID operationId) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_END_QUOTA_URI)
-                .buildAndExpand(sub, quotaType, operationId)
-                .toUriString();
-        restTemplate.postForEntity(userAdminServerBaseUri + path, null, Void.class);
+    /**
+     * Registers, once the computation has actually been launched and its result UUID is known, the association
+     * between that result UUID and the quotaId consumed earlier for this operation. This mapping is later used by
+     * {@link #releaseQuota} to release the quota once the async computation result/failure/stop notification is
+     * received.
+     */
+    @Transactional
+    public void registerQuotaConsumption(UUID resultUuid, UUID quotaId) {
+        if (quotaId == null) {
+            return;
+        }
+        quotaConsumptionRepository.save(new QuotaConsumptionEntity(resultUuid, quotaId));
+    }
+
+    /**
+     * Releases the quota consumed for the computation whose result is identified by {@code resultUuid}, looking
+     * up the corresponding quotaId in the local mapping registered by {@link #registerQuotaConsumption}. This is a
+     * no-op if there is no such mapping (quota checking disabled, or the computation never actually registered a
+     * consumption).
+     */
+    @Transactional
+    public void releaseQuota(String sub, UUID resultUuid) {
+        quotaConsumptionRepository.findById(resultUuid).ifPresent(mapping -> {
+            releaseQuotaId(sub, mapping.getQuotaId());
+            quotaConsumptionRepository.delete(mapping);
+        });
     }
 }

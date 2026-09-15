@@ -64,9 +64,17 @@ public class ShortCircuitController {
             @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.assertOnQuotasAvailability(SHORT_CIRCUIT, userId);
-        nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
-            () -> shortCircuitService.runShortCircuit(studyUuid, nodeUuid, rootNetworkUuid, busId, debug, userId));
+        UUID quotaId = studyService.consumeQuota(SHORT_CIRCUIT, userId);
+        boolean succeeded = false;
+        try {
+            nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+                () -> shortCircuitService.runShortCircuit(studyUuid, nodeUuid, rootNetworkUuid, busId, debug, userId, quotaId));
+            succeeded = true;
+        } finally {
+            if (!succeeded) {
+                studyService.releaseQuotaOnFailure(userId, quotaId);
+            }
+        }
         return ResponseEntity.ok().build();
     }
 
