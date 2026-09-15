@@ -12,9 +12,13 @@ import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.asymmetricalload.AsymmetricalLoadRestService;
@@ -96,6 +100,12 @@ public class SupervisionService {
 
     private final RootNetworkService rootNetworkService;
 
+    private final NodeRepository nodeRepository;
+
+    private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+
+    private final NetworkModificationService networkModificationService;
+
     private static final String SUPERVISION_USER = "Supervision";
 
     public SupervisionService(StudyService studyService,
@@ -117,7 +127,10 @@ public class SupervisionService {
                               ElasticsearchOperations elasticsearchOperations,
                               StudyInfosService studyInfosService,
                               RootNetworkService rootNetworkService,
-                              StudyRepository studyRepository) {
+                              StudyRepository studyRepository,
+                              NodeRepository nodeRepository,
+                              NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
+                              NetworkModificationService networkModificationService) {
 
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -140,6 +153,9 @@ public class SupervisionService {
         this.studyInfosService = studyInfosService;
         this.rootNetworkService = rootNetworkService;
         this.studyRepository = studyRepository;
+        this.nodeRepository = nodeRepository;
+        this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
+        this.networkModificationService = networkModificationService;
     }
 
     @Transactional
@@ -402,6 +418,12 @@ public class SupervisionService {
     public void invalidateStudy(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
+        // remove all stashed nodes and stashed network modifications
+        try {
+            deleteAllStashedElements(studyUuid);
+        } catch (Exception e) {
+            LOGGER.error("Error while deleting stashed elements", e);
+        }
         rootNetworkService.getStudyRootNetworkIds(studyUuid).forEach(rnId -> {
             try {
                 rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADING);
@@ -413,6 +435,38 @@ public class SupervisionService {
             }
         });
         LOGGER.trace("Study {} nodes builds deleted and root node invalidated in : {} milliseconds", studyUuid, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime.get()));
+    }
+
+    public void deleteAllStashedElements(UUID studyId) {
+        List<NodeEntity> nodes = nodeRepository.findAllByStudyId(studyId);
+        List<NodeEntity> stashedNodes = new ArrayList<>();
+        List<NodeEntity> notStashedNodes = new ArrayList<>();
+        for (NodeEntity nodeEntity : nodes) {
+            if (nodeEntity.isStashed()) {
+                stashedNodes.add(nodeEntity);
+            } else {
+                notStashedNodes.add(nodeEntity);
+            }
+        }
+
+        // remove stashed modification on not stashed nodes
+        List<NetworkModificationNodeInfoEntity> networkModificationNodeInfos = networkModificationNodeInfoRepository
+                .findAllById(notStashedNodes.stream().map(NodeEntity::getIdNode).toList());
+        List<UUID> notStashedModificationGroupUuids = networkModificationNodeInfos.stream()
+                .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
+                .toList();
+        networkModificationService.deleteStashedModificationsFromGroups(notStashedModificationGroupUuids);
+
+        // remove modification on stashed nodes
+        List<NetworkModificationNodeInfoEntity> networkModificationNodeInfosToDelete = networkModificationNodeInfoRepository
+                .findAllById(stashedNodes.stream().map(NodeEntity::getIdNode).toList());
+        List<UUID> modificationGroupUuidsToDelete = networkModificationNodeInfosToDelete.stream()
+                .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
+                .toList();
+        networkModificationService.deleteModificationsGroups(modificationGroupUuidsToDelete);
+        // remove stashed nodes
+        networkModificationNodeInfoRepository.deleteAllById(stashedNodes.stream().map(NodeEntity::getIdNode).toList());
+        nodeRepository.deleteAll(stashedNodes);
     }
 
     @Transactional(readOnly = true)
