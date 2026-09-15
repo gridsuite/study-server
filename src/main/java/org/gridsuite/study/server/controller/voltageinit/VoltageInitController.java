@@ -61,12 +61,20 @@ public class VoltageInitController {
             @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.assertOnQuotasAvailability(VOLTAGE_INITIALIZATION, userId);
-        // applying the modifications inserts them into the node, which invalidates its children
-        NodeActivityType activityType = studyService.shouldApplyModifications(studyUuid)
-            ? COMPUTE_AND_UNBUILD_CHILDREN : COMPUTE;
-        nodeActivityRunnerService.runWith(activityType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
-            () -> voltageInitService.runVoltageInit(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
+        UUID quotaId = studyService.consumeQuota(VOLTAGE_INITIALIZATION, userId);
+        boolean succeeded = false;
+        try {
+            // applying the modifications inserts them into the node, which invalidates its children
+            NodeActivityType activityType = studyService.shouldApplyModifications(studyUuid)
+                ? COMPUTE_AND_UNBUILD_CHILDREN : COMPUTE;
+            nodeActivityRunnerService.runWith(activityType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+                () -> voltageInitService.runVoltageInit(studyUuid, nodeUuid, rootNetworkUuid, userId, debug, quotaId));
+            succeeded = true;
+        } finally {
+            if (!succeeded) {
+                studyService.releaseQuotaOnFailure(userId, quotaId);
+            }
+        }
         return ResponseEntity.ok().build();
     }
 
