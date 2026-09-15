@@ -61,10 +61,18 @@ public class DynamicMarginCalculationController {
                                                             @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.assertOnQuotasAvailability(DYNAMIC_MARGIN_CALCULATION, userId);
-        studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), dynamicMarginCalculationService::getDynamicMarginCalculationProvider);
-        nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
-            () -> dynamicMarginCalculationService.runDynamicMarginCalculation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
+        UUID quotaId = studyService.consumeQuota(DYNAMIC_MARGIN_CALCULATION, userId);
+        boolean succeeded = false;
+        try {
+            studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), dynamicMarginCalculationService::getDynamicMarginCalculationProvider);
+            nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+                () -> dynamicMarginCalculationService.runDynamicMarginCalculation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug, quotaId));
+            succeeded = true;
+        } finally {
+            if (!succeeded) {
+                studyService.releaseQuotaOnFailure(userId, quotaId);
+            }
+        }
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
 

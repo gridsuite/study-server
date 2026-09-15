@@ -88,12 +88,12 @@ public class DynamicSimulationService extends AbstractComputationService {
 
     @Transactional
     public UUID runDynamicSimulation(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid,
-                                     String userId, boolean debug) {
+                                     String userId, boolean debug, UUID quotaId) {
         StudyEntity studyEntity = getStudy(studyUuid);
 
         UUID result = handleDynamicSimulationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
 
-        handleQuotaStart(userId, result, DYNAMIC_SIMULATION);
+        handleQuotaStart(result, quotaId);
         return result;
     }
 

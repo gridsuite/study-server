@@ -135,7 +135,8 @@ public class ConsumerService {
 
         if (rerunLoadFlowInfos.isPresent()) {
             RerunLoadFlowInfos workflowInfos = rerunLoadFlowInfos.get();
-            loadFlowService.sendLoadflowRequestWorflow(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid(), workflowInfos.isWithRatioTapChangers(), workflowInfos.getUserId());
+            loadFlowService.sendLoadflowRequestWorflow(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid(),
+                workflowInfos.isWithRatioTapChangers(), workflowInfos.getUserId(), workflowInfos.getQuotaId());
         } else {
             // a rerun's loadflow removes the activity when its own result arrives
             nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
@@ -209,9 +210,11 @@ public class ConsumerService {
 
     private void handleBuildCanceledOrFailedWorkflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Message<String> message) throws JsonProcessingException {
         Optional<RerunLoadFlowInfos> rerunLoadFlowInfos = getRerunLoadFlowInfos(message);
-        // the rerun's build failed or was canceled, so no loadflow will follow to remove the activity
-        rerunLoadFlowInfos.ifPresent(infos ->
-            loadFlowService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, infos.getLoadflowResultUuid()));
+        // the rerun's build failed or was canceled, so no loadflow will follow to remove the activity nor release the quota
+        rerunLoadFlowInfos.ifPresent(infos -> {
+            loadFlowService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, infos.getLoadflowResultUuid());
+            userAdminService.releaseQuotaId(infos.getUserId(), infos.getQuotaId());
+        });
         nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
     }
 
@@ -450,7 +453,7 @@ public class ConsumerService {
 
     private void handleQuotaEnd(ComputationType computationType, String userId, UUID resultUuid) {
         QuotaType quotaType = QuotaType.mapFromComputationType(computationType);
-        userAdminService.endOperationWithQuota(userId, quotaType, resultUuid);
+        userAdminService.releaseQuota(userId, resultUuid);
         notificationService.emitQuotaChange(userId, quotaType);
     }
 

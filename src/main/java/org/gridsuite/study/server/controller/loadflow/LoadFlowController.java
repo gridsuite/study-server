@@ -68,18 +68,26 @@ public class LoadFlowController {
             @RequestParam(value = "withRatioTapChangers", required = false, defaultValue = "false") boolean withRatioTapChangers,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.assertOnQuotasAvailability(LOAD_FLOW, userId);
-        studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNA_FLOW_PROVIDER), loadFlowService::getLoadFlowProvider);
-        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
-        // a loadflow on a security node writes solved values onto its own variant and invalidates its children
-        NodeActivityType activityType = networkModificationTreeService.isSecurityNode(nodeUuid)
-            ? COMPUTE_AND_UNBUILD_CHILDREN : COMPUTE;
-        if (prevResultUuid != null) {
-            nodeActivityRunnerService.runWith(activityType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
-                () -> handleRerunLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, prevResultUuid, withRatioTapChangers, userId));
-        } else {
-            nodeActivityRunnerService.runWith(activityType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
-                () -> loadFlowService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, null, withRatioTapChangers, userId));
+        UUID quotaId = studyService.consumeQuota(LOAD_FLOW, userId);
+        boolean succeeded = false;
+        try {
+            studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNA_FLOW_PROVIDER), loadFlowService::getLoadFlowProvider);
+            UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
+            // a loadflow on a security node writes solved values onto its own variant and invalidates its children
+            NodeActivityType activityType = networkModificationTreeService.isSecurityNode(nodeUuid)
+                ? COMPUTE_AND_UNBUILD_CHILDREN : COMPUTE;
+            if (prevResultUuid != null) {
+                nodeActivityRunnerService.runWith(activityType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+                    () -> handleRerunLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, prevResultUuid, withRatioTapChangers, userId, quotaId));
+            } else {
+                nodeActivityRunnerService.runWith(activityType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+                    () -> loadFlowService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, null, withRatioTapChangers, userId, quotaId));
+            }
+            succeeded = true;
+        } finally {
+            if (!succeeded) {
+                studyService.releaseQuotaOnFailure(userId, quotaId);
+            }
         }
         return ResponseEntity.ok().build();
     }
@@ -88,12 +96,12 @@ public class LoadFlowController {
      * Need to have several transactions to send notifications by step
      * Disadvantage is that it is not atomic so need a try/catch to rollback
      */
-    private void handleRerunLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID prevResultUuid, Boolean withRatioTapChangers, String userId) {
+    private void handleRerunLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID prevResultUuid, Boolean withRatioTapChangers, String userId, UUID quotaId) {
         UUID loadflowResultUuid = null;
         try {
             loadFlowService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, prevResultUuid);
             loadflowResultUuid = loadFlowService.createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers);
-            loadFlowService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+            loadFlowService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId, quotaId);
         } catch (Exception e) {
             if (loadflowResultUuid != null) {
                 loadFlowService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid);

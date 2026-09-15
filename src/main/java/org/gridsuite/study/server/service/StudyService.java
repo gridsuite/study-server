@@ -1339,11 +1339,11 @@ public class StudyService {
     }
 
     private long getAllowedBuildNodesUpToQuota(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
-        Map<QuotaType, Integer> userMaxQuotas = userAdminService.getUserMaxQuota(userId);
+        Map<QuotaType, QuotaState> userQuotaState = userAdminService.getUserQuotaState(userId);
 
-        return Optional.ofNullable(userMaxQuotas.get(QuotaType.BUILD)).map(maxBuilds -> {
+        return Optional.ofNullable(userQuotaState.get(QuotaType.BUILD)).map(QuotaState::max).map(maxBuilds -> {
             long nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid, rootNetworkUuid);
-            return maxBuilds - nbBuiltNodes;
+            return (long) maxBuilds - nbBuiltNodes;
         }).orElse(Long.MAX_VALUE);
     }
 
@@ -2830,22 +2830,21 @@ public class StudyService {
         notificationService.emitRootNetworksUpdated(studyUuid);
     }
 
-    public void assertOnQuotasAvailability(ComputationType computationType, String userId) {
+    public UUID consumeQuota(ComputationType computationType, String userId) {
         if (!shouldCheckOperationQuotas) {
+            return null;
+        }
+        QuotaType quotaType = QuotaType.mapFromComputationType(computationType);
+        UUID quotaId = userAdminService.consumeQuota(userId, quotaType);
+        notificationService.emitQuotaChange(userId, quotaType);
+        return quotaId;
+    }
+
+    public void releaseQuotaOnFailure(String userId, UUID quotaId) {
+        if (quotaId == null) {
             return;
         }
-
-        Map<QuotaType, Integer> userMaxQuotas = userAdminService.getUserMaxQuota(userId);
-        Map<QuotaType, Integer> userCurrentQuotas = userAdminService.getUserCurrentQuota(userId);
-        QuotaType quotaType = QuotaType.mapFromComputationType(computationType);
-
-        Integer maxComputation = userMaxQuotas.get(quotaType);
-        Integer currentComputation = userCurrentQuotas.get(quotaType);
-
-        if (maxComputation != null && currentComputation != null && currentComputation >= maxComputation) {
-            throw new StudyException(MAX_OPERATION_TYPE_EXCEEDED, "Max number of " + computationType.name() + " already reached",
-                                     Map.of("maxComputation", maxComputation, "currentComputation", currentComputation));
-        }
+        userAdminService.releaseQuotaId(userId, quotaId);
     }
 
     public Boolean getOperationQuotaStatus() {
