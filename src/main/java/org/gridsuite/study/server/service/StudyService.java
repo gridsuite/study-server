@@ -718,7 +718,7 @@ public class StudyService {
 
         StudyEntity newStudyEntity = duplicateStudyEntity(sourceStudy, studyInfos.getId());
         rootNetworkService.duplicateStudyRootNetworks(newStudyEntity, sourceStudy);
-        networkModificationTreeService.duplicateStudyNodes(newStudyEntity, sourceStudy);
+        networkModificationTreeService.duplicateStudyNodes(newStudyEntity, sourceStudy, userId);
         duplicateStudyNodeAliases(newStudyEntity, sourceStudy);
 
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(newStudyEntity);
@@ -1447,7 +1447,7 @@ public class StudyService {
         assertDuplicateStudySubtree(sourceStudyUuid, targetStudyUuid, parentNodeToCopyUuid, referenceNodeUuid);
         AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(sourceStudyUuid, parentNodeToCopyUuid, null);
         StudyEntity studyEntity = getStudy(targetStudyUuid);
-        UUID duplicatedNodeUuid = networkModificationTreeService.cloneStudyTree(studySubTree, referenceNodeUuid, studyEntity);
+        UUID duplicatedNodeUuid = networkModificationTreeService.cloneStudyTree(studySubTree, referenceNodeUuid, studyEntity, userId);
         notificationService.emitSubtreeInserted(targetStudyUuid, duplicatedNodeUuid, referenceNodeUuid);
         notificationService.emitElementUpdated(targetStudyUuid, userId);
     }

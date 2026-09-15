@@ -335,11 +335,6 @@ public class NetworkModificationService {
         ).getBody();
     }
 
-    /**
-     * @return references data of the modifications in the group :
-     * - element uuid in directory server
-     * - uuid of its mother composite (null if the modification is at the root level)
-     */
     public List<ModificationReference> getModificationReferences(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "references");
