@@ -461,7 +461,7 @@ public class StudyConfigService {
         return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
     }
 
-    UUID createDefaultNetworkVisualizationParameters(String userId, UserProfileInfos userProfileInfos) {
+    public UUID createDefaultNetworkVisualizationParameters(String userId, UserProfileInfos userProfileInfos) {
         if (userProfileInfos != null && userProfileInfos.getNetworkVisualizationParameterId() != null) {
             // try to access/duplicate the user profile network visualization parameters
             try {
@@ -480,7 +480,7 @@ public class StudyConfigService {
         }
     }
 
-    UUID createDefaultSpreadsheetConfigCollection(String userId, UserProfileInfos userProfileInfos) {
+    public UUID createDefaultSpreadsheetConfigCollection(String userId, UserProfileInfos userProfileInfos) {
         if (userProfileInfos != null && userProfileInfos.getSpreadsheetConfigCollectionId() != null) {
             try {
                 return duplicateSpreadsheetConfigCollection(userProfileInfos.getSpreadsheetConfigCollectionId());

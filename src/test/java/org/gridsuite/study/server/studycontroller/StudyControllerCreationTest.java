@@ -14,6 +14,7 @@ import com.powsybl.commons.report.ReportNode;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.ElementAttributes;
+import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
@@ -258,7 +259,7 @@ class StudyControllerCreationTest {
         verify(voltageInitService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
         verify(dynamicSecurityAnalysisRestService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
         verify(stateEstimationService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
-        verify(studyConfigService, times(1)).createDefaultSpreadsheetConfigCollection();
+        verify(studyConfigService, times(1)).createDefaultSpreadsheetConfigCollection(anyString(), any(UserProfileInfos.class));
     }
 
     private void sendStudyCreationRequest(String userId, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, boolean duplicateCase) throws Exception {
