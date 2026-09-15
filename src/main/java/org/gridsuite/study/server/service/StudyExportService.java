@@ -11,6 +11,7 @@ import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.dto.studyexport.RootNetworkExportInfos;
 import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
 import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.InputStreamResource;
@@ -44,17 +45,21 @@ public class StudyExportService {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyExportService.class);
     public static final String TREE_JSON_FILE_NAME = "tree.json";
     public static final String CASES_FOLDER = "cases";
+    public static final String PARAMETERS_FOLDER = "computationParameters";
 
     private final StudyService studyService;
     private final CaseService caseService;
     private final DirectoryService directoryService;
     private final ObjectMapper objectMapper;
+    private final ComputationParametersService computationParametersService;
 
-    public StudyExportService(StudyService studyService, CaseService caseService, DirectoryService directoryService, ObjectMapper objectMapper) {
+    public StudyExportService(StudyService studyService, CaseService caseService, DirectoryService directoryService,
+                              ObjectMapper objectMapper, ComputationParametersService computationParametersService) {
         this.studyService = studyService;
         this.caseService = caseService;
         this.directoryService = directoryService;
         this.objectMapper = objectMapper;
+        this.computationParametersService = computationParametersService;
     }
 
     /**
@@ -68,7 +73,7 @@ public class StudyExportService {
         Path tempDir = createTempWorkDir(studyUuid);
         Path zipFile = null;
         try {
-            zipFile = compressStudyToZip(studyUuid, tempDir);
+            zipFile = compressStudyToZip(studyUuid, userId, tempDir);
             InputStream stream = Files.newInputStream(zipFile, StandardOpenOption.DELETE_ON_CLOSE);
             zipFile = null;
             return new InputStreamResource(stream);
@@ -93,7 +98,7 @@ public class StudyExportService {
     /**
      * Build tree.json and the case files under tempDir, then compress them into a temp zip file
      */
-    private Path compressStudyToZip(UUID studyUuid, Path tempDir) throws IOException {
+    private Path compressStudyToZip(UUID studyUuid, String userId, Path tempDir) throws IOException {
         TreeExportInfos treeExportInfos = studyService.buildTreeExport(studyUuid);
         Path studyJsonPath = tempDir.resolve(TREE_JSON_FILE_NAME);
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(studyJsonPath.toFile(), treeExportInfos);
@@ -103,12 +108,17 @@ public class StudyExportService {
             String caseName = rootNetworkInfos.caseInfos().getCaseName();
             exportCaseFile(caseUuid, caseName, casesDir);
         }
+        exportComputationParameters(studyUuid, userId, tempDir);
         Path zipFile = createTempExportFile(studyUuid);
         try (OutputStream fos = Files.newOutputStream(zipFile);
              ZipOutputStream zipOut = new ZipOutputStream(fos)) {
             writeZipEntries(tempDir, zipOut);
         }
         return zipFile;
+    }
+
+    private void exportComputationParameters(UUID studyUuid, String userId, Path tempDir) {
+        computationParametersService.exportParameters(studyService.getStudy(studyUuid), userId, tempDir.resolve(PARAMETERS_FOLDER));
     }
 
     private Path createTempWorkDir(UUID studyUuid) {
