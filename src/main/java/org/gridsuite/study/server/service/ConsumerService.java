@@ -78,6 +78,8 @@ public class ConsumerService {
     private final LoadFlowService loadFlowService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
     private final NodeActivityService nodeActivityService;
+    private final WorkspaceService workspaceService;
+    private final StudyConfigService studyConfigService;
 
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
@@ -92,7 +94,9 @@ public class ConsumerService {
                            UserAdminService userAdminService,
                            LoadFlowService loadFlowService,
                            NodeActivityRunnerService nodeActivityRunnerService,
-                           NodeActivityService nodeActivityService) {
+                           NodeActivityService nodeActivityService,
+                           WorkspaceService workspaceService,
+                           StudyConfigService studyConfigService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -107,6 +111,8 @@ public class ConsumerService {
         this.loadFlowService = loadFlowService;
         this.nodeActivityService = nodeActivityService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
+        this.workspaceService = workspaceService;
+        this.studyConfigService = studyConfigService;
     }
 
     @Bean
@@ -289,9 +295,9 @@ public class ConsumerService {
         UserProfileInfos userProfileInfos = studyService.getUserProfile(userId);
 
         ComputationParameterUUIDs computationParameterUUIDs = computationParametersService.createDefaultComputationParameters(userId, userProfileInfos);
-        UUID networkVisualizationParametersUuid = studyService.createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
-        UUID spreadsheetConfigCollectionUuid = studyService.createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
-        UUID workspacesConfigUuid = studyService.createWorkspacesConfig(userProfileInfos);
+        UUID networkVisualizationParametersUuid = studyConfigService.createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
+        UUID spreadsheetConfigCollectionUuid = studyConfigService.createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
+        UUID workspacesConfigUuid = workspaceService.createWorkspacesConfig(userProfileInfos);
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, computationParameterUUIDs,
             networkVisualizationParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid,

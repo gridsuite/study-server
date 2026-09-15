@@ -131,6 +131,7 @@ public class StudyService {
     private final DynamicSimulationEventService dynamicSimulationEventService;
     private final ShortCircuitRestService shortCircuitRestService;
     private final VoltageInitRestService voltageInitRestService;
+    private final WorkspaceService workspaceService;
 
     private final ObjectMapper objectMapper;
 
@@ -163,39 +164,40 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-        StudyRepository studyRepository,
-        StudyCreationRequestRepository studyCreationRequestRepository,
-        NetworkService networkStoreService,
-        NetworkModificationService networkModificationService,
-        ReportService reportService,
-        UserAdminService userAdminService,
-        StudyInfosService studyInfosService,
-        EquipmentInfosService equipmentInfosService,
-        NetworkModificationTreeService networkModificationTreeService,
-        ObjectMapper objectMapper,
-        StudyServerExecutionService studyServerExecutionService,
-        NotificationService notificationService,
-        LoadFlowRestService loadflowRestService,
-        LoadFlowService loadFlowService,
-        ShortCircuitRestService shortCircuitService,
-        SingleLineDiagramService singleLineDiagramService,
-        NetworkConversionService networkConversionService,
-        GeoDataService geoDataService,
-        NetworkMapService networkMapService,
-        SecurityAnalysisRestService securityAnalysisRestService,
-        ActionsService actionsService,
-        CaseService caseService,
-        DynamicMappingService dynamicMappingService,
-        VoltageInitRestService voltageInitService,
-        DynamicSimulationEventService dynamicSimulationEventService,
-        StudyConfigService studyConfigService,
-        NadConfigService nadConfigService,
-        FilterService filterService,
-        @Lazy StudyService studyService,
-        RootNetworkService rootNetworkService,
-        RootNetworkNodeInfoService rootNetworkNodeInfoService,
-        DirectoryService directoryService,
-        ComputationParametersService computationParametersService) {
+            StudyRepository studyRepository,
+            StudyCreationRequestRepository studyCreationRequestRepository,
+            NetworkService networkStoreService,
+            NetworkModificationService networkModificationService,
+            ReportService reportService,
+            UserAdminService userAdminService,
+            StudyInfosService studyInfosService,
+            EquipmentInfosService equipmentInfosService,
+            NetworkModificationTreeService networkModificationTreeService,
+            ObjectMapper objectMapper,
+            StudyServerExecutionService studyServerExecutionService,
+            NotificationService notificationService,
+            LoadFlowRestService loadflowRestService,
+            LoadFlowService loadFlowService,
+            ShortCircuitRestService shortCircuitService,
+            SingleLineDiagramService singleLineDiagramService,
+            NetworkConversionService networkConversionService,
+            GeoDataService geoDataService,
+            NetworkMapService networkMapService,
+            SecurityAnalysisRestService securityAnalysisRestService,
+            ActionsService actionsService,
+            CaseService caseService,
+            DynamicMappingService dynamicMappingService,
+            VoltageInitRestService voltageInitService,
+            DynamicSimulationEventService dynamicSimulationEventService,
+            StudyConfigService studyConfigService,
+            NadConfigService nadConfigService,
+            FilterService filterService,
+            @Lazy StudyService studyService,
+            RootNetworkService rootNetworkService,
+            RootNetworkNodeInfoService rootNetworkNodeInfoService,
+            DirectoryService directoryService,
+            ComputationParametersService computationParametersService,
+            WorkspaceService workspaceService) {
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
@@ -229,6 +231,7 @@ public class StudyService {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.directoryService = directoryService;
         this.computationParametersService = computationParametersService;
+        this.workspaceService = workspaceService;
     }
 
     private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid) {
@@ -2909,9 +2912,9 @@ public class StudyService {
     public StudyEntity createStudyEntityWithTree(UUID studyUuid, String userId, NodeTreeExportInfos nodeTree) {
         UserProfileInfos userProfileInfos = getUserProfile(userId);
         ComputationParameterUUIDs computationParameterUUIDs = computationParametersService.createDefaultComputationParameters(userId, userProfileInfos);
-        UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
-        UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
-        UUID workspacesConfigUuid = createWorkspacesConfig(userProfileInfos);
+        UUID networkVisualizationParametersUuid = studyConfigService.createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
+        UUID spreadsheetConfigCollectionUuid = studyConfigService.createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
+        UUID workspacesConfigUuid = workspaceService.createWorkspacesConfig(userProfileInfos);
         StudyEntity studyEntity = studyRepository.save(buildStudyEntity(studyUuid, computationParameterUUIDs,
                 networkVisualizationParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid));
         UUID rootNodeUuid = networkModificationTreeService.createRoot(studyEntity).getIdNode();
@@ -2938,58 +2941,5 @@ public class StudyService {
                 userId
         );
         CollectionUtils.emptyIfNull(exportNode.children()).forEach(child -> createNodeRecursively(studyEntity, newNode.getId(), child, userId));
-    }
-
-    UUID createDefaultNetworkVisualizationParameters(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getNetworkVisualizationParameterId() != null) {
-            // try to access/duplicate the user profile network visualization parameters
-            try {
-                return studyConfigService.duplicateNetworkVisualizationParameters(userProfileInfos.getNetworkVisualizationParameterId());
-            } catch (Exception e) {
-                LOGGER.error(String.format("Could not duplicate network visualization parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                        userProfileInfos.getNetworkVisualizationParameterId(), userId, userProfileInfos.getName()), e);
-            }
-        }
-        try {
-            return studyConfigService.createDefaultNetworkVisualizationParameters();
-        } catch (final Exception e) {
-            // TODO try to report a log in Root subreporter ?
-            LOGGER.error("Error while creating network visualization default parameters", e);
-            return null;
-        }
-    }
-
-    UUID createDefaultSpreadsheetConfigCollection(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getSpreadsheetConfigCollectionId() != null) {
-            try {
-                return studyConfigService.duplicateSpreadsheetConfigCollection(userProfileInfos.getSpreadsheetConfigCollectionId());
-            } catch (Exception e) {
-                LOGGER.error(String.format("Could not duplicate spreadsheet config collection with id '%s' from user/profile '%s/%s'. Using default spreadsheet config collection",
-                        userProfileInfos.getSpreadsheetConfigCollectionId(), userId, userProfileInfos.getName()), e);
-            }
-        }
-        try {
-            return studyConfigService.createDefaultSpreadsheetConfigCollection();
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating default spreadsheet config collection", e);
-            return null;
-        }
-    }
-
-    @SuppressWarnings("checkstyle:LambdaBodyLength")
-    UUID createWorkspacesConfig(UserProfileInfos userProfileInfos) {
-        try {
-            List<UUID> workspaceIds = new ArrayList<>();
-            if (userProfileInfos != null && userProfileInfos.getWorkspaceId() != null) {
-                // Create config with profile workspace as first, and two empty workspaces
-                workspaceIds.add(userProfileInfos.getWorkspaceId());
-                workspaceIds.add(null);
-                workspaceIds.add(null);
-            }
-            return studyConfigService.createWorkspacesConfigFromWorkspaces(workspaceIds);
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating workspace collection", e);
-            return null;
-        }
     }
 }
