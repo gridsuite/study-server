@@ -11,6 +11,7 @@ import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.dto.studyexport.RootNetworkExportInfos;
 import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
 import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.InputStreamResource;
@@ -27,7 +28,6 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -45,18 +45,21 @@ public class StudyExportService {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyExportService.class);
     public static final String TREE_JSON_FILE_NAME = "tree.json";
     public static final String CASES_FOLDER = "cases";
-    public static final String PARAMETERS_FOLDER = "parameters";
+    public static final String PARAMETERS_FOLDER = "computationParameters";
 
     private final StudyService studyService;
     private final CaseService caseService;
     private final DirectoryService directoryService;
     private final ObjectMapper objectMapper;
+    private final ComputationParametersService computationParametersService;
 
-    public StudyExportService(StudyService studyService, CaseService caseService, DirectoryService directoryService, ObjectMapper objectMapper) {
+    public StudyExportService(StudyService studyService, CaseService caseService, DirectoryService directoryService,
+                              ObjectMapper objectMapper, ComputationParametersService computationParametersService) {
         this.studyService = studyService;
         this.caseService = caseService;
         this.directoryService = directoryService;
         this.objectMapper = objectMapper;
+        this.computationParametersService = computationParametersService;
     }
 
     /**
@@ -114,15 +117,8 @@ public class StudyExportService {
         return zipFile;
     }
 
-    private void exportComputationParameters(UUID studyUuid, String userId, Path tempDir) throws IOException {
-        Map<String, String> parametersByFileName = studyService.exportComputationParameters(studyUuid, userId);
-        if (parametersByFileName.isEmpty()) {
-            return;
-        }
-        Path parametersDir = Files.createDirectories(tempDir.resolve(PARAMETERS_FOLDER));
-        for (Map.Entry<String, String> entry : parametersByFileName.entrySet()) {
-            Files.writeString(parametersDir.resolve(entry.getKey()), entry.getValue());
-        }
+    private void exportComputationParameters(UUID studyUuid, String userId, Path tempDir) {
+        computationParametersService.exportParameters(studyService.getStudy(studyUuid), userId, tempDir.resolve(PARAMETERS_FOLDER));
     }
 
     private Path createTempWorkDir(UUID studyUuid) {

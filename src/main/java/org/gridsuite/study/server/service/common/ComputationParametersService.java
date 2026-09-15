@@ -6,14 +6,12 @@
  */
 package org.gridsuite.study.server.service.common;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.dto.computation.ComputationParameterUUIDs;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
@@ -28,16 +26,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.LinkedHashMap;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.EXPORT_STUDY_ERROR;
 
 /**
  * @author Abdelsalem HEDHILI <abdelsalem.hedhili at rte-france.com>
@@ -243,34 +239,19 @@ public class ComputationParametersService {
         }
     }
 
-    public Map<String, String> exportParameters(StudyEntity studyEntity, String userId) {
-        Map<String, String> parametersByFileName = new LinkedHashMap<>();
-        computationParametersDefinitions.forEach(definition -> {
+    public void exportParameters(StudyEntity studyEntity, String userId, Path parametersDir) {
+        for (ComputationParametersDefinition definition : computationParametersDefinitions) {
             UUID parametersUuid = definition.studyParameterGetter().apply(studyEntity);
             if (parametersUuid == null) {
-                return;
+                continue;
             }
+            Object parameters = definition.parametersFetcher().apply(parametersUuid, userId);
             try {
-                Object parameters = definition.parametersFetcher().apply(parametersUuid, userId);
-                String fileName = toFileName(definition.type());
-                parametersByFileName.put(fileName, parameters instanceof String json ? json : writeAsJson(fileName, parameters));
-            } catch (Exception e) {
-                LOGGER.warn("Failed to fetch {} parameters (uuid={}) for study export", definition.type().getLabel(), parametersUuid, e);
+                Files.createDirectories(parametersDir);
+                Files.writeString(parametersDir.resolve(definition.type().name() + ".json"), objectMapper.writeValueAsString(parameters));
+            } catch (IOException e) {
+                LOGGER.error(e.toString());
             }
-        });
-        return parametersByFileName;
-    }
-
-    private static String toFileName(ComputationType type) {
-        return type.name().toLowerCase(Locale.ROOT).replace('_', '-') + ".json";
-    }
-
-    private String writeAsJson(String fileName, Object parameters) {
-        try {
-            return objectMapper.writeValueAsString(parameters);
-        } catch (JsonProcessingException e) {
-            throw new StudyException(EXPORT_STUDY_ERROR, "Failed to serialize computation parameters " + fileName);
         }
     }
-
 }

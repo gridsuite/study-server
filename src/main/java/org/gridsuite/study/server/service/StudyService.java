@@ -1782,7 +1782,7 @@ public class StudyService {
         reindexRootNetwork(getStudy(studyUuid), rootNetworkUuid);
     }
 
-    private StudyEntity getStudy(UUID studyUuid) {
+    StudyEntity getStudy(UUID studyUuid) {
         return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(NOT_FOUND, STUDY_NOT_FOUND));
     }
 
@@ -2870,11 +2870,6 @@ public class StudyService {
         AbstractNode rootNode = networkModificationTreeService.getStudyTree(studyUuid, null);
         NodeTreeExportInfos nodeTree = rootNode != null ? toNodeTreeExportInfos(rootNode) : null;
         return new TreeExportInfos(studyUuid, rootNetworks, nodeTree);
-    }
-
-    public Map<String, String> exportComputationParameters(UUID studyUuid, String userId) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        return computationParametersService.exportParameters(studyEntity, userId);
     }
 
     private RootNetworkExportInfos toRootNetworkExportInfos(RootNetworkInfos rootNetworkInfos, int index) {
