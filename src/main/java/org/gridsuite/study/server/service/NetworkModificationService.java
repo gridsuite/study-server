@@ -506,7 +506,7 @@ public class NetworkModificationService {
      * by a reference to it, so that it can be stored as an element in the directory server. The composite modification
      * keeps its own uuid.
      *
-     * @return the reference-modification left in place of the composite modification, either in the group of the node
+     * @return the reference modification left in place of the composite modification, either in the group of the node
      * or in a parent composite
      */
     public ModificationReference extractCompositeModificationToShare(@NonNull UUID groupUuid, @NonNull UUID modificationUuid, @NonNull String name) {

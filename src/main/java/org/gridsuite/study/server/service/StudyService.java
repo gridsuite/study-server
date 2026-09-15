@@ -2029,7 +2029,7 @@ public class StudyService {
             ModificationReference newReference = networkModificationService.extractCompositeModificationToShare(groupUuid, modificationUuid, name);
             // the composite modification keeps its uuid when extracted, so it is shared under that same uuid
             directoryService.createElement(parentDirectoryUuid, description, modificationUuid, name, DirectoryService.MODIFICATION, userId);
-            // extraction replaced the local composite by a new reference-modification, in the node group or in a parent
+            // extraction replaced the local composite by a new reference modification, in the node group or in a parent
             // composite: register it on the shared element
             createElementsReferences(List.of(newReference), studyUuid, nodeUuid, userId);
         } finally {

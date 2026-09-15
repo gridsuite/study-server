@@ -2234,7 +2234,7 @@ class NetworkModificationTest {
                         "/v1/directories/" + directoryUuid + "/elements/" + compositeName + "/types/MODIFICATION"))
                 .willReturn(WireMock.aResponse().withStatus(HttpStatus.NO_CONTENT.value())));
 
-        // the composite modification is replaced by a new reference-modification, then stored as an element of the directory
+        // the composite modification is replaced by a new reference modification, then stored as an element of the directory
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo(
                         "/v1/network-composite-modifications/" + compositeUuid + "/share"))
                 .willReturn(WireMock.ok()
