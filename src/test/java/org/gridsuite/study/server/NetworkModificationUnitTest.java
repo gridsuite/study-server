@@ -459,6 +459,12 @@ class NetworkModificationUnitTest {
             // Ignoring
         } finally {
             output.clear(); // purge in order to not fail the other tests
+            rootNetworkNodeInfoRepository.deleteAll();
+            rootNodeInfoRepository.deleteAll();
+            networkModificationNodeInfoRepository.deleteAll();
+            nodeRepository.deleteAll();
+            rootNetworkRepository.deleteAll();
+            studyRepository.deleteAll();
         }
     }
 
