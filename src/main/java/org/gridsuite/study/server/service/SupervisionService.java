@@ -402,11 +402,11 @@ public class SupervisionService {
     public void invalidateStudy(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
+        // remove all stashed nodes and stashed network modifications
+        networkModificationTreeService.deleteAllStashedElements(studyUuid);
         rootNetworkService.getStudyRootNetworkIds(studyUuid).forEach(rnId -> {
             try {
                 rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADING);
-                // remove all stashed nodes and stashed network modifications
-                networkModificationTreeService.deleteAllStashedElements(studyUuid);
                 studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER, false);
                 rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADED);
             } catch (Exception e) {
