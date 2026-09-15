@@ -7,7 +7,6 @@
 package org.gridsuite.study.server.controller.loadflow;
 
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -40,8 +39,8 @@ public class LoadFlowParametersController {
     }
 
     @GetMapping(value = "/parameters/{parameterUuid}")
-    public ResponseEntity<LoadFlowParametersInfos> getLoadFlowParameters(@PathVariable UUID parameterUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(loadFlowService.getLoadFlowParameters(parameterUuid));
+    public ResponseEntity<String> getLoadFlowParameters(@PathVariable UUID parameterUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(loadFlowService.getCommonParameters(parameterUuid));
     }
 
     @PutMapping(value = "/parameters/{parameterUuid}")

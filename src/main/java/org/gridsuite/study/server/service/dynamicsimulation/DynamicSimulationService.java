@@ -7,7 +7,6 @@
 package org.gridsuite.study.server.service.dynamicsimulation;
 
 import lombok.NonNull;
-import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.error.StudyException;
@@ -94,7 +93,7 @@ public class DynamicSimulationService extends AbstractComputationService {
 
         UUID result = handleDynamicSimulationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
 
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(DYNAMIC_SIMULATION), result);
+        handleQuotaStart(userId, result, DYNAMIC_SIMULATION);
         return result;
     }
 

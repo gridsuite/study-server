@@ -90,7 +90,7 @@ public class RebuildNodeService {
 
     private void handleMoveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<ModificationMoveOrCopyInfos> moveOrCopyInfos, String userId) {
         boolean isTargetInDifferentNodeTree = studyService.invalidateNodeTreeWhenMoveModifications(studyUuid, targetNodeUuid, originNodeUuid);
-        studyService.moveNetworkModifications(studyUuid, targetNodeUuid, moveOrCopyInfos, originNodeUuid, null, null, isTargetInDifferentNodeTree, userId);
+        studyService.moveNetworkModifications(studyUuid, originNodeUuid, targetNodeUuid, moveOrCopyInfos, null, null, isTargetInDifferentNodeTree, userId);
     }
 
     public void moveNetworkModification(
@@ -104,9 +104,9 @@ public class RebuildNodeService {
                     studyService.invalidateNodeTreeWhenMoveModification(studyUuid, nodeUuid);
                     studyService.moveNetworkModifications(
                             studyUuid,
+                            nodeUuid, // same-container reorder when source is omitted: default to the node's own group
                             nodeUuid,
                             List.of(new ModificationMoveOrCopyInfos(modificationUuid, moveModificationInfos.source())),
-                            nodeUuid, // same-container reorder when source is omitted: default to the node's own group
                             moveModificationInfos.target(),
                             moveModificationInfos.beforeUuid(),
                             false,

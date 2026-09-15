@@ -1011,6 +1011,8 @@ class StudyTest extends StudyTestBase {
         // duplicate the study
         StudyEntity duplicatedStudy = duplicateStudy(study1Uuid, userId);
         assertNotEquals(study1Uuid, duplicatedStudy.getId());
+        StudyEntity originalStudy = studyRepository.findById(study1Uuid).orElseThrow();
+        assertEquals(originalStudy.isMonoRoot(), duplicatedStudy.isMonoRoot());
 
         // Verify node aliases on the duplicated study
         aliases = mapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/node-aliases", duplicatedStudy.getId())).andExpect(status().isOk()).andReturn()

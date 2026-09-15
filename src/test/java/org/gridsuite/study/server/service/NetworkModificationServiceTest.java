@@ -157,4 +157,13 @@ class NetworkModificationServiceTest {
 
         verifyNoMoreInteractions(restTemplate);
     }
+
+    @Test
+    void testHasModificationReferences() {
+        UUID modificationUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/references/exists?uuids=" + modificationUuid;
+
+        networkModificationService.hasModificationReferences(List.of(modificationUuid));
+        verify(restTemplate).getForObject(eq(expectedUrl), eq(Boolean.class));
+    }
 }
