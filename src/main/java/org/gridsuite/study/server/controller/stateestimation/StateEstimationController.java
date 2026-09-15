@@ -56,9 +56,17 @@ public class StateEstimationController {
                                                    @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                    @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.assertOnQuotasAvailability(STATE_ESTIMATION, userId);
-        nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
-            () -> stateEstimationService.runStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
+        UUID quotaId = studyService.consumeQuota(STATE_ESTIMATION, userId);
+        boolean succeeded = false;
+        try {
+            nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+                () -> stateEstimationService.runStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug, quotaId));
+            succeeded = true;
+        } finally {
+            if (!succeeded) {
+                studyService.releaseQuotaOnFailure(userId, quotaId);
+            }
+        }
         return ResponseEntity.ok().build();
     }
 
