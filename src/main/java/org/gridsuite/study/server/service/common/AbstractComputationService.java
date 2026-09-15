@@ -8,12 +8,16 @@
 package org.gridsuite.study.server.service.common;
 
 import org.gridsuite.study.server.dto.ComputationType;
+import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
+import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.service.UserAdminService;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -32,18 +36,25 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 @Service
 public abstract class AbstractComputationService {
     protected final StudyRepository studyRepository;
-    private final ComputationParametersService computationParametersService;
     protected final NotificationService notificationService;
+    protected final NetworkModificationTreeService networkModificationTreeService;
     protected final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    protected final RootNetworkService rootNetworkService;
+    protected final ComputationParametersService computationParametersService;
+    protected final UserAdminService userAdminService;
 
-    protected AbstractComputationService(StudyRepository studyRepository,
+    protected AbstractComputationService(StudyRepository studyRepository, NotificationService notificationService,
+                                         NetworkModificationTreeService networkModificationTreeService,
+                                         RootNetworkNodeInfoService rootNetworkNodeInfoService, RootNetworkService rootNetworkService,
                                          ComputationParametersService computationParametersService,
-                                         NotificationService notificationService,
-                                         RootNetworkNodeInfoService rootNetworkNodeInfoService) {
+                                         UserAdminService userAdminService) {
         this.studyRepository = studyRepository;
-        this.computationParametersService = computationParametersService;
         this.notificationService = notificationService;
+        this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.rootNetworkService = rootNetworkService;
+        this.computationParametersService = computationParametersService;
+        this.userAdminService = userAdminService;
     }
 
     protected StudyEntity getStudy(UUID studyUuid) {
@@ -110,5 +121,11 @@ public abstract class AbstractComputationService {
 
     protected void updateComputationResultUuid(UUID nodeUuid, UUID rootNetworkUuid, UUID computationResultUuid, ComputationType computationType) {
         rootNetworkNodeInfoService.updateComputationResultUuid(nodeUuid, rootNetworkUuid, computationResultUuid, computationType);
+    }
+
+    protected void handleQuotaStart(String userId, UUID result, ComputationType computationType) {
+        QuotaType quotaType = QuotaType.mapFromComputationType(computationType);
+        userAdminService.startOperationWithQuota(userId, quotaType, result);
+        notificationService.emitQuotaChange(userId, quotaType);
     }
 }

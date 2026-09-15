@@ -106,7 +106,8 @@ class ShortCircuitTest implements WithAssertions {
     private static final String ALL_COMPUTATIONS_STATUS_JSON = "{\"LOAD_FLOW\":null,\"SECURITY_ANALYSIS\":null," +
             "\"SENSITIVITY_ANALYSIS\":null,\"SHORT_CIRCUIT\":\"{\\\"status\\\":\\\"COMPLETED\\\"}\"," +
             "\"SHORT_CIRCUIT_ONE_BUS\":null,\"VOLTAGE_INITIALIZATION\":null,\"DYNAMIC_SIMULATION\":null," +
-            "\"DYNAMIC_SECURITY_ANALYSIS\":null,\"DYNAMIC_MARGIN_CALCULATION\":null,\"STATE_ESTIMATION\":null,\"PCC_MIN\":null}";
+            "\"DYNAMIC_SECURITY_ANALYSIS\":null,\"DYNAMIC_MARGIN_CALCULATION\":null,\"STATE_ESTIMATION\":null," +
+            "\"PCC_MIN\":null,\"ASYMMETRICAL_LOAD\":null}";
 
     private static final String SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
     private static final UUID SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID = UUID.fromString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
@@ -221,10 +222,11 @@ class ShortCircuitTest implements WithAssertions {
                         .header(HEADER_USER_ID, "testUserId")
                         .content("{\"dumb\": \"json\"}").contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
-        assertEquals(NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        assertEquals(NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        assertEquals(NotificationService.UPDATE_TYPE_PCC_MIN_STATUS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        assertEquals(NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS, TestUtils.receiveStudyUpdate(output, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS,
+            TestUtils.receiveStudyUpdate(output, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_PCC_MIN_STATUS, TestUtils.receiveStudyUpdate(output, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS, TestUtils.receiveStudyUpdate(output, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         WireMockUtilsCriteria.verifyPutRequest(wireMockServer, "/v1/parameters/" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING, Map.of(), null);
     }
 
@@ -614,7 +616,7 @@ class ShortCircuitTest implements WithAssertions {
         // Test reset uuid result in the database
         assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, ComputationType.SHORT_CIRCUIT));
 
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED, updateType);
@@ -625,7 +627,7 @@ class ShortCircuitTest implements WithAssertions {
     }
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, String updateTypeToCheck, String otherUpdateTypeToCheck) {
-        Message<byte[]> shortCircuitAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> shortCircuitAnalysisStatusMessage = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(studyUuid, shortCircuitAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) shortCircuitAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         if (otherUpdateTypeToCheck == null) {
@@ -764,17 +766,17 @@ class ShortCircuitTest implements WithAssertions {
                     .contentType(MediaType.ALL)
                     .content(parameters))
             .andExpect(status().is(status.value()));
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
-        message = output.receive(TIMEOUT, studyUpdateDestination);
+        message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
-        message = output.receive(TIMEOUT, studyUpdateDestination);
+        message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(NotificationService.UPDATE_TYPE_PCC_MIN_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
-        message = output.receive(TIMEOUT, studyUpdateDestination);
+        message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
@@ -886,7 +888,7 @@ class ShortCircuitTest implements WithAssertions {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
                 .andExpect(status().isOk());
-        var mess = output.receive(TIMEOUT, studyUpdateDestination);
+        var mess = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));

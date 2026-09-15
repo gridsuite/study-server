@@ -8,11 +8,12 @@
 package org.gridsuite.study.server.service.loadflow;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.loadflow.LoadFlowParameters;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
@@ -32,7 +33,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -184,13 +184,6 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
         return restTemplate.postForObject(baseUri + path, null, UUID.class);
     }
 
-    public void assertLoadFlowNotRunning(UUID resultUuid) {
-        LoadFlowStatus loadFlowStatus = getLoadFlowStatus(resultUuid);
-        if (LoadFlowStatus.RUNNING.equals(loadFlowStatus)) {
-            throw new StudyException(COMPUTATION_RUNNING);
-        }
-    }
-
     public List<LimitViolationInfos> getLimitViolations(UUID resultUuid, String filters, String globalFilters, Sort sort, UUID networkUuid, String variantId) {
         List<LimitViolationInfos> result = new ArrayList<>();
 
@@ -223,11 +216,16 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
             }).getBody();
     }
 
-    public LoadFlowParametersInfos getLoadFlowParameters(UUID parametersUuid) {
-
+    public LoadFlowParameters getCommonParameters(UUID parametersUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(parametersUuid).toUriString();
-        return restTemplate.getForObject(baseUri + path, LoadFlowParametersInfos.class);
+        String parameters = restTemplate.getForObject(baseUri + path, String.class);
+        try {
+            JsonNode commonParametersNode = objectMapper.readTree(parameters).get("commonParameters");
+            return objectMapper.treeToValue(commonParametersNode, LoadFlowParameters.class);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     public UUID createLoadFlowParameters(String parameters) {
@@ -325,9 +323,9 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
         return restTemplate.getForObject(getBaseUri() + DELIMITER + LOADFLOW_API_VERSION + "/parameters/default-limit-reductions", String.class);
     }
 
-    public LoadFlowParametersInfos getParameters(UUID parameterUuid) {
+    public String getParameters(UUID parameterUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
-        return restTemplate.getForObject(getBaseUri() + path, LoadFlowParametersInfos.class);
+        return restTemplate.getForObject(getBaseUri() + path, String.class);
     }
 
     public void updateParameters(UUID parameterUuid, @Nullable String parameters) {

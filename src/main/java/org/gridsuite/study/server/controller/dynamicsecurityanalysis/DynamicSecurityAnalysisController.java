@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
@@ -25,6 +26,7 @@ import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.DYNAWO_PROVIDER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_SECURITY_ANALYSIS;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -36,13 +38,16 @@ import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_SECURITY_AN
 public class DynamicSecurityAnalysisController {
     private final StudyService studyService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
 
     public DynamicSecurityAnalysisController(StudyService studyService,
                                              RootNetworkNodeInfoService rootNetworkNodeInfoService,
-                                             DynamicSecurityAnalysisService dynamicSecurityAnalysisService) {
+                                             DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
+                                             NodeActivityRunnerService nodeActivityRunnerService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
     }
 
@@ -57,7 +62,8 @@ public class DynamicSecurityAnalysisController {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(DYNAMIC_SECURITY_ANALYSIS, userId);
         studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), dynamicSecurityAnalysisService::getDynamicSecurityAnalysisProvider);
-        dynamicSecurityAnalysisService.runDynamicSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
+        nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+            () -> dynamicSecurityAnalysisService.runDynamicSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
 

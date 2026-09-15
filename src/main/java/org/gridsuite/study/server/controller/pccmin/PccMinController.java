@@ -12,20 +12,22 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.pccmin.PccMinService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.PCC_MIN;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -33,16 +35,19 @@ import static org.gridsuite.study.server.dto.ComputationType.PCC_MIN;
 
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min")
-@Tag(name = "Study server - Pcc min parameters")
+@Tag(name = "Study server - Pcc min")
 public class PccMinController {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final StudyService studyService;
     private final PccMinService pccMinService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
 
-    public PccMinController(RootNetworkNodeInfoService rootNetworkNodeInfoService, StudyService studyService, PccMinService pccMinService) {
+    public PccMinController(RootNetworkNodeInfoService rootNetworkNodeInfoService, StudyService studyService,
+                            PccMinService pccMinService, NodeActivityRunnerService nodeActivityRunnerService) {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.studyService = studyService;
         this.pccMinService = pccMinService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
     }
 
     @PostMapping(value = "/result/csv", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -57,15 +62,7 @@ public class PccMinController {
             @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
             @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
             Sort sort, @RequestBody String csvHeaders) {
-        byte[] result = rootNetworkNodeInfoService.exportPccMinResultsAsCsv(nodeUuid, rootNetworkUuid, csvHeaders, sort, filters, globalFilters);
-        HttpHeaders responseHeaders = new HttpHeaders();
-        responseHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        responseHeaders.setContentDispositionFormData("attachment", "pcc_min_results.csv");
-
-        return ResponseEntity
-                .ok()
-                .headers(responseHeaders)
-                .body(result);
+        return rootNetworkNodeInfoService.exportPccMinResultsAsCsv(nodeUuid, rootNetworkUuid, csvHeaders, sort, filters, globalFilters);
     }
 
     @PostMapping(value = "/run")
@@ -78,7 +75,8 @@ public class PccMinController {
 
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(PCC_MIN, userId);
-        pccMinService.runPccMin(studyUuid, nodeUuid, rootNetworkUuid, userId);
+        nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+            () -> pccMinService.runPccMin(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }
 

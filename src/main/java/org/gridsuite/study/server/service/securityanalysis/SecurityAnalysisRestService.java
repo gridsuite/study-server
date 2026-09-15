@@ -70,8 +70,9 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
         return restTemplate.getForObject(baseUri + path, String.class);
     }
 
-    public byte[] getSecurityAnalysisResultCsv(UUID resultUuid, UUID networkUuid, String variantId, SecurityAnalysisResultType resultType, String globalFilters, String filters, Sort sort, String
-            csvTranslations) {
+    public ResponseEntity<byte[]> getSecurityAnalysisResultCsv(UUID resultUuid, UUID networkUuid, String variantId,
+                                                               SecurityAnalysisResultType resultType, String globalFilters,
+                                                               String filters, Sort sort, String csvTranslations) {
         if (resultUuid == null) {
             throw new StudyException(NOT_FOUND, "Result for security analysis not found");
         }
@@ -84,7 +85,7 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(csvTranslations, headers);
-        return restTemplate.exchange(baseUri + path, HttpMethod.POST, entity, byte[].class).getBody();
+        return restTemplate.exchange(baseUri + path, HttpMethod.POST, entity, byte[].class);
     }
 
     private String getPagedPathFromResultType(SecurityAnalysisResultType resultType) {
@@ -210,13 +211,6 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
                     .queryParam(RESULT_UUID, uuids).build().toUriString();
 
             restTemplate.put(baseUri + path, Void.class);
-        }
-    }
-
-    public void assertSecurityAnalysisNotRunning(UUID resultUuid) {
-        SecurityAnalysisStatus sas = getSecurityAnalysisStatus(resultUuid);
-        if (sas == SecurityAnalysisStatus.RUNNING) {
-            throw new StudyException(COMPUTATION_RUNNING);
         }
     }
 

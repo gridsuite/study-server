@@ -34,7 +34,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
 /**
@@ -133,13 +132,6 @@ public class PccMinRestService extends AbstractComputationRestService implements
         String path = UriComponentsBuilder
             .fromPath(PCC_MIN_URI + DELIMITER + "supervision/results-count").toUriString();
         return restTemplate.getForObject(baseUri + path, Integer.class);
-    }
-
-    public void assertPccMinNotRunning(UUID resultUuid) {
-        String status = getPccMinStatus(resultUuid);
-        if (PccMinStatus.RUNNING.name().equals(status)) {
-            throw new StudyException(COMPUTATION_RUNNING);
-        }
     }
 
     public void invalidatePccMinStatus(List<UUID> uuids) {
@@ -262,7 +254,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
         return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public byte[] exportPccMinResultsAsCsv(UUID resultUuid, String csvHeaders, UUID networkUuid, String variantId, Sort sort, String filters, String globalFilters) {
+    public ResponseEntity<byte[]> exportPccMinResultsAsCsv(UUID resultUuid, String csvHeaders, UUID networkUuid, String variantId, Sort sort, String filters, String globalFilters) {
         if (resultUuid == null) {
             throw new StudyException(NOT_FOUND, "Result of pcc min was not found");
         }
@@ -288,7 +280,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<String> httpEntity = new HttpEntity<>(csvHeaders, headers);
-        return restTemplate.exchange(uri, HttpMethod.POST, httpEntity, byte[].class).getBody();
+        return restTemplate.exchange(uri, HttpMethod.POST, httpEntity, byte[].class);
     }
 
     public String getParameters(UUID parameterUuid) {

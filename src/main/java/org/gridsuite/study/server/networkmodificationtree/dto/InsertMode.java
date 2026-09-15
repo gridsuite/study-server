@@ -13,5 +13,9 @@ package org.gridsuite.study.server.networkmodificationtree.dto;
 public enum InsertMode {
     BEFORE,
     AFTER,
-    CHILD
+    CHILD;
+
+    public boolean isChild() {
+        return this == CHILD;
+    }
 }

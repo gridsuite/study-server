@@ -67,6 +67,7 @@ public class InvalidateNodeInfos extends RemoteDeletionInfos {
         voltageInitResultUuids.addAll(invalidateNodeInfos.getVoltageInitResultUuids());
         stateEstimationResultUuids.addAll(invalidateNodeInfos.getStateEstimationResultUuids());
         pccMinResultUuids.addAll(invalidateNodeInfos.getPccMinResultUuids());
+        asymmetricalLoadResultUuids.addAll(invalidateNodeInfos.getAsymmetricalLoadResultUuids());
         dynamicSimulationResultUuids.addAll(invalidateNodeInfos.getDynamicSimulationResultUuids());
         dynamicSecurityAnalysisResultUuids.addAll(invalidateNodeInfos.getDynamicSecurityAnalysisResultUuids());
         dynamicMarginCalculationResultUuids.addAll(invalidateNodeInfos.getDynamicMarginCalculationResultUuids());
@@ -86,6 +87,7 @@ public class InvalidateNodeInfos extends RemoteDeletionInfos {
         infos.setDynamicMarginCalculationResultUuids(new HashSet<>(invalidateNodeInfos.getDynamicMarginCalculationResultUuids()));
         infos.setStateEstimationResultUuids(new HashSet<>(invalidateNodeInfos.getStateEstimationResultUuids()));
         infos.setPccMinResultUuids(new HashSet<>(invalidateNodeInfos.getPccMinResultUuids()));
+        infos.setAsymmetricalLoadResultUuids(new HashSet<>(invalidateNodeInfos.getAsymmetricalLoadResultUuids()));
         return infos;
     }
 }

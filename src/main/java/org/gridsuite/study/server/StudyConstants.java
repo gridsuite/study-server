@@ -49,6 +49,7 @@ public final class StudyConstants {
     public static final String DELIMITER = "/";
     public static final String QUERY_PARAM_VARIANT_ID = "variantId";
     public static final String QUERY_PARAM_PCC_MIN_UUID = "pccMinParametersUuid";
+    public static final String QUERY_PARAM_ASYMMETRICAL_LOAD_UUID = "asymmetricalLoadParametersUuid";
     public static final String QUERY_PARAM_SHORT_CIRCUIT_UUID = "shortCircuitParametersUuid";
     public static final String QUERY_PARAM_NETWORK_UUID = "networkUuid";
     public static final String QUERY_PARAM_ROOT_NETWORK_UUID = "rootNetworkUuid";
@@ -105,7 +106,7 @@ public final class StudyConstants {
     public static final String HEADER_ERROR_MESSAGE = "x-exception-message";
     public static final String QUERY_PARAM_ONLY_STASHED = "onlyStashed";
     public static final String QUERY_PARAM_STASHED = "stashed";
-    public static final String QUERY_PARAM_ACTIVATED = "activated";
+    public static final String QUERY_PARAM_APPLICABLE = "applicable";
     public static final String QUERY_PARAM_DESCRIPTION = "description";
     public static final String PATH_PARAM_PARAMETERS = "parameters";
     public static final String DYNA_FLOW_PROVIDER = "DynaFlow";

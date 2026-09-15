@@ -73,7 +73,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ContextConfigurationWithTestChannel
 class StudyControllerCreationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyControllerCreationTest.class);
-    private static final long TIMEOUT = 1000;
 
     @Autowired
     private StudyRepository studyRepository;
@@ -319,7 +318,7 @@ class StudyControllerCreationTest {
     }
 
     private void assertStudyCreationMessageReceived(UUID studyUuid, String userId, String expectedUpdateType) {
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));

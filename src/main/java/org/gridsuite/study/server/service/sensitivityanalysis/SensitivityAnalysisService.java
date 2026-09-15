@@ -7,7 +7,6 @@
 package org.gridsuite.study.server.service.sensitivityanalysis;
 
 import lombok.NonNull;
-import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -32,11 +31,8 @@ import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSI
 @Service
 public class SensitivityAnalysisService extends AbstractComputationService {
 
-    private final SensitivityAnalysisRestService sensitivityAnalysisRestService;
-    private final NetworkModificationTreeService networkModificationTreeService;
-    private final RootNetworkService rootNetworkService;
-    private final UserAdminService userAdminService;
     private final DirectoryService directoryService;
+    private final SensitivityAnalysisRestService sensitivityAnalysisRestService;
 
     protected SensitivityAnalysisService(StudyRepository studyRepository,
                                          ComputationParametersService computationParametersService,
@@ -47,11 +43,9 @@ public class SensitivityAnalysisService extends AbstractComputationService {
                                          RootNetworkService rootNetworkService,
                                          UserAdminService userAdminService,
                                          DirectoryService directoryService) {
-        super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService,
+            rootNetworkService, computationParametersService, userAdminService);
         this.sensitivityAnalysisRestService = sensitivityAnalysisRestService;
-        this.networkModificationTreeService = networkModificationTreeService;
-        this.rootNetworkService = rootNetworkService;
-        this.userAdminService = userAdminService;
         this.directoryService = directoryService;
     }
 
@@ -75,23 +69,18 @@ public class SensitivityAnalysisService extends AbstractComputationService {
                 sensitivityAnalysisRestService::createSensitivityAnalysisParameters,
                 sensitivityAnalysisRestService::updateSensitivityAnalysisParameters,
                 SENSITIVITY_ANALYSIS,
-                List.of(this::invalidateSensitivityAnalysisStatusOnAllNodes),
+                List.of(rootNetworkNodeInfoService::invalidateSensitivityAnalysisStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS
         );
-    }
-
-    public void invalidateSensitivityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        sensitivityAnalysisRestService.invalidateSensitivityAnalysisStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SENSITIVITY_ANALYSIS));
     }
 
     @Transactional
     public UUID runSensitivityAnalysis(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
         StudyEntity study = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
         UUID result = handleSensitivityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId);
 
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(SENSITIVITY_ANALYSIS), result);
+        handleQuotaStart(userId, result, SENSITIVITY_ANALYSIS);
         return result;
     }
 

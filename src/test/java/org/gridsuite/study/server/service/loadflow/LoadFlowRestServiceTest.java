@@ -7,8 +7,9 @@
 package org.gridsuite.study.server.service.loadflow;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.loadflow.LoadFlowParameters;
+import com.powsybl.loadflow.json.LoadFlowParametersJsonModule;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,6 +20,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,12 +38,14 @@ class LoadFlowRestServiceTest {
     @Mock
     private RestTemplate restTemplate;
 
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new LoadFlowParametersJsonModule());
+
     private LoadFlowRestService loadFlowRestService;
 
     @BeforeEach
     void setUp() {
         when(remoteServicesProperties.getServiceUri("loadflow-server")).thenReturn(BASE_URI);
-        loadFlowRestService = new LoadFlowRestService(remoteServicesProperties, new ObjectMapper(), restTemplate);
+        loadFlowRestService = new LoadFlowRestService(remoteServicesProperties, objectMapper, restTemplate);
     }
 
     @Test
@@ -71,10 +75,23 @@ class LoadFlowRestServiceTest {
     @Test
     void testGetParameters() {
         UUID parameterUuid = UUID.randomUUID();
-        LoadFlowParametersInfos parameters = new LoadFlowParametersInfos();
-        when(restTemplate.getForObject(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/" + parameterUuid, LoadFlowParametersInfos.class)).thenReturn(parameters);
+        String parameters = "{\"provider\":\"OpenLoadFlow\"}";
+        when(restTemplate.getForObject(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/" + parameterUuid, String.class)).thenReturn(parameters);
 
         assertThat(loadFlowRestService.getParameters(parameterUuid)).isEqualTo(parameters);
+    }
+
+    @Test
+    void testGetCommonParameters() throws Exception {
+        UUID parameterUuid = UUID.randomUUID();
+        LoadFlowParameters commonParameters = LoadFlowParameters.load();
+        String parameters = objectMapper.writeValueAsString(Map.of(
+                "provider", "OpenLoadFlow",
+                "commonParameters", commonParameters));
+        when(restTemplate.getForObject(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/" + parameterUuid, String.class)).thenReturn(parameters);
+
+        assertThat(objectMapper.writeValueAsString(loadFlowRestService.getCommonParameters(parameterUuid)))
+                .isEqualTo(objectMapper.writeValueAsString(commonParameters));
     }
 
     @Test

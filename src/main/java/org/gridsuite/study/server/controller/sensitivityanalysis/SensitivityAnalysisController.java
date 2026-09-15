@@ -13,21 +13,23 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisService;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSIS;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -43,19 +45,22 @@ public class SensitivityAnalysisController {
     private final NetworkModificationTreeService networkModificationTreeService;
     private final SensitivityAnalysisRestService sensitivityAnalysisRestService;
     private final RootNetworkService rootNetworkService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
 
     public SensitivityAnalysisController(RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                          StudyService studyService,
                                          SensitivityAnalysisService sensitivityAnalysisService,
                                          NetworkModificationTreeService networkModificationTreeService,
                                          SensitivityAnalysisRestService sensitivityAnalysisRestService,
-                                         RootNetworkService rootNetworkService) {
+                                         RootNetworkService rootNetworkService,
+                                         NodeActivityRunnerService nodeActivityRunnerService) {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.studyService = studyService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.sensitivityAnalysisRestService = sensitivityAnalysisRestService;
         this.rootNetworkService = rootNetworkService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
     }
 
     @PostMapping(value = "/run")
@@ -68,7 +73,8 @@ public class SensitivityAnalysisController {
                                                        @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(SENSITIVITY_ANALYSIS, userId);
-        sensitivityAnalysisService.runSensitivityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId);
+        nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+            () -> sensitivityAnalysisService.runSensitivityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }
 
@@ -103,15 +109,7 @@ public class SensitivityAnalysisController {
             @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
             @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
             @RequestBody SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
-        byte[] result = rootNetworkNodeInfoService.exportSensitivityResultsAsCsv(nodeUuid, rootNetworkUuid, sensitivityAnalysisCsvFileInfos, selector, filters, globalFilters);
-        HttpHeaders responseHeaders = new HttpHeaders();
-        responseHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        responseHeaders.setContentDispositionFormData("attachment", "sensitivity_results.csv");
-
-        return ResponseEntity
-                .ok()
-                .headers(responseHeaders)
-                .body(result);
+        return rootNetworkNodeInfoService.exportSensitivityResultsAsCsv(nodeUuid, rootNetworkUuid, sensitivityAnalysisCsvFileInfos, selector, filters, globalFilters);
     }
 
     @GetMapping(value = "/result/filter-options")

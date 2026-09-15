@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.springframework.http.MediaType;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_EVENTS;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -33,10 +35,13 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 public class DynamicSimulationEventsController {
     private final StudyService studyService;
     private final DynamicSimulationService dynamicSimulationService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
 
-    public DynamicSimulationEventsController(StudyService studyService, DynamicSimulationService dynamicSimulationService) {
+    public DynamicSimulationEventsController(StudyService studyService, DynamicSimulationService dynamicSimulationService,
+                                             NodeActivityRunnerService nodeActivityRunnerService) {
         this.studyService = studyService;
         this.dynamicSimulationService = dynamicSimulationService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
     }
 
     @GetMapping(value = "/events")
@@ -72,8 +77,9 @@ public class DynamicSimulationEventsController {
                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @RequestBody EventInfos event,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
-        dynamicSimulationService.createDynamicSimulationEvent(studyUuid, nodeUuid, userId, event);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        nodeActivityRunnerService.runWith(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
+            () -> dynamicSimulationService.createDynamicSimulationEvent(studyUuid, nodeUuid, userId, event));
         return ResponseEntity.ok().build();
     }
 
@@ -86,8 +92,9 @@ public class DynamicSimulationEventsController {
                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @RequestBody EventInfos event,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
-        dynamicSimulationService.updateDynamicSimulationEvent(studyUuid, nodeUuid, userId, event);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        nodeActivityRunnerService.runWith(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
+            () -> dynamicSimulationService.updateDynamicSimulationEvent(studyUuid, nodeUuid, userId, event));
         return ResponseEntity.ok().build();
     }
 
@@ -100,8 +107,9 @@ public class DynamicSimulationEventsController {
                                                               @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                               @Parameter(description = "Dynamic simulation event UUIDs") @RequestParam("eventUuids") List<UUID> eventUuids,
                                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
-        dynamicSimulationService.deleteDynamicSimulationEvents(studyUuid, nodeUuid, userId, eventUuids);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        nodeActivityRunnerService.runWith(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
+            () -> dynamicSimulationService.deleteDynamicSimulationEvents(studyUuid, nodeUuid, userId, eventUuids));
         return ResponseEntity.ok().build();
     }
 }
