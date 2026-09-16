@@ -17,7 +17,6 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,26 +35,23 @@ public class StudyImportService {
     private final RootNetworkService rootNetworkService;
     private final CaseService caseService;
     private final NotificationService notificationService;
-    private final StudyImportService self;
 
     public StudyImportService(StudyService studyService, RootNetworkService rootNetworkService,
-                              CaseService caseService, NotificationService notificationService,
-                              @Lazy StudyImportService self) {
+                              CaseService caseService, NotificationService notificationService) {
         this.studyService = studyService;
         this.rootNetworkService = rootNetworkService;
         this.caseService = caseService;
         this.notificationService = notificationService;
-        this.self = self;
-    }
-
-    public void importStudy(TreeExportInfos treeExportInfos, String userId) {
-        StudyEntity studyEntity = self.createStudyEntityWithTree(treeExportInfos, userId);
-        UUID studyUuid = studyEntity.getId();
-        self.duplicateCaseAndCreateRootNetworks(studyUuid, treeExportInfos.rootNetworks());
-        notificationService.emitStudyCreationFinished(studyUuid, userId);
     }
 
     @Transactional
+    public void importStudy(TreeExportInfos treeExportInfos, String userId) {
+        StudyEntity studyEntity = createStudyEntityWithTree(treeExportInfos, userId);
+        UUID studyUuid = studyEntity.getId();
+        duplicateCaseAndCreateRootNetworks(studyUuid, treeExportInfos.rootNetworks());
+        notificationService.emitStudyCreationFinished(studyUuid, userId);
+    }
+
     public StudyEntity createStudyEntityWithTree(TreeExportInfos treeExportInfos, String userId) {
         return studyService.createStudyEntityWithTree(treeExportInfos.studyUuid(), userId, treeExportInfos.nodeTree());
     }
@@ -65,7 +61,7 @@ public class StudyImportService {
         for (RootNetworkExportInfos rootNetworkInfos : orderedRootNetworks) {
             UUID newCaseUuid = caseService.duplicateCase(rootNetworkInfos.caseInfos().getCaseUuid(), false);
             try {
-                self.createRootNetwork(studyUuid, rootNetworkInfos, newCaseUuid);
+                createRootNetwork(studyUuid, rootNetworkInfos, newCaseUuid);
             } catch (Exception exception) {
                 caseService.deleteCase(newCaseUuid);
                 LOGGER.error(String.format("Could not clean up orphaned case '%s' after import failure", newCaseUuid), exception);
@@ -73,7 +69,6 @@ public class StudyImportService {
         }
     }
 
-    @Transactional
     public void createRootNetwork(UUID studyUuid, RootNetworkExportInfos rootNetworkInfos, UUID newCaseUuid) {
         StudyEntity studyEntity = studyService.getStudy(studyUuid);
         RootNetworkEntity rootNetworkEntity = rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder()
