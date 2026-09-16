@@ -17,6 +17,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
@@ -128,6 +129,32 @@ class NetworkModificationServiceTest {
         networkModificationService.updateNetworkModificationsMetadata(List.of(firstUuid, secondUuid), RESPONSE);
 
         verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+    }
+
+    @Test
+    void testDeleteModificationsGroups() {
+        UUID firstUuid = UUID.randomUUID();
+        UUID secondUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups?errorOnGroupNotFound=false";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        networkModificationService.deleteModificationsGroups(List.of(firstUuid, secondUuid));
+        HttpEntity<String> httpEntity = new HttpEntity<>("[\"" + firstUuid + "\",\"" + secondUuid + "\"]", headers);
+        verify(restTemplate).exchange(expectedUrl, HttpMethod.DELETE, httpEntity, new ParameterizedTypeReference<Map<UUID, UUID>>() { });
+    }
+
+    @Test
+    void testDeleteStashedModificationsGroups() {
+        UUID firstUuid = UUID.randomUUID();
+        UUID secondUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/stashed-modifications?errorOnGroupNotFound=false";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        networkModificationService.deleteStashedModificationsFromGroups(List.of(firstUuid, secondUuid));
+        HttpEntity<String> httpEntity = new HttpEntity<>("[\"" + firstUuid + "\",\"" + secondUuid + "\"]", headers);
+        verify(restTemplate).exchange(expectedUrl, HttpMethod.DELETE, httpEntity, new ParameterizedTypeReference<Map<UUID, UUID>>() { });
     }
 
     @Test
