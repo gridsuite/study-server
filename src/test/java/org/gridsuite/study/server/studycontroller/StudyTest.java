@@ -1181,7 +1181,7 @@ class StudyTest extends StudyTestBase {
                 (NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)
             ).forEach(
                     node -> WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/groups/" + node.getModificationGroupUuid() + "/references", Map.of(), 1)
-            );
+        );
 
         if (sourceStudy.getSecurityAnalysisParametersUuid() == null) {
             // if we don't have a securityAnalysisParametersUuid we don't call the security-analysis-server to duplicate them
