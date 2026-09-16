@@ -15,7 +15,9 @@ import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -112,6 +114,16 @@ public class RootNetworkNodeInfoEntity {
         @AttributeOverride(name = "globalBuildStatus", column = @Column(name = "globalBuildStatus", nullable = false))
     })
     private NodeBuildStatusEmbeddable nodeBuildStatus;
+
+    // The modifications a root network used to leave out, replaced by the applicability per root network tag. Nothing
+    // reads this collection any more: it is only mapped so that the rows left in the table are deleted with their root
+    // network node info, which their foreign key would otherwise hold back. The table itself goes in a later release.
+    @ElementCollection
+    @CollectionTable(name = "RootNetworkNodeInfoModificationsToExclude",
+        joinColumns = @JoinColumn(name = "root_network_node_info_id"),
+        indexes = {@Index(name = "root_network_node_info_entity_modificationsUuidsToExclude_idx1", columnList = "root_network_node_info_id")},
+        foreignKey = @ForeignKey(name = "root_network_node_info_entity_modificationsUuidsToExclude_fk1"))
+    private Set<UUID> modificationsUuidsToExclude = new HashSet<>();
 
     public RootNetworkNodeInfo toDto() {
         return RootNetworkNodeInfo.builder()
