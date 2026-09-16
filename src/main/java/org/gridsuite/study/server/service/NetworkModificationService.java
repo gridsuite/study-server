@@ -46,7 +46,8 @@ public class NetworkModificationService {
 
     private static final String DELIMITER = "/";
     private static final String COMPOSITE_PATH = "network-composite-modifications" + DELIMITER;
-    private static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
+    private static final String GROUPS = "groups";
+    private static final String GROUP_PATH = GROUPS + DELIMITER + "{groupUuid}";
     private static final String CONTAINER_PATH = "containers" + DELIMITER + "{containerId}";
     private static final String NETWORK_MODIFICATIONS_PATH = "network-modifications";
     private static final String NETWORK_MODIFICATIONS_COUNT_PATH = "network-modifications-count";
@@ -184,6 +185,24 @@ public class NetworkModificationService {
             .toUriString();
 
         restTemplate.delete(getNetworkModificationServerURI(false) + path);
+    }
+
+    public void deleteModificationsGroups(List<UUID> groupUuids) {
+        Objects.requireNonNull(groupUuids);
+        if (groupUuids.isEmpty()) {
+            return;
+        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(toJson(groupUuids), headers);
+        var path = UriComponentsBuilder.fromPath(GROUPS)
+                .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
+                .toUriString();
+
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path,
+                HttpMethod.DELETE,
+                httpEntity,
+                new ParameterizedTypeReference<Map<UUID, UUID>>() { });
     }
 
     public void deleteModifications(UUID groupUuid, List<UUID> modificationsUuids) {
@@ -497,23 +516,26 @@ public class NetworkModificationService {
     }
 
     /**
-     * Asks the network modification server to take a composite modification out of its group, replacing it in the group
+     * Asks the network modification server to take a composite modification out of its container, replacing it there
      * by a reference to it, so that it can be stored as an element in the directory server. The composite modification
      * keeps its own uuid.
+     *
+     * @return the reference modification left in place of the composite modification, either in the group of the node
+     * or in a parent composite
      */
-    public void extractCompositeModificationToShare(@NonNull UUID groupUuid, @NonNull UUID modificationUuid, @NonNull String name) {
+    public ModificationReference extractCompositeModificationToShare(@NonNull UUID groupUuid, @NonNull UUID modificationUuid, @NonNull String name) {
         String path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + "{modificationUuid}" + DELIMITER + "share")
                 .queryParam(QUERY_PARAM_NAME, name)
                 .queryParam(QUERY_PARAM_GROUP_UUID, groupUuid)
                 .buildAndExpand(modificationUuid)
                 .toUriString();
 
-        restTemplate.exchange(
+        return restTemplate.exchange(
                 getNetworkModificationServerURI(false) + path,
                 HttpMethod.POST,
                 null,
-                Void.class
-        );
+                ModificationReference.class
+        ).getBody();
     }
 
     public UUID assembleModificationsIntoComposite(@NonNull List<UUID> modificationsUuids) {
@@ -591,6 +613,24 @@ public class NetworkModificationService {
         }
 
         return json;
+    }
+
+    public void deleteStashedModificationsFromGroups(List<UUID> groupUuids) {
+        Objects.requireNonNull(groupUuids);
+        if (groupUuids.isEmpty()) {
+            return;
+        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(toJson(groupUuids), headers);
+        var path = UriComponentsBuilder.fromPath(GROUPS + "/stashed-modifications")
+                .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
+                .toUriString();
+
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path,
+                HttpMethod.DELETE,
+                httpEntity,
+                new ParameterizedTypeReference<Map<UUID, UUID>>() { });
     }
 
     public void deleteStashedModifications(UUID groupUUid) {

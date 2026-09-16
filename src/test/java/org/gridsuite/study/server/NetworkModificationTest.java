@@ -2191,9 +2191,37 @@ class NetworkModificationTest {
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
                 UUID.randomUUID(), VARIANT_ID, "Node 1", userId);
-        UUID nodeUuid1 = node1.getId();
 
+        UUID newReferenceUuid = UUID.randomUUID();
         UUID compositeUuid = UUID.randomUUID();
+
+        // the composite modification is replaced in the node group : the reference left behind belongs to the node
+        testShareCompositeModificationFromContainer(studyUuid, node1, userId,
+                new ModificationReference(newReferenceUuid, compositeUuid, null),
+                ReferenceAttributes.createReferenceAttributes(newReferenceUuid, studyUuid, node1.getId(), STUDY_NODE));
+    }
+
+    @Test
+    void testShareNestedCompositeModification() throws Exception {
+        String userId = "userId";
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "Node 1", userId);
+        UUID newReferenceUuid = UUID.randomUUID();
+        UUID compositeUuid = UUID.randomUUID();
+        UUID parentCompositeUuid = UUID.randomUUID();
+
+        // the composite modification is replaced in a parent composite : the reference left behind belongs to it
+        testShareCompositeModificationFromContainer(studyUuid, node1, userId,
+                new ModificationReference(newReferenceUuid, compositeUuid, parentCompositeUuid),
+                ReferenceAttributes.createReferenceAttributes(newReferenceUuid, node1.getId(), parentCompositeUuid, STUDY_NODE_NETWORK_MODIFICATION));
+    }
+
+    private void testShareCompositeModificationFromContainer(UUID studyUuid, NetworkModificationNode node, String userId,
+                                                             ModificationReference newReference, ReferenceAttributes expectedReference) throws Exception {
+        UUID compositeUuid = newReference.referencedId();
         UUID directoryUuid = UUID.randomUUID();
         String compositeName = "sharedComposite";
 
@@ -2204,50 +2232,43 @@ class NetworkModificationTest {
                         "/v1/directories/" + directoryUuid + "/elements/" + compositeName + "/types/MODIFICATION"))
                 .willReturn(WireMock.aResponse().withStatus(HttpStatus.NO_CONTENT.value())));
 
-        // the composite modification is taken out of the node group, then stored as an element of the directory
+        // the composite modification is replaced by a new reference modification, then stored as an element of the directory
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo(
                         "/v1/network-composite-modifications/" + compositeUuid + "/share"))
-                .willReturn(WireMock.ok()));
+                .willReturn(WireMock.ok()
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(mapper.writeValueAsString(newReference))));
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/directories/" + directoryUuid + "/elements"))
                 .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/elements/" + compositeUuid + "/references"))
                 .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
 
-        // extraction replaced the local composite by this new reference-modification in the group
-        UUID newReferenceUuid = UUID.randomUUID();
-        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/groups/" + node1.getModificationGroupUuid() + "/references"))
-                .willReturn(WireMock.ok()
-                        .withBody(mapper.writeValueAsString(List.of(new ModificationReference(newReferenceUuid, compositeUuid, null))))
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
-
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuid}/share",
-                        studyUuid, nodeUuid1, compositeUuid)
+                        studyUuid, node.getId(), compositeUuid)
                         .queryParam("name", compositeName)
                         .queryParam("description", "description")
                         .queryParam("parentDirectoryUuid", directoryUuid.toString())
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
 
-        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, node.getId());
         checkElementUpdatedMessageSent(studyUuid, userId);
 
         verifyDirectoryWriteChecks(directoryUuid, compositeName);
         WireMockUtilsCriteria.verifyPostRequest(
                 wireMockServer,
                 "/v1/network-composite-modifications/" + compositeUuid + "/share",
-                Map.of("groupUuid", equalTo(node1.getModificationGroupUuid().toString()),
-                        "name", equalTo(compositeName)));
+                Map.of("groupUuid", WireMock.equalTo(node.getModificationGroupUuid().toString()),
+                        "name", WireMock.equalTo(compositeName)));
         WireMockUtilsCriteria.verifyPostRequest(
                 wireMockServer,
                 "/v1/directories/" + directoryUuid + "/elements",
                 Map.of());
-        WireMockUtilsCriteria.verifyGetRequest(wireMockServer,
-                "/v1/groups/" + node1.getModificationGroupUuid() + "/references", Map.of(), 1);
         WireMockUtilsCriteria.verifyPostRequest(
                 wireMockServer,
                 "/v1/elements/" + compositeUuid + "/references",
                 Map.of(),
-                mapper.writeValueAsString(ReferenceAttributes.createReferenceAttributes(newReferenceUuid, studyUuid, nodeUuid1, STUDY_NODE)));
+                mapper.writeValueAsString(expectedReference));
     }
 
     @Test
