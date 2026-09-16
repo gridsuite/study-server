@@ -2026,15 +2026,12 @@ public class StudyService {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         try {
             // the applied modifications are left unchanged : the node does not need to be rebuilt
-            networkModificationService.extractCompositeModificationToShare(groupUuid, modificationUuid, name);
+            ModificationReference newReference = networkModificationService.extractCompositeModificationToShare(groupUuid, modificationUuid, name);
             // the composite modification keeps its uuid when extracted, so it is shared under that same uuid
             directoryService.createElement(parentDirectoryUuid, description, modificationUuid, name, DirectoryService.MODIFICATION, userId);
-            // extraction replaced the local composite by a new reference-modification pointing at modificationUuid
-            // (the only such reference, since that composite was local until now): register it on the shared element
-            List<ModificationReference> newReference = networkModificationService.getModificationReferences(groupUuid).stream()
-                    .filter(ref -> modificationUuid.equals(ref.referencedId()))
-                    .toList();
-            createElementsReferences(newReference, studyUuid, nodeUuid, userId);
+            // extraction replaced the local composite by a new reference modification, in the node group or in a parent
+            // composite: register it on the shared element
+            createElementsReferences(List.of(newReference), studyUuid, nodeUuid, userId);
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
         }
