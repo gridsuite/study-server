@@ -762,6 +762,7 @@ public class StudyService {
             .networkVisualizationParametersUuid(copiedNetworkVisualizationParametersUuid)
             .spreadsheetConfigCollectionUuid(copiedSpreadsheetConfigCollectionUuid)
             .workspacesConfigUuid(copiedWorkspacesConfigUuid)
+            .monoRoot(sourceStudyEntity.isMonoRoot())
             .build());
     }
 
