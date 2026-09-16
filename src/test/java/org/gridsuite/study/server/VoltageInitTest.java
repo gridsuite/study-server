@@ -351,7 +351,7 @@ class VoltageInitTest {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), VOLTAGE_INIT_STATUS_JSON);
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "\"" + MODIFICATIONS_GROUP_UUID + "\"");
-                } else if (path.matches("/v1/containers/.*" + "\\?action=COPY.*")) {
+                } else if (path.matches("/v1/groups/.*network-modifications/copy.*")) {
                     Optional<NetworkModificationResult> networkModificationResult =
                             createModificationResultWithElementImpact(SimpleImpactType.MODIFICATION,
                                     IdentifiableType.GENERATOR, "genId", Set.of("s1"));
@@ -553,7 +553,7 @@ class VoltageInitTest {
         // Fetch results to get modification group UUID
         TestUtils.assertRequestMatches("GET", "/v1/results/.*", server);
         // Duplicate modification in the group related to the node
-        TestUtils.assertRequestMatches("PUT", "/v1/containers/.*", server);
+        TestUtils.assertRequestMatches("PUT", "/v1/groups/.*/network-modifications/copy.*", server);
         // Update modification group UUID in the result
         TestUtils.assertRequestMatches("PUT", "/v1/results/.*/modifications-group-uuid", server);
 
@@ -802,7 +802,7 @@ class VoltageInitTest {
             .header("userId", "userId")).andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(3, server).stream().allMatch(r ->
             r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
-                r.matches("/v1/containers/.*\\?action=COPY&sourceContainerId=.*")
+            r.matches("/v1/groups/.*/network-modifications/copy\\?sourceContainerUuid=.*")
         ));
 
         // Invalidate only children
@@ -817,7 +817,7 @@ class VoltageInitTest {
         assertTrue(TestUtils.getRequestsDone(6, server).stream().allMatch(r ->
             r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
                 r.matches("/v1/results\\?resultsUuids=" + VOLTAGE_INIT_RESULT_UUID) ||
-                r.matches("/v1/containers/.*\\?action=COPY.*") ||
+                r.matches("/v1/groups/.*network-modifications/copy.*") ||
                 r.matches("/v1/network-modifications/index\\?networkUuid=.*&groupUuids=.*") ||
                 r.matches("/v1/reports")
         ));
@@ -834,7 +834,7 @@ class VoltageInitTest {
             .header("userId", "userId")).andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(4, server).stream().allMatch(r ->
             r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
-                r.matches("/v1/containers/.*\\?action=COPY&sourceContainerId=.*") ||
+                r.matches("/v1/groups/.*/network-modifications/copy\\?sourceContainerUuid=.*") ||
                 r.matches("/v1/network-modifications/index\\?networkUuid=.*&groupUuids=.*")
         ));
 
@@ -848,7 +848,7 @@ class VoltageInitTest {
             .header("userId", "userId")).andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(4, server).stream().allMatch(r ->
             r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
-                r.matches("/v1/containers/.*\\?action=COPY.*") ||
+                r.matches("/v1/groups/.*/network-modifications/copy.*") ||
                 r.matches("/v1/network-modifications/index\\?networkUuid=.*&groupUuids=.*")
         ));
 
@@ -936,7 +936,7 @@ class VoltageInitTest {
                 .header("userId", "userId")).andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(4, server).stream().allMatch(r ->
                 r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
-                        r.matches("/v1/containers/[^?]*\\?action=COPY&sourceContainerId=.*") ||
+                        r.matches("/v1/groups/[^?]*/network-modifications/copy\\?sourceContainerUuid=.*") ||
                         // the created modification is deactivated on the tag of the other root network
                         r.matches("/v1/network-modifications/root-network-applicability\\?.*")
         ));

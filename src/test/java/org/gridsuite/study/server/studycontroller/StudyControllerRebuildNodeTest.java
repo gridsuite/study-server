@@ -35,6 +35,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -94,7 +95,8 @@ class StudyControllerRebuildNodeTest {
     void testMoveNetworkModifications() {
         List<ModificationMoveInfos> modificationInfos = List.of(new ModificationMoveInfos(UUID.randomUUID(), null, null, null));
         UUID originNodeUuid = UUID.randomUUID();
-        studyController.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationInfos, userId);
+        when(networkModificationTreeService.resolveNodeGroups(modificationInfos, originNodeUuid, nodeUuid)).thenReturn(modificationInfos);
+        studyController.moveModifications(studyUuid, nodeUuid, studyUuid, originNodeUuid, modificationInfos, userId);
 
         verify(rebuildNodeService, times(1)).moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationInfos, userId);
         verify(studyService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));

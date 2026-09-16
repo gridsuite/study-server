@@ -24,6 +24,7 @@ import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.nodeactivity.NodeActivityInfos;
@@ -48,6 +49,7 @@ import java.util.stream.Stream;
 import static org.gridsuite.study.server.StudyConstants.CASE_FORMAT;
 import static org.gridsuite.study.server.StudyConstants.CompositeModificationsActionType;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MOVE_NETWORK_MODIFICATION_FORBIDDEN;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.*;
 
 /**
@@ -653,6 +655,7 @@ public class StudyController {
     public ResponseEntity<Void> moveModifications(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
+            @RequestParam(value = "originStudyUuid", required = false) UUID originStudyUuid,
             @RequestParam(value = "originNodeUuid", required = false) UUID originNodeUuid,
             @RequestBody List<ModificationMoveInfos> modificationInfos,
             @RequestHeader(HEADER_USER_ID) String userId) {
@@ -660,6 +663,11 @@ public class StudyController {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertIsStudyAndNodeExist(studyUuid, resolvedOriginNodeUuid);
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+
+        if (originStudyUuid != null && !studyUuid.equals(originStudyUuid)) {
+            throw new StudyException(MOVE_NETWORK_MODIFICATION_FORBIDDEN);
+        }
+
         List<ModificationMoveInfos> resolvedModificationMoveInfos = networkModificationTreeService.resolveNodeGroups(modificationInfos, resolvedOriginNodeUuid, nodeUuid);
         rebuildNodeService.moveNetworkModifications(studyUuid, nodeUuid, resolvedOriginNodeUuid, resolvedModificationMoveInfos, userId);
         return ResponseEntity.ok().build();
@@ -670,12 +678,9 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification list has been updated.")})
     public ResponseEntity<Void> copyModifications(@PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
-                                                         @RequestParam("originStudyUuid") UUID originStudyUuid,
-                                                         @RequestParam("originNodeUuid") UUID originNodeUuid,
                                                          @RequestBody List<ModificationCopyInfos> modificationInfos,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        studyService.assertIsStudyAndNodeExist(originStudyUuid, originNodeUuid);
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         List<UUID> modificationsToCopyUuidList = modificationInfos.stream().map(ModificationCopyInfos::modificationUuid).toList();
         handleDuplicateNetworkModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId);

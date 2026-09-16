@@ -80,7 +80,7 @@ class RebuildNodeServiceTest {
                 new ModificationContainerInfos(UUID.randomUUID(), ModificationContainerType.GROUP),
                 new ModificationContainerInfos(UUID.randomUUID(), ModificationContainerType.GROUP),
                 null);
-        rebuildNodeService.moveNetworkModifications(studyUuid, node1Uuid, modificationUuid, List.of(modificationMoveInfos), userId);
+        rebuildNodeService.moveNetworkModifications(studyUuid, node1Uuid, node1Uuid, List.of(modificationMoveInfos), userId);
 
         verify(studyService, times(1)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
     }
