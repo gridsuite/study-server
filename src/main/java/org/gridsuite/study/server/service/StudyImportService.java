@@ -39,7 +39,8 @@ public class StudyImportService {
     private final StudyImportService self;
 
     public StudyImportService(StudyService studyService, RootNetworkService rootNetworkService,
-                              CaseService caseService, NotificationService notificationService, @Lazy StudyImportService self) {
+                              CaseService caseService, NotificationService notificationService,
+                              @Lazy StudyImportService self) {
         this.studyService = studyService;
         this.rootNetworkService = rootNetworkService;
         this.caseService = caseService;
@@ -50,7 +51,7 @@ public class StudyImportService {
     public void importStudy(TreeExportInfos treeExportInfos, String userId) {
         StudyEntity studyEntity = self.createStudyEntityWithTree(treeExportInfos, userId);
         UUID studyUuid = studyEntity.getId();
-        duplicateCaseAndCreateRootNetworks(studyUuid, treeExportInfos.rootNetworks());
+        self.duplicateCaseAndCreateRootNetworks(studyUuid, treeExportInfos.rootNetworks());
         notificationService.emitStudyCreationFinished(studyUuid, userId);
     }
 
@@ -59,31 +60,31 @@ public class StudyImportService {
         return studyService.createStudyEntityWithTree(treeExportInfos.studyUuid(), userId, treeExportInfos.nodeTree());
     }
 
-    private void duplicateCaseAndCreateRootNetworks(UUID studyUuid, List<RootNetworkExportInfos> rootNetworksInfos) {
+    public void duplicateCaseAndCreateRootNetworks(UUID studyUuid, List<RootNetworkExportInfos> rootNetworksInfos) {
         List<RootNetworkExportInfos> orderedRootNetworks = rootNetworksInfos.stream().sorted(Comparator.comparing(RootNetworkExportInfos::index)).toList();
         for (RootNetworkExportInfos rootNetworkInfos : orderedRootNetworks) {
-            self.duplicateCaseAndCreateRootNetwork(studyUuid, rootNetworkInfos);
+            UUID newCaseUuid = caseService.duplicateCase(rootNetworkInfos.caseInfos().getCaseUuid(), false);
+            try {
+                self.createRootNetwork(studyUuid, rootNetworkInfos, newCaseUuid);
+            } catch (Exception exception) {
+                caseService.deleteCase(newCaseUuid);
+                LOGGER.error(String.format("Could not clean up orphaned case '%s' after import failure", newCaseUuid), exception);
+            }
         }
     }
 
     @Transactional
-    public void duplicateCaseAndCreateRootNetwork(UUID studyUuid, RootNetworkExportInfos rootNetworkInfos) {
+    public void createRootNetwork(UUID studyUuid, RootNetworkExportInfos rootNetworkInfos, UUID newCaseUuid) {
         StudyEntity studyEntity = studyService.getStudy(studyUuid);
-        UUID newCaseUuid = caseService.duplicateCase(rootNetworkInfos.caseInfos().getCaseUuid(), false);
-        try {
-            RootNetworkEntity rootNetworkEntity = rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder()
-                    .id(UUID.randomUUID())
-                    .name(rootNetworkInfos.name())
-                    .tag(rootNetworkInfos.tag())
-                    .caseInfos(new CaseInfos(newCaseUuid, rootNetworkInfos.caseInfos().getOriginalCaseUuid(),
-                            rootNetworkInfos.caseInfos().getCaseName(), rootNetworkInfos.caseInfos().getCaseFormat()))
-                    .importParameters(rootNetworkInfos.importParameters())
-                    .networkInfos(new NetworkInfos(UUID.randomUUID(), ""))
-                    .build());
-            rootNetworkService.updateNetworkLoadStatus(rootNetworkEntity.getId(), RootNetworkLoadStatus.UNLOADED);
-        } catch (Exception exception) {
-            caseService.deleteCase(newCaseUuid);
-            LOGGER.error(String.format("Could not clean up orphaned case '%s' after import failure", newCaseUuid), exception);
-        }
+        RootNetworkEntity rootNetworkEntity = rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder()
+                .id(UUID.randomUUID())
+                .name(rootNetworkInfos.name())
+                .tag(rootNetworkInfos.tag())
+                .caseInfos(new CaseInfos(newCaseUuid, rootNetworkInfos.caseInfos().getOriginalCaseUuid(),
+                        rootNetworkInfos.caseInfos().getCaseName(), rootNetworkInfos.caseInfos().getCaseFormat()))
+                .importParameters(rootNetworkInfos.importParameters())
+                .networkInfos(new NetworkInfos(UUID.randomUUID(), ""))
+                .build());
+        rootNetworkService.updateNetworkLoadStatus(rootNetworkEntity.getId(), RootNetworkLoadStatus.UNLOADED);
     }
 }
