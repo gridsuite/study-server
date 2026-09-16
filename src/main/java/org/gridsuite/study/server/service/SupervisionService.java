@@ -458,7 +458,7 @@ public class SupervisionService {
         networkModificationService.deleteStashedModificationsFromGroups(notStashedModificationGroupUuids);
 
         // remove stashed nodes and their modifications
-        studyService.deleteNodes(studyId, stashedNodes.stream().map(NodeEntity::getIdNode).toList(), true, SUPERVISION_USER);
+        studyService.deleteNodes(studyId, stashedNodes.stream().map(NodeEntity::getIdNode).toList(), true, SUPERVISION_USER, false);
     }
 
     @Transactional(readOnly = true)
