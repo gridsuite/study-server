@@ -1678,7 +1678,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void deleteNodes(UUID studyUuid, List<UUID> nodeIds, boolean deleteChildren, String userId) {
+    public void deleteNodes(UUID studyUuid, List<UUID> nodeIds, boolean deleteChildren, String userId, boolean emitNotification) {
         removeNodesFromAliases(studyUuid, nodeIds, deleteChildren);
 
         DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
@@ -1701,8 +1701,9 @@ public class StudyService {
         }
 
         deleteNodesInfos(deleteNodeInfos, userId);
-
-        notificationService.emitElementUpdated(studyUuid, userId);
+        if (emitNotification) {
+            notificationService.emitElementUpdated(studyUuid, userId);
+        }
     }
 
     private void deleteNodesInfos(DeleteNodeInfos deleteNodeInfos, String userId) {
