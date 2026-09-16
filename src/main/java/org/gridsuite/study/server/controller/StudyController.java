@@ -1166,7 +1166,7 @@ public class StudyController {
                                            @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren,
                                            @RequestHeader(HEADER_USER_ID) String userId) {
         nodeActivityRunnerService.runWith(DELETE_NODES, studyUuid, nodeIds,
-            () -> studyService.deleteNodes(studyUuid, nodeIds, deleteChildren, userId));
+            () -> studyService.deleteNodes(studyUuid, nodeIds, deleteChildren, userId, true));
         return ResponseEntity.ok().build();
     }
 
