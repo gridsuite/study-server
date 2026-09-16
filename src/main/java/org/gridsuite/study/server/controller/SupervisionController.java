@@ -181,7 +181,7 @@ public class SupervisionController {
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/invalidate")
-    @Operation(summary = "Invalidate built nodes and delete root node network")
+    @Operation(summary = "Invalidate all node tree, clean stashed elements and delete root networks")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "study has been invalidated")})
     public ResponseEntity<Void> invalidateStudy(@PathVariable("studyUuid") UUID studyUuid) {
         supervisionService.invalidateStudy(studyUuid);
