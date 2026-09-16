@@ -73,7 +73,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ContextConfigurationWithTestChannel
 class StudyControllerCreationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyControllerCreationTest.class);
-    private static final long TIMEOUT = 1000;
 
     @Autowired
     private StudyRepository studyRepository;
@@ -259,7 +258,7 @@ class StudyControllerCreationTest {
         verify(voltageInitService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
         verify(dynamicSecurityAnalysisRestService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
         verify(stateEstimationService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
-        verify(studyConfigService, times(1)).createDefaultSpreadsheetConfigCollection();
+        verify(studyConfigService, times(1)).createDefaultSpreadsheetConfigCollection(anyString(), any());
     }
 
     private void sendStudyCreationRequest(String userId, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, boolean duplicateCase) throws Exception {
@@ -319,7 +318,7 @@ class StudyControllerCreationTest {
     }
 
     private void assertStudyCreationMessageReceived(UUID studyUuid, String userId, String expectedUpdateType) {
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));

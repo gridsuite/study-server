@@ -54,6 +54,8 @@ public class RootNetworkNodeInfo {
 
     private UUID pccMinResultUuid;
 
+    private UUID asymmetricalLoadResultUuid;
+
     private NodeBuildStatus nodeBuildStatus;
 
     private List<NodeExportEmbeddable> nodeExportNetwork;

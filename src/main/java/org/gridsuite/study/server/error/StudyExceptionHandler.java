@@ -46,7 +46,8 @@ public class StudyExceptionHandler extends AbstractBusinessExceptionHandler<Stud
                  TOO_MANY_MAP_CARDS,
                  MOVE_NETWORK_MODIFICATION_FORBIDDEN,
                  CANT_DELETE_ROOT_NODE,
-                 MAX_NODE_BUILDS_EXCEEDED
+                 MAX_NODE_BUILDS_EXCEEDED,
+                 NODE_ACTIVITY_CONFLICT
                 -> HttpStatus.FORBIDDEN;
             case TIME_SERIES_BAD_TYPE -> HttpStatus.BAD_REQUEST;
             default -> HttpStatus.INTERNAL_SERVER_ERROR;

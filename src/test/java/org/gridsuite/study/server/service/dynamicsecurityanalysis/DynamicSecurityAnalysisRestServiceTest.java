@@ -1,225 +1,456 @@
 /*
- * Copyright (c) 2022, RTE (http://www.rte-france.com)
+ * Copyright (c) 2025, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 package org.gridsuite.study.server.service.dynamicsecurityanalysis;
 
-import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
-import org.gridsuite.study.server.dto.ReportInfos;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
-import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
-import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
+import org.gridsuite.study.server.utils.assertions.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.github.tomakehurst.wiremock.client.WireMock.absent;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyConstants.DYNAWO_PROVIDER;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
-import static org.gridsuite.study.server.utils.TestUtils.assertStudyException;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.*;
+import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
+import static org.gridsuite.study.server.service.client.RestClient.DELIMITER;
+import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
+import static org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService.*;
+import static org.gridsuite.study.server.utils.assertions.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
-@SpringBootTest
-@ContextConfigurationWithTestChannel
-@DisableElasticsearch
-class DynamicSecurityAnalysisRestServiceTest {
-    private static final String VARIANT_1_ID = "variant_1";
-    private static final String PARAMETERS_JSON = "parametersJson";
-
-    // converged node
+class DynamicSecurityAnalysisRestServiceTest extends AbstractWireMockRestClientTest {
     private static final UUID NETWORK_UUID = UUID.randomUUID();
+    private static final UUID REPORT_UUID = UUID.randomUUID();
     private static final UUID NODE_UUID = UUID.randomUUID();
-    private static final UUID ROOTNETWORK_UUID = UUID.randomUUID();
     private static final UUID DYNAMIC_SIMULATION_RESULT_UUID = UUID.randomUUID();
     private static final UUID PARAMETERS_UUID = UUID.randomUUID();
-    private static final UUID DUPLICATED_PARAMETERS_UUID = UUID.randomUUID();
     private static final UUID RESULT_UUID = UUID.randomUUID();
-    private static final UUID REPORT_UUID = UUID.randomUUID();
+    private static final UUID ROOT_NETWORK_UUID = UUID.randomUUID();
 
-    // running node
-    private static final UUID RESULT_UUID_RUNNING = UUID.randomUUID();
-
-    @MockitoBean
-    DynamicSecurityAnalysisClient dynamicSecurityAnalysisClient;
-    @Autowired
+    private static final String PARAMETERS_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
+    private static final String RUN_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN);
+    private static final String RESULT_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RESULT);
+    private static final String PARAMETERS_JSON = "parametersJson";
     private DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
+    @Autowired
+    private RestTemplate restTemplate;
+    @Autowired
+    private ObjectMapper objectMapper;
+    @Autowired
+    private RemoteServicesProperties remoteServicesProperties;
 
-    @Test
-    void testGetParameters() {
-        given(dynamicSecurityAnalysisClient.getParameters(PARAMETERS_UUID)).willReturn(PARAMETERS_JSON);
-
-        String parametersJson = dynamicSecurityAnalysisRestService.getParameters(PARAMETERS_UUID);
-
-        assertThat(parametersJson).isEqualTo(PARAMETERS_JSON);
-    }
-
-    @Test
-    void testCreateParameters() {
-        given(dynamicSecurityAnalysisClient.createParameters(PARAMETERS_JSON)).willReturn(PARAMETERS_UUID);
-
-        UUID parametersUuid = dynamicSecurityAnalysisRestService.createParameters(PARAMETERS_JSON);
-
-        assertThat(parametersUuid).isEqualTo(PARAMETERS_UUID);
-    }
-
-    @Test
-    void testCreateDefaultParameters() {
-        given(dynamicSecurityAnalysisClient.createDefaultParameters()).willReturn(PARAMETERS_UUID);
-
-        UUID parametersUuid = dynamicSecurityAnalysisRestService.createDefaultParameters();
-
-        assertThat(parametersUuid).isEqualTo(PARAMETERS_UUID);
-    }
-
-    @Test
-    void testUpdateParameters() {
-        doNothing().when(dynamicSecurityAnalysisClient).updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
-
-        dynamicSecurityAnalysisRestService.updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
-
-        verify(dynamicSecurityAnalysisClient, times(1)).updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
-    }
-
-    @Test
-    void testDuplicateParameters() {
-        when(dynamicSecurityAnalysisClient.duplicateParameters(PARAMETERS_UUID)).thenReturn(DUPLICATED_PARAMETERS_UUID);
-
-        UUID newParametersUuid = dynamicSecurityAnalysisRestService.duplicateParameters(PARAMETERS_UUID);
-
-        assertThat(newParametersUuid).isEqualTo(DUPLICATED_PARAMETERS_UUID);
-    }
-
-    @Test
-    void testDeleteParameters() {
-        doNothing().when(dynamicSecurityAnalysisClient).deleteParameters(PARAMETERS_UUID);
-
-        dynamicSecurityAnalysisRestService.deleteParameters(PARAMETERS_UUID);
-
-        verify(dynamicSecurityAnalysisClient, times(1)).deleteParameters(PARAMETERS_UUID);
-    }
-
-    @Test
-    void testRunDynamicSimulation() {
-        // setup DynamicSecurityAnalysisClient mock
-        given(dynamicSecurityAnalysisClient.run(any(), eq(NETWORK_UUID), eq(VARIANT_1_ID),
-                eq(new ReportInfos(REPORT_UUID, NODE_UUID)), eq(DYNAMIC_SIMULATION_RESULT_UUID), eq(PARAMETERS_UUID), any(), eq(false)))
-                .willReturn(RESULT_UUID);
-
-        // call method to be tested
-        UUID resultUuid = dynamicSecurityAnalysisRestService.runDynamicSecurityAnalysis(NODE_UUID, ROOTNETWORK_UUID,
-                NETWORK_UUID, VARIANT_1_ID, REPORT_UUID, DYNAMIC_SIMULATION_RESULT_UUID, PARAMETERS_UUID, "testUserId", false);
-
-        // check result
-        assertThat(resultUuid).isEqualTo(RESULT_UUID);
-    }
-
-    @Test
-    void testGetStatus() {
-        // setup DynamicSecurityAnalysisClient mock
-        given(dynamicSecurityAnalysisClient.getStatus(RESULT_UUID)).willReturn(DynamicSecurityAnalysisStatus.SUCCEED);
-
-        // call method to be tested
-        DynamicSecurityAnalysisStatus status = dynamicSecurityAnalysisRestService.getStatus(RESULT_UUID);
-
-        // check result
-        // status must be "SUCCEED"
-        assertThat(status).isEqualTo(DynamicSecurityAnalysisStatus.SUCCEED);
-    }
-
-    @Test
-    void testInvalidateStatus() {
-        List<UUID> uuids = List.of(RESULT_UUID);
-        doNothing().when(dynamicSecurityAnalysisClient).invalidateStatus(uuids);
-
-        dynamicSecurityAnalysisRestService.invalidateStatus(uuids);
-
-        verify(dynamicSecurityAnalysisClient, times(1)).invalidateStatus(uuids);
-    }
-
-    @Test
-    void testDeleteResult() {
-        doNothing().when(dynamicSecurityAnalysisClient).deleteResults(List.of(RESULT_UUID));
-
-        dynamicSecurityAnalysisRestService.deleteResults(List.of(RESULT_UUID));
-
-        verify(dynamicSecurityAnalysisClient, times(1)).deleteResults(List.of(RESULT_UUID));
-    }
-
-    @Test
-    void testDeleteResults() {
-        doNothing().when(dynamicSecurityAnalysisClient).deleteResults(null);
-
-        dynamicSecurityAnalysisRestService.deleteAllResults();
-        verify(dynamicSecurityAnalysisClient, times(1)).deleteResults(null);
-    }
-
-    @Test
-    void testResultCount() {
-        given(dynamicSecurityAnalysisClient.getResultsCount()).willReturn(10);
-
-        Integer resultsCount = dynamicSecurityAnalysisRestService.getResultsCount();
-
-        assertThat(resultsCount).isEqualTo(10);
-    }
-
-    @Test
-    void testAssertDynamicSecurityAnalysisNotRunning() {
-        when(dynamicSecurityAnalysisClient.getStatus(RESULT_UUID)).thenReturn(DynamicSecurityAnalysisStatus.SUCCEED);
-
-        // test not running
-        assertDoesNotThrow(() -> dynamicSecurityAnalysisRestService.assertDynamicSecurityAnalysisNotRunning(RESULT_UUID));
-
-        verify(dynamicSecurityAnalysisClient, times(1)).getStatus(RESULT_UUID);
-    }
-
-    @Test
-    void testAssertDynamicSecurityAnalysisRunning() {
-        // setup for running node
-        given(dynamicSecurityAnalysisClient.getStatus(RESULT_UUID_RUNNING)).willReturn(DynamicSecurityAnalysisStatus.RUNNING);
-
-        // test running
-        assertStudyException(() -> dynamicSecurityAnalysisRestService.assertDynamicSecurityAnalysisNotRunning(RESULT_UUID_RUNNING),
-            COMPUTATION_RUNNING, null);
+    @BeforeEach
+    void setup() {
+        // config client
+        remoteServicesProperties.setServiceUri("dynamic-security-analysis-server", initMockWebServer());
+        dynamicSecurityAnalysisRestService = new DynamicSecurityAnalysisRestService(remoteServicesProperties, restTemplate, objectMapper);
     }
 
     @Test
     void testGetProvider() {
-        given(dynamicSecurityAnalysisClient.getProvider(PARAMETERS_UUID)).willReturn(DYNAWO_PROVIDER);
+        String url = PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID + "/provider";
 
+        // --- Success --- //
+        String expectedProvider = DYNAWO_PROVIDER;
+
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.ok()
+                        .withBody(expectedProvider)
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN_VALUE)
+                ));
+        // call service to test
         String provider = dynamicSecurityAnalysisRestService.getProvider(PARAMETERS_UUID);
 
-        assertThat(provider).isEqualTo(DYNAWO_PROVIDER);
+        // check result
+        assertThat(provider).isEqualTo(expectedProvider);
+
+        // --- Not Found --- //
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.notFound()));
+
+        // check result
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSecurityAnalysisRestService.getProvider(PARAMETERS_UUID)
+        );
+
+        // --- Error --- //
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.serverError()));
+
+        // check result
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSecurityAnalysisRestService.getProvider(PARAMETERS_UUID)
+        );
+    }
+
+    @Test
+    void testGetParameters() {
+        String parametersJson = PARAMETERS_JSON;
+
+        String url = PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID;
+
+        // --- Success --- //
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.ok()
+                        .withBody(parametersJson)
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                ));
+        // call service to test
+        String resultParametersJson = dynamicSecurityAnalysisRestService.getParameters(PARAMETERS_UUID);
+
+        // check result
+        assertThat(resultParametersJson).isEqualTo(parametersJson);
+
+        // --- Not Found --- //
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.notFound()));
+
+        // check result
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSecurityAnalysisRestService.getParameters(PARAMETERS_UUID)
+        );
+
+        // --- Error --- //
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.serverError()));
+
+        // check result
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSecurityAnalysisRestService.getParameters(PARAMETERS_UUID)
+        );
+    }
+
+    @Test
+    void testCreateParameters() throws Exception {
+        String parameterJson = PARAMETERS_JSON;
+
+        // --- Success --- //
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo(PARAMETERS_BASE_URL))
+                .withRequestBody(equalTo(parameterJson))
+                .willReturn(WireMock.ok()
+                        .withBody(objectMapper.writeValueAsString(PARAMETERS_UUID))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                ));
+        // call service to test
+        UUID resultParametersUuid = dynamicSecurityAnalysisRestService.createParameters(parameterJson);
+
+        // check result
+        assertThat(resultParametersUuid).isEqualTo(PARAMETERS_UUID);
+
+        // --- Error --- //
+        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo(PARAMETERS_BASE_URL))
+                .withRequestBody(equalTo(parameterJson))
+                .willReturn(WireMock.serverError()));
+
+        // check result
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSecurityAnalysisRestService.createParameters(parameterJson)
+        );
+    }
+
+    @Test
+    void testUpdateParameters() {
+        String parameterJson = PARAMETERS_JSON;
+
+        String url = PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID;
+
+        // --- Success --- //
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url))
+                .withRequestBody(equalTo(parameterJson))
+                .willReturn(WireMock.ok()));
+        // call service to test
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicSecurityAnalysisRestService.updateParameters(PARAMETERS_UUID, parameterJson));
+
+        // --- Not Found --- //
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url))
+                .withRequestBody(equalTo(parameterJson))
+                .willReturn(WireMock.notFound()));
+
+        // check result
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSecurityAnalysisRestService.updateParameters(PARAMETERS_UUID, parameterJson)
+        );
+
+        // --- Error --- //
+        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url))
+                .withRequestBody(equalTo(parameterJson))
+                .willReturn(WireMock.serverError()));
+
+        // check result
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSecurityAnalysisRestService.updateParameters(PARAMETERS_UUID, parameterJson)
+        );
+    }
+
+    @Test
+    void testDuplicateParameters() throws Exception {
+        UUID newParameterUuid = UUID.randomUUID();
+
+        // --- Success --- //
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(PARAMETERS_BASE_URL + "/" + PARAMETERS_UUID + "/duplicate"))
+                    .willReturn(WireMock.ok()
+                        .withBody(objectMapper.writeValueAsString(newParameterUuid))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    ));
+        // call service to test
+        UUID resultParametersUuid = dynamicSecurityAnalysisRestService.duplicateParameters(PARAMETERS_UUID);
+
+        // check result
+        assertThat(resultParametersUuid).isEqualTo(newParameterUuid);
+
+        // --- Not Found --- //
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(PARAMETERS_BASE_URL + "/" + PARAMETERS_UUID + "/duplicate"))
+                .willReturn(WireMock.notFound()));
+
+        // check result
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSecurityAnalysisRestService.duplicateParameters(PARAMETERS_UUID)
+        );
+
+        // --- Error --- //
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(PARAMETERS_BASE_URL + "/" + PARAMETERS_UUID + "/duplicate"))
+                .willReturn(WireMock.serverError()));
+
+        // check result
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSecurityAnalysisRestService.duplicateParameters(PARAMETERS_UUID)
+        );
+    }
+
+    @Test
+    void testDeleteParameters() {
+        // configure mock server response
+        String url = PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID;
+        wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.ok()));
+        // call service to test
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicSecurityAnalysisRestService.deleteParameters(PARAMETERS_UUID));
+    }
+
+    @Test
+    void testCreateDefaultParameters() throws JsonProcessingException {
+        String url = PARAMETERS_BASE_URL + "/default";
+
+        // --- Success --- //
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.ok()
+                        .withBody(objectMapper.writeValueAsString(PARAMETERS_UUID))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                ));
+        // call service to test
+        UUID resultParametersUuid = dynamicSecurityAnalysisRestService.createDefaultParameters();
+
+        // check result
+        assertThat(resultParametersUuid).isEqualTo(PARAMETERS_UUID);
+
+        // --- Error --- //
+        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.serverError()));
+
+        // check result
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSecurityAnalysisRestService.createDefaultParameters()
+        );
+    }
+
+    @Test
+    void testRun() throws Exception {
+        UUID expectedResultUuid = UUID.randomUUID();
+        // configure mock server response
+        String url = RUN_BASE_URL + DELIMITER + NETWORK_UUID + DELIMITER + "run";
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(url))
+                .withQueryParam(QUERY_PARAM_VARIANT_ID, equalTo("variantId"))
+                .withQueryParam("dynamicSimulationResultUuid", equalTo(DYNAMIC_SIMULATION_RESULT_UUID.toString()))
+                .withQueryParam("parametersUuid", equalTo(PARAMETERS_UUID.toString()))
+                .withQueryParam(QUERY_PARAM_REPORT_UUID, equalTo(REPORT_UUID.toString()))
+                .withQueryParam(QUERY_PARAM_REPORTER_ID, equalTo(NODE_UUID.toString()))
+                .withQueryParam(QUERY_PARAM_REPORT_TYPE, equalTo(StudyService.ReportType.DYNAMIC_SECURITY_ANALYSIS.reportKey))
+                .withHeader(HEADER_USER_ID, equalTo("userId"))
+                .willReturn(WireMock.ok()
+                        .withBody(objectMapper.writeValueAsString(expectedResultUuid))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                ));
+        // call service to test
+        UUID resultUuid = dynamicSecurityAnalysisRestService.runDynamicSecurityAnalysis(NODE_UUID, ROOT_NETWORK_UUID, NETWORK_UUID,
+               "variantId", REPORT_UUID, DYNAMIC_SIMULATION_RESULT_UUID, PARAMETERS_UUID, "userId", false);
+
+        // check result
+        assertThat(resultUuid).isEqualTo(expectedResultUuid);
+
+        // --- Error --- //
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(url))
+                .withQueryParam(QUERY_PARAM_VARIANT_ID, absent())
+                .withQueryParam("dynamicSimulationResultUuid", equalTo(DYNAMIC_SIMULATION_RESULT_UUID.toString()))
+                .withQueryParam("parametersUuid", equalTo(PARAMETERS_UUID.toString()))
+                .withQueryParam(QUERY_PARAM_RECEIVER, equalTo("receiver"))
+                .withQueryParam(QUERY_PARAM_REPORT_UUID, equalTo(REPORT_UUID.toString()))
+                .withQueryParam(QUERY_PARAM_REPORTER_ID, equalTo(NODE_UUID.toString()))
+                .withQueryParam(QUERY_PARAM_REPORT_TYPE, equalTo(StudyService.ReportType.DYNAMIC_SECURITY_ANALYSIS.reportKey))
+                .withHeader(QUERY_PARAM_DEBUG, equalTo("true"))
+                .withHeader(HEADER_USER_ID, equalTo("userId"))
+                .willReturn(WireMock.serverError()));
+
+        // check result
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSecurityAnalysisRestService.runDynamicSecurityAnalysis(NODE_UUID, ROOT_NETWORK_UUID, NETWORK_UUID, null,
+                REPORT_UUID, DYNAMIC_SIMULATION_RESULT_UUID, PARAMETERS_UUID,
+                "userId", true)
+        );
+    }
+
+    @Test
+    void testGetStatus() throws Exception {
+        // configure mock server response
+        String url = RESULT_BASE_URL + DELIMITER + RESULT_UUID + "/status";
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.ok()
+                        .withBody(objectMapper.writeValueAsString(DynamicSecurityAnalysisStatus.SUCCEED))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                ));
+        // call service to test
+        DynamicSecurityAnalysisStatus status = dynamicSecurityAnalysisRestService.getStatus(RESULT_UUID);
+
+        // check result
+        assertThat(status).isEqualTo(DynamicSecurityAnalysisStatus.SUCCEED);
+    }
+
+    @Test
+    void testGetStatusWithoutResultUuid() {
+        assertThat(dynamicSecurityAnalysisRestService.getStatus(null)).isNull();
+    }
+
+    @Test
+    void testInvalidateStatus() {
+        String url = RESULT_BASE_URL + "/invalidate-status";
+
+        // --- Success --- //
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.put(WireMock.urlPathTemplate(url))
+                .withQueryParam("resultUuid", equalTo(RESULT_UUID.toString()))
+                .willReturn(WireMock.ok()));
+        // call service to test
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicSecurityAnalysisRestService.invalidateStatus(List.of(RESULT_UUID)));
+
+        // --- Not Found --- //
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.put(WireMock.urlPathTemplate(url))
+                .withQueryParam("resultUuid", equalTo(RESULT_UUID.toString()))
+                .willReturn(WireMock.notFound()));
+
+        // check result
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSecurityAnalysisRestService.invalidateStatus(List.of(RESULT_UUID))
+        );
+
+        // --- Error --- //
+        wireMockServer.stubFor(WireMock.put(WireMock.urlPathTemplate(url))
+                .withQueryParam("resultUuid", equalTo(RESULT_UUID.toString()))
+                .willReturn(WireMock.serverError()));
+
+        // check result
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSecurityAnalysisRestService.invalidateStatus(List.of(RESULT_UUID))
+        );
+    }
+
+    @Test
+    void testDeleteResult() {
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(RESULT_BASE_URL + "?resultsUuids=" + RESULT_UUID))
+                .willReturn(WireMock.ok()));
+        // call service to test
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicSecurityAnalysisRestService.deleteResults(List.of(RESULT_UUID)));
+    }
+
+    @Test
+    void testDeleteResults() {
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(RESULT_BASE_URL + "?resultsUuids"))
+                .willReturn(WireMock.ok()));
+        // call service to test
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicSecurityAnalysisRestService.deleteResults(null));
+    }
+
+    @Test
+    void testResultsCount() throws Exception {
+        Integer expectedResultCount = 10;
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(RESULT_BASE_URL))
+                .willReturn(WireMock.ok()
+                        .withBody(objectMapper.writeValueAsString(expectedResultCount))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                ));
+        // call service to test
+        Integer resultCount = dynamicSecurityAnalysisRestService.getResultsCount();
+        assertThat(resultCount).isEqualTo(expectedResultCount);
     }
 
     @Test
     void testGetProviders() {
+        String url = buildEndPointUrl("", DYNAMIC_SECURITY_ANALYSIS_API_VERSION, "providers");
         String providers = "[\"Dynawo\"]";
-        given(dynamicSecurityAnalysisClient.getProviders()).willReturn(providers);
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.ok().withBody(providers).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
 
         assertThat(dynamicSecurityAnalysisRestService.getProviders()).isEqualTo(providers);
+        wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlEqualTo(url)));
     }
 
     @Test
-    void testDownloadDebugFile() {
-        ResponseEntity<Resource> response = ResponseEntity.ok(new ByteArrayResource(PARAMETERS_JSON.getBytes()));
-        given(dynamicSecurityAnalysisClient.downloadDebugFile(RESULT_UUID)).willReturn(response);
+    void testDownloadDebugFile() throws Exception {
+        String body = "{\"debug\":true}";
+        String url = RESULT_BASE_URL + DELIMITER + RESULT_UUID + DELIMITER + "download-debug-file";
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url)).willReturn(WireMock.ok().withBody(body)));
 
-        assertThat(dynamicSecurityAnalysisRestService.downloadDebugFile(RESULT_UUID)).isEqualTo(response);
+        var response = dynamicSecurityAnalysisRestService.downloadDebugFile(RESULT_UUID);
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(new String(response.getBody().getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)).isEqualTo(body);
+        wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlEqualTo(url)));
     }
+
 }

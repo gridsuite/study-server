@@ -6,28 +6,23 @@
  */
 package org.gridsuite.study.server.service;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.study.server.dto.CaseInfos;
+import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
-import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
-import org.gridsuite.study.server.dto.studyexport.NodeTreeExportInfos;
+import org.gridsuite.study.server.dto.RootNetworkLoadStatus;
 import org.gridsuite.study.server.dto.studyexport.RootNetworkExportInfos;
 import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
@@ -37,103 +32,54 @@ public class StudyImportService {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyImportService.class);
 
     private final StudyService studyService;
-    private final StudyRepository studyRepository;
     private final RootNetworkService rootNetworkService;
-    private final NetworkModificationService networkModificationService;
     private final CaseService caseService;
     private final NotificationService notificationService;
 
-    public StudyImportService(StudyService studyService, StudyRepository studyRepository, RootNetworkService rootNetworkService,
-                              NetworkModificationService networkModificationService, CaseService caseService, NotificationService notificationService) {
+    public StudyImportService(StudyService studyService, RootNetworkService rootNetworkService,
+                              CaseService caseService, NotificationService notificationService) {
         this.studyService = studyService;
-        this.studyRepository = studyRepository;
         this.rootNetworkService = rootNetworkService;
-        this.networkModificationService = networkModificationService;
         this.caseService = caseService;
         this.notificationService = notificationService;
     }
 
+    @Transactional
     public void importStudy(TreeExportInfos treeExportInfos, String userId) {
-        if (treeExportInfos.rootNetworks().isEmpty()) {
-            throw new StudyException(NOT_FOUND, "No root network found in import archive");
-        }
-        List<RootNetworkInfos> orderedRootNetworks = treeExportInfos.rootNetworks().stream()
-                .sorted(Comparator.comparing(RootNetworkExportInfos::index))
-                .map(this::toRootNetworkInfos)
-                .toList();
+        StudyEntity studyEntity = createStudyEntityWithTree(treeExportInfos, userId);
+        UUID studyUuid = studyEntity.getId();
+        duplicateCaseAndCreateRootNetworks(studyUuid, treeExportInfos.rootNetworks());
+        notificationService.emitStudyCreationFinished(studyUuid, userId);
+    }
 
-        Map<UUID, UUID> modificationGroupUuidMapping = duplicateModificationGroups(treeExportInfos.nodeTree());
+    public StudyEntity createStudyEntityWithTree(TreeExportInfos treeExportInfos, String userId) {
+        return studyService.createStudyEntityWithTree(treeExportInfos.studyUuid(), userId, treeExportInfos.nodeTree());
+    }
 
-        StudyEntity studyEntity = studyService.createStudyEntityWithTree(treeExportInfos.studyUuid(), userId, treeExportInfos.nodeTree(), modificationGroupUuidMapping,
-                treeExportInfos.computationParameters());
-        studyEntity.setRootNetworkOrder(orderedRootNetworks.stream().map(RootNetworkInfos::getId).toList());
-        studyRepository.save(studyEntity);
-
-        notificationService.emitStudyCreationStarted(studyEntity.getId(), userId);
-        int successfulRequests = 0;
-        for (RootNetworkInfos rootNetworkInfos : orderedRootNetworks) {
+    public void duplicateCaseAndCreateRootNetworks(UUID studyUuid, List<RootNetworkExportInfos> rootNetworksInfos) {
+        List<RootNetworkExportInfos> orderedRootNetworks = rootNetworksInfos.stream().sorted(Comparator.comparing(RootNetworkExportInfos::index)).toList();
+        for (RootNetworkExportInfos rootNetworkInfos : orderedRootNetworks) {
+            UUID newCaseUuid = caseService.duplicateCase(rootNetworkInfos.caseInfos().getCaseUuid(), false);
             try {
-                caseService.assertCaseExists(rootNetworkInfos.getCaseInfos().getOriginalCaseUuid());
-                studyService.createRootNetworkRequest(studyEntity.getId(), rootNetworkInfos, userId, CaseImportAction.ROOT_NETWORK_CREATION_FOR_STUDY_IMPORT);
-                successfulRequests++;
-            } catch (Exception e) {
-                LOGGER.error(String.format("Could not request root network '%s' for imported study '%s'", rootNetworkInfos.getName(), studyEntity.getId()), e);
+                createRootNetwork(studyUuid, rootNetworkInfos, newCaseUuid);
+            } catch (Exception exception) {
+                caseService.deleteCase(newCaseUuid);
+                LOGGER.error(String.format("Could not clean up orphaned case '%s' after import failure", newCaseUuid), exception);
             }
         }
-        if (successfulRequests == 0) {
-            studyService.deleteStudyIfNotCreationInProgress(studyEntity.getId(), userId);
-            notificationService.emitStudyCreationError(studyEntity.getId(), userId, "Could not request any root network for imported study");
-        }
     }
 
-    public void checkFinishedStudyImport(UUID studyUuid, String userId) {
-        if (rootNetworkService.countRootNetworkCreationRequests(studyUuid) == 0) {
-            studyRepository.findById(studyUuid).ifPresent(studyEntity -> {
-                studyEntity.setRootNetworkOrder(null);
-                studyRepository.save(studyEntity);
-            });
-            notificationService.emitStudyCreationFinished(studyUuid, userId);
-        }
-    }
-
-    private RootNetworkInfos toRootNetworkInfos(RootNetworkExportInfos rootNetworkExportInfos) {
-        CaseInfos caseInfos = rootNetworkExportInfos.caseInfos();
-        return RootNetworkInfos.builder()
+    public void createRootNetwork(UUID studyUuid, RootNetworkExportInfos rootNetworkInfos, UUID newCaseUuid) {
+        StudyEntity studyEntity = studyService.getStudy(studyUuid);
+        RootNetworkEntity rootNetworkEntity = rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder()
                 .id(UUID.randomUUID())
-                .name(rootNetworkExportInfos.name())
-                .tag(rootNetworkExportInfos.tag())
-                .caseInfos(new CaseInfos(null, caseInfos.getCaseUuid(), caseInfos.getCaseName(), caseInfos.getCaseFormat()))
-                .importParameters(rootNetworkExportInfos.importParameters())
-                .build();
-    }
-
-    private Map<UUID, UUID> duplicateModificationGroups(NodeTreeExportInfos nodeTree) {
-        Map<UUID, UUID> modificationGroupUuidMapping = new HashMap<>();
-        if (nodeTree == null) {
-            return modificationGroupUuidMapping;
-        }
-        try {
-            CollectionUtils.emptyIfNull(nodeTree.children()).forEach(child -> duplicateModificationGroupsRecursively(child, modificationGroupUuidMapping));
-        } catch (Exception e) {
-            modificationGroupUuidMapping.values().forEach(newGroupUuid -> {
-                try {
-                    networkModificationService.deleteModifications(newGroupUuid);
-                } catch (Exception cleanupException) {
-                    LOGGER.error(String.format("Could not clean up orphaned modification group '%s' after import failure", newGroupUuid), cleanupException);
-                }
-            });
-            throw e;
-        }
-        return modificationGroupUuidMapping;
-    }
-
-    private void duplicateModificationGroupsRecursively(NodeTreeExportInfos exportNode, Map<UUID, UUID> modificationGroupUuidMapping) {
-        studyService.toNetworkModificationNodeType(exportNode.nodeType());
-        if (exportNode.modificationGroupUuid() != null) {
-            UUID newGroupUuid = UUID.randomUUID();
-            networkModificationService.duplicateModificationsGroup(exportNode.modificationGroupUuid(), newGroupUuid);
-            modificationGroupUuidMapping.put(exportNode.modificationGroupUuid(), newGroupUuid);
-        }
-        CollectionUtils.emptyIfNull(exportNode.children()).forEach(child -> duplicateModificationGroupsRecursively(child, modificationGroupUuidMapping));
+                .name(rootNetworkInfos.name())
+                .tag(rootNetworkInfos.tag())
+                .caseInfos(new CaseInfos(newCaseUuid, rootNetworkInfos.caseInfos().getOriginalCaseUuid(),
+                        rootNetworkInfos.caseInfos().getCaseName(), rootNetworkInfos.caseInfos().getCaseFormat()))
+                .importParameters(rootNetworkInfos.importParameters())
+                .networkInfos(new NetworkInfos(UUID.randomUUID(), ""))
+                .build());
+        rootNetworkService.updateNetworkLoadStatus(rootNetworkEntity.getId(), RootNetworkLoadStatus.UNLOADED);
     }
 }

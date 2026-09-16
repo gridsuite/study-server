@@ -8,7 +8,6 @@
 package org.gridsuite.study.server.service.dynamicsecurityanalysis;
 
 import lombok.NonNull;
-import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.error.StudyException;
@@ -39,10 +38,8 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_ALLOWE
 
 @Service
 public class DynamicSecurityAnalysisService extends AbstractComputationService {
+
     private final DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
-    private final NetworkModificationTreeService networkModificationTreeService;
-    private final UserAdminService userAdminService;
-    private final RootNetworkService rootNetworkService;
 
     protected DynamicSecurityAnalysisService(StudyRepository studyRepository,
                                              ComputationParametersService computationParametersService,
@@ -51,11 +48,9 @@ public class DynamicSecurityAnalysisService extends AbstractComputationService {
                                              DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService,
                                              NetworkModificationTreeService networkModificationTreeService,
                                              UserAdminService userAdminService, RootNetworkService rootNetworkService) {
-        super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService,
+            computationParametersService, userAdminService);
         this.dynamicSecurityAnalysisRestService = dynamicSecurityAnalysisRestService;
-        this.networkModificationTreeService = networkModificationTreeService;
-        this.userAdminService = userAdminService;
-        this.rootNetworkService = rootNetworkService;
     }
 
     public String getDynamicSecurityAnalysisProvider(UUID studyUuid) {
@@ -83,23 +78,18 @@ public class DynamicSecurityAnalysisService extends AbstractComputationService {
                 dynamicSecurityAnalysisRestService::createParameters,
                 dynamicSecurityAnalysisRestService::updateParameters,
                 DYNAMIC_SECURITY_ANALYSIS,
-                List.of(this::invalidateDynamicSecurityAnalysisStatusOnAllNodes),
+                List.of(rootNetworkNodeInfoService::invalidateDynamicSecurityAnalysisStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS
         );
-    }
-
-    public void invalidateDynamicSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        dynamicSecurityAnalysisRestService.invalidateStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, DYNAMIC_SECURITY_ANALYSIS));
     }
 
     @Transactional
     public UUID runDynamicSecurityAnalysis(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, boolean debug) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
         UUID result = handleDynamicSecurityAnalysisRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
 
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(DYNAMIC_SECURITY_ANALYSIS), result);
+        handleQuotaStart(userId, result, DYNAMIC_SECURITY_ANALYSIS);
         return result;
     }
 

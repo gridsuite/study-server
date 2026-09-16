@@ -23,7 +23,6 @@ import mockwebserver3.RecordedRequest;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
-import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -79,8 +78,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ContextConfigurationWithTestChannel
 class SingleLineDiagramTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(SingleLineDiagramTest.class);
-
-    private static final long TIMEOUT = 1000;
 
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String VARIANT_ID = "variant_1";
@@ -164,11 +161,8 @@ class SingleLineDiagramTest {
         when(networkStoreService.getVariantsInfos(UUID.fromString(NETWORK_UUID_VARIANT_ERROR_STRING)))
             .thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0)));
 
-        when(loadFlowRestService.getLoadFlowParameters(LOADFLOW_PARAMETERS_UUID))
-            .thenReturn(LoadFlowParametersInfos.builder()
-                .commonParameters(LoadFlowParameters.load())
-                .specificParametersPerProvider(Map.of())
-                .build());
+        when(loadFlowRestService.getCommonParameters(LOADFLOW_PARAMETERS_UUID))
+            .thenReturn(LoadFlowParameters.load());
 
         when(loadFlowRestService.getLoadFlowParametersOrDefaultsUuid(any()))
             .thenReturn(LOADFLOW_PARAMETERS_UUID);
@@ -528,7 +522,7 @@ class SingleLineDiagramTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
             .andExpect(status().isOk());
-        var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        var mess = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));

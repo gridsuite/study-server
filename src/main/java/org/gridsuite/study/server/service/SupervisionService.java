@@ -12,16 +12,21 @@ import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
-import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
+import org.gridsuite.study.server.service.asymmetricalload.AsymmetricalLoadRestService;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
@@ -61,6 +66,8 @@ public class SupervisionService {
 
     private final ReportService reportService;
 
+    private final LoadFlowService loadFlowService;
+
     private final LoadFlowRestService loadFlowRestService;
 
     private final DynamicSimulationRestService dynamicSimulationRestService;
@@ -85,18 +92,24 @@ public class SupervisionService {
 
     private final PccMinRestService pccMinService;
 
+    private final AsymmetricalLoadRestService asymmetricalLoadRestService;
+
     private final ElasticsearchOperations elasticsearchOperations;
 
     private final StudyInfosService studyInfosService;
 
     private final RootNetworkService rootNetworkService;
 
-    private final NotificationService notificationService;
+    private final NodeRepository nodeRepository;
+
+    private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+
+    private final NetworkModificationService networkModificationService;
 
     private static final String SUPERVISION_USER = "Supervision";
 
     public SupervisionService(StudyService studyService,
-                              NetworkModificationTreeService networkModificationTreeService,
+                              NetworkModificationTreeService networkModificationTreeService, LoadFlowService loadFlowService,
                               RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                               ReportService reportService,
                               LoadFlowRestService loadFlowRestService,
@@ -108,15 +121,20 @@ public class SupervisionService {
                               ShortCircuitRestService shortCircuitService,
                               VoltageInitRestService voltageInitService,
                               EquipmentInfosService equipmentInfosService,
+                              AsymmetricalLoadRestService asymmetricalLoadRestService,
                               StateEstimationRestService stateEstimationService,
                               PccMinRestService pccMinService,
                               ElasticsearchOperations elasticsearchOperations,
                               StudyInfosService studyInfosService,
                               RootNetworkService rootNetworkService,
                               StudyRepository studyRepository,
-                              NotificationService notificationService) {
+                              NodeRepository nodeRepository,
+                              NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
+                              NetworkModificationService networkModificationService) {
+
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
+        this.loadFlowService = loadFlowService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.reportService = reportService;
         this.loadFlowRestService = loadFlowRestService;
@@ -130,11 +148,14 @@ public class SupervisionService {
         this.equipmentInfosService = equipmentInfosService;
         this.stateEstimationService = stateEstimationService;
         this.pccMinService = pccMinService;
+        this.asymmetricalLoadRestService = asymmetricalLoadRestService;
         this.elasticsearchOperations = elasticsearchOperations;
         this.studyInfosService = studyInfosService;
         this.rootNetworkService = rootNetworkService;
         this.studyRepository = studyRepository;
-        this.notificationService = notificationService;
+        this.nodeRepository = nodeRepository;
+        this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
+        this.networkModificationService = networkModificationService;
     }
 
     @Transactional
@@ -159,6 +180,8 @@ public class SupervisionService {
                 dryRun ? stateEstimationService.getStateEstimationResultsCount() : deleteStateEstimationResults();
             case PCC_MIN ->
                 dryRun ? pccMinService.getPccMinResultsCount() : deletePccMinResults();
+            case ASYMMETRICAL_LOAD ->
+                dryRun ? asymmetricalLoadRestService.getAsymmetricalLoadResultsCount() : deleteAsymmetricalLoadResults();
         };
     }
 
@@ -213,7 +236,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
         List<UUID> studyUuids = rootNetworkNodeInfoEntities.stream().map(rnnie -> rnnie.getRootNetwork().getStudy().getId()).distinct().toList();
-        studyUuids.forEach(studyService::invalidateAllStudyLoadFlowStatus);
+        studyUuids.forEach(loadFlowService::invalidateAllStudyLoadFlowStatus);
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.LOAD_FLOW, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
@@ -367,11 +390,27 @@ public class SupervisionService {
         return rootNetworkNodeInfoEntities.size();
     }
 
+    private Integer deleteAsymmetricalLoadResults() {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        startTime.set(System.nanoTime());
+        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByAsymmetricalLoadResultUuidNotNull();
+        List<UUID> reportsToDelete = new ArrayList<>();
+        rootNetworkNodeInfoEntities.forEach(rootNetworkNodeInfo -> {
+            rootNetworkNodeInfo.setAsymmetricalLoadResultUuid(null);
+            reportsToDelete.add(rootNetworkNodeInfo.getComputationReports().get(ComputationType.ASYMMETRICAL_LOAD.name()));
+            rootNetworkNodeInfo.getComputationReports().remove(ComputationType.ASYMMETRICAL_LOAD.name());
+        });
+        reportService.deleteReports(reportsToDelete);
+        asymmetricalLoadRestService.deleteAllAsymmetricalLoadResults();
+        LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.ASYMMETRICAL_LOAD, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        return rootNetworkNodeInfoEntities.size();
+    }
+
     @Transactional
     public void unbuildAllNodes(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
-        studyService.unbuildNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false, SUPERVISION_USER);
+        studyService.unbuildNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), SUPERVISION_USER);
 
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
@@ -379,16 +418,52 @@ public class SupervisionService {
     public void invalidateStudy(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
+        // remove all stashed nodes and stashed network modifications
         try {
-            rootNetworkService.getStudyRootNetworkIds(studyUuid).forEach(rnId ->
-                    studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER)
-            );
-        } finally {
-            var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-            studyService.unblockNodeTree(studyUuid, rootNodeUuid);
+            deleteAllStashedElements(studyUuid);
+        } catch (Exception e) {
+            LOGGER.error("Error while deleting stashed elements", e);
         }
-        notificationService.emitElementUpdated(studyUuid, SUPERVISION_USER);
+        rootNetworkService.getStudyRootNetworkIds(studyUuid).forEach(rnId -> {
+            try {
+                rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADING);
+                studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER, false);
+                rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADED);
+            } catch (Exception e) {
+                rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.LOADED);
+                LOGGER.error("Error while invalidating study root network", e);
+            }
+        });
         LOGGER.trace("Study {} nodes builds deleted and root node invalidated in : {} milliseconds", studyUuid, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime.get()));
+    }
+
+    public void deleteAllStashedElements(UUID studyId) {
+        List<NodeEntity> nodes = nodeRepository.findAllByStudyId(studyId);
+        List<NodeEntity> stashedNodes = new ArrayList<>();
+        List<NodeEntity> notStashedNodes = new ArrayList<>();
+        for (NodeEntity nodeEntity : nodes) {
+            if (nodeEntity.isStashed()) {
+                stashedNodes.add(nodeEntity);
+            } else {
+                notStashedNodes.add(nodeEntity);
+            }
+        }
+
+        // remove stashed modification on not stashed nodes
+        List<NetworkModificationNodeInfoEntity> networkModificationNodeInfos = networkModificationNodeInfoRepository
+                .findAllById(notStashedNodes.stream().map(NodeEntity::getIdNode).toList());
+        List<UUID> notStashedModificationGroupUuids = networkModificationNodeInfos.stream()
+                .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
+                .toList();
+        networkModificationService.deleteStashedModificationsFromGroups(notStashedModificationGroupUuids);
+
+        // remove stashed nodes and their modifications
+        studyService.deleteNodes(studyId, stashedNodes.stream().map(NodeEntity::getIdNode).toList(), true, SUPERVISION_USER, false);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UUID> getLoadedStudyUuids(List<UUID> studyUuids) {
+        return rootNetworkService.getLoadedStudyIds(studyUuids);
     }
 
     @Transactional

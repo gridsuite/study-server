@@ -19,6 +19,7 @@ import org.gridsuite.study.server.dto.Report;
 import org.gridsuite.study.server.error.StudyBusinessErrorCode;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
@@ -40,6 +41,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -47,6 +49,7 @@ import static org.gridsuite.study.server.notification.NotificationService.UPDATE
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doAnswer;
 
 /**
@@ -60,6 +63,7 @@ public final class TestUtils {
     public static final String ELEMENT_UPDATE_DESTINATION = "element.update";
 
     private static final long TIMEOUT = 100;
+    private static final long MESSAGE_TIMEOUT = 1000;
     public static final String USER_DEFAULT_PROFILE_JSON = """
         {
             "id":null,
@@ -179,6 +183,111 @@ public final class TestUtils {
         return studyEntity;
     }
 
+    // TODO remove all createDummyStudy and use the builder
+    public static class CreateDummyStudyBuilder {
+        private UUID networkUuid;
+        private String networkId;
+        private UUID caseUuid;
+        private String caseFormat;
+        private String caseName;
+        private UUID reportUuid;
+        private UUID loadFlowParametersUuid;
+        private UUID shortCircuitParametersUuid;
+        private UUID securityAnalysisParametersUuid;
+        private UUID sensitivityParametersUuid;
+        private UUID stateEstimationParametersUuid;
+        private UUID pccMinParametersUuid;
+        private UUID asymmetricalLoadParametersUuid;
+
+        public static CreateDummyStudyBuilder builder() {
+            return new CreateDummyStudyBuilder();
+        }
+
+        public CreateDummyStudyBuilder setNetworkUuid(UUID networkUuid) {
+            this.networkUuid = networkUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setNetworkId(String networkId) {
+            this.networkId = networkId;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setCaseUuid(UUID caseUuid) {
+            this.caseUuid = caseUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setCaseFormat(String caseFormat) {
+            this.caseFormat = caseFormat;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setCaseName(String caseName) {
+            this.caseName = caseName;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setReportUuid(UUID reportUuid) {
+            this.reportUuid = reportUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setLoadFlowParametersUuid(UUID loadFlowParametersUuid) {
+            this.loadFlowParametersUuid = loadFlowParametersUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setShortCircuitParametersUuid(UUID shortCircuitParametersUuid) {
+            this.shortCircuitParametersUuid = shortCircuitParametersUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setSecurityAnalysisParametersUuid(UUID securityAnalysisParametersUuid) {
+            this.securityAnalysisParametersUuid = securityAnalysisParametersUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setSensitivityParametersUuid(UUID sensitivityParametersUuid) {
+            this.sensitivityParametersUuid = sensitivityParametersUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setStateEstimationParametersUuid(UUID stateEstimationParametersUuid) {
+            this.stateEstimationParametersUuid = stateEstimationParametersUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setPccMinParametersUuid(UUID pccMinParametersUuid) {
+            this.pccMinParametersUuid = pccMinParametersUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setAsymmetricalLoadParametersUuid(UUID asymmetricalLoadParametersUuid) {
+            this.asymmetricalLoadParametersUuid = asymmetricalLoadParametersUuid;
+            return this;
+        }
+
+        public StudyEntity build() {
+            StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
+                    .loadFlowParametersUuid(loadFlowParametersUuid)
+                    .shortCircuitParametersUuid(shortCircuitParametersUuid)
+                    .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
+                    .sensitivityAnalysisParametersUuid(sensitivityParametersUuid)
+                    .stateEstimationParametersUuid(stateEstimationParametersUuid)
+                    .pccMinParametersUuid(pccMinParametersUuid)
+                    .asymmetricalLoadParametersUuid(asymmetricalLoadParametersUuid)
+                    .build();
+            RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder()
+                    .id(UUID.randomUUID()).name("rootNetworkName").tag("dum")
+                    .caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName)
+                    .networkId(networkId).networkUuid(networkUuid).reportUuid(reportUuid)
+                    .build();
+            studyEntity.addRootNetwork(rootNetworkEntity);
+            return studyEntity;
+        }
+    }
+
     public static StudyEntity createDummyStudy(UUID networkUuid, String networkId, UUID caseUuid, String caseFormat, String caseName, UUID reportUuid,
                                                UUID loadFlowParametersUuid,
                                                UUID shortCircuitParametersUuid,
@@ -216,10 +325,43 @@ public final class TestUtils {
             .children(Collections.emptyList()).build();
     }
 
+    /**
+     * Runs guarded actions straight through, for tests whose node uuids have no activity rows: the
+     * activity insert would otherwise fail on its foreign keys. The rules themselves are covered by
+     * NodeActivityRulesTest.
+     */
+    public static void bypassNodeActivities(NodeActivityRunnerService nodeActivityService) {
+        Answer<Object> runIt = invocation -> {
+            invocation.getArgument(invocation.getArguments().length - 1, Runnable.class).run();
+            return null;
+        };
+        Answer<Object> supplyIt = invocation ->
+            invocation.getArgument(invocation.getArguments().length - 1, Supplier.class).get();
+
+        doAnswer(runIt).when(nodeActivityService).runWith(any(), any(), any(), anyList(), any(Runnable.class));
+        doAnswer(runIt).when(nodeActivityService).runWith(any(), any(), anyList(), any(Runnable.class));
+        doAnswer(supplyIt).when(nodeActivityService).runWith(any(), any(), any(), anyList(), any(Supplier.class));
+        doAnswer(supplyIt).when(nodeActivityService).runWith(any(), any(), anyList(), any(Supplier.class));
+    }
+
+    /** Node activity notifications interleave with every other study update, so reads for anything else skip them. */
+    public static Message<byte[]> receiveStudyUpdate(OutputDestination output, String destination) {
+        return receiveStudyUpdate(output, destination, MESSAGE_TIMEOUT);
+    }
+
+    public static Message<byte[]> receiveStudyUpdate(OutputDestination output, String destination, long timeout) {
+        Message<byte[]> message = output.receive(timeout, destination);
+        while (message != null && NotificationService.UPDATE_NODE_ACTIVITIES
+                .equals(message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE))) {
+            message = output.receive(timeout, destination);
+        }
+        return message;
+    }
+
     @SuppressWarnings("checkstyle:IllegalCatch")
     public static void assertQueuesEmptyThenClear(List<String> destinations, OutputDestination output) {
         try {
-            destinations.forEach(destination -> assertNull(output.receive(TIMEOUT, destination), "Should not be any messages in queue " + destination + " : "));
+            destinations.forEach(destination -> assertNull(receiveStudyUpdate(output, destination, TIMEOUT), "Should not be any messages in queue " + destination + " : "));
         } catch (NullPointerException e) {
             // Ignoring
         } finally {
@@ -298,7 +440,7 @@ public final class TestUtils {
 
     public static void checkUpdateTypeMessageReceived(UUID studyUuid, UUID nodeUuid, String updateType, OutputDestination output, String destination) {
         // assert that the broker message has been sent for updating updateType
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, destination);
+        Message<byte[]> messageStatus = receiveStudyUpdate(output, destination);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));

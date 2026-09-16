@@ -20,5 +20,6 @@ public record ComputationParameterUUIDs(UUID loadFlowParametersUuid,
                                         UUID dynamicSecurityAnalysisParametersUuid,
                                         UUID dynamicMarginCalculationParametersUuid,
                                         UUID stateEstimationParametersUuid,
-                                        UUID pccMinParametersUuid) {
+                                        UUID pccMinParametersUuid,
+                                        UUID asymmetricalLoadParametersUuid) {
 }
