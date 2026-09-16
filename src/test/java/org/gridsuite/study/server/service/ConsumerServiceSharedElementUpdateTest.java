@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.ReferenceAttributes;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.nodeactivity.NodeActivityService;
@@ -14,122 +13,143 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
+import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import java.util.*;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE;
 import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 /**
  * @author Souissi Maissa <souissi.maissa at rte-france.com>
  */
-@ExtendWith(MockitoExtension.class)
+@SpringBootTest
+@DisableElasticsearch
 class ConsumerServiceSharedElementUpdateTest {
 
-    @Mock
+    @MockitoBean
     private NotificationService notificationService;
-    @Mock
+    @MockitoBean
     private StudyService studyService;
-    @Mock
+    @MockitoBean
     private CaseService caseService;
-    @Mock
+    @MockitoBean
     private LoadFlowRestService loadFlowRestService;
-    @Mock
+    @MockitoBean
     private NetworkModificationTreeService networkModificationTreeService;
-    @Mock
+    @MockitoBean
     private NetworkModificationService networkModificationService;
-    @Mock
+    @MockitoBean
     private StudyConfigService studyConfigService;
-    @Mock
+    @MockitoBean
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
-    @Mock
+    @MockitoBean
     private RootNetworkService rootNetworkService;
-    @Mock
+    @MockitoBean
     private DirectoryService directoryService;
-    @Mock
+    @MockitoBean
     private ComputationParametersService computationParametersService;
-    @Mock
+    @MockitoBean
     private UserAdminService userAdminService;
-    @Mock
+    @MockitoBean
     private LoadFlowService loadFlowService;
-    @Mock
+    @MockitoBean
     private NodeActivityRunnerService nodeActivityRunnerService;
-    @Mock
+    @MockitoBean
     private NodeActivityService nodeActivityService;
+
+    @Autowired
+    private ConsumerService consumerService;
 
     private Consumer<Message<Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>>>> consumeSharedElementUpdate;
 
     @BeforeEach
     void setup() {
-        ConsumerService consumerService = new ConsumerService(new ObjectMapper(), notificationService, studyService, caseService,
-                loadFlowRestService, networkModificationTreeService, networkModificationService, studyConfigService,
-                rootNetworkNodeInfoService, rootNetworkService, directoryService, computationParametersService, userAdminService, loadFlowService,
-                nodeActivityRunnerService, nodeActivityService);
         consumeSharedElementUpdate = consumerService.consumeSharedElementUpdate();
     }
 
     @Test
-    void directNodeReferenceInvalidatesItsNodeWithoutAnyLookup() {
+    void testStudyNodeReference() {
         UUID nodeUuid = UUID.randomUUID();
         UUID modificationUuid = UUID.randomUUID();
 
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(
-                List.of(studyNodeReference(modificationUuid, nodeUuid)), List.of()));
+                List.of(createStudyNodeReference(modificationUuid, nodeUuid)), List.of()));
 
-        verify(studyService).sharedElementUpdatedNotification(nodeUuid, List.of(modificationUuid));
+        verify(studyService, times(1)).sharedModificationsUpdatedNotification(any(), anyList());
+        verify(studyService).sharedModificationsUpdatedNotification(nodeUuid, List.of(modificationUuid));
     }
 
     @Test
-    void compositeReferenceInvalidatesTheNodeCarriedByItsContainer() {
+    void testNodeCompositeReference() {
         UUID compositeModificationUuid = UUID.randomUUID();
         UUID nodeUuid = UUID.randomUUID();
 
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(
-                List.of(), List.of(compositeReference(compositeModificationUuid, nodeUuid))));
+                List.of(), List.of(createCompositeReference(compositeModificationUuid, nodeUuid))));
 
-        verify(studyService).sharedElementUpdatedNotification(nodeUuid, List.of(compositeModificationUuid));
+        verify(studyService, times(1)).sharedModificationsUpdatedNotification(any(), anyList());
+        verify(studyService).sharedModificationsUpdatedNotification(nodeUuid, List.of(compositeModificationUuid));
     }
 
     @Test
-    void sameNodeReachedDirectlyAndThroughACompositeIsInvalidatedOnceWithBothModifications() {
+    void testStudyNodeAndCompositeReferencesInSameNode() {
         UUID nodeUuid = UUID.randomUUID();
         UUID directModificationUuid = UUID.randomUUID();
         UUID compositeModificationUuid = UUID.randomUUID();
 
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(
-                List.of(studyNodeReference(directModificationUuid, nodeUuid)),
-                List.of(compositeReference(compositeModificationUuid, nodeUuid))));
+                List.of(createStudyNodeReference(directModificationUuid, nodeUuid)),
+                List.of(createCompositeReference(compositeModificationUuid, nodeUuid))));
 
-        verify(studyService, times(1)).sharedElementUpdatedNotification(nodeUuid, List.of(directModificationUuid, compositeModificationUuid));
+        verify(studyService, times(1)).sharedModificationsUpdatedNotification(any(), anyList());
+        verify(studyService, times(1)).sharedModificationsUpdatedNotification(nodeUuid, List.of(directModificationUuid, compositeModificationUuid));
     }
 
     @Test
-    void emptyMessageInvalidatesNothing() {
+    void testStudyNodeAndCompositeReferencesInDifferentNode() {
+        UUID node1Uuid = UUID.randomUUID();
+        UUID node2Uuid = UUID.randomUUID();
+        UUID directModificationUuid = UUID.randomUUID();
+        UUID compositeModificationUuid = UUID.randomUUID();
+
+        consumeSharedElementUpdate.accept(sharedElementUpdateMessage(
+            List.of(createStudyNodeReference(directModificationUuid, node1Uuid)),
+            List.of(createCompositeReference(compositeModificationUuid, node2Uuid))));
+
+        verify(studyService, times(2)).sharedModificationsUpdatedNotification(any(), anyList());
+        verify(studyService, times(1)).sharedModificationsUpdatedNotification(node1Uuid, List.of(directModificationUuid));
+        verify(studyService, times(1)).sharedModificationsUpdatedNotification(node2Uuid, List.of(compositeModificationUuid));
+    }
+
+    @Test
+    void testNoSharedCompositeUpdated() {
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(List.of(), List.of()));
 
-        verify(studyService, never()).sharedElementUpdatedNotification(org.mockito.ArgumentMatchers.any(), anyList());
+        verify(studyService, never()).sharedModificationsUpdatedNotification(any(), anyList());
         verifyNoMoreInteractions(networkModificationService, networkModificationTreeService);
     }
 
-    private static ReferenceAttributes studyNodeReference(UUID modificationUuid, UUID nodeUuid) {
+    private static ReferenceAttributes createStudyNodeReference(UUID modificationUuid, UUID nodeUuid) {
         // STUDY_NODE: rootContainerId = studyId, containerId = nodeId
         return ReferenceAttributes.createReferenceAttributes(modificationUuid, UUID.randomUUID(), nodeUuid, STUDY_NODE);
     }
 
-    private static ReferenceAttributes compositeReference(UUID modificationUuid, UUID nodeUuid) {
+    private static ReferenceAttributes createCompositeReference(UUID modificationUuid, UUID nodeUuid) {
         // STUDY_NODE_NETWORK_MODIFICATION: rootContainerId = nodeId, containerId = parentCompositeId
         return ReferenceAttributes.createReferenceAttributes(modificationUuid, nodeUuid, UUID.randomUUID(), STUDY_NODE_NETWORK_MODIFICATION);
     }

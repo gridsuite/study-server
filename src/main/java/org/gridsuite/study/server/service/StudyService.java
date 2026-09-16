@@ -1503,15 +1503,10 @@ public class StudyService {
     }
 
     @Transactional
-    public void invalidateNodeTreeWhenSharedModificationChanged(UUID studyUuid, UUID nodeUuid) {
-        invalidateNodeTree(studyUuid, nodeUuid, InvalidateNodeTreeParameters.ALL);
-    }
-
-    @Transactional
-    public void sharedElementUpdatedNotification(UUID nodeUuid, List<UUID> networkModificationUuids) {
+    public void sharedModificationsUpdatedNotification(UUID nodeUuid, List<UUID> networkModificationUuids) {
         UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
         invalidateNodeTree(studyUuid, nodeUuid);
-        notificationService.emitSharedElementUpdated(studyUuid, nodeUuid, networkModificationUuids);
+        notificationService.emitSharedModificationsUpdated(studyUuid, nodeUuid, networkModificationUuids);
     }
 
     @Transactional

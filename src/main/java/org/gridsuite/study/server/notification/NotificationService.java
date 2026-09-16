@@ -128,7 +128,7 @@ public class NotificationService {
 
     public static final String MODIFICATIONS_UPDATING_FINISHED = "UPDATE_FINISHED";
     public static final String MODIFICATIONS_DELETING_FINISHED = "DELETE_FINISHED";
-    public static final String SHARED_ELEMENT_UPDATED = "sharedElementUpdate";
+    public static final String SHARED_MODIFICATIONS_UPDATED = "SHARED_MODIFICATIONS_UPDATED";
 
     public static final String EVENTS_CRUD_FINISHED = "EVENT_CRUD_FINISHED";
 
@@ -482,8 +482,8 @@ public class NotificationService {
      * modifications list of that node so the affected modifications display the up-to-date reference.
      */
     @PostCompletion
-    public void emitSharedElementUpdated(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> networkModificationUuids) {
-        sendStudyUpdateMessage(studyUuid, SHARED_ELEMENT_UPDATED, MessageBuilder.withPayload("")
+    public void emitSharedModificationsUpdated(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> networkModificationUuids) {
+        sendStudyUpdateMessage(studyUuid, SHARED_MODIFICATIONS_UPDATED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
                 .setHeader(HEADER_NETWORK_MODIFICATION_UUIDS, networkModificationUuids)
         );

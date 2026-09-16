@@ -13,6 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.computation.ComputationParameterUUIDs;
@@ -867,21 +868,18 @@ public class ConsumerService {
     }
 
     @Bean
-    public Consumer<Message<Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>>>> consumeSharedElementUpdate() {
+    public Consumer<Message<Map<ReferenceType, List<ReferenceAttributes>>>> consumeSharedElementUpdate() {
         return message -> handleSharedElementUpdate(message.getPayload());
     }
 
     private void handleSharedElementUpdate(Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType) {
         Map<UUID, List<UUID>> modificationUuidsByNode = new HashMap<>();
-
-        referencesByType.getOrDefault(ReferenceAttributes.ReferenceType.STUDY_NODE, List.of())
-            .forEach(ref -> modificationUuidsByNode.computeIfAbsent(ref.getReferenceContainer().getContainerId(), k -> new ArrayList<>())
-                .add(ref.getReferenceId()));
-
-        referencesByType.getOrDefault(ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION, List.of())
-            .forEach(ref -> modificationUuidsByNode.computeIfAbsent(ref.getReferenceContainer().getRootContainerId(), k -> new ArrayList<>())
-                .add(ref.getReferenceId()));
-
-        modificationUuidsByNode.forEach(studyService::sharedElementUpdatedNotification);
+        referencesByType.forEach((_, references) -> references.forEach(ref -> {
+            UUID nodeId = ref.getReferenceNodeId();
+            if (nodeId != null) {
+                modificationUuidsByNode.computeIfAbsent(nodeId, k -> new ArrayList<>()).add(ref.getReferenceId());
+            }
+        }));
+        modificationUuidsByNode.forEach(studyService::sharedModificationsUpdatedNotification);
     }
 }

@@ -49,14 +49,14 @@ class NotificationServiceTest {
         UUID parentNodeUuid = UUID.randomUUID();
         List<UUID> networkModificationUuids = List.of(UUID.randomUUID(), UUID.randomUUID());
 
-        notificationService.emitSharedElementUpdated(studyUuid, parentNodeUuid, networkModificationUuids);
+        notificationService.emitSharedModificationsUpdated(studyUuid, parentNodeUuid, networkModificationUuids);
 
         verify(updatePublisher).send(org.mockito.ArgumentMatchers.eq(STUDY_UPDATE_DESTINATION), messageCaptor.capture());
         Message<String> message = messageCaptor.getValue();
         assertThat(message.getPayload()).isEmpty();
         assertThat(message.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
-                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.SHARED_ELEMENT_UPDATED)
+                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.SHARED_MODIFICATIONS_UPDATED)
                 .containsEntry(NotificationService.HEADER_PARENT_NODE, parentNodeUuid)
                 .containsEntry(NotificationService.HEADER_NETWORK_MODIFICATION_UUIDS, networkModificationUuids);
     }
@@ -66,12 +66,12 @@ class NotificationServiceTest {
         UUID studyUuid = UUID.randomUUID();
         UUID parentNodeUuid = UUID.randomUUID();
 
-        notificationService.emitSharedElementUpdated(studyUuid, parentNodeUuid, List.of());
+        notificationService.emitSharedModificationsUpdated(studyUuid, parentNodeUuid, List.of());
 
         verify(updatePublisher).send(org.mockito.ArgumentMatchers.eq(STUDY_UPDATE_DESTINATION), messageCaptor.capture());
         Message<String> message = messageCaptor.getValue();
         assertThat(message.getHeaders())
-                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.SHARED_ELEMENT_UPDATED)
+                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.SHARED_MODIFICATIONS_UPDATED)
                 .containsEntry(NotificationService.HEADER_PARENT_NODE, parentNodeUuid)
                 .containsEntry(NotificationService.HEADER_NETWORK_MODIFICATION_UUIDS, List.of());
     }
