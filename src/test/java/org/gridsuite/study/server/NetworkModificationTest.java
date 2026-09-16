@@ -2040,7 +2040,7 @@ class NetworkModificationTest {
 
         // switch the 2 modifications order (modification1 is set at the end, after modification2)
         // Same-container reorder: no source/target params -> controller resolves both to the node's group.
-        ModificationMoveInfos moveToEnd = new ModificationMoveInfos(null,null, null, null);
+        ModificationMoveInfos moveToEnd = new ModificationMoveInfos(null, null, null, null);
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}",
                         studyNameUserIdUuid, modificationNodeUuid, modification1)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -2062,7 +2062,7 @@ class NetworkModificationTest {
                 expectedBodyStr);
 
         // switch back the 2 modifications order (modification1 is set before modification2)
-        ModificationMoveInfos moveBeforeMod2 = new ModificationMoveInfos(null,null, null, modification2);
+        ModificationMoveInfos moveBeforeMod2 = new ModificationMoveInfos(null, null, null, modification2);
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}",
                         studyNameUserIdUuid, modificationNodeUuid, modification1)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -2101,7 +2101,7 @@ class NetworkModificationTest {
         UUID studyNameUserIdUuid1 = UUID.randomUUID();
         UUID nodeIdUuid1 = UUID.randomUUID();
 
-        ModificationMoveInfos modificationMoveInfos = new ModificationMoveInfos(null,null, null, modification2);
+        ModificationMoveInfos modificationMoveInfos = new ModificationMoveInfos(null, null, null, modification2);
         String moveModificationInfosBody = mapper.writeValueAsString(modificationMoveInfos);
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}",
