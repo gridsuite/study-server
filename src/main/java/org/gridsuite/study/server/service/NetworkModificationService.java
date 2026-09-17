@@ -551,7 +551,7 @@ public class NetworkModificationService {
 
     private NetworkModificationsResult duplicateModifications(UUID targetGroupUuid, UUID sourceGroupUuid,
                                                               Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos) {
-        var path = UriComponentsBuilder.fromPath("/groups/{groupUuid}/network-modifications/copy");
+        var path = UriComponentsBuilder.fromPath("groups/{groupUuid}/network-modifications/copy");
         if (sourceGroupUuid != null) {
             path.queryParam("sourceContainerUuid", sourceGroupUuid);
         }
