@@ -41,7 +41,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
-import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -1454,25 +1453,18 @@ public class NetworkModificationTreeService {
 
     @Transactional(readOnly = true)
     public List<ModificationMoveInfos> resolveLocations(List<ModificationMoveRequest> modificationMoveRequests) {
-        Set<UUID> nodeUuids = modificationMoveRequests.stream()
+        Map<UUID, UUID> nodeToGroup = modificationMoveRequests.stream()
                 .flatMap(r -> Stream.of(r.source(), r.target()))
                 .map(ModificationLocationInfos::nodeUuidOrNull)
                 .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-
-        Map<UUID, UUID> nodeToGroup = nodeUuids.isEmpty()
-                ? Map.of()
-                : nodeUuids.stream().collect(Collectors.toMap(
-                Function.identity(), this::getModificationGroupUuid));
-
-        UnaryOperator<UUID> resolver = nodeId -> Objects.requireNonNull(
-                nodeToGroup.get(nodeId), "No modification group for node " + nodeId);
+                .distinct()
+                .collect(Collectors.toMap(Function.identity(), this::getModificationGroupUuid));
 
         return modificationMoveRequests.stream()
                 .map(r -> new ModificationMoveInfos(
                         r.modificationUuid(),
-                        r.source().resolve(resolver),
-                        r.target().resolve(resolver),
+                        r.source().resolve(nodeToGroup::get),
+                        r.target().resolve(nodeToGroup::get),
                         r.beforeUuid()))
                 .toList();
     }

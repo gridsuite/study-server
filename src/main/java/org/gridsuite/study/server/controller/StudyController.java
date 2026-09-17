@@ -674,7 +674,7 @@ public class StudyController {
                 .forEach(id -> {
                     try {
                         studyService.assertIsNodeExist(studyUuid, id);
-                    } catch (StudyException e) {
+                    } catch (StudyException _) {
                         throw new StudyException(MOVE_NETWORK_MODIFICATION_FORBIDDEN);
                     }
                 });
