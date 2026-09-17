@@ -1452,7 +1452,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public List<ModificationMoveInfos> resolveLocations(List<ModificationMoveRequest> modificationMoveRequests) {
+    public List<ModificationMoveInfos> resolveMoveContainers(List<ModificationMoveRequest> modificationMoveRequests) {
         Map<UUID, UUID> nodeToGroup = modificationMoveRequests.stream()
                 .flatMap(r -> Stream.of(r.source(), r.target()))
                 .map(ModificationLocationInfos::nodeUuidOrNull)
@@ -1463,8 +1463,8 @@ public class NetworkModificationTreeService {
         return modificationMoveRequests.stream()
                 .map(r -> new ModificationMoveInfos(
                         r.modificationUuid(),
-                        r.source().resolve(nodeToGroup::get),
-                        r.target().resolve(nodeToGroup::get),
+                        r.source().resolveContainerInfos(nodeToGroup::get),
+                        r.target().resolveContainerInfos(nodeToGroup::get),
                         r.beforeUuid()))
                 .toList();
     }

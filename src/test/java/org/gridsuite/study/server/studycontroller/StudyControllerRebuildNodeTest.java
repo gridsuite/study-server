@@ -109,7 +109,7 @@ class StudyControllerRebuildNodeTest {
                         new ModificationContainerInfos(targetGroupUuid, ModificationContainerType.GROUP),
                         null));
 
-        when(networkModificationTreeService.resolveLocations(requests)).thenReturn(resolved);
+        when(networkModificationTreeService.resolveMoveContainers(requests)).thenReturn(resolved);
         when(networkModificationTreeService.getNodeUuidByModificationGroup(originGroupUuid)).thenReturn(originNodeUuid);
 
         studyController.moveModifications(studyUuid, nodeUuid, requests, userId);

@@ -20,7 +20,7 @@ public record ModificationLocationInfos(
         @Schema(description = "Node UUID — the node's root modification group") UUID nodeUuid,
         @Schema(description = "Composite UUID — a specific composite modification") UUID compositeUuid) {
 
-    public ModificationContainerInfos resolve(UnaryOperator<UUID> nodeToGroupResolver) {
+    public ModificationContainerInfos resolveContainerInfos(UnaryOperator<UUID> nodeToGroupResolver) {
         if (compositeUuid != null) {
             return new ModificationContainerInfos(compositeUuid, ModificationContainerType.COMPOSITE);
         }

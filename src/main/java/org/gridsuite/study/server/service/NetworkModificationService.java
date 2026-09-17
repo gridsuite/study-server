@@ -469,7 +469,7 @@ public class NetworkModificationService {
     }
 
     public NetworkModificationsResult moveModifications(
-            List<ModificationMoveInfos> moves,
+            List<ModificationMoveInfos> modificationMoveInfos,
             List<ModificationApplicationContext> applicationContexts,
             boolean buildTargetNode) {
         var path = UriComponentsBuilder.fromPath("containers/network-modifications/move")
@@ -478,7 +478,7 @@ public class NetworkModificationService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Pair<List<ModificationMoveInfos>, List<ModificationApplicationContext>>> httpEntity =
-                new HttpEntity<>(Pair.of(moves, applicationContexts), headers);
+                new HttpEntity<>(Pair.of(modificationMoveInfos, applicationContexts), headers);
 
         return restTemplate.exchange(
                 getNetworkModificationServerURI(false) + path.toUriString(),

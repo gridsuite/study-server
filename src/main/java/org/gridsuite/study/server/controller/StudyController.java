@@ -688,7 +688,7 @@ public class StudyController {
                 .findFirst()
                 .orElse(nodeUuid);
 
-        List<ModificationMoveInfos> modificationMoveInfos = networkModificationTreeService.resolveLocations(modificationMoveRequests);
+        List<ModificationMoveInfos> modificationMoveInfos = networkModificationTreeService.resolveMoveContainers(modificationMoveRequests);
         rebuildNodeService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationMoveInfos, userId);
         return ResponseEntity.ok().build();
     }
