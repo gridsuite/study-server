@@ -381,9 +381,9 @@ public final class TestUtils {
     public static void assertWiremockServerRequestsEmptyThenShutdown(WireMockServer wireMockServer) throws UncheckedInterruptedException {
         try {
             wireMockServer.checkForUnmatchedRequests(); // requests no matched ? (it returns an exception if a request was not matched by wireMock, but does not complain if it was not verified by 'verify')
-            // Remove quota operation start/end requests that are auto-stubbed and do not need explicit verification
-            wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_START_URL_PATTERN)).build());
-            wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_END_URL_PATTERN)).build());
+            // Remove quota operation consume/release requests that are auto-stubbed and do not need explicit verification
+            wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_CONSUME_URL_PATTERN)).build());
+            wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_RELEASE_URL_PATTERN)).build());
             var requests = wireMockServer.findAll(WireMock.anyRequestedFor(WireMock.anyUrl()));
             assertEquals(0, requests.size(), "Unverified WireMock requests found:\n" + requests.stream()
                 .map(r -> "URL: " + r.getUrl() + ", Method: " + r.getMethod() + ", Body: " + r.getBodyAsString() + ", Params: " + r.getQueryParams())
@@ -396,9 +396,9 @@ public final class TestUtils {
     public static void assertWiremockServerRequestsEmptyThenClear(WireMockServer wireMockServer) throws UncheckedInterruptedException {
         try {
             wireMockServer.checkForUnmatchedRequests();
-            // Remove quota operation start/end requests that are auto-stubbed and do not need explicit verification
-            wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_START_URL_PATTERN)).build());
-            wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_END_URL_PATTERN)).build());
+            // Remove quota operation consume/release requests that are auto-stubbed and do not need explicit verification
+            wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_CONSUME_URL_PATTERN)).build());
+            wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_RELEASE_URL_PATTERN)).build());
             assertEquals(0, wireMockServer.findAll(WireMock.anyRequestedFor(WireMock.anyUrl())).size());
         } finally {
             wireMockServer.resetAll();

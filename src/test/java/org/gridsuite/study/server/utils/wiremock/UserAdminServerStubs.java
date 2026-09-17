@@ -19,17 +19,19 @@ import java.util.UUID;
  */
 
 public class UserAdminServerStubs {
-    public static final String QUOTA_START_URL_PATTERN = "/v1/users/.*/quota/.*/start";
-    public static final String QUOTA_END_URL_PATTERN = "/v1/users/.*/quota/.*/end";
+    public static final String QUOTA_CONSUME_URL_PATTERN = "/v1/users/.*/quota/.*/consume";
+    public static final String QUOTA_RELEASE_URL_PATTERN = "/v1/users/.*/quota/.*/release";
 
     private final WireMockServer wireMock;
 
     public UserAdminServerStubs(WireMockServer wireMock) {
         this.wireMock = wireMock;
-        // Stub the startOperationWithQuota and endOperationWithQuota endpoints used by all computation runs
-        wireMock.stubFor(WireMock.post(WireMock.urlPathMatching(QUOTA_START_URL_PATTERN))
-            .willReturn(WireMock.ok()));
-        wireMock.stubFor(WireMock.post(WireMock.urlPathMatching(QUOTA_END_URL_PATTERN))
+        // Stub the consumeQuota and releaseQuotaId endpoints used by all computation runs
+        wireMock.stubFor(WireMock.post(WireMock.urlPathMatching(QUOTA_CONSUME_URL_PATTERN))
+            .willReturn(WireMock.ok()
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .withBody("\"" + UUID.randomUUID() + "\"")));
+        wireMock.stubFor(WireMock.post(WireMock.urlPathMatching(QUOTA_RELEASE_URL_PATTERN))
             .willReturn(WireMock.ok()));
     }
 

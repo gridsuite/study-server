@@ -69,12 +69,12 @@ public class VoltageInitService extends AbstractComputationService {
     }
 
     @Transactional
-    public UUID runVoltageInit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId, boolean debug) {
+    public UUID runVoltageInit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId, boolean debug, UUID quotaId) {
         StudyEntity studyEntity = getStudy(studyUuid);
 
         UUID result = handleVoltageInitRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
 
-        handleQuotaStart(userId, result, VOLTAGE_INITIALIZATION);
+        handleQuotaStart(result, quotaId);
         return result;
     }
 

@@ -1058,8 +1058,8 @@ class VoltageInitTest {
                     .setHeader("resultUuid", VOLTAGE_INIT_ERROR_RESULT_UUID)
                 .build(), voltageInitFailedDestination);
             return resultUuid;
-        }).when(mockVoltageInitService).runVoltageInit(any(), any(), any(), any(), anyBoolean());
-        mockVoltageInitService.runVoltageInit(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, "", false);
+        }).when(mockVoltageInitService).runVoltageInit(any(), any(), any(), any(), anyBoolean(), any());
+        mockVoltageInitService.runVoltageInit(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, "", false, null);
 
         // Test doesn't reset uuid result in the database
         assertEquals(VOLTAGE_INIT_ERROR_RESULT_UUID, rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, VOLTAGE_INITIALIZATION).toString());

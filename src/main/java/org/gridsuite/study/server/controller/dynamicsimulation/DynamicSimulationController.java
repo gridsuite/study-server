@@ -63,10 +63,18 @@ public class DynamicSimulationController {
                                                      @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.assertOnQuotasAvailability(DYNAMIC_SIMULATION, userId);
-        studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), dynamicSimulationService::getDynamicSimulationProvider);
-        nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
-            () -> dynamicSimulationService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
+        UUID quotaId = studyService.consumeQuota(DYNAMIC_SIMULATION, userId);
+        boolean succeeded = false;
+        try {
+            studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), dynamicSimulationService::getDynamicSimulationProvider);
+            nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+                () -> dynamicSimulationService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug, quotaId));
+            succeeded = true;
+        } finally {
+            if (!succeeded) {
+                studyService.releaseQuotaOnFailure(userId, quotaId);
+            }
+        }
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
 

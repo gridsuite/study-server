@@ -59,9 +59,17 @@ public class SecurityAnalysisController {
                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                     @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.assertOnQuotasAvailability(SECURITY_ANALYSIS, userId);
-        nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
-            () -> securityAnalysisService.runSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId));
+        UUID quotaId = studyService.consumeQuota(SECURITY_ANALYSIS, userId);
+        boolean succeeded = false;
+        try {
+            nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+                () -> securityAnalysisService.runSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId, quotaId));
+            succeeded = true;
+        } finally {
+            if (!succeeded) {
+                studyService.releaseQuotaOnFailure(userId, quotaId);
+            }
+        }
         return ResponseEntity.ok().build();
     }
 
