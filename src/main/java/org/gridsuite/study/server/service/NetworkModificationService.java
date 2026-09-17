@@ -251,13 +251,14 @@ public class NetworkModificationService {
         restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
-    public void updateModificationsMetadata(UUID groupUUid, List<UUID> modificationsUuids, NetworkModificationMetadata metadata) {
+    public void updateModificationsMetadata(UUID groupUUid, List<UUID> modificationsUuids, NetworkModificationMetadata metadata, String userId) {
         Objects.requireNonNull(groupUUid);
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
             .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
             .queryParam(UUIDS, modificationsUuids)
             .queryParam(GROUP_UUID, groupUUid)
+            .queryParam(HEADER_USER_ID, userId)
             .buildAndExpand()
             .toUriString();
 

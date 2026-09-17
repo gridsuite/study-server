@@ -1594,7 +1594,7 @@ public class StudyService {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.updateModificationsMetadata(groupId, modificationsUuids, metadata);
+            networkModificationService.updateModificationsMetadata(groupId, modificationsUuids, metadata, userId);
             if (metadata.getActivated() != null || metadata.getName() != null) {
                 invalidateNodeTree(studyUuid, nodeUuid);
             }
