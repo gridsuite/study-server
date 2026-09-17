@@ -133,13 +133,18 @@ class NetworkModificationUnitTest {
 
     @BeforeEach
     void setup() {
+        cleanDB();
+
+        doAnswer(invocation -> List.of()).when(networkModificationTreeService).getHighestNodeUuids(any(), any());
+    }
+
+    private void cleanDB() {
+        rootNetworkNodeInfoRepository.deleteAll();
         rootNodeInfoRepository.deleteAll();
         networkModificationNodeInfoRepository.deleteAll();
         nodeRepository.deleteAll();
         rootNetworkRepository.deleteAll();
         studyRepository.deleteAll();
-
-        doAnswer(invocation -> List.of()).when(networkModificationTreeService).getHighestNodeUuids(any(), any());
     }
 
     @Test
@@ -458,6 +463,7 @@ class NetworkModificationUnitTest {
             // Ignoring
         } finally {
             output.clear(); // purge in order to not fail the other tests
+            cleanDB();
         }
     }
 

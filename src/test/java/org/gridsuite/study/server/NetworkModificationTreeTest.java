@@ -46,9 +46,9 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
-import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
-import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
+import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
@@ -169,6 +169,9 @@ class NetworkModificationTreeTest {
     private PccMinRestService pccMinService;
 
     @Autowired
+    DynamicMarginCalculationRestService dynamicMarginCalculationRestService;
+
+    @Autowired
     private SingleLineDiagramService singleLineDiagramService;
 
     @Autowired
@@ -180,14 +183,11 @@ class NetworkModificationTreeTest {
     @Autowired
     private ActionsService actionsService;
 
-    @MockitoSpyBean
-    private DynamicSimulationClient dynamicSimulationClient;
+    @Autowired
+    private DynamicSimulationRestService dynamicSimulationRestService;
 
-    @MockitoSpyBean
-    DynamicSecurityAnalysisClient dynamicSecurityAnalysisClient;
-
-    @MockitoSpyBean
-    DynamicMarginCalculationClient dynamicMarginCalculationClient;
+    @Autowired
+    private DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
 
     @MockitoBean
     private NetworkStoreService networkStoreService;
@@ -281,10 +281,10 @@ class NetworkModificationTreeTest {
         shortCircuitService.setBaseUri(baseUrl);
         stateEstimationService.setBaseUri(baseUrl);
         pccMinService.setBaseUri(baseUrl);
+        dynamicMarginCalculationRestService.setBaseUri(baseUrl);
 
-        doReturn(baseUrl).when(dynamicSimulationClient).getBaseUri();
-        doReturn(baseUrl).when(dynamicSecurityAnalysisClient).getBaseUri();
-        doReturn(baseUrl).when(dynamicMarginCalculationClient).getBaseUri();
+        dynamicSimulationRestService.setBaseUri(baseUrl);
+        dynamicSecurityAnalysisRestService.setBaseUri(baseUrl);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows

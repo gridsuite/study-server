@@ -72,12 +72,14 @@ public class ConsumerService {
     private final NetworkModificationTreeService networkModificationTreeService;
     private final StudyConfigService studyConfigService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    private final RootNetworkService rootNetworkService;
     private final DirectoryService directoryService;
     private final ComputationParametersService computationParametersService;
     private final UserAdminService userAdminService;
     private final LoadFlowService loadFlowService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
     private final NodeActivityService nodeActivityService;
+    private final WorkspaceService workspaceService;
 
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
@@ -87,12 +89,14 @@ public class ConsumerService {
                            NetworkModificationTreeService networkModificationTreeService,
                            StudyConfigService studyConfigService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                           RootNetworkService rootNetworkService,
                            DirectoryService directoryService,
                            ComputationParametersService computationParametersService,
                            UserAdminService userAdminService,
                            LoadFlowService loadFlowService,
                            NodeActivityRunnerService nodeActivityRunnerService,
-                           NodeActivityService nodeActivityService) {
+                           NodeActivityService nodeActivityService,
+                           WorkspaceService workspaceService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -101,12 +105,14 @@ public class ConsumerService {
         this.networkModificationTreeService = networkModificationTreeService;
         this.studyConfigService = studyConfigService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.rootNetworkService = rootNetworkService;
         this.directoryService = directoryService;
         this.computationParametersService = computationParametersService;
         this.userAdminService = userAdminService;
         this.loadFlowService = loadFlowService;
         this.nodeActivityService = nodeActivityService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
+        this.workspaceService = workspaceService;
     }
 
     @Bean
@@ -129,7 +135,6 @@ public class ConsumerService {
         UUID rootNetworkUuid = receiverObj.getRootNetworkUuid();
         Optional<RerunLoadFlowInfos> rerunLoadFlowInfos = getRerunLoadFlowInfos(message);
         UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
-        studyService.handleBuildSuccess(studyUuid, nodeUuid, rootNetworkUuid, message.getPayload());
 
         if (rerunLoadFlowInfos.isPresent()) {
             RerunLoadFlowInfos workflowInfos = rerunLoadFlowInfos.get();
@@ -138,6 +143,8 @@ public class ConsumerService {
             // a rerun's loadflow removes the activity when its own result arrives
             nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
         }
+
+        studyService.handleBuildSuccess(studyUuid, nodeUuid, rootNetworkUuid, message.getPayload());
     }
 
     private Optional<RerunLoadFlowInfos> getRerunLoadFlowInfos(Message<?> message) throws JsonProcessingException {
@@ -288,71 +295,13 @@ public class ConsumerService {
         UserProfileInfos userProfileInfos = studyService.getUserProfile(userId);
 
         ComputationParameterUUIDs computationParameterUUIDs = computationParametersService.createDefaultComputationParameters(userId, userProfileInfos);
-        UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
-        UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
-        UUID workspacesConfigUuid = createWorkspacesConfig(userProfileInfos);
+        UUID networkVisualizationParametersUuid = studyConfigService.createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
+        UUID spreadsheetConfigCollectionUuid = studyConfigService.createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
+        UUID workspacesConfigUuid = workspaceService.createWorkspacesConfig(userProfileInfos);
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, computationParameterUUIDs,
             networkVisualizationParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid,
             importParameters, importReportUuid);
-    }
-
-    private UUID createDefaultNetworkVisualizationParameters(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getNetworkVisualizationParameterId() != null) {
-            // try to access/duplicate the user profile network visualization parameters
-            try {
-                return studyConfigService.duplicateNetworkVisualizationParameters(userProfileInfos.getNetworkVisualizationParameterId());
-            } catch (Exception e) {
-                // TODO try to report a log in Root subreporter ?
-                LOGGER.error(String.format("Could not duplicate network visualization parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                    userProfileInfos.getNetworkVisualizationParameterId(), userId, userProfileInfos.getName()), e);
-            }
-        }
-        // no profile, or no/bad network visualization parameters in profile => use default values
-        try {
-            return studyConfigService.createDefaultNetworkVisualizationParameters();
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating network visualization default parameters", e);
-            return null;
-        }
-    }
-
-    private UUID createDefaultSpreadsheetConfigCollection(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getSpreadsheetConfigCollectionId() != null) {
-            // try to access/duplicate the user profile spreadsheet config collection
-            try {
-                return studyConfigService.duplicateSpreadsheetConfigCollection(userProfileInfos.getSpreadsheetConfigCollectionId());
-            } catch (Exception e) {
-                // TODO try to report a log in Root subreporter ?
-                LOGGER.error(String.format("Could not duplicate spreadsheet config collection with id '%s' from user/profile '%s/%s'. Using default spreadsheet config collection",
-                    userProfileInfos.getSpreadsheetConfigCollectionId(), userId, userProfileInfos.getName()), e);
-            }
-        }
-        // no profile, or no/bad spreadsheet config collection in profile => use default values
-        try {
-            return studyConfigService.createDefaultSpreadsheetConfigCollection();
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating default spreadsheet config collection", e);
-            return null;
-        }
-    }
-
-    @SuppressWarnings("checkstyle:LambdaBodyLength")
-    private UUID createWorkspacesConfig(UserProfileInfos userProfileInfos) {
-        try {
-            List<UUID> workspaceIds = new ArrayList<>();
-            if (userProfileInfos != null && userProfileInfos.getWorkspaceId() != null) {
-                // Create config with profile workspace as first, and two empty workspaces
-                workspaceIds.add(userProfileInfos.getWorkspaceId());
-                workspaceIds.add(null);
-                workspaceIds.add(null);
-            }
-            // Empty list will create default config
-            return studyConfigService.createWorkspacesConfigFromWorkspaces(workspaceIds);
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating workspace collection", e);
-            return null;
-        }
     }
 
     @Bean
@@ -390,6 +339,9 @@ public class ConsumerService {
         }
         if (receiver.getCaseImportAction() == CaseImportAction.ROOT_NETWORK_MODIFICATION) {
             removeReimportCaseActivity(receiver.getStudyUuid(), receiver.getRootNetworkUuid());
+        }
+        if (receiver.getCaseImportAction() == CaseImportAction.NETWORK_RECREATION) {
+            rootNetworkService.updateNetworkLoadStatus(receiver.getRootNetworkUuid(), RootNetworkLoadStatus.UNLOADED);
         }
         notificationService.emitRootNetworksUpdateFailed(receiver.getStudyUuid(), errorMessage);
     }
@@ -431,7 +383,7 @@ public class ConsumerService {
 
                     // free quota
                     if (userId != null && resultUuid != null) {
-                        userAdminService.endOperationWithQuota(userId, QuotaType.mapFromComputationType(computationType), resultUuid);
+                        handleQuotaEnd(computationType, userId, resultUuid);
                     }
 
                     // send notification for failed computation
@@ -439,6 +391,12 @@ public class ConsumerService {
                 }
             }
         }
+    }
+
+    private void handleQuotaEnd(ComputationType computationType, String userId, UUID resultUuid) {
+        QuotaType quotaType = QuotaType.mapFromComputationType(computationType);
+        userAdminService.endOperationWithQuota(userId, quotaType, resultUuid);
+        notificationService.emitQuotaChange(userId, quotaType);
     }
 
     public void consumeCalculationStopped(Message<String> msg, ComputationType computationType) {
@@ -460,7 +418,7 @@ public class ConsumerService {
                 String userId = msg.getHeaders().get(HEADER_USER_ID, String.class);
                 if (resultId != null && userId != null) {
                     UUID resultUuid = UUID.fromString(resultId);
-                    userAdminService.endOperationWithQuota(userId, QuotaType.mapFromComputationType(computationType), resultUuid);
+                    handleQuotaEnd(computationType, userId, resultUuid);
                 }
 
                 LOGGER.info("{} stopped for node '{}'", computationType.getLabel(), receiverObj.getNodeUuid());
@@ -544,7 +502,7 @@ public class ConsumerService {
                 // free quota
                 String userId = msg.getHeaders().get(HEADER_USER_ID, String.class);
                 if (userId != null) {
-                    userAdminService.endOperationWithQuota(userId, QuotaType.mapFromComputationType(computationType), resultUuid);
+                    handleQuotaEnd(computationType, userId, resultUuid);
                 }
 
                 // send notifications

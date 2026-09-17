@@ -1011,6 +1011,8 @@ class StudyTest extends StudyTestBase {
         // duplicate the study
         StudyEntity duplicatedStudy = duplicateStudy(study1Uuid, userId);
         assertNotEquals(study1Uuid, duplicatedStudy.getId());
+        StudyEntity originalStudy = studyRepository.findById(study1Uuid).orElseThrow();
+        assertEquals(originalStudy.isMonoRoot(), duplicatedStudy.isMonoRoot());
 
         // Verify node aliases on the duplicated study
         aliases = mapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/node-aliases", duplicatedStudy.getId())).andExpect(status().isOk()).andReturn()
@@ -1117,7 +1119,7 @@ class StudyTest extends StudyTestBase {
             .whenScenarioStateIs(Scenario.STARTED)
             .willSetStateTo("indexed")
             .willReturn(WireMock.ok())).getId();
-        UUID stubUuid = wireMockStubs.stubDuplicateModificationGroup(mapper.writeValueAsString(Map.of()));
+        UUID stubUuid = wireMockStubs.stubDuplicateModificationGroup();
         UUID stubDuplicateCaseId = wireMockStubs.caseServer.stubDuplicateCaseWithBody(CASE_UUID_STRING, mapper.writeValueAsString(CLONED_CASE_UUID));
         UUID stubReportsDuplicateId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/reports/.*/duplicate"))
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)

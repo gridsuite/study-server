@@ -70,7 +70,7 @@ public class PccMinService extends AbstractComputationService {
 
         UUID result = handlePccMinRequest(studyEntity, nodeUuid, rootNetworkUuid, userId);
 
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(PCC_MIN), result);
+        handleQuotaStart(userId, result, PCC_MIN);
         return result;
     }
 

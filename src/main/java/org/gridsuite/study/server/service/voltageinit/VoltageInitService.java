@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.service.voltageinit;
 
-import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.dto.VariantInfos;
@@ -75,7 +74,7 @@ public class VoltageInitService extends AbstractComputationService {
 
         UUID result = handleVoltageInitRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
 
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(VOLTAGE_INITIALIZATION), result);
+        handleQuotaStart(userId, result, VOLTAGE_INITIALIZATION);
         return result;
     }
 

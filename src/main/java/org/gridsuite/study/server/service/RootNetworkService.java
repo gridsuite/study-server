@@ -89,6 +89,11 @@ public class RootNetworkService {
         return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
     }
 
+    public RootNetworkLoadStatus getRootNetworkLoadStatus(UUID networkUuid) {
+        Optional<RootNetworkEntity> rootNetworkEntity = getRootNetwork(networkUuid);
+        return rootNetworkEntity.map(RootNetworkEntity::getLoadStatus).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+    }
+
     public UUID getRootReportUuid(UUID rootNetworkUuid) {
         return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getReportUuid).orElse(null);
     }
@@ -171,6 +176,15 @@ public class RootNetworkService {
         return rootNetworkRepository.findById(rootNetworkUuid);
     }
 
+    public String getRootNetworkTag(UUID rootNetworkUuid) {
+        return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getTag).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+    }
+
+    // Mono-root returns null tag, and the applicability for this tag is then ignored
+    public String getApplicabilityTag(UUID rootNetworkUuid) {
+        return getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")).getApplicabilityTag();
+    }
+
     public String getCaseName(UUID rootNetworkUuid) {
         return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getCaseName).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
     }
@@ -191,29 +205,37 @@ public class RootNetworkService {
     public void duplicateStudyRootNetworks(StudyEntity newStudyEntity, StudyEntity sourceStudyEntity) {
         List<RootNetworkEntity> rootNetworkEntities = sourceStudyEntity.getRootNetworks();
         rootNetworkEntities.forEach(rootNetworkEntityToDuplicate -> {
-                List<VariantInfos> networkVariants = networkService.getNetworkVariants(rootNetworkEntityToDuplicate.getNetworkUuid());
+            UUID sourceNetworkUuid = rootNetworkEntityToDuplicate.getNetworkUuid();
+            UUID clonedNetworkUuid;
+            if (rootNetworkEntityToDuplicate.getLoadStatus() == RootNetworkLoadStatus.LOADED || networkService.doesNetworkExist(sourceNetworkUuid)) {
+                List<VariantInfos> networkVariants = networkService.getNetworkVariants(sourceNetworkUuid);
                 // Clone only the initial variant
                 List<String> targetVariantIds = networkVariants.stream().findFirst().map(VariantInfos::getId).stream().toList();
-                Network clonedNetwork = networkService.cloneNetwork(rootNetworkEntityToDuplicate.getNetworkUuid(), targetVariantIds);
-                UUID clonedNetworkUuid = networkService.getNetworkUuid(clonedNetwork);
+                Network clonedNetwork = networkService.cloneNetwork(sourceNetworkUuid, targetVariantIds);
+                clonedNetworkUuid = networkService.getNetworkUuid(clonedNetwork);
+            } else {
+                // source network isn't loaded (or was deleted), generate new network uuid
+                clonedNetworkUuid = UUID.randomUUID();
+            }
 
-                UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkEntityToDuplicate.getCaseUuid(), false);
-                Map<String, Object> newImportParameters = JsonUtils.deserializeImportParameters(rootNetworkEntityToDuplicate.getImportParameters(), objectMapper);
+            UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkEntityToDuplicate.getCaseUuid(), false);
+            Map<String, Object> newImportParameters = JsonUtils.deserializeImportParameters(rootNetworkEntityToDuplicate.getImportParameters(), objectMapper);
 
-                UUID clonedRootNodeReportUuid = reportService.duplicateReport(rootNetworkEntityToDuplicate.getReportUuid());
+            UUID clonedRootNodeReportUuid = reportService.duplicateReport(rootNetworkEntityToDuplicate.getReportUuid());
 
-                createRootNetwork(newStudyEntity,
-                    RootNetworkInfos.builder()
-                        .id(UUID.randomUUID())
-                        .name(rootNetworkEntityToDuplicate.getName())
-                        .importParameters(newImportParameters)
-                        .caseInfos(new CaseInfos(clonedCaseUuid, rootNetworkEntityToDuplicate.getOriginalCaseUuid(), rootNetworkEntityToDuplicate.getCaseName(),
-                                rootNetworkEntityToDuplicate.getCaseFormat()))
-                        .networkInfos(new NetworkInfos(clonedNetworkUuid, rootNetworkEntityToDuplicate.getNetworkId()))
-                        .reportUuid(clonedRootNodeReportUuid)
-                        .tag(rootNetworkEntityToDuplicate.getTag())
-                        .build()
-                );
+            RootNetworkEntity newRootNetworkEntity = createRootNetwork(newStudyEntity,
+                RootNetworkInfos.builder()
+                    .id(UUID.randomUUID())
+                    .name(rootNetworkEntityToDuplicate.getName())
+                    .importParameters(newImportParameters)
+                    .caseInfos(new CaseInfos(clonedCaseUuid, rootNetworkEntityToDuplicate.getOriginalCaseUuid(), rootNetworkEntityToDuplicate.getCaseName(),
+                            rootNetworkEntityToDuplicate.getCaseFormat()))
+                    .networkInfos(new NetworkInfos(clonedNetworkUuid, rootNetworkEntityToDuplicate.getNetworkId()))
+                    .reportUuid(clonedRootNodeReportUuid)
+                    .tag(rootNetworkEntityToDuplicate.getTag())
+                    .build()
+            );
+            newRootNetworkEntity.setLoadStatus(rootNetworkEntityToDuplicate.getLoadStatus());
             }
         );
     }
@@ -391,5 +413,16 @@ public class RootNetworkService {
                 .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetwork.setIndexationStatus(indexationStatus);
         notificationService.emitRootNetworkIndexationStatusChanged(studyUuid, rootNetworkUuid, indexationStatus);
+    }
+
+    @Transactional
+    public void updateNetworkLoadStatus(UUID rootNetworkUuid, RootNetworkLoadStatus rootNetworkLoadStatus) {
+        RootNetworkEntity rootNetwork = getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        rootNetwork.setLoadStatus(rootNetworkLoadStatus);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UUID> getLoadedStudyIds(List<UUID> studyUuids) {
+        return rootNetworkRepository.findDistinctStudyIdsByStudyIdInAndLoadStatus(studyUuids, RootNetworkLoadStatus.LOADED);
     }
 }

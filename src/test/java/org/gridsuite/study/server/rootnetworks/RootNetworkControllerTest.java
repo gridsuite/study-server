@@ -49,8 +49,10 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_IMPORT_PARAMETERS
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -162,7 +164,7 @@ class RootNetworkControllerTest {
     }
 
     @Test
-    void testCheckNetworkExistenceReturnsNotContent() throws Exception {
+    void testCheckNetworkExistenceReturnsNetworkNotFound() throws Exception {
         Map<String, Object> importParameters = new HashMap<>();
         importParameters.put("param1", "changedValue1, changedValue2");
         importParameters.put("param2", "changedValue");
@@ -170,9 +172,10 @@ class RootNetworkControllerTest {
         UUID studyUuid = createStudy(userId, importParameters);
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         when(networkStoreService.getNetwork(NETWORK_UUID)).thenThrow(new PowsyblException("Network '" + NETWORK_UUID + "' not found"));
-        mockMvc.perform(head("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid)
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid)
                         .header(USER_ID_HEADER, userId))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.exists").value(false));
     }
 
     @Test

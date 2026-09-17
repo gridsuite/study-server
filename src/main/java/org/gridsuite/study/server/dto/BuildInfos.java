@@ -27,8 +27,8 @@ public class BuildInfos {
 
     private List<UUID> modificationGroupUuids = new ArrayList<>();
 
-    // map with modification groups as key, modification to excludes as value
-    private Map<UUID, Set<UUID>> modificationUuidsToExclude = new HashMap<>();
+    // tag of the root network being built, used to resolve the applicability of each modification
+    private String rootNetworkTag;
 
     /**
      * Reports generated during this build operation.
@@ -43,10 +43,7 @@ public class BuildInfos {
      */
     private List<ReportInfos> inheritedReportsInfos = new ArrayList<>();
 
-    public void insertModificationInfos(UUID modificationGroupUuid, Set<UUID> modificationUuidsToExclude, ReportInfos reportInfos) {
-        if (modificationUuidsToExclude != null && !modificationUuidsToExclude.isEmpty()) {
-            this.modificationUuidsToExclude.put(modificationGroupUuid, modificationUuidsToExclude);
-        }
+    public void insertModificationInfos(UUID modificationGroupUuid, ReportInfos reportInfos) {
         modificationGroupUuids.add(0, modificationGroupUuid);
         reportsInfos.add(0, reportInfos);
     }

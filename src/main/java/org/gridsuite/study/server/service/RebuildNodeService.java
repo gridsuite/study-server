@@ -62,9 +62,9 @@ public class RebuildNodeService {
             () -> studyService.updateNetworkModificationsMetadata(studyUuid, nodeUuid, modificationsUuids, userId, metadata));
     }
 
-    public void updateNetworkModificationsActivation(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Set<UUID> modificationsUuids, String userId, boolean activated) {
+    public void updateNetworkModificationsApplicability(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Set<UUID> modificationsUuids, String userId, boolean applicable) {
         handleRebuildNode(studyUuid, nodeUuid, userId,
-            () -> studyService.updateNetworkModificationsActivationInRootNetwork(studyUuid, nodeUuid, rootNetworkUuid, modificationsUuids, userId, activated));
+            () -> studyService.updateNetworkModificationsApplicabilityInRootNetwork(studyUuid, nodeUuid, rootNetworkUuid, modificationsUuids, userId, applicable));
     }
 
     public void restoreNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
@@ -90,7 +90,7 @@ public class RebuildNodeService {
 
     private void handleMoveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<ModificationMoveOrCopyInfos> moveOrCopyInfos, String userId) {
         boolean isTargetInDifferentNodeTree = studyService.invalidateNodeTreeWhenMoveModifications(studyUuid, targetNodeUuid, originNodeUuid);
-        studyService.moveNetworkModifications(studyUuid, targetNodeUuid, moveOrCopyInfos, originNodeUuid, null, null, isTargetInDifferentNodeTree, userId);
+        studyService.moveNetworkModifications(studyUuid, originNodeUuid, targetNodeUuid, moveOrCopyInfos, null, null, isTargetInDifferentNodeTree, userId);
     }
 
     public void moveNetworkModification(
@@ -104,9 +104,9 @@ public class RebuildNodeService {
                     studyService.invalidateNodeTreeWhenMoveModification(studyUuid, nodeUuid);
                     studyService.moveNetworkModifications(
                             studyUuid,
+                            nodeUuid, // same-container reorder when source is omitted: default to the node's own group
                             nodeUuid,
                             List.of(new ModificationMoveOrCopyInfos(modificationUuid, moveModificationInfos.source())),
-                            nodeUuid, // same-container reorder when source is omitted: default to the node's own group
                             moveModificationInfos.target(),
                             moveModificationInfos.beforeUuid(),
                             false,
@@ -143,9 +143,13 @@ public class RebuildNodeService {
             Stream.of(node1Uuid, node2Uuid).distinct().toList(), action);
 
         rootNetworkUuidsByNodeBuilt.forEach((nodeUuid, rootNetworkUuids) ->
-            rootNetworkUuids.forEach(rootNetworkUuid ->
-                nodeActivityService.runWith(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid),
-                    () -> studyService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId))));
+            rootNetworkUuids.forEach(rootNetworkUuid -> {
+                if (!studyService.isNodeBuilt(nodeUuid, rootNetworkUuid)) {
+                    nodeActivityService.runWith(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+                        () -> studyService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId));
+                }
+            })
+        );
 
         return result;
     }

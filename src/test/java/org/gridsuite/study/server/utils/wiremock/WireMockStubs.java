@@ -224,10 +224,10 @@ public class WireMockStubs {
         ).getId();
     }
 
-    public UUID stubDuplicateModificationGroup(String responseBody) {
+    public UUID stubDuplicateModificationGroup() {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + "/.*/duplicate"))
             .withQueryParam("groupUuid", WireMock.matching(".*"))
-            .willReturn(WireMock.ok().withBody(responseBody).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
+            .willReturn(WireMock.ok())
         ).getId();
     }
 

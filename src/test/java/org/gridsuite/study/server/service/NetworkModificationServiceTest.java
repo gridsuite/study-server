@@ -13,16 +13,21 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -121,5 +126,74 @@ class NetworkModificationServiceTest {
         networkModificationService.updateNetworkModificationsMetadata(List.of(firstUuid, secondUuid), RESPONSE);
 
         verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+    }
+
+    @Test
+    void testDeleteModificationsGroups() {
+        UUID firstUuid = UUID.randomUUID();
+        UUID secondUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups?errorOnGroupNotFound=false";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        networkModificationService.deleteModificationsGroups(List.of(firstUuid, secondUuid));
+        HttpEntity<String> httpEntity = new HttpEntity<>("[\"" + firstUuid + "\",\"" + secondUuid + "\"]", headers);
+        verify(restTemplate).exchange(expectedUrl, HttpMethod.DELETE, httpEntity, new ParameterizedTypeReference<Map<UUID, UUID>>() { });
+    }
+
+    @Test
+    void testDeleteStashedModificationsGroups() {
+        UUID firstUuid = UUID.randomUUID();
+        UUID secondUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/stashed-modifications?errorOnGroupNotFound=false";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        networkModificationService.deleteStashedModificationsFromGroups(List.of(firstUuid, secondUuid));
+        HttpEntity<String> httpEntity = new HttpEntity<>("[\"" + firstUuid + "\",\"" + secondUuid + "\"]", headers);
+        verify(restTemplate).exchange(expectedUrl, HttpMethod.DELETE, httpEntity, new ParameterizedTypeReference<Map<UUID, UUID>>() { });
+    }
+
+    @Test
+    void testRenameRootNetworkTag() {
+        UUID firstGroupUuid = UUID.randomUUID();
+        UUID secondGroupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
+                + "?groupUuids=" + firstGroupUuid + "&groupUuids=" + secondGroupUuid + "&oldTag=PH1&newTag=PH2";
+
+        networkModificationService.renameRootNetworkTag(List.of(firstGroupUuid, secondGroupUuid), "PH1", "PH2");
+
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+
+        // there is nothing to rename without a group
+        networkModificationService.renameRootNetworkTag(List.of(), "PH1", "PH2");
+
+        verifyNoMoreInteractions(restTemplate);
+    }
+
+    @Test
+    void testDeleteRootNetworkTags() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
+                + "?groupUuids=" + groupUuid + "&rootNetworkTags=PH1&rootNetworkTags=PH2";
+
+        networkModificationService.deleteRootNetworkTags(List.of(groupUuid), List.of("PH1", "PH2"));
+
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.DELETE), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+
+        // there is nothing to drop without a group or without a tag
+        networkModificationService.deleteRootNetworkTags(List.of(), List.of("PH1"));
+        networkModificationService.deleteRootNetworkTags(List.of(groupUuid), List.of());
+
+        verifyNoMoreInteractions(restTemplate);
+    }
+
+    @Test
+    void testHasModificationReferences() {
+        UUID modificationUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/references/exists?uuids=" + modificationUuid;
+
+        networkModificationService.hasModificationReferences(List.of(modificationUuid));
+        verify(restTemplate).getForObject(eq(expectedUrl), eq(Boolean.class));
     }
 }
