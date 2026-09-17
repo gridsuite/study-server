@@ -1455,7 +1455,7 @@ public class NetworkModificationTreeService {
     public List<ModificationMoveInfos> resolveMoveContainers(List<ModificationMoveRequest> modificationMoveRequests) {
         Map<UUID, UUID> nodeToGroup = modificationMoveRequests.stream()
                 .flatMap(r -> Stream.of(r.source(), r.target()))
-                .map(ModificationLocationInfos::nodeUuidOrNull)
+                .map(ModificationLocationInfos::nodeUuid)
                 .filter(Objects::nonNull)
                 .distinct()
                 .collect(Collectors.toMap(Function.identity(), this::getModificationGroupUuid));

@@ -667,7 +667,7 @@ public class StudyController {
         // Any foreign node referenced in source/target must belong to this study
         modificationMoveRequests.stream()
                 .flatMap(r -> Stream.of(r.source(), r.target()))
-                .map(ModificationLocationInfos::nodeUuidOrNull)
+                .map(ModificationLocationInfos::nodeUuid)
                 .filter(Objects::nonNull)
                 .filter(id -> !id.equals(nodeUuid))
                 .distinct()
@@ -679,10 +679,12 @@ public class StudyController {
                     }
                 });
 
-        // Origin node for rebuild: first foreign source node, or same node
+        // TODO The system isn't currently able to properly handle rebuild with multiple different node sources
+        // which isn't a feature in the app atm, need some adaptation if multiple source nodes need rebuilding
+        // thus the origin node for rebuild is the first foreign source node, or the node at hand
         UUID originNodeUuid = modificationMoveRequests.stream()
                 .map(ModificationMoveRequest::source)
-                .map(ModificationLocationInfos::nodeUuidOrNull)
+                .map(ModificationLocationInfos::nodeUuid)
                 .filter(Objects::nonNull)
                 .filter(id -> !id.equals(nodeUuid))
                 .findFirst()

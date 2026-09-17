@@ -27,9 +27,4 @@ public record ModificationLocationInfos(
         return new ModificationContainerInfos(
                 nodeToGroupResolver.apply(nodeUuid), ModificationContainerType.GROUP);
     }
-
-    /** @return the node UUID if this is a node location, null otherwise */
-    public UUID nodeUuidOrNull() {
-        return nodeUuid;
-    }
 }
