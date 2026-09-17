@@ -11,7 +11,9 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.modification.ModificationLocationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
+import org.gridsuite.study.server.dto.modification.ModificationMoveRequest;
 import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
@@ -39,7 +41,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 
@@ -1449,9 +1453,27 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public List<ModificationMoveInfos> resolveNodeGroups(List<ModificationMoveInfos> modificationInfos, UUID originNodeUuid, UUID targetNodeUuid) {
-        UUID originGroupUuid = getModificationGroupUuid(originNodeUuid);
-        UUID targetGroupUuid = originNodeUuid.equals(targetNodeUuid) ? originGroupUuid : getModificationGroupUuid(targetNodeUuid);
-        return modificationInfos.stream().map(info -> info.fillGroupsUuid(originGroupUuid, targetGroupUuid)).toList();
+    public List<ModificationMoveInfos> resolveLocations(List<ModificationMoveRequest> modificationMoveRequests) {
+        Set<UUID> nodeUuids = modificationMoveRequests.stream()
+                .flatMap(r -> Stream.of(r.source(), r.target()))
+                .map(ModificationLocationInfos::nodeUuidOrNull)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<UUID, UUID> nodeToGroup = nodeUuids.isEmpty()
+                ? Map.of()
+                : nodeUuids.stream().collect(Collectors.toMap(
+                Function.identity(), this::getModificationGroupUuid));
+
+        UnaryOperator<UUID> resolver = nodeId -> Objects.requireNonNull(
+                nodeToGroup.get(nodeId), "No modification group for node " + nodeId);
+
+        return modificationMoveRequests.stream()
+                .map(r -> new ModificationMoveInfos(
+                        r.modificationUuid(),
+                        r.source().resolve(resolver),
+                        r.target().resolve(resolver),
+                        r.beforeUuid()))
+                .toList();
     }
 }

@@ -7,8 +7,7 @@
 package org.gridsuite.study.server.studycontroller;
 
 import org.gridsuite.study.server.controller.StudyController;
-import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
-import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
+import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
@@ -93,12 +92,29 @@ class StudyControllerRebuildNodeTest {
 
     @Test
     void testMoveNetworkModifications() {
-        List<ModificationMoveInfos> modificationInfos = List.of(new ModificationMoveInfos(UUID.randomUUID(), null, null, null));
+        UUID modificationUuid = UUID.randomUUID();
         UUID originNodeUuid = UUID.randomUUID();
-        when(networkModificationTreeService.resolveNodeGroups(modificationInfos, originNodeUuid, nodeUuid)).thenReturn(modificationInfos);
-        studyController.moveModifications(studyUuid, nodeUuid, studyUuid, originNodeUuid, modificationInfos, userId);
+        UUID originGroupUuid = UUID.randomUUID();
+        UUID targetGroupUuid = UUID.randomUUID();
 
-        verify(rebuildNodeService, times(1)).moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationInfos, userId);
+        List<ModificationMoveRequest> requests = List.of(
+                new ModificationMoveRequest(modificationUuid,
+                        new ModificationLocationInfos(originNodeUuid, null),
+                        new ModificationLocationInfos(nodeUuid, null),
+                        null));
+
+        List<ModificationMoveInfos> resolved = List.of(
+                new ModificationMoveInfos(modificationUuid,
+                        new ModificationContainerInfos(originGroupUuid, ModificationContainerType.GROUP),
+                        new ModificationContainerInfos(targetGroupUuid, ModificationContainerType.GROUP),
+                        null));
+
+        when(networkModificationTreeService.resolveLocations(requests)).thenReturn(resolved);
+        when(networkModificationTreeService.getNodeUuidByModificationGroup(originGroupUuid)).thenReturn(originNodeUuid);
+
+        studyController.moveModifications(studyUuid, nodeUuid, requests, userId);
+
+        verify(rebuildNodeService, times(1)).moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, resolved, userId);
         verify(studyService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
     }
 

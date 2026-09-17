@@ -18,9 +18,4 @@ public record ModificationMoveInfos(
         UUID modificationUuid,
         @Schema(description = "current container; resolved to the parent composite or the origin node's group when omitted") ModificationContainerInfos source,
         @Schema(description = "destination container; defaults to the target node's group") ModificationContainerInfos target,
-        @Schema(description = "insert before this modification of the target container; appends when null") UUID beforeUuid) {
-
-    public ModificationMoveInfos fillGroupsUuid(UUID originGroupUuid, UUID targetGroupUuid) {
-        return new ModificationMoveInfos(modificationUuid, source.fillGroup(originGroupUuid), target.fillGroup(targetGroupUuid), beforeUuid);
-    }
-}
+        @Schema(description = "insert before this modification of the target container; appends when null") UUID beforeUuid) { }

@@ -654,26 +654,42 @@ public class StudyController {
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/move")
-    @Operation(summary = "Move modifications, each within or between containers (groups or composites), possibly from another node of the same study")
+    @Operation(summary = "Move modifications within or between containers, possibly from another node of the same study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modifications have been moved")})
     public ResponseEntity<Void> moveModifications(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @RequestParam(value = "originStudyUuid", required = false) UUID originStudyUuid,
-            @RequestParam(value = "originNodeUuid", required = false) UUID originNodeUuid,
-            @RequestBody List<ModificationMoveInfos> modificationInfos,
+            @RequestBody List<ModificationMoveRequest> modificationMoveRequests,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        UUID resolvedOriginNodeUuid = Optional.ofNullable(originNodeUuid).orElse(nodeUuid);
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        studyService.assertIsStudyAndNodeExist(studyUuid, resolvedOriginNodeUuid);
         studyService.assertIsNodeNotReadOnly(nodeUuid);
 
-        if (originStudyUuid != null && !studyUuid.equals(originStudyUuid)) {
-            throw new StudyException(MOVE_NETWORK_MODIFICATION_FORBIDDEN);
-        }
+        // Any foreign node referenced in source/target must belong to this study
+        modificationMoveRequests.stream()
+                .flatMap(r -> Stream.of(r.source(), r.target()))
+                .map(ModificationLocationInfos::nodeUuidOrNull)
+                .filter(Objects::nonNull)
+                .filter(id -> !id.equals(nodeUuid))
+                .distinct()
+                .forEach(id -> {
+                    try {
+                        studyService.assertIsNodeExist(studyUuid, id);
+                    } catch (StudyException e) {
+                        throw new StudyException(MOVE_NETWORK_MODIFICATION_FORBIDDEN);
+                    }
+                });
 
-        List<ModificationMoveInfos> resolvedModificationMoveInfos = networkModificationTreeService.resolveNodeGroups(modificationInfos, resolvedOriginNodeUuid, nodeUuid);
-        rebuildNodeService.moveNetworkModifications(studyUuid, nodeUuid, resolvedOriginNodeUuid, resolvedModificationMoveInfos, userId);
+        // Origin node for rebuild: first foreign source node, or same node
+        UUID originNodeUuid = modificationMoveRequests.stream()
+                .map(ModificationMoveRequest::source)
+                .map(ModificationLocationInfos::nodeUuidOrNull)
+                .filter(Objects::nonNull)
+                .filter(id -> !id.equals(nodeUuid))
+                .findFirst()
+                .orElse(nodeUuid);
+
+        List<ModificationMoveInfos> modificationMoveInfos = networkModificationTreeService.resolveLocations(modificationMoveRequests);
+        rebuildNodeService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationMoveInfos, userId);
         return ResponseEntity.ok().build();
     }
 

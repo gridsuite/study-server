@@ -12,16 +12,13 @@ import java.util.UUID;
 
 /**
  * @author Hugo Marcellin <hugo.marcelin at rte-france.com>
+ *
+ * Wire DTO for the move endpoint.  Uses {@link ModificationLocationInfos}
+ * (node-aware) rather than {@link ModificationContainerInfos} (group-aware).
  */
-public record ModificationContainerInfos(
-        @Schema(description = "container UUID; omitted only for GROUP, where node's group is used") UUID id,
-        @Schema(description = "container type") ModificationContainerType type) {
-
-    public boolean isGroup() {
-        return ModificationContainerType.GROUP.equals(type);
-    }
-
-    public boolean isComposite() {
-        return ModificationContainerType.COMPOSITE.equals(type);
-    }
+public record ModificationMoveRequest(
+        UUID modificationUuid,
+        ModificationLocationInfos source,
+        ModificationLocationInfos target,
+        @Schema(description = "Insert before this modification; appends when null") UUID beforeUuid) {
 }
