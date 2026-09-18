@@ -11,6 +11,8 @@ import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.dto.studyexport.RootNetworkExportInfos;
 import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
 import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.InputStreamResource;
@@ -27,8 +29,10 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
@@ -44,17 +48,26 @@ public class StudyExportService {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyExportService.class);
     public static final String TREE_JSON_FILE_NAME = "tree.json";
     public static final String CASES_FOLDER = "cases";
+    public static final String PARAMETERS_FOLDER = "computationParameters";
 
     private final StudyService studyService;
     private final CaseService caseService;
     private final DirectoryService directoryService;
     private final ObjectMapper objectMapper;
+    private final ComputationParametersService computationParametersService;
+    private final NetworkModificationTreeService networkModificationTreeService;
+    private final RootNetworkService rootNetworkService;
 
-    public StudyExportService(StudyService studyService, CaseService caseService, DirectoryService directoryService, ObjectMapper objectMapper) {
+    public StudyExportService(StudyService studyService, CaseService caseService, DirectoryService directoryService,
+                              ObjectMapper objectMapper, ComputationParametersService computationParametersService,
+                              NetworkModificationTreeService networkModificationTreeService, RootNetworkService rootNetworkService) {
         this.studyService = studyService;
         this.caseService = caseService;
         this.directoryService = directoryService;
         this.objectMapper = objectMapper;
+        this.computationParametersService = computationParametersService;
+        this.networkModificationTreeService = networkModificationTreeService;
+        this.rootNetworkService = rootNetworkService;
     }
 
     /**
@@ -68,7 +81,7 @@ public class StudyExportService {
         Path tempDir = createTempWorkDir(studyUuid);
         Path zipFile = null;
         try {
-            zipFile = compressStudyToZip(studyUuid, tempDir);
+            zipFile = compressStudyToZip(studyUuid, userId, tempDir);
             InputStream stream = Files.newInputStream(zipFile, StandardOpenOption.DELETE_ON_CLOSE);
             zipFile = null;
             return new InputStreamResource(stream);
@@ -93,7 +106,7 @@ public class StudyExportService {
     /**
      * Build tree.json and the case files under tempDir, then compress them into a temp zip file
      */
-    private Path compressStudyToZip(UUID studyUuid, Path tempDir) throws IOException {
+    private Path compressStudyToZip(UUID studyUuid, String userId, Path tempDir) throws IOException {
         TreeExportInfos treeExportInfos = studyService.buildTreeExport(studyUuid);
         Path studyJsonPath = tempDir.resolve(TREE_JSON_FILE_NAME);
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(studyJsonPath.toFile(), treeExportInfos);
@@ -103,12 +116,43 @@ public class StudyExportService {
             String caseName = rootNetworkInfos.caseInfos().getCaseName();
             exportCaseFile(caseUuid, caseName, casesDir);
         }
+        exportComputationParameters(studyUuid, userId, tempDir);
         Path zipFile = createTempExportFile(studyUuid);
         try (OutputStream fos = Files.newOutputStream(zipFile);
              ZipOutputStream zipOut = new ZipOutputStream(fos)) {
             writeZipEntries(tempDir, zipOut);
         }
         return zipFile;
+    }
+
+    private void exportComputationParameters(UUID studyUuid, String userId, Path tempDir) throws IOException {
+        StudyEntity study = studyService.getStudy(studyUuid);
+        var export = computationParametersService.exportParameters(study, userId);
+        Path parametersDir = tempDir.resolve(PARAMETERS_FOLDER);
+
+        if (!export.parametersByFileName().isEmpty()) {
+            Files.createDirectories(parametersDir);
+            for (Map.Entry<String, String> entry : export.parametersByFileName().entrySet()) {
+                Files.writeString(parametersDir.resolve(entry.getKey()), entry.getValue());
+            }
+        }
+
+        Set<UUID> filteredUuids = export.filterUuids();
+        Set<UUID> contingencyListUuids = export.contingencyListUuids();
+        UUID rootNetworkUuid = rootNetworkService.getFirstRootNetworkUuid(studyUuid);
+        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+        writeIfNotEmpty(parametersDir, "filters.json", filteredUuids,
+                () -> studyService.exportFilters(rootNetworkUuid, List.copyOf(filteredUuids), rootNodeUuid, false));
+        writeIfNotEmpty(parametersDir, "contingencyLists.json", contingencyListUuids,
+                () -> studyService.exportContingencyLists(rootNetworkUuid, List.copyOf(contingencyListUuids), rootNodeUuid, false));
+    }
+
+    private void writeIfNotEmpty(Path dir, String fileName, Set<UUID> ids, Supplier<String> contentSupplier) throws IOException {
+        if (ids.isEmpty()) {
+            return;
+        }
+        Files.createDirectories(dir);
+        Files.writeString(dir.resolve(fileName), contentSupplier.get());
     }
 
     private Path createTempWorkDir(UUID studyUuid) {

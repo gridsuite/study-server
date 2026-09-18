@@ -63,6 +63,8 @@ class TreeExportTest extends StudyTestBase {
                 .willReturn(WireMock.aResponse().withStatus(200)
                         .withHeader("Content-Type", "application/octet-stream")
                         .withBody("dummy case content".getBytes())));
+        // Stub the computation parameters fetches
+        computationServerStubs.stubGetParametersAny("{}");
         // Export as zip
         MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName").header(HEADER_USER_ID, "testUser"))
                 .andExpect(status().isOk())
@@ -103,6 +105,8 @@ class TreeExportTest extends StudyTestBase {
         // Verify the case content download call
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
+        // Verify the computation parameters fetches
+        computationServerStubs.verifyParametersGetAny(10);
     }
 
     @Test
@@ -125,6 +129,7 @@ class TreeExportTest extends StudyTestBase {
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + CASE_UUID))
                 .willReturn(WireMock.aResponse().withStatus(200).withHeader("Content-Type", "application/octet-stream")
                         .withBody("dummy case content".getBytes())));
+        computationServerStubs.stubGetParametersAny("{}");
         // Capture the real zip file path as it is matched, so the test can clean it up itself:
         // the service's own Files.deleteIfExists call on this path is mocked to fail below.
         AtomicReference<Path> capturedZipFile = new AtomicReference<>();
@@ -156,5 +161,6 @@ class TreeExportTest extends StudyTestBase {
         }
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
+        computationServerStubs.verifyParametersGetAny(10);
     }
 }
