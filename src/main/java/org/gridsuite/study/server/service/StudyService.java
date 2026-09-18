@@ -2571,6 +2571,12 @@ public class StudyService {
         return filterService.exportFilters(rootNetworkService.getNetworkUuid(rootNetworkUuid), filtersUuid, variantId);
     }
 
+    public String exportContingencyLists(UUID rootNetworkUuid, List<UUID> contingencyListUuids, UUID nodeUuid, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid);
+        return actionsService.exportContingencyLists(rootNetworkService.getNetworkUuid(rootNetworkUuid), variantId, contingencyListUuids);
+    }
+
     @Transactional
     public NetworkModificationNode createNode(UUID studyUuid, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode, String userId) {
         StudyEntity study = getStudy(studyUuid);

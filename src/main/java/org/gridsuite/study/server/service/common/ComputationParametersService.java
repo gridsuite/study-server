@@ -6,10 +6,12 @@
  */
 package org.gridsuite.study.server.service.common;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.dto.computation.ComputationParameterUUIDs;
+import org.gridsuite.study.server.dto.studyexport.ComputationParametersExportInfos;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
@@ -26,10 +28,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -46,6 +49,8 @@ public class ComputationParametersService {
 
     private final UserAdminService userAdminService;
     private final ObjectMapper objectMapper;
+    private final SecurityAnalysisRestService securityAnalysisService;
+    private final SensitivityAnalysisRestService sensitivityAnalysisService;
     private final List<ComputationParametersDefinition> computationParametersDefinitions;
 
     // this is useful to avoid repetitive calls when doing operation on all computation types (duplicate, delete, export)
@@ -74,6 +79,8 @@ public class ComputationParametersService {
 
         this.userAdminService = userAdminService;
         this.objectMapper = objectMapper;
+        this.securityAnalysisService = securityAnalysisService;
+        this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.computationParametersDefinitions = List.of(
                 new ComputationParametersDefinition(
                         ComputationType.LOAD_FLOW,
@@ -239,7 +246,10 @@ public class ComputationParametersService {
         }
     }
 
-    public void exportParameters(StudyEntity studyEntity, String userId, Path parametersDir) {
+    public ComputationParametersExportInfos exportParameters(StudyEntity studyEntity, String userId) {
+        Map<String, String> parametersByFileName = new HashMap<>();
+        Set<UUID> filterUuids = new HashSet<>();
+        Set<UUID> contingencyListUuids = new HashSet<>();
         for (ComputationParametersDefinition definition : computationParametersDefinitions) {
             UUID parametersUuid = definition.studyParameterGetter().apply(studyEntity);
             if (parametersUuid == null) {
@@ -247,11 +257,17 @@ public class ComputationParametersService {
             }
             Object parameters = definition.parametersFetcher().apply(parametersUuid, userId);
             try {
-                Files.createDirectories(parametersDir);
-                Files.writeString(parametersDir.resolve(definition.type().name() + ".json"), objectMapper.writeValueAsString(parameters));
-            } catch (IOException e) {
+                parametersByFileName.put(definition.type().name() + ".json", objectMapper.writeValueAsString(parameters));
+            } catch (JsonProcessingException e) {
                 LOGGER.error(e.toString());
             }
+            if (definition.type() == ComputationType.SECURITY_ANALYSIS) {
+                contingencyListUuids.addAll(securityAnalysisService.getContingencyListUuids(parametersUuid));
+            } else if (definition.type() == ComputationType.SENSITIVITY_ANALYSIS) {
+                filterUuids.addAll(sensitivityAnalysisService.getFilterUuids(parametersUuid));
+                contingencyListUuids.addAll(sensitivityAnalysisService.getContingencyListUuids(parametersUuid));
+            }
         }
+        return new ComputationParametersExportInfos(parametersByFileName, filterUuids, contingencyListUuids);
     }
 }

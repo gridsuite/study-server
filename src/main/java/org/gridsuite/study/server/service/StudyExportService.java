@@ -11,6 +11,7 @@ import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.dto.studyexport.RootNetworkExportInfos;
 import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
 import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,8 +29,10 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
@@ -52,14 +55,19 @@ public class StudyExportService {
     private final DirectoryService directoryService;
     private final ObjectMapper objectMapper;
     private final ComputationParametersService computationParametersService;
+    private final NetworkModificationTreeService networkModificationTreeService;
+    private final RootNetworkService rootNetworkService;
 
     public StudyExportService(StudyService studyService, CaseService caseService, DirectoryService directoryService,
-                              ObjectMapper objectMapper, ComputationParametersService computationParametersService) {
+                              ObjectMapper objectMapper, ComputationParametersService computationParametersService,
+                              NetworkModificationTreeService networkModificationTreeService, RootNetworkService rootNetworkService) {
         this.studyService = studyService;
         this.caseService = caseService;
         this.directoryService = directoryService;
         this.objectMapper = objectMapper;
         this.computationParametersService = computationParametersService;
+        this.networkModificationTreeService = networkModificationTreeService;
+        this.rootNetworkService = rootNetworkService;
     }
 
     /**
@@ -117,8 +125,34 @@ public class StudyExportService {
         return zipFile;
     }
 
-    private void exportComputationParameters(UUID studyUuid, String userId, Path tempDir) {
-        computationParametersService.exportParameters(studyService.getStudy(studyUuid), userId, tempDir.resolve(PARAMETERS_FOLDER));
+    private void exportComputationParameters(UUID studyUuid, String userId, Path tempDir) throws IOException {
+        StudyEntity study = studyService.getStudy(studyUuid);
+        var export = computationParametersService.exportParameters(study, userId);
+        Path parametersDir = tempDir.resolve(PARAMETERS_FOLDER);
+
+        if (!export.parametersByFileName().isEmpty()) {
+            Files.createDirectories(parametersDir);
+            for (Map.Entry<String, String> entry : export.parametersByFileName().entrySet()) {
+                Files.writeString(parametersDir.resolve(entry.getKey()), entry.getValue());
+            }
+        }
+
+        Set<UUID> filteredUuids = export.filterUuids();
+        Set<UUID> contingencyListUuids = export.contingencyListUuids();
+        UUID rootNetworkUuid = rootNetworkService.getFirstRootNetworkUuid(studyUuid);
+        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+        writeIfNotEmpty(parametersDir, "filters.json", filteredUuids,
+                () -> studyService.exportFilters(rootNetworkUuid, List.copyOf(filteredUuids), rootNodeUuid, false));
+        writeIfNotEmpty(parametersDir, "contingencyLists.json", contingencyListUuids,
+                () -> studyService.exportContingencyLists(rootNetworkUuid, List.copyOf(contingencyListUuids), rootNodeUuid, false));
+    }
+
+    private void writeIfNotEmpty(Path dir, String fileName, Set<UUID> ids, Supplier<String> contentSupplier) throws IOException {
+        if (ids.isEmpty()) {
+            return;
+        }
+        Files.createDirectories(dir);
+        Files.writeString(dir.resolve(fileName), contentSupplier.get());
     }
 
     private Path createTempWorkDir(UUID studyUuid) {

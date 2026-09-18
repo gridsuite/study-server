@@ -11,6 +11,7 @@ package org.gridsuite.study.server.service;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
+import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ContingencyCount;
@@ -32,9 +33,11 @@ public class ActionsService {
 
     private static final String NETWORK_UUID = "networkUuid";
     private static final String CONTINGENCY_LIST_IDS = "ids";
+    private static final String CONTINGENCY_LIST_EXPORT_IDS = "contingencyListIds";
 
     public static final ContingencyCount EMPTY_CONTINGENCY_COUNT = new ContingencyCount(Map.of());
 
+    @Setter
     private String actionsServerBaseUri;
 
     public ActionsService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
@@ -58,7 +61,18 @@ public class ActionsService {
         ).getBody();
     }
 
-    public void setActionsServerBaseUri(String actionsServerBaseUri) {
-        this.actionsServerBaseUri = actionsServerBaseUri;
+    public String exportContingencyLists(UUID networkUuid, String variantId, List<UUID> contingencyListIds) {
+        var uriComponentsBuilder = UriComponentsBuilder
+                .fromPath(DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/export")
+                .queryParam(CONTINGENCY_LIST_EXPORT_IDS, contingencyListIds)
+                .queryParam(NETWORK_UUID, networkUuid);
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        return restTemplate.getForObject(
+                actionsServerBaseUri + uriComponentsBuilder.toUriString(),
+                String.class
+        );
     }
+
 }
