@@ -1586,7 +1586,7 @@ public class StudyService {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.stashModifications(groupId, modificationsUuids);
+            networkModificationService.stashModifications(groupId, modificationsUuids, userId);
             invalidateNodeTree(studyUuid, nodeUuid);
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);

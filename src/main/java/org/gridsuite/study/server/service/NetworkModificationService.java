@@ -253,7 +253,7 @@ public class NetworkModificationService {
         restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
-    public void stashModifications(UUID groupUUid, List<UUID> modificationsUuids) {
+    public void stashModifications(UUID groupUUid, List<UUID> modificationsUuids, String userId) {
         Objects.requireNonNull(groupUUid);
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
@@ -266,6 +266,7 @@ public class NetworkModificationService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HEADER_USER_ID, userId);
 
         HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
         restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
