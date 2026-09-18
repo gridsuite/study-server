@@ -58,19 +58,22 @@ public class StudyImportService {
 
     public void duplicateCaseAndCreateRootNetworks(UUID studyUuid, List<RootNetworkExportInfos> rootNetworksInfos) {
         List<RootNetworkExportInfos> orderedRootNetworks = rootNetworksInfos.stream().sorted(Comparator.comparing(RootNetworkExportInfos::index)).toList();
+        StudyEntity studyEntity = studyService.getStudy(studyUuid);
         for (RootNetworkExportInfos rootNetworkInfos : orderedRootNetworks) {
             UUID newCaseUuid = caseService.duplicateCase(rootNetworkInfos.caseInfos().getCaseUuid(), false);
             try {
-                createRootNetwork(studyUuid, rootNetworkInfos, newCaseUuid);
+                createRootNetwork(studyEntity, rootNetworkInfos, newCaseUuid);
             } catch (Exception exception) {
                 caseService.deleteCase(newCaseUuid);
                 LOGGER.error(String.format("Could not clean up orphaned case '%s' after import failure", newCaseUuid), exception);
             }
         }
+        if (studyEntity.getRootNetworks().size() > 1) {
+            studyEntity.setMonoRoot(false);
+        }
     }
 
-    public void createRootNetwork(UUID studyUuid, RootNetworkExportInfos rootNetworkInfos, UUID newCaseUuid) {
-        StudyEntity studyEntity = studyService.getStudy(studyUuid);
+    public void createRootNetwork(StudyEntity studyEntity, RootNetworkExportInfos rootNetworkInfos, UUID newCaseUuid) {
         RootNetworkEntity rootNetworkEntity = rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder()
                 .id(UUID.randomUUID())
                 .name(rootNetworkInfos.name())
