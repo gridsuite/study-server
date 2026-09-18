@@ -54,6 +54,8 @@ public class NetworkModificationService {
     private static final String QUERY_PARAM_ACTION = "action";
     private static final String QUERY_PARAM_NAME = "name";
     private static final String QUERY_PARAM_GROUP_UUID = "groupUuid";
+    private static final String QUERY_PARAM_NODE_UUID = "nodeUuid";
+    private static final String QUERY_PARAM_STUDY_UUID = "studyUuid";
     private static final String QUERY_PARAM_ROOT_NETWORK_TAG = "rootNetworkTag";
     private static final String QUERY_PARAM_GROUP_UUIDS = "groupUuids";
     private static final String QUERY_PARAM_ROOT_NETWORK_TAGS = "rootNetworkTags";
@@ -577,16 +579,19 @@ public class NetworkModificationService {
         ).getBody();
     }
 
-    public void duplicateModificationsGroup(UUID sourceGroupUuid, UUID groupUuid) {
+    public void duplicateModificationsGroup(UUID sourceGroupUuid, UUID groupUuid, UUID newNodeUuid, UUID studyUuid, String userId) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(sourceGroupUuid);
         var path = UriComponentsBuilder.fromPath("groups/{uuid}/duplicate")
                 .queryParam(QUERY_PARAM_GROUP_UUID, groupUuid)
+                .queryParam(QUERY_PARAM_NODE_UUID, newNodeUuid)
+                .queryParam(QUERY_PARAM_STUDY_UUID, studyUuid)
                 .buildAndExpand(sourceGroupUuid)
                 .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HEADER_USER_ID, userId);
 
         restTemplate.exchange(
             getNetworkModificationServerURI(false) + path,
