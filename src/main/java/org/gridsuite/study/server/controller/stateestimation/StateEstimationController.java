@@ -25,6 +25,7 @@ import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.STATE_ESTIMATION;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -95,5 +96,15 @@ public class StateEstimationController {
                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         rootNetworkNodeInfoService.stopStateEstimation(studyUuid, nodeUuid, rootNetworkUuid);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/logical-controls", produces = APPLICATION_JSON_VALUE)
+    @Operation(summary = "Run logical controls on a study node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The computation has been done and the results are returned")})
+    public ResponseEntity<String> computeLogicalControls(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                   @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        // no quota on this small synchronous computation
+        return ResponseEntity.ok().body(stateEstimationService.computeLogicalControls(studyUuid, nodeUuid, rootNetworkUuid));
     }
 }
