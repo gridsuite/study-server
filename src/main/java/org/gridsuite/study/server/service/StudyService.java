@@ -2862,7 +2862,7 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public TreeExportInfos buildTreeExport(UUID studyUuid) {
+    public TreeExportInfos buildTreeExport(UUID studyUuid, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(NOT_FOUND, STUDY_NOT_FOUND));
         List<RootNetworkInfos> rootNetworkInfosList = rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid);
         if (rootNetworkInfosList.isEmpty()) {
@@ -2875,7 +2875,8 @@ public class StudyService {
                 .toList();
         AbstractNode rootNode = networkModificationTreeService.getStudyTree(studyUuid, null);
         NodeTreeExportInfos nodeTree = rootNode != null ? toNodeTreeExportInfos(rootNode) : null;
-        return new TreeExportInfos(studyUuid, rootNetworks, nodeTree);
+        Map<String, String> computationParameters = computationParametersService.exportParameters(studyEntity, userId);
+        return new TreeExportInfos(studyUuid, rootNetworks, nodeTree, computationParameters);
     }
 
     private RootNetworkExportInfos toRootNetworkExportInfos(RootNetworkInfos rootNetworkInfos, int index) {

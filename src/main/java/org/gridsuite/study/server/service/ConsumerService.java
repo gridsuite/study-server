@@ -70,7 +70,6 @@ public class ConsumerService {
     private final CaseService caseService;
     private final LoadFlowRestService loadFlowRestService;
     private final NetworkModificationTreeService networkModificationTreeService;
-    private final StudyConfigService studyConfigService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final RootNetworkService rootNetworkService;
     private final DirectoryService directoryService;
@@ -87,7 +86,6 @@ public class ConsumerService {
                            CaseService caseService,
                            LoadFlowRestService loadFlowRestService,
                            NetworkModificationTreeService networkModificationTreeService,
-                           StudyConfigService studyConfigService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            RootNetworkService rootNetworkService,
                            DirectoryService directoryService,
@@ -103,7 +101,6 @@ public class ConsumerService {
         this.caseService = caseService;
         this.loadFlowRestService = loadFlowRestService;
         this.networkModificationTreeService = networkModificationTreeService;
-        this.studyConfigService = studyConfigService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.rootNetworkService = rootNetworkService;
         this.directoryService = directoryService;
