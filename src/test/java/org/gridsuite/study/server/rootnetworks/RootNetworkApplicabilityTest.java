@@ -57,6 +57,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -282,6 +283,56 @@ class RootNetworkApplicabilityTest {
         // and neither is an update carrying the tag the root network already has
         updateRootNetwork(studyEntity.getId(), rootNetworkUuid, ROOT_NETWORK_TAG_2);
         verify(networkModificationService, times(1)).renameRootNetworkTag(any(), any(), any());
+    }
+
+    @Test
+    void testRenamingARootNetworkTagNeedsWritePermissionOnTheSharedModifications() throws Exception {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+        UUID rootNetworkUuid = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).getFirst().rootNetworkUuid();
+
+        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
+        NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
+
+        // the study points to a shared modification the user is not allowed to write on
+        UUID sharedModificationUuid = UUID.randomUUID();
+        doReturn(List.of(sharedModificationUuid)).when(networkModificationService).getReferencedModifications(List.of(firstNode.getModificationGroupUuid()));
+        doThrow(HttpClientErrorException.create(HttpStatus.FORBIDDEN, "Forbidden", null, null, null))
+            .when(directoryService).checkPermission(List.of(sharedModificationUuid), null, USER_ID, PermissionType.WRITE, false);
+
+        UUID studyUuid = studyEntity.getId();
+        RootNetworkInfos renaming = RootNetworkInfos.builder().id(rootNetworkUuid).tag(ROOT_NETWORK_TAG_2).build();
+        assertThrows(HttpClientErrorException.class, () -> studyService.updateRootNetworkRequest(studyUuid, renaming, USER_ID));
+
+        // neither the tag nor the applicabilities are touched
+        assertEquals(ROOT_NETWORK_TAG_1, rootNetworkService.getRootNetworkTag(rootNetworkUuid));
+        verify(networkModificationService, never()).renameRootNetworkTag(any(), any(), any());
+
+        // an update keeping the tag is no rename, so it needs no permission
+        updateRootNetwork(studyUuid, rootNetworkUuid, ROOT_NETWORK_TAG_1);
+        verify(directoryService, times(1)).checkPermission(any(), any(), any(), any(), anyBoolean());
+    }
+
+    @Test
+    void testHasSharedModifications() throws Exception {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+        UUID studyUuid = studyEntity.getId();
+
+        // a study with no modification node holds no shared modification, and the server is not even asked
+        assertFalse(hasSharedModifications(studyUuid));
+        verify(networkModificationService, never()).hasModificationReferences(any());
+
+        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
+        NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
+        doReturn(true).when(networkModificationService).hasModificationReferences(List.of(firstNode.getModificationGroupUuid()));
+
+        assertTrue(hasSharedModifications(studyUuid));
+    }
+
+    private boolean hasSharedModifications(UUID studyUuid) throws Exception {
+        return Boolean.parseBoolean(mockMvc.perform(get("/v1/studies/{studyUuid}/network-modifications/references/exists", studyUuid))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
     }
 
     @Test

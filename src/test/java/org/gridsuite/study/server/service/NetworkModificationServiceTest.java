@@ -18,6 +18,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
@@ -195,5 +196,18 @@ class NetworkModificationServiceTest {
 
         networkModificationService.hasModificationReferences(List.of(modificationUuid));
         verify(restTemplate).getForObject(eq(expectedUrl), eq(Boolean.class));
+    }
+
+    @Test
+    void testGetReferencedModifications() {
+        UUID groupUuid = UUID.randomUUID();
+        UUID sharedModificationUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/references?uuids=" + groupUuid;
+        when(restTemplate.exchange(expectedUrl, HttpMethod.GET, null, new ParameterizedTypeReference<List<UUID>>() { }))
+            .thenReturn(ResponseEntity.ok(List.of(sharedModificationUuid)));
+
+        assertThat(networkModificationService.getReferencedModifications(List.of(groupUuid))).containsExactly(sharedModificationUuid);
+        assertThat(networkModificationService.getReferencedModifications(List.of())).isEmpty();
+        verifyNoMoreInteractions(restTemplate);
     }
 }

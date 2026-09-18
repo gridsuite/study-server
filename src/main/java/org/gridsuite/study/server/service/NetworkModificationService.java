@@ -725,6 +725,24 @@ public class NetworkModificationService {
     }
 
     /**
+     * @return the shared modifications the given containers point to, directly or through other shared modifications
+     */
+    public List<UUID> getReferencedModifications(List<UUID> containerUuids) {
+        if (containerUuids.isEmpty()) {
+            return List.of();
+        }
+        String path = UriComponentsBuilder.fromPath("containers/references")
+                .queryParam(UUIDS, containerUuids)
+                .build().toUriString();
+        return restTemplate.exchange(
+                getNetworkModificationServerURI(false) + path,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<UUID>>() { }
+        ).getBody();
+    }
+
+    /**
      * References among {@code modificationUuids} and among the modifications nested in them: getReferences() does not
      * descend into composites, so a reference sitting inside a copied/inserted composite must be looked up explicitly.
      */
