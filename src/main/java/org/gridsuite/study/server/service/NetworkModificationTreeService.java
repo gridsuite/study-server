@@ -11,6 +11,9 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.modification.ModificationLocationInfos;
+import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
+import org.gridsuite.study.server.dto.modification.ModificationMoveRequest;
 import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
@@ -39,6 +42,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 
@@ -1445,5 +1449,23 @@ public class NetworkModificationTreeService {
     public UUID getNodeUuidByModificationGroup(UUID groupUuid) {
         var node = networkModificationNodeInfoRepository.findByModificationGroupUuidIn(List.of(groupUuid));
         return node.isEmpty() ? null : node.getFirst().getIdNode();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ModificationMoveInfos> resolveMoveContainers(List<ModificationMoveRequest> modificationMoveRequests) {
+        Map<UUID, UUID> nodeToGroup = modificationMoveRequests.stream()
+                .flatMap(r -> Stream.of(r.source(), r.target()))
+                .map(ModificationLocationInfos::nodeUuid)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toMap(Function.identity(), this::getModificationGroupUuid));
+
+        return modificationMoveRequests.stream()
+                .map(r -> new ModificationMoveInfos(
+                        r.modificationUuid(),
+                        r.source().resolveContainerInfos(nodeToGroup::get),
+                        r.target().resolveContainerInfos(nodeToGroup::get),
+                        r.beforeUuid()))
+                .toList();
     }
 }

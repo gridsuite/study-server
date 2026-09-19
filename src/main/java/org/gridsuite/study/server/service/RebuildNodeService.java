@@ -6,8 +6,7 @@
  */
 package org.gridsuite.study.server.service;
 
-import org.gridsuite.study.server.dto.modification.ModificationMoveOrCopyInfos;
-import org.gridsuite.study.server.dto.modification.MoveModificationInfos;
+import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.springframework.stereotype.Service;
@@ -72,9 +71,11 @@ public class RebuildNodeService {
             () -> studyService.restoreNetworkModifications(studyUuid, nodeUuid, modificationsUuids, userId));
     }
 
-    public void moveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<ModificationMoveOrCopyInfos> modificationInfos, String userId) {
-        handleRebuildNode(studyUuid, targetNodeUuid, originNodeUuid, userId,
-                () -> handleMoveNetworkModifications(studyUuid, targetNodeUuid, originNodeUuid, modificationInfos, userId));
+    public void moveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<ModificationMoveInfos> modificationMoveInfos, String userId) {
+        handleRebuildNode(studyUuid, targetNodeUuid, originNodeUuid, userId, () -> {
+            boolean isTargetInDifferentNodeTree = studyService.invalidateNodeTreeWhenMoveModifications(studyUuid, targetNodeUuid, originNodeUuid);
+            studyService.moveNetworkModifications(studyUuid, targetNodeUuid, modificationMoveInfos, isTargetInDifferentNodeTree, userId);
+        });
     }
 
     public UUID assembleModificationsIntoComposite(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
@@ -85,32 +86,6 @@ public class RebuildNodeService {
                 () -> {
                     studyService.invalidateNodeTreeWhenMoveModification(studyUuid, nodeUuid);
                     return studyService.assembleModificationsIntoComposite(studyUuid, nodeUuid, modificationsUuids, userId);
-                });
-    }
-
-    private void handleMoveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<ModificationMoveOrCopyInfos> moveOrCopyInfos, String userId) {
-        boolean isTargetInDifferentNodeTree = studyService.invalidateNodeTreeWhenMoveModifications(studyUuid, targetNodeUuid, originNodeUuid);
-        studyService.moveNetworkModifications(studyUuid, originNodeUuid, targetNodeUuid, moveOrCopyInfos, null, null, isTargetInDifferentNodeTree, userId);
-    }
-
-    public void moveNetworkModification(
-            UUID studyUuid,
-            UUID nodeUuid,
-            UUID modificationUuid,
-            MoveModificationInfos moveModificationInfos,
-            String userId) {
-        handleRebuildNode(studyUuid, nodeUuid, userId,
-                () -> {
-                    studyService.invalidateNodeTreeWhenMoveModification(studyUuid, nodeUuid);
-                    studyService.moveNetworkModifications(
-                            studyUuid,
-                            nodeUuid, // same-container reorder when source is omitted: default to the node's own group
-                            nodeUuid,
-                            List.of(new ModificationMoveOrCopyInfos(modificationUuid, moveModificationInfos.source())),
-                            moveModificationInfos.target(),
-                            moveModificationInfos.beforeUuid(),
-                            false,
-                            userId);
                 });
     }
 
