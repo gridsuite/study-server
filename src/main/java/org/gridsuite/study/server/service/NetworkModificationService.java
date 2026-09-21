@@ -651,6 +651,21 @@ public class NetworkModificationService {
         restTemplate.delete(getNetworkModificationServerURI(false) + path);
     }
 
+    public void removeReferences(UUID groupUUid, String userId) {
+        Objects.requireNonNull(groupUUid);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + "/references")
+                .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
+                .buildAndExpand(groupUUid)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HEADER_USER_ID, userId);
+
+        HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
+        restTemplate.exchange(getNetworkModificationServerURI(false)  + path, HttpMethod.DELETE, httpEntity, Void.class);
+    }
+
     public void verifyModifications(UUID groupUuid, Set<UUID> modificationUuids) {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + NETWORK_MODIFICATIONS_PATH + DELIMITER + "verify")
             .queryParam("uuids", modificationUuids)

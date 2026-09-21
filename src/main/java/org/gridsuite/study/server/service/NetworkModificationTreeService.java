@@ -320,10 +320,10 @@ public class NetworkModificationTreeService {
 
     @Transactional
     // TODO test if studyUuid exist and have a node <nodeId>
-    public void doStashNode(UUID nodeId, boolean stashChildren) {
+    public void doStashNode(UUID nodeId, boolean stashChildren, String userId) {
         List<UUID> stashedNodes = new ArrayList<>();
         UUID studyId = self.getStudyUuidForNodeId(nodeId);
-        stashNode(nodeId, stashChildren, stashedNodes, true);
+        stashNode(nodeId, stashChildren, stashedNodes, true, userId);
         notificationService.emitNodesDeleted(studyId, stashedNodes, stashChildren);
     }
 
@@ -332,16 +332,17 @@ public class NetworkModificationTreeService {
         return getNodeEntity(id).getStudy().getId();
     }
 
-    private void stashNode(UUID nodeId, boolean stashChildren, List<UUID> stashedNodes, boolean firstIteration) {
+    private void stashNode(UUID nodeId, boolean stashChildren, List<UUID> stashedNodes, boolean firstIteration, String userId) {
         NetworkModificationNodeInfoEntity nodeToStashInfo = getNetworkModificationNodeInfoEntity(nodeId);
         NodeEntity nodeToStash = nodeToStashInfo.getNode();
         UUID modificationGroupUuid = nodeToStashInfo.getModificationGroupUuid();
         networkModificationService.deleteStashedModifications(modificationGroupUuid);
+        networkModificationService.removeReferences(modificationGroupUuid, userId);
         if (!stashChildren) {
             insertNodesToParent(nodeToStash.getParentNode(), nodeToStashInfo.getColumnPosition(), getChildren(nodeId));
         } else {
             getChildren(nodeId)
-                .forEach(child -> stashNode(child.getIdNode(), true, stashedNodes, false));
+                .forEach(child -> stashNode(child.getIdNode(), true, stashedNodes, false, userId));
         }
         stashedNodes.add(nodeId);
         nodeToStash.setStashed(true);
