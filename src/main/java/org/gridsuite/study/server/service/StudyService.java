@@ -1761,7 +1761,7 @@ public class StudyService {
 
     public void restoreNodes(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId, String userId) {
         networkModificationTreeService.assertIsRootOrConstructionNode(anchorNodeId);
-        networkModificationTreeService.restoreNode(studyId, nodeIds, anchorNodeId);
+        networkModificationTreeService.restoreNode(studyId, nodeIds, anchorNodeId, userId);
         notificationService.emitElementUpdated(studyId, userId);
     }
 

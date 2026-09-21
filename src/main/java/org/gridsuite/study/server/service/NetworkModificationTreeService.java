@@ -872,7 +872,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void restoreNode(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId) {
+    public void restoreNode(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId, String userId) {
         for (UUID nodeId : nodeIds) {
             NodeEntity nodeToRestore = getNodeEntity(nodeId);
             NodeEntity anchorNode = getNodeEntity(anchorNodeId);
@@ -887,7 +887,12 @@ public class NetworkModificationTreeService {
             nodeToRestore.setStashed(false);
             nodeToRestore.setStashDate(null);
             modificationNodeToRestore.setColumnPosition(getNextColumnPosition(anchorNodeId));
-            nodesRepository.save(nodeToRestore);
+            NodeEntity newNode = nodesRepository.save(nodeToRestore);
+            // restore the references pointing from directory server to netmod-server
+            if (this.hasModifications(newNode.getIdNode(), false)) {
+                UUID modificationGroupUuid = getModificationGroupUuid(newNode.getIdNode());
+                networkModificationService.restoreReferences(modificationGroupUuid, studyId, newNode.getIdNode(), userId);
+            }
             if (hasChildren(nodeId)) {
                 restoreNodeChildren(studyId, nodeId);
                 notificationService.emitSubtreeInserted(studyId, nodeId, anchorNodeId);
