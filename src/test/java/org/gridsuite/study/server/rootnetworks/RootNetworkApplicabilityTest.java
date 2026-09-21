@@ -319,7 +319,7 @@ class RootNetworkApplicabilityTest {
         studyRepository.save(studyEntity);
         UUID studyUuid = studyEntity.getId();
 
-        // a study with no modification node holds no shared modification, and the server is not even asked
+        // a study with no modification node contains no shared modification, and the server is not even asked
         assertFalse(hasSharedModifications(studyUuid));
         verify(networkModificationService, never()).hasModificationReferences(any());
 

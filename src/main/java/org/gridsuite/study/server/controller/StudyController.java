@@ -960,7 +960,7 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/network-modifications/references/exists")
-    @Operation(summary = "Whether the study holds a shared modification, including nested in its composites")
+    @Operation(summary = "Whether the study contains a shared modification, including nested in its composites")
     @ApiResponse(responseCode = "200", description = "true if at least one shared modification is found")
     public ResponseEntity<Boolean> hasSharedModifications(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.hasSharedModifications(studyUuid));

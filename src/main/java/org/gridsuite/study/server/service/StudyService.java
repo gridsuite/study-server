@@ -407,7 +407,7 @@ public class StudyService {
     }
 
     /**
-     * Renaming a tag rewrites the applicabilities the shared modifications of the study hold for every study
+     * Renaming a tag rewrites the applicabilities the shared modifications of the study contain for every study
      * referencing them: only a user allowed to write on all of them may do it.
      */
     private void assertCanRenameRootNetworkTag(UUID studyUuid, String userId) {
