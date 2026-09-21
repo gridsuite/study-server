@@ -36,6 +36,7 @@ import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -130,6 +131,7 @@ public class StudyService {
     private final DynamicSimulationEventService dynamicSimulationEventService;
     private final ShortCircuitRestService shortCircuitRestService;
     private final VoltageInitRestService voltageInitRestService;
+    private final WorkspaceService workspaceService;
 
     private final ObjectMapper objectMapper;
 
@@ -194,7 +196,8 @@ public class StudyService {
         RootNetworkService rootNetworkService,
         RootNetworkNodeInfoService rootNetworkNodeInfoService,
         DirectoryService directoryService,
-        ComputationParametersService computationParametersService) {
+        ComputationParametersService computationParametersService,
+        WorkspaceService workspaceService) {
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
@@ -228,6 +231,7 @@ public class StudyService {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.directoryService = directoryService;
         this.computationParametersService = computationParametersService;
+        this.workspaceService = workspaceService;
     }
 
     private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid) {
@@ -1160,12 +1164,9 @@ public class StudyService {
                 indexationStatus);
     }
 
-    private StudyEntity saveStudyThenCreateBasicTree(UUID studyUuid, NetworkInfos networkInfos,
-                                                    CaseInfos caseInfos, ComputationParameterUUIDs computationParameterUUIDs,
-                                                    UUID networkVisualizationParametersUuid, UUID spreadsheetConfigCollectionUuid,
-                                                    UUID workspacesConfigUuid, Map<String, Object> importParameters, UUID importReportUuid) {
-
-        StudyEntity studyEntity = StudyEntity.builder()
+    private StudyEntity buildStudyEntity(UUID studyUuid, ComputationParameterUUIDs computationParameterUUIDs, UUID networkVisualizationParametersUuid,
+                                         UUID spreadsheetConfigCollectionUuid, UUID workspacesConfigUuid) {
+        return StudyEntity.builder()
                 .id(studyUuid)
                 .loadFlowParametersUuid(computationParameterUUIDs.loadFlowParametersUuid())
                 .shortCircuitParametersUuid(computationParameterUUIDs.shortCircuitParametersUuid())
@@ -1183,7 +1184,14 @@ public class StudyService {
                 .workspacesConfigUuid(workspacesConfigUuid)
                 .monoRoot(true)
                 .build();
+    }
 
+    private StudyEntity saveStudyThenCreateBasicTree(UUID studyUuid, NetworkInfos networkInfos,
+                                                    CaseInfos caseInfos, ComputationParameterUUIDs computationParameterUUIDs,
+                                                    UUID networkVisualizationParametersUuid, UUID spreadsheetConfigCollectionUuid,
+                                                    UUID workspacesConfigUuid, Map<String, Object> importParameters, UUID importReportUuid) {
+
+        StudyEntity studyEntity = buildStudyEntity(studyUuid, computationParameterUUIDs, networkVisualizationParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid);
         var study = studyRepository.save(studyEntity);
         // if the StudyCreationRequestEntity has no firstRootNetworkName then the first root network's name is the case file name with the extension.
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
@@ -1790,7 +1798,7 @@ public class StudyService {
         reindexRootNetwork(getStudy(studyUuid), rootNetworkUuid);
     }
 
-    private StudyEntity getStudy(UUID studyUuid) {
+    StudyEntity getStudy(UUID studyUuid) {
         return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(NOT_FOUND, STUDY_NOT_FOUND));
     }
 
@@ -2903,5 +2911,40 @@ public class StudyService {
                 nodeType,
                 children
         );
+    }
+
+    @Transactional
+    public StudyEntity createStudyEntityWithTree(UUID studyUuid, String userId, NodeTreeExportInfos nodeTree) {
+        UserProfileInfos userProfileInfos = getUserProfile(userId);
+        ComputationParameterUUIDs computationParameterUUIDs = computationParametersService.createDefaultComputationParameters(userId, userProfileInfos);
+        UUID networkVisualizationParametersUuid = studyConfigService.createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
+        UUID spreadsheetConfigCollectionUuid = studyConfigService.createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
+        UUID workspacesConfigUuid = workspaceService.createWorkspacesConfig(userProfileInfos);
+        StudyEntity studyEntity = studyRepository.save(buildStudyEntity(studyUuid, computationParameterUUIDs,
+                networkVisualizationParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid));
+        UUID rootNodeUuid = networkModificationTreeService.createRoot(studyEntity).getIdNode();
+        if (nodeTree != null) {
+            CollectionUtils.emptyIfNull(nodeTree.children()).forEach(child -> createNodeRecursively(studyEntity, rootNodeUuid, child, userId));
+        }
+        studyInfosService.add(toCreatedStudyBasicInfos(studyEntity));
+        return studyEntity;
+    }
+
+    private void createNodeRecursively(StudyEntity studyEntity, UUID parentNodeUuid, NodeTreeExportInfos exportNode, String userId) {
+        NetworkModificationNodeType nodeType = NetworkModificationNodeType.valueOf(exportNode.nodeType());
+        UUID newGroupUuid = exportNode.modificationGroupUuid() != null ? UUID.randomUUID() : null;
+        NetworkModificationNode newNode = networkModificationTreeService.createNode(
+                studyEntity,
+                parentNodeUuid,
+                NetworkModificationNode.builder()
+                        .name(exportNode.name())
+                        .nodeType(nodeType)
+                        // buildStatus intentionally left by default (NOT_BUILT):
+                        .modificationGroupUuid(newGroupUuid)
+                        .build(),
+                InsertMode.CHILD,
+                userId
+        );
+        CollectionUtils.emptyIfNull(exportNode.children()).forEach(child -> createNodeRecursively(studyEntity, newNode.getId(), child, userId));
     }
 }
