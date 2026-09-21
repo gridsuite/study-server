@@ -2006,17 +2006,7 @@ public class StudyService {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
         try {
             checkStudyContainsNode(targetStudyUuid, targetNodeUuid);
-            // TODO : to avoid those references requests this code will be moved to netmod-server once it will be able to call directory-server directly
-            // (should be added in a following ticket)
-            List<ModificationReference> referenceMods = networkModificationService.getModificationReferences(modificationsUuids);
-            newCompositeUuid = networkModificationService.assembleModificationsIntoComposite(modificationsUuids);
-            // if some of the assembled modifications are shared, their container is now the newly created composite
-            updateElementsReferences(
-                    referenceMods,
-                    targetNodeUuid,
-                    newCompositeUuid,
-                    ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION,
-                    userId);
+            newCompositeUuid = networkModificationService.assembleModificationsIntoComposite(modificationsUuids, targetNodeUuid, userId);
         } finally {
             notificationService.emitModificationsUpdated(targetStudyUuid, targetNodeUuid, childrenUuids);
         }

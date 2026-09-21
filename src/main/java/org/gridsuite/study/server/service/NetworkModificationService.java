@@ -541,11 +541,13 @@ public class NetworkModificationService {
         ).getBody();
     }
 
-    public UUID assembleModificationsIntoComposite(@NonNull List<UUID> modificationsUuids) {
-        var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH);
+    public UUID assembleModificationsIntoComposite(@NonNull List<UUID> modificationsUuids, UUID nodeUuid, String userId) {
+        var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH)
+                .queryParam(QUERY_PARAM_NODE_UUID, nodeUuid);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HEADER_USER_ID, userId);
         HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(
                 modificationsUuids,
                 headers
