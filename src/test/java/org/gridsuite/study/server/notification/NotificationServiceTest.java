@@ -79,10 +79,7 @@ class NotificationServiceTest {
     @Test
     void testEmitQuotaChange() {
         notificationService.emitQuotaChange(USER_ID, QuotaType.SHORT_CIRCUIT);
-
-        ArgumentCaptor<Message<String>> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(updatePublisher).send(eq("publishQuotaUpdate-out-0"), messageCaptor.capture());
-
         Message<String> message = messageCaptor.getValue();
         assertThat(message.getHeaders().get(NotificationService.HEADER_USER_ID)).isEqualTo(USER_ID);
         assertThat(message.getHeaders().get(NotificationService.HEADER_QUOTA_TYPE)).isEqualTo(QuotaType.SHORT_CIRCUIT);

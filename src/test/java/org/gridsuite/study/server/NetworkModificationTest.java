@@ -2473,7 +2473,6 @@ class NetworkModificationTest {
 
         UUID copy1 = UUID.randomUUID();
         UUID copy2 = UUID.randomUUID();
-        List<UUID> copyUuids = List.of(copy1, copy2);
         UUID copyChild = UUID.randomUUID();
         UUID sharedComposite1 = UUID.randomUUID();
         UUID sharedComposite2 = UUID.randomUUID();
