@@ -23,6 +23,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -203,8 +204,8 @@ class NetworkModificationServiceTest {
         UUID groupUuid = UUID.randomUUID();
         UUID sharedModificationUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/references?uuids=" + groupUuid;
-        when(restTemplate.exchange(expectedUrl, HttpMethod.GET, null, new ParameterizedTypeReference<List<UUID>>() { }))
-            .thenReturn(ResponseEntity.ok(List.of(sharedModificationUuid)));
+        when(restTemplate.exchange(expectedUrl, HttpMethod.GET, null, new ParameterizedTypeReference<Set<UUID>>() { }))
+            .thenReturn(ResponseEntity.ok(Set.of(sharedModificationUuid)));
 
         assertThat(networkModificationService.getReferencedModifications(List.of(groupUuid))).containsExactly(sharedModificationUuid);
         assertThat(networkModificationService.getReferencedModifications(List.of())).isEmpty();

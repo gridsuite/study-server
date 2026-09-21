@@ -727,9 +727,9 @@ public class NetworkModificationService {
     /**
      * @return the shared modifications the given containers point to, directly or through other shared modifications
      */
-    public List<UUID> getReferencedModifications(List<UUID> containerUuids) {
+    public Set<UUID> getReferencedModifications(List<UUID> containerUuids) {
         if (containerUuids.isEmpty()) {
-            return List.of();
+            return Set.of();
         }
         String path = UriComponentsBuilder.fromPath("containers/references")
                 .queryParam(UUIDS, containerUuids)
@@ -738,7 +738,7 @@ public class NetworkModificationService {
                 getNetworkModificationServerURI(false) + path,
                 HttpMethod.GET,
                 null,
-                new ParameterizedTypeReference<List<UUID>>() { }
+                new ParameterizedTypeReference<Set<UUID>>() { }
         ).getBody();
     }
 

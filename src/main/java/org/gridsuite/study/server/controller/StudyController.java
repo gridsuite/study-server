@@ -185,13 +185,6 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getAllBasicRootNetworkInfos(studyUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network-modifications/references/exists")
-    @Operation(summary = "Whether the study holds a shared modification, including nested in its composites")
-    @ApiResponse(responseCode = "200", description = "true if at least one shared modification is found")
-    public ResponseEntity<Boolean> hasSharedModifications(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.hasSharedModifications(studyUuid));
-    }
-
     @PostMapping(value = "/studies/{studyUuid}/root-networks")
     @Operation(summary = "Create root network for study")
     @ApiResponse(responseCode = "200", description = "Root network created")
@@ -964,6 +957,13 @@ public class StudyController {
     public ResponseEntity<List<String>> getAvailableSvgComponentLibraries() {
         List<String> libraries = singleLineDiagramService.getAvailableSvgComponentLibraries();
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(libraries);
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/network-modifications/references/exists")
+    @Operation(summary = "Whether the study holds a shared modification, including nested in its composites")
+    @ApiResponse(responseCode = "200", description = "true if at least one shared modification is found")
+    public ResponseEntity<Boolean> hasSharedModifications(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.hasSharedModifications(studyUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", produces = MediaType.TEXT_PLAIN_VALUE)

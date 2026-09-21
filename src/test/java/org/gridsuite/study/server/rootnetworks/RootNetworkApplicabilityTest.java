@@ -296,13 +296,13 @@ class RootNetworkApplicabilityTest {
 
         // the study points to a shared modification the user is not allowed to write on
         UUID sharedModificationUuid = UUID.randomUUID();
-        doReturn(List.of(sharedModificationUuid)).when(networkModificationService).getReferencedModifications(List.of(firstNode.getModificationGroupUuid()));
+        doReturn(Set.of(sharedModificationUuid)).when(networkModificationService).getReferencedModifications(List.of(firstNode.getModificationGroupUuid()));
         doThrow(HttpClientErrorException.create(HttpStatus.FORBIDDEN, "Forbidden", null, null, null))
-            .when(directoryService).checkPermission(List.of(sharedModificationUuid), null, USER_ID, PermissionType.WRITE, false);
+            .when(directoryService).checkPermission(Set.of(sharedModificationUuid), null, USER_ID, PermissionType.WRITE, false);
 
         UUID studyUuid = studyEntity.getId();
-        RootNetworkInfos renaming = RootNetworkInfos.builder().id(rootNetworkUuid).tag(ROOT_NETWORK_TAG_2).build();
-        assertThrows(HttpClientErrorException.class, () -> studyService.updateRootNetworkRequest(studyUuid, renaming, USER_ID));
+        RootNetworkInfos renamingTagInfos = RootNetworkInfos.builder().id(rootNetworkUuid).tag(ROOT_NETWORK_TAG_2).build();
+        assertThrows(HttpClientErrorException.class, () -> studyService.updateRootNetworkRequest(studyUuid, renamingTagInfos, USER_ID));
 
         // neither the tag nor the applicabilities are touched
         assertEquals(ROOT_NETWORK_TAG_1, rootNetworkService.getRootNetworkTag(rootNetworkUuid));
