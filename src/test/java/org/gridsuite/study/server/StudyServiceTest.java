@@ -7,15 +7,19 @@
 package org.gridsuite.study.server;
 
 import org.gridsuite.study.server.dto.ComputationType;
+import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
 import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.service.NetworkModificationService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -50,6 +54,10 @@ class StudyServiceTest {
     private NetworkModificationTreeService networkModificationTreeService;
     @MockitoBean
     private NetworkModificationService networkModificationService;
+    @MockitoBean
+    private NotificationService notificationService;
+    @MockitoBean
+    private RootNetworkService rootNetworkService;
 
     @AfterEach
     void resetOperationQuotasFlag() {
@@ -261,6 +269,31 @@ class StudyServiceTest {
 
         ReflectionTestUtils.setField(studyService, "shouldCheckOperationQuotas", false);
         assertFalse(studyService.getOperationQuotaStatus());
+    }
+
+    @Test
+    void testSharedModificationsUpdatedNotification() {
+        UUID studyUuid = UUID.randomUUID();
+        UUID nodeUuid = UUID.randomUUID();
+        UUID rootNetwork1Uuid = UUID.randomUUID();
+        UUID rootNetwork2Uuid = UUID.randomUUID();
+        List<UUID> networkModificationUuids = List.of(UUID.randomUUID(), UUID.randomUUID());
+
+        doReturn(studyUuid).when(networkModificationTreeService).getStudyUuidForNodeId(nodeUuid);
+        doReturn(List.of(
+            RootNetworkEntity.builder().id(rootNetwork1Uuid).build(),
+            RootNetworkEntity.builder().id(rootNetwork2Uuid).build()
+        )).when(rootNetworkService).getStudyRootNetworks(studyUuid);
+        doNothing().when(networkModificationTreeService).invalidateNodeTree(any(), any(), any(), any(), anyBoolean());
+
+        studyService.sharedModificationsUpdatedNotification(nodeUuid, networkModificationUuids);
+
+        verify(networkModificationTreeService, times(1))
+            .invalidateNodeTree(studyUuid, nodeUuid, rootNetwork1Uuid, InvalidateNodeTreeParameters.ALL, false);
+        verify(networkModificationTreeService, times(1))
+            .invalidateNodeTree(studyUuid, nodeUuid, rootNetwork2Uuid, InvalidateNodeTreeParameters.ALL, false);
+
+        verify(notificationService, times(1)).emitSharedModificationsUpdated(studyUuid, nodeUuid, networkModificationUuids);
     }
 
     private void mockNodeBuild(UUID nodeUuid, UUID rootNetworkUuid) {
