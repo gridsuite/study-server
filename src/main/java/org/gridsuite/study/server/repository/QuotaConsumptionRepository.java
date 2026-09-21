@@ -9,6 +9,7 @@ package org.gridsuite.study.server.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -16,4 +17,6 @@ import java.util.UUID;
  */
 @Repository
 public interface QuotaConsumptionRepository extends JpaRepository<QuotaConsumptionEntity, UUID> {
+
+    Optional<QuotaConsumptionEntity> findByQuotaId(UUID quotaId);
 }

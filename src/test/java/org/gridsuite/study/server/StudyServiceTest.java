@@ -221,7 +221,7 @@ class StudyServiceTest {
     void testReleaseQuotaOnFailureIsNoOpWhenQuotaIdIsNull() {
         studyService.releaseQuotaOnFailure("userId", null);
 
-        verify(userAdminService, never()).releaseQuotaId(anyString(), any());
+        verify(userAdminService, never()).releaseFailedQuotaId(anyString(), any());
     }
 
     @Test
@@ -229,7 +229,7 @@ class StudyServiceTest {
         UUID quotaId = UUID.randomUUID();
         studyService.releaseQuotaOnFailure("userId", quotaId);
 
-        verify(userAdminService, times(1)).releaseQuotaId("userId", quotaId);
+        verify(userAdminService, times(1)).releaseFailedQuotaId("userId", quotaId);
     }
 
     @Test

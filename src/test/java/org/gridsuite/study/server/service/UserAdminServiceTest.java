@@ -145,4 +145,33 @@ class UserAdminServiceTest {
 
         verify(restTemplate, times(0)).postForEntity(anyString(), isNull(), eq(Void.class));
     }
+
+    @Test
+    void testRegisterThenReleaseFailedQuotaIdUsesLocalMapping() {
+        UUID resultUuid = UUID.randomUUID();
+        UUID quotaId = UUID.randomUUID();
+
+        userAdminService.registerQuotaConsumption(resultUuid, quotaId);
+        assertTrue(quotaConsumptionRepository.findByQuotaId(quotaId).isPresent());
+
+        userAdminService.releaseFailedQuotaId(USER_ID, quotaId);
+
+        verify(restTemplate, times(1)).postForEntity(
+                matches(".*/users/" + USER_ID + "/quota/" + quotaId + "/release$"),
+                isNull(),
+                eq(Void.class));
+        assertTrue(quotaConsumptionRepository.findByQuotaId(quotaId).isEmpty());
+    }
+
+    @Test
+    void testReleaseFailedQuotaIdCallsReleaseEndpointWhenNoMappingRegistered() {
+        UUID quotaId = UUID.randomUUID();
+
+        userAdminService.releaseFailedQuotaId(USER_ID, quotaId);
+
+        verify(restTemplate, times(1)).postForEntity(
+                matches(".*/users/" + USER_ID + "/quota/" + quotaId + "/release$"),
+                isNull(),
+                eq(Void.class));
+    }
 }

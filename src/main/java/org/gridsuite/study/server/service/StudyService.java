@@ -2853,7 +2853,7 @@ public class StudyService {
         if (quotaId == null) {
             return;
         }
-        userAdminService.releaseQuotaId(userId, quotaId);
+        userAdminService.releaseFailedQuotaId(userId, quotaId);
     }
 
     public Boolean getOperationQuotaStatus() {

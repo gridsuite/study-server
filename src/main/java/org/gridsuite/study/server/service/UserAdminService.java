@@ -116,4 +116,10 @@ public class UserAdminService {
             quotaConsumptionRepository.delete(mapping);
         });
     }
+
+    @Transactional
+    public void releaseFailedQuotaId(String sub, UUID quotaId) {
+        quotaConsumptionRepository.findByQuotaId(quotaId).ifPresent(quotaConsumptionRepository::delete);
+        releaseQuotaId(sub, quotaId);
+    }
 }
