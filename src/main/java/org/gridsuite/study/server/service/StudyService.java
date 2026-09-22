@@ -411,7 +411,7 @@ public class StudyService {
      * referencing them: only a user allowed to write on all of them may do it.
      */
     private void assertCanRenameRootNetworkTag(UUID studyUuid, String userId) {
-        Set<UUID> sharedModificationsUuids = networkModificationService.getReferencedModifications(getStudyModificationGroupUuids(studyUuid));
+        Set<UUID> sharedModificationsUuids = networkModificationService.getReferencedModificationUuids(getStudyModificationGroupUuids(studyUuid));
         if (!sharedModificationsUuids.isEmpty()) {
             directoryService.checkPermission(sharedModificationsUuids, null, userId, PermissionType.WRITE, false);
         }
@@ -433,7 +433,7 @@ public class StudyService {
         rootNetworkService.assertCanModifyRootNetwork(studyUuid, rootNetworkInfos.getId(), rootNetworkInfos.getName(), rootNetworkInfos.getTag());
         String newTag = rootNetworkInfos.getTag();
         if (newTag != null && !newTag.equals(rootNetworkService.getRootNetworkTag(rootNetworkInfos.getId()))) {
-            // If we rename the tag we check the permission.
+            // Renaming a tag requires WRITE persmission on shared modifications
             assertCanRenameRootNetworkTag(studyUuid, userId);
         }
         StudyEntity studyEntity = getStudy(studyUuid);

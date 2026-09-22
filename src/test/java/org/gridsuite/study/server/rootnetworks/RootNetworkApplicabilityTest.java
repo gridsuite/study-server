@@ -296,7 +296,7 @@ class RootNetworkApplicabilityTest {
 
         // the study points to a shared modification the user is not allowed to write on
         UUID sharedModificationUuid = UUID.randomUUID();
-        doReturn(Set.of(sharedModificationUuid)).when(networkModificationService).getReferencedModifications(List.of(firstNode.getModificationGroupUuid()));
+        doReturn(Set.of(sharedModificationUuid)).when(networkModificationService).getReferencedModificationUuids(List.of(firstNode.getModificationGroupUuid()));
         doThrow(HttpClientErrorException.create(HttpStatus.FORBIDDEN, "Forbidden", null, null, null))
             .when(directoryService).checkPermission(Set.of(sharedModificationUuid), null, USER_ID, PermissionType.WRITE, false);
 

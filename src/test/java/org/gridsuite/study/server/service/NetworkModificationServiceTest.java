@@ -207,8 +207,8 @@ class NetworkModificationServiceTest {
         when(restTemplate.exchange(expectedUrl, HttpMethod.GET, null, new ParameterizedTypeReference<Set<UUID>>() { }))
             .thenReturn(ResponseEntity.ok(Set.of(sharedModificationUuid)));
 
-        assertThat(networkModificationService.getReferencedModifications(List.of(groupUuid))).containsExactly(sharedModificationUuid);
-        assertThat(networkModificationService.getReferencedModifications(List.of())).isEmpty();
+        assertThat(networkModificationService.getReferencedModificationUuids(List.of(groupUuid))).containsExactly(sharedModificationUuid);
+        assertThat(networkModificationService.getReferencedModificationUuids(List.of())).isEmpty();
         verifyNoMoreInteractions(restTemplate);
     }
 }

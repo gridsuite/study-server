@@ -725,9 +725,9 @@ public class NetworkModificationService {
     }
 
     /**
-     * @return the shared modifications the given containers point to, directly or through other shared modifications
+     * @return the shared modifications IDs the given containers point to, directly or through other shared modifications
      */
-    public Set<UUID> getReferencedModifications(List<UUID> containerUuids) {
+    public Set<UUID> getReferencedModificationUuids(List<UUID> containerUuids) {
         if (containerUuids.isEmpty()) {
             return Set.of();
         }
