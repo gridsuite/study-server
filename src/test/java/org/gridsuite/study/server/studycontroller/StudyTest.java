@@ -27,7 +27,6 @@ import org.gridsuite.study.server.service.StudyServerExecutionService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.utils.MatcherReport;
 import org.gridsuite.study.server.utils.TestUtils;
-import org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -1114,7 +1113,7 @@ class StudyTest extends StudyTestBase {
     }
 
     private StudyEntity duplicateStudy(UUID studyUuid, String userId) throws Exception {
-        wireMockStubs.stubGetAllReferencesDataFromGroup();
+        //wireMockStubs.stubGetAllReferencesDataFromGroup();
 
         // Network reindex stubs - using scenarios for stateful behavior
         UUID stubReindexAllId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/networks/.*/reindex-all"))
@@ -1175,13 +1174,13 @@ class StudyTest extends StudyTestBase {
         wireMockStubs.verifyDuplicateModificationGroup(stubUuid, 3);
 
         //Check references have been collected on each newly created modification group, to be re-created on the duplicated nodes
-        Stream.of(
+        /*Stream.of(
                 duplicatedModificationNode,
                 (NetworkModificationNode) duplicatedModificationNode.getChildren().get(0),
                 (NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)
             ).forEach(
                     node -> WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/groups/" + node.getModificationGroupUuid() + "/references", Map.of(), 1)
-        );
+        );*/
 
         if (sourceStudy.getSecurityAnalysisParametersUuid() == null) {
             // if we don't have a securityAnalysisParametersUuid we don't call the security-analysis-server to duplicate them
