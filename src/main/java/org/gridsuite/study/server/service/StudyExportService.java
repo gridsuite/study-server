@@ -134,44 +134,48 @@ public class StudyExportService {
     }
 
     private void exportDefinitions(Path parametersDir, Set<UUID> filterUuids, Set<UUID> contingencyListUuids) throws IOException {
+        Map<UUID, JsonNode> contingencyLists = exportContingencyLists(contingencyListUuids, filterUuids);
+        Map<UUID, JsonNode> filters = exportFilters(filterUuids);
+
+        Set<UUID> definitionUuids = new HashSet<>(filters.keySet());
+        definitionUuids.addAll(contingencyLists.keySet());
+        Map<UUID, String> names = directoryService.getElementNames(definitionUuids);
+
+        writeDefinitions(parametersDir.resolve("filterDefinitions.json"), filters, names);
+        writeDefinitions(parametersDir.resolve("contingencyListDefinitions.json"), contingencyLists, names);
+    }
+
+    private Map<UUID, JsonNode> exportContingencyLists(Set<UUID> contingencyListUuids, Set<UUID> filterUuids) throws IOException {
         Map<UUID, JsonNode> contingencyLists = new LinkedHashMap<>();
         for (UUID contingencyListUuid : contingencyListUuids) {
             String content = actionsService.getContingencyList(contingencyListUuid);
-            if (content == null) {
-                continue;
+            if (content != null) {
+                JsonNode contentNode = objectMapper.readTree(content);
+                contingencyLists.put(contingencyListUuid, contentNode);
+                contentNode.path("filters").findValues("id").forEach(id -> filterUuids.add(UUID.fromString(id.asText())));
+                contentNode.path("selectedEquipmentTypesByFilter").findValues("filterId").forEach(id -> filterUuids.add(UUID.fromString(id.asText())));
             }
-            JsonNode contentNode = objectMapper.readTree(content);
-            contingencyLists.put(contingencyListUuid, contentNode);
-            contentNode.path("filters").findValues("id").forEach(id -> filterUuids.add(UUID.fromString(id.asText())));
-            contentNode.path("selectedEquipmentTypesByFilter").findValues("filterId").forEach(id -> filterUuids.add(UUID.fromString(id.asText())));
         }
+        return contingencyLists;
+    }
 
+    private Map<UUID, JsonNode> exportFilters(Set<UUID> filterUuids) throws IOException {
         Map<UUID, JsonNode> filters = new LinkedHashMap<>();
         Deque<UUID> filtersToExport = new ArrayDeque<>(filterUuids);
         while (!filtersToExport.isEmpty()) {
             UUID filterUuid = filtersToExport.poll();
-            if (filters.containsKey(filterUuid)) {
-                continue;
-            }
-            String content = filterService.getFilter(filterUuid);
-            if (content == null) {
-                continue;
-            }
-            JsonNode contentNode = objectMapper.readTree(content);
-            filters.put(filterUuid, contentNode);
-            for (JsonNode rule : contentNode.findParents("dataType")) {
-                if ("FILTER_UUID".equals(rule.get("dataType").asText())) {
-                    rule.path("values").forEach(value -> filtersToExport.add(UUID.fromString(value.asText())));
+            String content = filters.containsKey(filterUuid) ? null : filterService.getFilter(filterUuid);
+            if (content != null) {
+                JsonNode contentNode = objectMapper.readTree(content);
+                filters.put(filterUuid, contentNode);
+                for (JsonNode rule : contentNode.findParents("dataType")) {
+                    if ("FILTER_UUID".equals(rule.get("dataType").asText())) {
+                        rule.path("values").forEach(value -> filtersToExport.add(UUID.fromString(value.asText())));
+                    }
                 }
             }
         }
-
-        Set<UUID> allUuids = new HashSet<>(filters.keySet());
-        allUuids.addAll(contingencyLists.keySet());
-        Map<UUID, String> names = directoryService.getElementNames(allUuids);
-
-        writeDefinitions(parametersDir.resolve("filterDefinitions.json"), filters, names);
-        writeDefinitions(parametersDir.resolve("contingencyListDefinitions.json"), contingencyLists, names);
+        return filters;
     }
 
     private void writeDefinitions(Path file, Map<UUID, JsonNode> contents, Map<UUID, String> names) throws IOException {

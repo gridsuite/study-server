@@ -14,8 +14,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
@@ -41,7 +39,6 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
  */
 @Service
 public class FilterService {
-    private static final Logger LOGGER = LoggerFactory.getLogger(FilterService.class);
 
     public static final String FILTER_END_POINT_EVALUATE = "/filters/evaluate";
     public static final String FILTER_END_POINT_EVALUATE_IDS = "/filters/evaluate/identifiables";
@@ -144,7 +141,6 @@ public class FilterService {
         try {
             return restTemplate.getForObject(getBaseUri() + DELIMITER + FILTER_API_VERSION + "/filters/{id}", String.class, filterUuid);
         } catch (HttpClientErrorException.NotFound e) {
-            LOGGER.warn("Filter {} is referenced but does not exist anymore: it is not exported", filterUuid);
             return null;
         }
     }

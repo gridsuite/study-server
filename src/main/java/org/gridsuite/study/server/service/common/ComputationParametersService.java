@@ -267,6 +267,7 @@ public class ComputationParametersService {
                 case VOLTAGE_INITIALIZATION -> filterUuids.addAll(voltageInitService.getFilterUuids(parametersUuid));
                 case PCC_MIN -> filterUuids.addAll(pccMinService.getFilterUuids(parametersUuid));
                 default -> {
+                    return;
                 }
             }
         }

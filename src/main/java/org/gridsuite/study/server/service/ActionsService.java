@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -64,13 +65,17 @@ public class ActionsService {
     }
 
     public String getContingencyList(UUID id) {
-        String metadataPath = DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/metadata?ids={id}";
-        Map<String, String>[] metadata = restTemplate.getForObject(actionsServerBaseUri + metadataPath, Map[].class, id);
-        if (metadata == null || metadata.length == 0) {
-            LOGGER.warn("Contingency list {} is referenced but does not exist anymore: it is not exported", id);
+        try {
+            String metadataPath = DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/metadata?ids={id}";
+            Map<String, String>[] metadata = restTemplate.getForObject(actionsServerBaseUri + metadataPath, Map[].class, id);
+            if (metadata == null || metadata.length == 0) {
+                LOGGER.warn("Contingency list {} is referenced but does not exist anymore: it is not exported", id);
+                return null;
+            }
+            String endpoint = "IDENTIFIERS".equals(metadata[0].get("type")) ? "identifier-contingency-lists" : "filters-contingency-lists";
+            return restTemplate.getForObject(actionsServerBaseUri + DELIMITER + ACTIONS_API_VERSION + "/" + endpoint + "/{id}", String.class, id);
+        } catch (HttpClientErrorException.NotFound e) {
             return null;
         }
-        String endpoint = "IDENTIFIERS".equals(metadata[0].get("type")) ? "identifier-contingency-lists" : "filters-contingency-lists";
-        return restTemplate.getForObject(actionsServerBaseUri + DELIMITER + ACTIONS_API_VERSION + "/" + endpoint + "/{id}", String.class, id);
     }
 }
