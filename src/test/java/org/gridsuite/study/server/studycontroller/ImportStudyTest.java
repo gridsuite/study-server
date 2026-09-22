@@ -17,6 +17,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -32,6 +33,7 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -102,6 +104,8 @@ class ImportStudyTest extends StudyTestBase {
         assertNull(output.receive(TIMEOUT, studyUpdateDestination));
         assertNull(output.receive(TIMEOUT, elementUpdateDestination));
         assertTrue(studyRepository.findById(studyUuid).isPresent());
+        StudyEntity study = studyRepository.findById(studyUuid).orElseThrow();
+        assertFalse(study.isMonoRoot());
     }
 
     private void assertImportedNodeTree(UUID studyUuid, UUID modificationGroupUuid1, UUID modificationGroupUuid2) {

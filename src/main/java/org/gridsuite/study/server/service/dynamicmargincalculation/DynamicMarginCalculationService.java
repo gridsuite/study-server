@@ -82,12 +82,12 @@ public class DynamicMarginCalculationService extends AbstractComputationService 
     }
 
     @Transactional
-    public UUID runDynamicMarginCalculation(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, boolean debug) {
+    public UUID runDynamicMarginCalculation(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, boolean debug, UUID quotaId) {
         StudyEntity studyEntity = getStudy(studyUuid);
 
         UUID result = handleDynamicMarginCalculationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
 
-        handleQuotaStart(userId, result, DYNAMIC_MARGIN_CALCULATION);
+        handleQuotaStart(result, quotaId);
         return result;
     }
 

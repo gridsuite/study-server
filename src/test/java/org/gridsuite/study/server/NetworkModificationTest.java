@@ -331,19 +331,19 @@ class NetworkModificationTest {
         buildStopStubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/build/stop"))
             .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", "", "destination", "build.stopped"))
             .willReturn(WireMock.ok())).getId();
-        userProfileQuotaStubId = wireMockServer.stubFor(WireMock.get(urlPathMatching("/v1/users/" + USER_ID + "/quota/max"))
+        userProfileQuotaStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/users/" + USER_ID + "/quota/state"))
             .willReturn(WireMock.ok()
-                .withBody("{\"BUILD\": 10}")
+                .withBody("{\"BUILD\": {\"current\": 0, \"max\": 10}}")
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
-        userProfileQuotaExceededStubId = wireMockServer.stubFor(WireMock.get(urlPathMatching("/v1/users/" + USER_ID_QUOTA_EXCEEDED + "/quota/max"))
+        userProfileQuotaExceededStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/users/" + USER_ID_QUOTA_EXCEEDED + "/quota/state"))
             .willReturn(WireMock.ok()
-                .withBody("{\"BUILD\": 1}")
+                .withBody("{\"BUILD\": {\"current\": 0, \"max\": 1}}")
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
-        userProfileNoQuotaStubId = wireMockServer.stubFor(WireMock.get(urlPathMatching("/v1/users/" + USER_ID_NO_QUOTA + "/quota/max"))
+        userProfileNoQuotaStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/users/" + USER_ID_NO_QUOTA + "/quota/state"))
                 .willReturn(WireMock.ok()
                 .withBody("{}")
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
-        wireMockServer.stubFor(WireMock.get(urlPathMatching("/v1/users/" + USER_ID_NO_PROFILE + "/quota/max"))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/users/" + USER_ID_NO_PROFILE + "/quota/state"))
                 .willReturn(WireMock.notFound())).getId();
     }
 
@@ -401,7 +401,7 @@ class NetworkModificationTest {
         assertEquals(MAX_NODE_BUILDS_EXCEEDED.value(), problemDetail.getBusinessErrorCode());
         assertEquals(1, problemDetail.getBusinessErrorValues().get("limit"));
         assertEquals("max allowed built nodes reached", problemDetail.getDetail());
-        WireMockUtils.verifyGetRequest(wireMockServer, userProfileQuotaExceededStubId, "/v1/users/" + userId + "/quota/max", Map.of());
+        WireMockUtils.verifyGetRequest(wireMockServer, userProfileQuotaExceededStubId, "/v1/users/" + userId + "/quota/state", Map.of());
     }
 
     @Test
@@ -3132,7 +3132,7 @@ class NetworkModificationTest {
         assertEquals(NotificationService.UPDATE_TYPE_BUILD_COMPLETED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(Set.of("s1", "s2"), buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
 
-        WireMockUtils.verifyGetRequest(wireMockServer, profileStubId, "/v1/users/" + userId + "/quota/max", Map.of());
+        WireMockUtils.verifyGetRequest(wireMockServer, profileStubId, "/v1/users/" + userId + "/quota/state", Map.of());
         WireMockUtils.verifyPostRequest(wireMockServer, buildOkStubId, "/v1/networks/" + NETWORK_UUID_STRING + "/build", Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")));
 
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).getGlobalBuildStatus());
@@ -3156,7 +3156,7 @@ class NetworkModificationTest {
         assertEquals(Set.of("s1", "s2"), buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
 
         WireMockUtils.verifyPostRequest(wireMockServer, buildOkStubId, "/v1/networks/" + NETWORK_UUID_STRING + "/build", Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")));
-        WireMockUtils.verifyGetRequest(wireMockServer, profileStubId, "/v1/users/" + userId + "/quota/max", Map.of());
+        WireMockUtils.verifyGetRequest(wireMockServer, profileStubId, "/v1/users/" + userId + "/quota/state", Map.of());
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).getGlobalBuildStatus());  // node is built
 
         markNodeBuilding(studyUuid, rootNetworkUuid, nodeUuid);
@@ -3193,7 +3193,7 @@ class NetworkModificationTest {
         assertEquals(ERROR_MESSAGE, buildStatusMessage.getHeaders().get(NotificationService.HEADER_ERROR));
 
         WireMockUtils.verifyPostRequest(wireMockServer, buildFailedStubId, "/v1/networks/" + NETWORK_UUID_2_STRING + "/build", Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")));
-        WireMockUtils.verifyGetRequest(wireMockServer, userProfileQuotaStubId, "/v1/users/" + USER_ID + "/quota/max", Map.of());
+        WireMockUtils.verifyGetRequest(wireMockServer, userProfileQuotaStubId, "/v1/users/" + USER_ID + "/quota/state", Map.of());
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).getGlobalBuildStatus());  // node is not built
     }
@@ -3206,7 +3206,7 @@ class NetworkModificationTest {
             .andExpect(status().isInternalServerError());
 
         WireMockUtils.verifyPostRequest(wireMockServer, buildErrorStubId, "/v1/networks/" + NETWORK_UUID_3_STRING + "/build", Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")));
-        WireMockUtils.verifyGetRequest(wireMockServer, userProfileQuotaStubId, "/v1/users/" + USER_ID + "/quota/max", Map.of());
+        WireMockUtils.verifyGetRequest(wireMockServer, userProfileQuotaStubId, "/v1/users/" + USER_ID + "/quota/state", Map.of());
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).getGlobalBuildStatus());  // node is not built
     }

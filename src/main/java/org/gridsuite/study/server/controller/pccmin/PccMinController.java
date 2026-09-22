@@ -16,6 +16,7 @@ import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.pccmin.PccMinService;
+import org.gridsuite.study.server.utils.QuotaRunner;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
@@ -74,9 +75,9 @@ public class PccMinController {
                                           @RequestHeader(HEADER_USER_ID) String userId) {
 
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.assertOnQuotasAvailability(PCC_MIN, userId);
-        nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
-            () -> pccMinService.runPccMin(studyUuid, nodeUuid, rootNetworkUuid, userId));
+        QuotaRunner.runComputationWithQuota(studyService, PCC_MIN, userId, quotaId ->
+            nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+                () -> pccMinService.runPccMin(studyUuid, nodeUuid, rootNetworkUuid, userId, quotaId)));
         return ResponseEntity.ok().build();
     }
 

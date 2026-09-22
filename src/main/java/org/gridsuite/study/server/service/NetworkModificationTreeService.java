@@ -134,10 +134,10 @@ public class NetworkModificationTreeService {
     }
 
     private void assertNoMaxBuilds(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
-        Map<QuotaType, Integer> userMaxQuotas = userAdminService.getUserMaxQuota(userId);
+        Map<QuotaType, QuotaState> userQuotaState = userAdminService.getUserQuotaState(userId);
 
         // check restrictions on node builds number
-        Integer maxBuilds = userMaxQuotas.get(QuotaType.BUILD);
+        Integer maxBuilds = Optional.ofNullable(userQuotaState.get(QuotaType.BUILD)).map(QuotaState::max).orElse(null);
         if (maxBuilds != null) {
             long nbBuiltNodes = countBuiltNodes(studyUuid, rootNetworkUuid);
             if (nbBuiltNodes >= maxBuilds) {

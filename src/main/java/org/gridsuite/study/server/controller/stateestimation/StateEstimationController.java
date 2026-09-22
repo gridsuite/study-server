@@ -16,6 +16,7 @@ import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.stateestimation.StateEstimationService;
+import org.gridsuite.study.server.utils.QuotaRunner;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -56,9 +57,9 @@ public class StateEstimationController {
                                                    @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                    @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.assertOnQuotasAvailability(STATE_ESTIMATION, userId);
-        nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
-            () -> stateEstimationService.runStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
+        QuotaRunner.runComputationWithQuota(studyService, STATE_ESTIMATION, userId, quotaId ->
+            nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+                () -> stateEstimationService.runStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug, quotaId)));
         return ResponseEntity.ok().build();
     }
 
