@@ -20,6 +20,7 @@ import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisService;
+import org.gridsuite.study.server.utils.QuotaRunner;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -72,17 +73,9 @@ public class SensitivityAnalysisController {
                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                        @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        UUID quotaId = studyService.consumeQuota(SENSITIVITY_ANALYSIS, userId);
-        boolean succeeded = false;
-        try {
+        QuotaRunner.runComputationWithQuota(studyService, SENSITIVITY_ANALYSIS, userId, quotaId ->
             nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
-                () -> sensitivityAnalysisService.runSensitivityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId, quotaId));
-            succeeded = true;
-        } finally {
-            if (!succeeded) {
-                studyService.releaseQuotaOnFailure(userId, quotaId);
-            }
-        }
+                () -> sensitivityAnalysisService.runSensitivityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId, quotaId)));
         return ResponseEntity.ok().build();
     }
 

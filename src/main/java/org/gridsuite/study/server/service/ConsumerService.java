@@ -215,8 +215,8 @@ public class ConsumerService {
         Optional<RerunLoadFlowInfos> rerunLoadFlowInfos = getRerunLoadFlowInfos(message);
         // the rerun's build failed or was canceled, so no loadflow will follow to remove the activity nor release the quota
         rerunLoadFlowInfos.ifPresent(infos -> {
-            loadFlowService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, infos.getLoadflowResultUuid());
             userAdminService.releaseQuotaId(infos.getUserId(), infos.getQuotaId());
+            loadFlowService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, infos.getLoadflowResultUuid());
         });
         nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
     }

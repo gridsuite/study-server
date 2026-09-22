@@ -16,6 +16,7 @@ import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.asymmetricalload.AsymmetricalLoadService;
+import org.gridsuite.study.server.utils.QuotaRunner;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
@@ -73,17 +74,9 @@ public class AsymmetricalLoadController {
                                           @RequestHeader(HEADER_USER_ID) String userId) {
 
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        UUID quotaId = studyService.consumeQuota(ASYMMETRICAL_LOAD, userId);
-        boolean succeeded = false;
-        try {
+        QuotaRunner.runComputationWithQuota(studyService, ASYMMETRICAL_LOAD, userId, quotaId ->
             nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
-                () -> asymmetricalLoadService.runAsymmetricalLoad(studyUuid, nodeUuid, rootNetworkUuid, userId, quotaId));
-            succeeded = true;
-        } finally {
-            if (!succeeded) {
-                studyService.releaseQuotaOnFailure(userId, quotaId);
-            }
-        }
+                () -> asymmetricalLoadService.runAsymmetricalLoad(studyUuid, nodeUuid, rootNetworkUuid, userId, quotaId)));
         return ResponseEntity.ok().build();
     }
 

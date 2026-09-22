@@ -16,6 +16,7 @@ import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
+import org.gridsuite.study.server.utils.QuotaRunner;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -60,18 +61,11 @@ public class DynamicSecurityAnalysisController {
                                                            @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                            @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        UUID quotaId = studyService.consumeQuota(DYNAMIC_SECURITY_ANALYSIS, userId);
-        boolean succeeded = false;
-        try {
+        QuotaRunner.runComputationWithQuota(studyService, DYNAMIC_SECURITY_ANALYSIS, userId, quotaId -> {
             studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), dynamicSecurityAnalysisService::getDynamicSecurityAnalysisProvider);
             nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
                 () -> dynamicSecurityAnalysisService.runDynamicSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId, debug, quotaId));
-            succeeded = true;
-        } finally {
-            if (!succeeded) {
-                studyService.releaseQuotaOnFailure(userId, quotaId);
-            }
-        }
+        });
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
 

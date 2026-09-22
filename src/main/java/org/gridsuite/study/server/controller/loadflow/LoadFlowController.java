@@ -19,6 +19,7 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
+import org.gridsuite.study.server.utils.QuotaRunner;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -68,9 +69,7 @@ public class LoadFlowController {
             @RequestParam(value = "withRatioTapChangers", required = false, defaultValue = "false") boolean withRatioTapChangers,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        UUID quotaId = studyService.consumeQuota(LOAD_FLOW, userId);
-        boolean succeeded = false;
-        try {
+        QuotaRunner.runComputationWithQuota(studyService, LOAD_FLOW, userId, quotaId -> {
             studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNA_FLOW_PROVIDER), loadFlowService::getLoadFlowProvider);
             UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
             // a loadflow on a security node writes solved values onto its own variant and invalidates its children
@@ -83,12 +82,7 @@ public class LoadFlowController {
                 nodeActivityRunnerService.runWith(activityType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
                     () -> loadFlowService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, null, withRatioTapChangers, userId, quotaId));
             }
-            succeeded = true;
-        } finally {
-            if (!succeeded) {
-                studyService.releaseQuotaOnFailure(userId, quotaId);
-            }
-        }
+        });
         return ResponseEntity.ok().build();
     }
 

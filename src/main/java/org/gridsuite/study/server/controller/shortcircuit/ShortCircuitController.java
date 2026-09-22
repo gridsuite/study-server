@@ -18,6 +18,7 @@ import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
+import org.gridsuite.study.server.utils.QuotaRunner;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -64,17 +65,9 @@ public class ShortCircuitController {
             @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        UUID quotaId = studyService.consumeQuota(SHORT_CIRCUIT, userId);
-        boolean succeeded = false;
-        try {
+        QuotaRunner.runComputationWithQuota(studyService, SHORT_CIRCUIT, userId, quotaId ->
             nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
-                () -> shortCircuitService.runShortCircuit(studyUuid, nodeUuid, rootNetworkUuid, busId, debug, userId, quotaId));
-            succeeded = true;
-        } finally {
-            if (!succeeded) {
-                studyService.releaseQuotaOnFailure(userId, quotaId);
-            }
-        }
+                () -> shortCircuitService.runShortCircuit(studyUuid, nodeUuid, rootNetworkUuid, busId, debug, userId, quotaId)));
         return ResponseEntity.ok().build();
     }
 

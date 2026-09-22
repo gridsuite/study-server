@@ -17,6 +17,7 @@ import org.gridsuite.study.server.nodeactivity.NodeActivityType;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.voltageinit.VoltageInitService;
+import org.gridsuite.study.server.utils.QuotaRunner;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -61,20 +62,13 @@ public class VoltageInitController {
             @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        UUID quotaId = studyService.consumeQuota(VOLTAGE_INITIALIZATION, userId);
-        boolean succeeded = false;
-        try {
+        QuotaRunner.runComputationWithQuota(studyService, VOLTAGE_INITIALIZATION, userId, quotaId -> {
             // applying the modifications inserts them into the node, which invalidates its children
             NodeActivityType activityType = studyService.shouldApplyModifications(studyUuid)
                 ? COMPUTE_AND_UNBUILD_CHILDREN : COMPUTE;
             nodeActivityRunnerService.runWith(activityType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
                 () -> voltageInitService.runVoltageInit(studyUuid, nodeUuid, rootNetworkUuid, userId, debug, quotaId));
-            succeeded = true;
-        } finally {
-            if (!succeeded) {
-                studyService.releaseQuotaOnFailure(userId, quotaId);
-            }
-        }
+        });
         return ResponseEntity.ok().build();
     }
 
