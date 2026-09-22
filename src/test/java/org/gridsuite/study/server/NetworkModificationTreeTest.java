@@ -314,12 +314,19 @@ class NetworkModificationTreeTest {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(2));
                 } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID_3 + "/network-modifications-count.*") && request.getMethod().equals("GET")) {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(0));
+                } else if (path.matches("/v1/groups/.*/network-modifications-count.*") && request.getMethod().equals("GET")) {
+                    // by default nodes contain no modifications
+                    return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(0));
                 } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID + "/.*") && request.getMethod().equals("GET")) {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(List.of()));
                 } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID_2 + "/.*") && request.getMethod().equals("GET")) {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(List.of("S1", "S2")));
                 } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID_3 + "/.*") && request.getMethod().equals("GET")) {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(List.of()));
+                } else if (path.matches("/v1/groups/.*/references.*") && request.getMethod().equals("DELETE")) {
+                    return new MockResponse(HttpStatus.OK.value());
+                }  else if (path.matches("/v1/groups/.*/references.*") && request.getMethod().equals("PUT")) {
+                    return new MockResponse(HttpStatus.OK.value());
                 } else if (path.matches("/v1/groups/.*") && request.getMethod().equals("DELETE")) {
                     return new MockResponse(HttpStatus.OK.value());
                 } else if (path.matches("/v1/reports") && request.getMethod().equals("DELETE")) {
@@ -1009,8 +1016,11 @@ class NetworkModificationTreeTest {
 
     private void restoreNode(UUID studyUuid, List<UUID> nodeIds, UUID anchorNodeId, String userId) throws Exception {
         String param = nodeIds.stream().map(UUID::toString).reduce("", (a1, a2) -> a1 + "," + a2).substring(1);
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/restore?anchorNodeId={anchorNodeId}", studyUuid, anchorNodeId).header(USER_ID_HEADER, userId)
-                        .queryParam("ids", param))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/restore", studyUuid)
+                        .header(USER_ID_HEADER, userId)
+                        .queryParam("anchorNodeId", anchorNodeId.toString())
+                        .queryParam("ids", param)
+                )
                 .andExpect(status().isOk());
 
         for (int i = 0; i < nodeIds.size(); i++) {
