@@ -203,12 +203,21 @@ public class ComputationServerStubs {
     }
 
     public void stubGetParametersAny(String responseBody) {
-        wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/parameters/.*"))
+        wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/parameters/[^/]+"))
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody)));
     }
 
+    public void stubGetReferencedUuidsAny() {
+        wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/parameters/[^/]+/(filter|contingency-list)-uuids"))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody("[]")));
+    }
+
+    public void verifyReferencedUuidsGetAny(int nbRequests) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/parameters/[^/]+/(filter|contingency-list)-uuids", true, Map.of(), nbRequests);
+    }
+
     public void verifyParametersGetAny(int nbRequests) {
-        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/parameters/.*", true, Map.of(), nbRequests);
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/parameters/[^/]+", true, Map.of(), nbRequests);
     }
 
     public void stubCreateParameter(String responseBody) {

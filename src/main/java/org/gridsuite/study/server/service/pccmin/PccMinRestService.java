@@ -19,6 +19,7 @@ import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
@@ -286,5 +287,10 @@ public class PccMinRestService extends AbstractComputationRestService implements
     public String getParameters(UUID parameterUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + PCC_MIN_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
         return restTemplate.getForObject(getBaseUri() + path, String.class);
+    }
+
+    public List<UUID> getFilterUuids(UUID parameterUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + PCC_MIN_API_VERSION + "/parameters/{parameterUuid}/filter-uuids").buildAndExpand(parameterUuid).toUriString();
+        return restTemplate.exchange(baseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<UUID>>() { }).getBody();
     }
 }

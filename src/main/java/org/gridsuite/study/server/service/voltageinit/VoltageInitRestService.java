@@ -19,6 +19,7 @@ import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParamete
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.Resource;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
@@ -122,6 +123,11 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
         String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(parametersUuid).toUriString();
         return restTemplate.getForObject(baseUri + path, VoltageInitParametersInfos.class);
+    }
+
+    public List<UUID> getFilterUuids(UUID parametersUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI + "/filter-uuids").buildAndExpand(parametersUuid).toUriString();
+        return restTemplate.exchange(baseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<UUID>>() { }).getBody();
     }
 
     public UUID createVoltageInitParameters(@Nullable VoltageInitParametersInfos parameters) {

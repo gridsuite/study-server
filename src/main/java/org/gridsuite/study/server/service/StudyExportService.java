@@ -6,12 +6,12 @@
  */
 package org.gridsuite.study.server.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.dto.studyexport.RootNetworkExportInfos;
 import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
 import org.gridsuite.study.server.error.StudyException;
-import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,12 +27,16 @@ import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Deque;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
@@ -55,19 +59,19 @@ public class StudyExportService {
     private final DirectoryService directoryService;
     private final ObjectMapper objectMapper;
     private final ComputationParametersService computationParametersService;
-    private final NetworkModificationTreeService networkModificationTreeService;
-    private final RootNetworkService rootNetworkService;
+    private final FilterService filterService;
+    private final ActionsService actionsService;
 
     public StudyExportService(StudyService studyService, CaseService caseService, DirectoryService directoryService,
                               ObjectMapper objectMapper, ComputationParametersService computationParametersService,
-                              NetworkModificationTreeService networkModificationTreeService, RootNetworkService rootNetworkService) {
+                              FilterService filterService, ActionsService actionsService) {
         this.studyService = studyService;
         this.caseService = caseService;
         this.directoryService = directoryService;
         this.objectMapper = objectMapper;
         this.computationParametersService = computationParametersService;
-        this.networkModificationTreeService = networkModificationTreeService;
-        this.rootNetworkService = rootNetworkService;
+        this.filterService = filterService;
+        this.actionsService = actionsService;
     }
 
     /**
@@ -116,7 +120,11 @@ public class StudyExportService {
             String caseName = rootNetworkInfos.caseInfos().getCaseName();
             exportCaseFile(caseUuid, caseName, casesDir);
         }
-        exportComputationParameters(studyUuid, userId, tempDir);
+        Path parametersDir = tempDir.resolve(PARAMETERS_FOLDER);
+        Set<UUID> filterUuids = new HashSet<>();
+        Set<UUID> contingencyListUuids = new HashSet<>();
+        computationParametersService.exportParameters(studyService.getStudy(studyUuid), userId, parametersDir, filterUuids, contingencyListUuids);
+        exportDefinitions(parametersDir, filterUuids, contingencyListUuids);
         Path zipFile = createTempExportFile(studyUuid);
         try (OutputStream fos = Files.newOutputStream(zipFile);
              ZipOutputStream zipOut = new ZipOutputStream(fos)) {
@@ -125,34 +133,51 @@ public class StudyExportService {
         return zipFile;
     }
 
-    private void exportComputationParameters(UUID studyUuid, String userId, Path tempDir) throws IOException {
-        StudyEntity study = studyService.getStudy(studyUuid);
-        var export = computationParametersService.exportParameters(study, userId);
-        Path parametersDir = tempDir.resolve(PARAMETERS_FOLDER);
+    private void exportDefinitions(Path parametersDir, Set<UUID> filterUuids, Set<UUID> contingencyListUuids) throws IOException {
+        Map<UUID, JsonNode> contingencyLists = new LinkedHashMap<>();
+        for (UUID contingencyListUuid : contingencyListUuids) {
+            String content = actionsService.getContingencyList(contingencyListUuid);
+            if (content == null) {
+                continue;
+            }
+            JsonNode contentNode = objectMapper.readTree(content);
+            contingencyLists.put(contingencyListUuid, contentNode);
+            contentNode.path("filters").findValues("id").forEach(id -> filterUuids.add(UUID.fromString(id.asText())));
+            contentNode.path("selectedEquipmentTypesByFilter").findValues("filterId").forEach(id -> filterUuids.add(UUID.fromString(id.asText())));
+        }
 
-        if (!export.parametersByFileName().isEmpty()) {
-            Files.createDirectories(parametersDir);
-            for (Map.Entry<String, String> entry : export.parametersByFileName().entrySet()) {
-                Files.writeString(parametersDir.resolve(entry.getKey()), entry.getValue());
+        Map<UUID, JsonNode> filters = new LinkedHashMap<>();
+        Deque<UUID> filtersToExport = new ArrayDeque<>(filterUuids);
+        while (!filtersToExport.isEmpty()) {
+            UUID filterUuid = filtersToExport.poll();
+            if (filters.containsKey(filterUuid)) {
+                continue;
+            }
+            String content = filterService.getFilter(filterUuid);
+            if (content == null) {
+                continue;
+            }
+            JsonNode contentNode = objectMapper.readTree(content);
+            filters.put(filterUuid, contentNode);
+            for (JsonNode rule : contentNode.findParents("dataType")) {
+                if ("FILTER_UUID".equals(rule.get("dataType").asText())) {
+                    rule.path("values").forEach(value -> filtersToExport.add(UUID.fromString(value.asText())));
+                }
             }
         }
 
-        Set<UUID> filteredUuids = export.filterUuids();
-        Set<UUID> contingencyListUuids = export.contingencyListUuids();
-        UUID rootNetworkUuid = rootNetworkService.getFirstRootNetworkUuid(studyUuid);
-        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-        writeIfNotEmpty(parametersDir, "filters.json", filteredUuids,
-                () -> studyService.exportFilters(rootNetworkUuid, List.copyOf(filteredUuids), rootNodeUuid, false));
-        writeIfNotEmpty(parametersDir, "contingencyLists.json", contingencyListUuids,
-                () -> studyService.exportContingencyLists(rootNetworkUuid, List.copyOf(contingencyListUuids), rootNodeUuid, false));
+        Set<UUID> allUuids = new HashSet<>(filters.keySet());
+        allUuids.addAll(contingencyLists.keySet());
+        Map<UUID, String> names = directoryService.getElementNames(allUuids);
+
+        writeDefinitions(parametersDir.resolve("filterDefinitions.json"), filters, names);
+        writeDefinitions(parametersDir.resolve("contingencyListDefinitions.json"), contingencyLists, names);
     }
 
-    private void writeIfNotEmpty(Path dir, String fileName, Set<UUID> ids, Supplier<String> contentSupplier) throws IOException {
-        if (ids.isEmpty()) {
-            return;
-        }
-        Files.createDirectories(dir);
-        Files.writeString(dir.resolve(fileName), contentSupplier.get());
+    private void writeDefinitions(Path file, Map<UUID, JsonNode> contents, Map<UUID, String> names) throws IOException {
+        List<Map<String, Object>> definitions = new ArrayList<>();
+        contents.forEach((uuid, content) -> definitions.add(Map.of("uuid", uuid, "name", names.getOrDefault(uuid, ""), "content", content)));
+        objectMapper.writeValue(file.toFile(), definitions);
     }
 
     private Path createTempWorkDir(UUID studyUuid) {
