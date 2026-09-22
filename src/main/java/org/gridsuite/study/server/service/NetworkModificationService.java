@@ -666,7 +666,7 @@ public class NetworkModificationService {
         headers.set(HEADER_USER_ID, userId);
 
         HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
-        restTemplate.exchange(getNetworkModificationServerURI(false)  + path, HttpMethod.DELETE, httpEntity, Void.class);
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.DELETE, httpEntity, Void.class);
     }
 
     public void restoreReferences(UUID groupUUid, UUID studyUuid, UUID newNodeUuid, String userId) {
@@ -683,7 +683,7 @@ public class NetworkModificationService {
         headers.set(HEADER_USER_ID, userId);
 
         HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
-        restTemplate.exchange(getNetworkModificationServerURI(false)  + path, HttpMethod.PUT, httpEntity, Void.class);
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
     public void verifyModifications(UUID groupUuid, Set<UUID> modificationUuids) {
