@@ -52,12 +52,12 @@ public class StateEstimationService extends AbstractComputationService {
     }
 
     @Transactional
-    public UUID runStateEstimation(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, boolean debug) {
+    public UUID runStateEstimation(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, boolean debug, UUID quotaId) {
         StudyEntity studyEntity = getStudy(studyUuid);
 
         UUID result = handleStateEstimationRequest(studyEntity, nodeUuid, rootNetworkUuid, userId, debug);
 
-        handleQuotaStart(userId, result, STATE_ESTIMATION);
+        handleQuotaStart(result, quotaId);
         return result;
     }
 
