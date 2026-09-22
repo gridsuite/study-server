@@ -8,7 +8,10 @@ package org.gridsuite.study.server.service;
 
 import lombok.Setter;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
@@ -29,6 +32,7 @@ import static org.gridsuite.study.server.StudyConstants.STUDY_CONFIG_API_VERSION
  */
 @Service
 public class StudyConfigService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(StudyConfigService.class);
     private static final String UUID_PARAM = "/{uuid}";
 
     private static final String NETWORK_VISU_PARAMETERS_URI = "/network-visualizations-params";
@@ -455,5 +459,41 @@ public class StudyConfigService {
         var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI + DEFAULT_URI)
                 .buildAndExpand().toUriString();
         return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+    }
+
+    public UUID createDefaultNetworkVisualizationParameters(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getNetworkVisualizationParameterId() != null) {
+            // try to access/duplicate the user profile network visualization parameters
+            try {
+                return duplicateNetworkVisualizationParameters(userProfileInfos.getNetworkVisualizationParameterId());
+            } catch (Exception e) {
+                LOGGER.error(String.format("Could not duplicate network visualization parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                        userProfileInfos.getNetworkVisualizationParameterId(), userId, userProfileInfos.getName()), e);
+            }
+        }
+        try {
+            return createDefaultNetworkVisualizationParameters();
+        } catch (final Exception e) {
+            // TODO try to report a log in Root subreporter ?
+            LOGGER.error("Error while creating network visualization default parameters", e);
+            return null;
+        }
+    }
+
+    public UUID createDefaultSpreadsheetConfigCollection(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getSpreadsheetConfigCollectionId() != null) {
+            try {
+                return duplicateSpreadsheetConfigCollection(userProfileInfos.getSpreadsheetConfigCollectionId());
+            } catch (Exception e) {
+                LOGGER.error(String.format("Could not duplicate spreadsheet config collection with id '%s' from user/profile '%s/%s'. Using default spreadsheet config collection",
+                        userProfileInfos.getSpreadsheetConfigCollectionId(), userId, userProfileInfos.getName()), e);
+            }
+        }
+        try {
+            return createDefaultSpreadsheetConfigCollection();
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating default spreadsheet config collection", e);
+            return null;
+        }
     }
 }
