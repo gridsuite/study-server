@@ -637,6 +637,11 @@ public class ConsumerService {
     }
 
     @Bean
+    public Consumer<Message<String>> consumeSensitivityAnalysisRunning() {
+        return message -> consumeCalculationRunning(message, SENSITIVITY_ANALYSIS);
+    }
+
+    @Bean
     public Consumer<Message<String>> consumeSensitivityAnalysisStopped() {
         return message -> consumeCalculationStopped(message, SENSITIVITY_ANALYSIS);
     }
@@ -649,6 +654,11 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeLoadFlowResult() {
         return message -> consumeCalculationResult(message, LOAD_FLOW);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeLoadFlowRunning() {
+        return message -> consumeCalculationRunning(message, LOAD_FLOW);
     }
 
     @Bean
@@ -681,6 +691,17 @@ public class ConsumerService {
             }
         };
     }
+    @Bean
+    public Consumer<Message<String>> consumeShortCircuitAnalysisRunning() {
+        return message -> {
+            String busId = message.getHeaders().get(HEADER_BUS_ID, String.class);
+            if (!StringUtils.isEmpty(busId)) {
+                consumeCalculationRunning(message, SHORT_CIRCUIT_ONE_BUS);
+            } else {
+                consumeCalculationRunning(message, SHORT_CIRCUIT);
+            }
+        };
+    }
 
     @Bean
     public Consumer<Message<String>> consumeShortCircuitAnalysisStopped() {
@@ -705,6 +726,11 @@ public class ConsumerService {
     }
 
     @Bean
+    public Consumer<Message<String>> consumeVoltageInitRunning() {
+        return message -> consumeCalculationRunning(message, VOLTAGE_INITIALIZATION);
+    }
+
+    @Bean
     public Consumer<Message<String>> consumeVoltageInitStopped() {
         return message -> consumeCalculationStopped(message, VOLTAGE_INITIALIZATION);
     }
@@ -722,6 +748,11 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeStateEstimationResult() {
         return message -> consumeCalculationResult(message, STATE_ESTIMATION);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeStateEstimationRunning() {
+        return message -> consumeCalculationRunning(message, STATE_ESTIMATION);
     }
 
     @Bean
@@ -745,6 +776,11 @@ public class ConsumerService {
     }
 
     @Bean
+    public Consumer<Message<String>> consumePccMinRunning() {
+        return message -> consumeCalculationRunning(message, PCC_MIN);
+    }
+
+    @Bean
     public Consumer<Message<String>> consumePccMinStopped() {
         return message -> consumeCalculationStopped(message, PCC_MIN);
     }
@@ -757,6 +793,11 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeAsymmetricalLoadResult() {
         return message -> consumeCalculationResult(message, ASYMMETRICAL_LOAD);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeAsymmetricalLoadRunning() {
+        return message -> consumeCalculationRunning(message, ASYMMETRICAL_LOAD);
     }
 
     @Bean

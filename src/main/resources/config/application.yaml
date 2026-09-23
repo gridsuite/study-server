@@ -9,13 +9,13 @@ spring:
       consumeDmcDebug;consumeDmcResult;consumeDmcStopped;consumeDmcFailed;consumeDmcCancelFailed;\
       consumeBuildResult;consumeBuildStopped;consumeBuildFailed;\
       consumeCaseImportSucceeded;consumeCaseImportFailed;\
-      consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;consumeSensitivityAnalysisCancelFailed;\
-      consumeShortCircuitAnalysisDebug;consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed;consumeShortCircuitAnalysisCancelFailed;\
-      consumeVoltageInitDebug;consumeVoltageInitResult;consumeVoltageInitStopped;consumeVoltageInitFailed;consumeVoltageInitCancelFailed;\
-      consumeLoadFlowResult;consumeLoadFlowStopped;consumeLoadFlowFailed;consumeLoadFlowCancelFailed;\
-      consumeStateEstimationResult;consumeStateEstimationDebug;consumeStateEstimationStopped;consumeStateEstimationFailed;\
-      consumePccMinResult;consumePccMinStopped;consumePccMinFailed;\
-      consumeAsymmetricalLoadResult;consumeAsymmetricalLoadStopped;consumeAsymmetricalLoadFailed;\
+      consumeSensitivityAnalysisResult;consumeSensitivityAnalysisRunning;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;consumeSensitivityAnalysisCancelFailed;\
+      consumeShortCircuitAnalysisDebug;consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisRunning;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed;consumeShortCircuitAnalysisCancelFailed;\
+      consumeVoltageInitDebug;consumeVoltageInitResult;consumeVoltageInitRunning;consumeVoltageInitStopped;consumeVoltageInitFailed;consumeVoltageInitCancelFailed;\
+      consumeLoadFlowResult;consumeLoadFlowRunning;consumeLoadFlowStopped;consumeLoadFlowFailed;consumeLoadFlowCancelFailed;\
+      consumeStateEstimationResult;consumeStateEstimationRunning;consumeStateEstimationDebug;consumeStateEstimationStopped;consumeStateEstimationFailed;\
+      consumePccMinResult;consumePccMinRunning;consumePccMinStopped;consumePccMinFailed;\
+      consumeAsymmetricalLoadResult;consumeAsymmetricalLoadRunning;consumeAsymmetricalLoadStopped;consumeAsymmetricalLoadFailed;\
       consumeNetworkExportFinished"
     stream:
       bindings:
@@ -97,6 +97,9 @@ spring:
         consumeLoadFlowResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}loadflow.result
           group: studyLoadFlowResultGroup
+        consumeLoadFlowRunning-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}loadflow.running
+          group: studyLoadFlowResultGroup
         consumeLoadFlowStopped-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}loadflow.stopped
           group: studyLoadFlowStoppedGroup
@@ -108,6 +111,9 @@ spring:
           group: studyLoadFlowCancelFailedGroup
         consumeSensitivityAnalysisResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.result
+          group: studySensitivityAnalysisResultGroup
+        consumeSensitivityAnalysisRunning-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.running
           group: studySensitivityAnalysisResultGroup
         consumeSensitivityAnalysisStopped-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.stopped
@@ -124,6 +130,9 @@ spring:
         consumeShortCircuitAnalysisResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.result
           group: studyShortCircuitAnalysisResultGroup
+        consumeShortCircuitAnalysisRunning-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.running
+          group: studyShortCircuitAnalysisResultGroup
         consumeShortCircuitAnalysisStopped-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.stopped
           group: studyShortCircuitAnalysisStoppedGroup
@@ -139,6 +148,9 @@ spring:
         consumeVoltageInitResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}voltageinit.result
           group: studyVoltageInitResultGroup
+        consumeVoltageInitRunning-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}voltageinit.running
+          group: studyVoltageInitResultGroup
         consumeVoltageInitStopped-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}voltageinit.stopped
           group: studyVoltageInitStoppedGroup
@@ -150,6 +162,9 @@ spring:
           group: studyVoltageInitCancelFailedGroup
         consumeStateEstimationResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}stateestimation.result
+          group: studyStateEstimationResultGroup
+        consumeStateEstimationRunning-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}stateestimation.running
           group: studyStateEstimationResultGroup
         consumeStateEstimationDebug-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}stateestimation.debug
@@ -163,6 +178,9 @@ spring:
         consumePccMinResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}pccmin.result
           group: studyPccMinResultGroup
+        consumePccMinRunning-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}pccmin.running
+          group: studyPccMinResultGroup
         consumePccMinStopped-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}pccmin.stopped
           group: studyPccMinStoppedGroup
@@ -171,6 +189,9 @@ spring:
           group: dlq
         consumeAsymmetricalLoadResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}asymmetricalload.result
+          group: studyPccMinResultGroup
+        consumeAsymmetricalLoadRunning-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}asymmetricalload.running
           group: studyPccMinResultGroup
         consumeAsymmetricalLoadStopped-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}asymmetricalload.stopped
