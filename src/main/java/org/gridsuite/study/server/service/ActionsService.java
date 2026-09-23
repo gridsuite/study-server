@@ -15,14 +15,13 @@ import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ContingencyCount;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -31,7 +30,6 @@ import static org.gridsuite.study.server.StudyConstants.*;
 
 @Service
 public class ActionsService {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ActionsService.class);
 
     private final RestTemplate restTemplate;
 
@@ -64,18 +62,14 @@ public class ActionsService {
         ).getBody();
     }
 
-    public String getContingencyList(UUID id) {
-        try {
-            String metadataPath = DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/metadata?ids={id}";
-            Map<String, String>[] metadata = restTemplate.getForObject(actionsServerBaseUri + metadataPath, Map[].class, id);
-            if (metadata == null || metadata.length == 0) {
-                LOGGER.warn("Contingency list {} is referenced but does not exist anymore: it is not exported", id);
-                return null;
-            }
-            String endpoint = "IDENTIFIERS".equals(metadata[0].get("type")) ? "identifier-contingency-lists" : "filters-contingency-lists";
-            return restTemplate.getForObject(actionsServerBaseUri + DELIMITER + ACTIONS_API_VERSION + "/" + endpoint + "/{id}", String.class, id);
-        } catch (HttpClientErrorException.NotFound e) {
-            return null;
-        }
+    public List<UUID> getReferencedFilterUuids(Collection<UUID> contingencyListUuids) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/filter-uuids")
+                .queryParam(CONTINGENCY_LIST_IDS, contingencyListUuids)
+                .toUriString();
+        return restTemplate.exchange(actionsServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<UUID>>() { }).getBody();
+    }
+
+    public String getContingencyLists(Collection<UUID> ids) {
+        return restTemplate.postForObject(actionsServerBaseUri + DELIMITER + ACTIONS_API_VERSION + "/contingency-lists", ids, String.class);
     }
 }
