@@ -34,7 +34,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -92,29 +91,12 @@ class StudyControllerRebuildNodeTest {
 
     @Test
     void testMoveNetworkModifications() {
-        UUID modificationUuid = UUID.randomUUID();
         UUID originNodeUuid = UUID.randomUUID();
-        UUID originGroupUuid = UUID.randomUUID();
-        UUID targetGroupUuid = UUID.randomUUID();
+        List<ModificationMoveInfos> modificationMoveInfos = List.of(new ModificationMoveInfos(UUID.randomUUID(), null, null, null));
 
-        List<ModificationMoveRequest> requests = List.of(
-                new ModificationMoveRequest(modificationUuid,
-                        new ModificationLocationInfos(originNodeUuid, null),
-                        new ModificationLocationInfos(nodeUuid, null),
-                        null));
+        studyController.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationMoveInfos, userId);
 
-        List<ModificationMoveInfos> resolved = List.of(
-                new ModificationMoveInfos(modificationUuid,
-                        new ModificationContainerInfos(originGroupUuid, ModificationContainerType.GROUP),
-                        new ModificationContainerInfos(targetGroupUuid, ModificationContainerType.GROUP),
-                        null));
-
-        when(networkModificationTreeService.resolveMoveContainers(requests)).thenReturn(resolved);
-        when(networkModificationTreeService.getNodeUuidByModificationGroup(originGroupUuid)).thenReturn(originNodeUuid);
-
-        studyController.moveModifications(studyUuid, nodeUuid, requests, userId);
-
-        verify(rebuildNodeService, times(1)).moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, resolved, userId);
+        verify(rebuildNodeService, times(1)).moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationMoveInfos, userId);
         verify(studyService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
     }
 

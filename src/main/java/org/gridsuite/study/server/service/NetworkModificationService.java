@@ -469,10 +469,13 @@ public class NetworkModificationService {
     }
 
     public NetworkModificationsResult moveModifications(
+            UUID originGroupUuid,
+            UUID targetGroupUuid,
             List<ModificationMoveInfos> modificationMoveInfos,
             List<ModificationApplicationContext> applicationContexts,
             boolean buildTargetNode) {
-        var path = UriComponentsBuilder.fromPath("containers/network-modifications/move")
+        var path = UriComponentsBuilder.fromPath("groups/{groupUuid}/network-modifications/move")
+                .queryParam("originGroupUuid", originGroupUuid)
                 .queryParam("build", buildTargetNode);
 
         HttpHeaders headers = new HttpHeaders();
@@ -481,7 +484,7 @@ public class NetworkModificationService {
                 new HttpEntity<>(Pair.of(modificationMoveInfos, applicationContexts), headers);
 
         return restTemplate.exchange(
-                getNetworkModificationServerURI(false) + path.toUriString(),
+                getNetworkModificationServerURI(false) + path.buildAndExpand(targetGroupUuid).toUriString(),
                 HttpMethod.PUT, httpEntity, NetworkModificationsResult.class).getBody();
     }
 

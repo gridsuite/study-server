@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import com.google.common.collect.ImmutableSet;
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
@@ -176,15 +177,15 @@ class NetworkModificationTest {
 
     private static final String URI_NETWORK_MODIF = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications";
     private static final String URI_NETWORK_MODIF_WITH_ID = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{uuid}";
-    private static final String URI_NETWORK_MODIF_MOVE = "/v1/containers/network-modifications/move";
+    private static final String URI_NETWORK_MODIF_MOVE_PATTERN = "/v1/groups/.*/network-modifications/move";
     private static final String URI_STUDY_MODIF_MOVE = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/move";
 
-    private static ModificationLocationInfos nodeLocation(UUID nodeUuid) {
-        return new ModificationLocationInfos(nodeUuid, null);
+    private static String networkModifMoveUri(UUID targetGroupUuid) {
+        return "/v1/groups/" + targetGroupUuid + "/network-modifications/move";
     }
 
-    private static ModificationLocationInfos compositeLocation(UUID compositeUuid) {
-        return new ModificationLocationInfos(null, compositeUuid);
+    private static Map<String, StringValuePattern> moveParams(UUID originGroupUuid, boolean build) {
+        return Map.of("originGroupUuid", WireMock.equalTo(originGroupUuid.toString()), "build", WireMock.equalTo(String.valueOf(build)));
     }
 
     private static final String URI_NETWORK_MODIF_COPY_PATTERN = "/v1/groups/.*/network-modifications/copy";
@@ -2032,7 +2033,7 @@ class NetworkModificationTest {
         UUID modification1 = UUID.randomUUID();
         UUID modification2 = UUID.randomUUID();
 
-        UUID groupStubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(URI_NETWORK_MODIF_MOVE))
+        UUID groupStubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathMatching(URI_NETWORK_MODIF_MOVE_PATTERN))
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(new NetworkModificationsResult(Arrays.asList(modification1, modification2), List.of(Optional.empty()))))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
@@ -2044,8 +2045,7 @@ class NetworkModificationTest {
         ).getId();
 
         // modification1 moved to end — same-node reorder
-        ModificationMoveRequest moveToEnd = new ModificationMoveRequest(modification1,
-                nodeLocation(modificationNodeUuid), nodeLocation(modificationNodeUuid), null);
+        ModificationMoveInfos moveToEnd = new ModificationMoveInfos(modification1, null, null, null);
         mockMvc.perform(put(URI_STUDY_MODIF_MOVE, studyNameUserIdUuid, modificationNodeUuid)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(List.of(moveToEnd)))
@@ -2056,19 +2056,16 @@ class NetworkModificationTest {
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
         // expected resolved body forwarded to network-modification-server
-        ModificationContainerInfos nodeGroup = new ModificationContainerInfos(modificationNode.getModificationGroupUuid(), ModificationContainerType.GROUP);
+        UUID nodeGroupUuid = modificationNode.getModificationGroupUuid();
         List<ModificationApplicationContext> contexts =
                 List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, modificationNodeUuid, NETWORK_UUID));
-        Pair<List<ModificationMoveInfos>, List<ModificationApplicationContext>> expectedBody =
-                Pair.of(List.of(new ModificationMoveInfos(modification1, nodeGroup, nodeGroup, null)), contexts);
+        Pair<List<ModificationMoveInfos>, List<ModificationApplicationContext>> expectedBody = Pair.of(List.of(moveToEnd), contexts);
         String expectedBodyStr = mapper.writeValueAsString(expectedBody);
-        WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, URI_NETWORK_MODIF_MOVE, false, Map.of(
-                        "build", WireMock.equalTo("false")),
+        WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, networkModifMoveUri(nodeGroupUuid), false, moveParams(nodeGroupUuid, false),
                 expectedBodyStr);
 
         // modification1 moved before modification2
-        ModificationMoveRequest moveBeforeMod2 = new ModificationMoveRequest(modification1,
-                nodeLocation(modificationNodeUuid), nodeLocation(modificationNodeUuid), modification2);
+        ModificationMoveInfos moveBeforeMod2 = new ModificationMoveInfos(modification1, null, null, modification2);
         mockMvc.perform(put(URI_STUDY_MODIF_MOVE, studyNameUserIdUuid, modificationNodeUuid)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(List.of(moveBeforeMod2)))
@@ -2077,10 +2074,8 @@ class NetworkModificationTest {
         checkUpdateStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, output);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        expectedBodyStr = mapper.writeValueAsString(
-                Pair.of(List.of(new ModificationMoveInfos(modification1, nodeGroup, nodeGroup, modification2)), contexts));
-        WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, URI_NETWORK_MODIF_MOVE, false, Map.of(
-                        "build", WireMock.equalTo("false")),
+        expectedBodyStr = mapper.writeValueAsString(Pair.of(List.of(moveBeforeMod2), contexts));
+        WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, networkModifMoveUri(nodeGroupUuid), false, moveParams(nodeGroupUuid, false),
                 expectedBodyStr);
         WireMockUtils.verifyGetRequest(wireMockServer, referencesStubId, "/v1/references",
                 Map.of("uuids", WireMock.matching(".*")), 2);
@@ -2101,8 +2096,7 @@ class NetworkModificationTest {
         UUID studyNameUserIdUuid1 = UUID.randomUUID();
         UUID nodeIdUuid1 = UUID.randomUUID();
 
-        ModificationMoveRequest request = new ModificationMoveRequest(modification1,
-                nodeLocation(modificationNodeUuid), nodeLocation(modificationNodeUuid), modification2);
+        ModificationMoveInfos request = new ModificationMoveInfos(modification1, null, null, modification2);
         String moveBody = mapper.writeValueAsString(List.of(request));
 
         mockMvc.perform(put(URI_STUDY_MODIF_MOVE, studyNameUserIdUuid, nodeIdUuid1)
@@ -2589,12 +2583,9 @@ class NetworkModificationTest {
 
         // Move modification between studies is forbidden
         mockMvc.perform(put(URI_STUDY_MODIF_MOVE, studyEntity1.getId(), node1.getId())
+                        .queryParam("originNodeUuid", node2.getId().toString())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(List.of(
-                                new ModificationMoveRequest(modifications.get(0),
-                                        nodeLocation(node2.getId()),
-                                        nodeLocation(node1.getId()),
-                                        null))))
+                        .content(mapper.writeValueAsString(List.of(new ModificationMoveInfos(modifications.get(0), null, null, null))))
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isForbidden());
     }
@@ -2644,7 +2635,7 @@ class NetworkModificationTest {
         UUID modification1 = UUID.randomUUID();
         UUID modification2 = UUID.randomUUID();
 
-        UUID groupStubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(URI_NETWORK_MODIF_MOVE))
+        UUID groupStubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathMatching(URI_NETWORK_MODIF_MOVE_PATTERN))
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(new NetworkModificationsResult(Arrays.asList(modification1, modification2), List.of(Optional.empty()))))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
@@ -2655,36 +2646,31 @@ class NetworkModificationTest {
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
         ).getId();
 
-        // move 2 modifications within node1 — source and target both point at node1
-        String sameNodeBody = mapper.writeValueAsString(
-                List.of(new ModificationMoveRequest(modification1, nodeLocation(nodeUuid1), nodeLocation(nodeUuid1), null),
-                        new ModificationMoveRequest(modification2, nodeLocation(nodeUuid1), nodeLocation(nodeUuid1), null)));
+        // move 2 modifications within node1 — the origin node defaults to the target node
+        List<ModificationMoveInfos> moveInfos = List.of(new ModificationMoveInfos(modification1, null, null, null),
+                new ModificationMoveInfos(modification2, null, null, null));
+        String moveBody = mapper.writeValueAsString(moveInfos);
         mockMvc.perform(put(URI_STUDY_MODIF_MOVE, studyUuid, nodeUuid1)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(sameNodeBody)
+                        .content(moveBody)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkUpdateStatusMessagesReceived(studyUuid, nodeUuid1, output);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
 
-        ModificationContainerInfos node1Group = new ModificationContainerInfos(node1.getModificationGroupUuid(), ModificationContainerType.GROUP);
-        ModificationContainerInfos node2Group = new ModificationContainerInfos(node2.getModificationGroupUuid(), ModificationContainerType.GROUP);
-        Pair<List<ModificationMoveInfos>, List<ModificationApplicationContext>> expectedBody = Pair.of(
-                List.of(new ModificationMoveInfos(modification1, node1Group, node1Group, null),
-                        new ModificationMoveInfos(modification2, node1Group, node1Group, null)),
+        UUID node1GroupUuid = node1.getModificationGroupUuid();
+        UUID node2GroupUuid = node2.getModificationGroupUuid();
+        Pair<List<ModificationMoveInfos>, List<ModificationApplicationContext>> expectedBody = Pair.of(moveInfos,
                 List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
         String expectedBodyStr = mapper.writeValueAsString(expectedBody);
-        WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, URI_NETWORK_MODIF_MOVE, false, Map.of(
-                        "build", WireMock.equalTo("false")),
+        WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, networkModifMoveUri(node1GroupUuid), false, moveParams(node1GroupUuid, false),
                 expectedBodyStr);
 
-        // move 2 modifications from node1 to node2 — source points at node1, target at node2
-        String crossNodeBody = mapper.writeValueAsString(
-                List.of(new ModificationMoveRequest(modification1, nodeLocation(nodeUuid1), nodeLocation(nodeUuid2), null),
-                        new ModificationMoveRequest(modification2, nodeLocation(nodeUuid1), nodeLocation(nodeUuid2), null)));
+        // move 2 modifications from node1 to node2 — node1 given as origin node
         mockMvc.perform(put(URI_STUDY_MODIF_MOVE, studyUuid, nodeUuid2)
+                        .queryParam("originNodeUuid", nodeUuid1.toString())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(crossNodeBody)
+                        .content(moveBody)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkUpdateStatusMessagesReceived(studyUuid, nodeUuid1, output);
@@ -2694,13 +2680,10 @@ class NetworkModificationTest {
         checkElementUpdatedMessageSent(studyUuid, userId);
         checkElementUpdatedMessageSent(studyUuid, userId);
 
-        expectedBody = Pair.of(
-                List.of(new ModificationMoveInfos(modification1, node1Group, node2Group, null),
-                        new ModificationMoveInfos(modification2, node1Group, node2Group, null)),
+        expectedBody = Pair.of(moveInfos,
                 List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node2.getId(), NETWORK_UUID)));
         expectedBodyStr = mapper.writeValueAsString(expectedBody);
-        WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, URI_NETWORK_MODIF_MOVE, false, Map.of(
-                        "build", WireMock.equalTo("true")),
+        WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, networkModifMoveUri(node2GroupUuid), false, moveParams(node1GroupUuid, true),
                 expectedBodyStr);
 
         WireMockUtils.verifyGetRequest(wireMockServer, referencesStubId, "/v1/references",
@@ -2713,14 +2696,14 @@ class NetworkModificationTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
-        createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "New node 1", userId);
+        UUID nodeUuid1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "New node 1", userId).getId();
         createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "New node 2", userId);
         UUID modification1 = UUID.randomUUID();
         UUID modification2 = UUID.randomUUID();
         UUID bogusNode = UUID.randomUUID();
         String moveInfosBody = mapper.writeValueAsString(
-                List.of(new ModificationMoveRequest(modification1, nodeLocation(bogusNode), nodeLocation(bogusNode), null),
-                        new ModificationMoveRequest(modification2, nodeLocation(bogusNode), nodeLocation(bogusNode), null)));
+                List.of(new ModificationMoveInfos(modification1, null, null, null),
+                        new ModificationMoveInfos(modification2, null, null, null)));
 
         // Random/bad studyId error case
         mockMvc.perform(put(URI_STUDY_MODIF_MOVE, UUID.randomUUID(), rootNodeUuid)
@@ -2735,6 +2718,14 @@ class NetworkModificationTest {
                         .content(moveInfosBody)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isNotFound());
+
+        // Origin node out of the study error case
+        mockMvc.perform(put(URI_STUDY_MODIF_MOVE, studyUuid, nodeUuid1)
+                        .queryParam("originNodeUuid", bogusNode.toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(moveInfosBody)
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -3403,7 +3394,7 @@ class NetworkModificationTest {
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
         ).getId();
 
-        wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(URI_NETWORK_MODIF_MOVE))
+        wireMockServer.stubFor(WireMock.put(WireMock.urlPathMatching(URI_NETWORK_MODIF_MOVE_PATTERN))
                 .willReturn(WireMock.ok()
                         .withHeader("Content-Type", "application/json")
                         .withBody("{\"modificationUuids\":[],\"modificationResults\":[]}")));
@@ -3413,8 +3404,7 @@ class NetworkModificationTest {
                         studyTestUtils.getOneRootNetworkUuid(studyUuid), nodeUuid, NETWORK_UUID));
 
         // --- Case 1: composite source → node target, with a beforeUuid ---
-        ModificationMoveRequest requestCase1 = new ModificationMoveRequest(
-                modificationUuid, compositeLocation(sourceContainerId), nodeLocation(nodeUuid), beforeUuid);
+        ModificationMoveInfos requestCase1 = new ModificationMoveInfos(modificationUuid, sourceContainerId, null, beforeUuid);
 
         mockMvc.perform(put(URI_STUDY_MODIF_MOVE, studyUuid, nodeUuid)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -3425,18 +3415,13 @@ class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid);
         checkElementUpdatedMessageSent(studyUuid, userId);
 
-        // resolved: composite stays, node resolves to group
-        ModificationMoveInfos resolvedCase1 = new ModificationMoveInfos(modificationUuid,
-                new ModificationContainerInfos(sourceContainerId, ModificationContainerType.COMPOSITE),
-                new ModificationContainerInfos(nodeGroupUuid, ModificationContainerType.GROUP),
-                beforeUuid);
-        String expectedMoveBodyJson = mapper.writeValueAsString(Pair.of(List.of(resolvedCase1), contexts));
-        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, URI_NETWORK_MODIF_MOVE, false,
-                Map.of("build", WireMock.equalTo("false")), expectedMoveBodyJson);
+        // forwarded as is: the node resolves to its group at request level
+        String expectedMoveBodyJson = mapper.writeValueAsString(Pair.of(List.of(requestCase1), contexts));
+        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, networkModifMoveUri(nodeGroupUuid), false,
+                moveParams(nodeGroupUuid, false), expectedMoveBodyJson);
 
         // --- Case 2: composite source → node target, no beforeUuid ---
-        ModificationMoveRequest requestCase2 = new ModificationMoveRequest(
-                modificationUuid, compositeLocation(sourceContainerId), nodeLocation(nodeUuid), null);
+        ModificationMoveInfos requestCase2 = new ModificationMoveInfos(modificationUuid, sourceContainerId, null, null);
 
         mockMvc.perform(put(URI_STUDY_MODIF_MOVE, studyUuid, nodeUuid)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -3446,13 +3431,9 @@ class NetworkModificationTest {
         checkUpdateStatusMessagesReceived(studyUuid, nodeUuid, output);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid);
         checkElementUpdatedMessageSent(studyUuid, userId);
-        expectedMoveBodyJson = mapper.writeValueAsString(Pair.of(List.of(new ModificationMoveInfos(
-                modificationUuid,
-                new ModificationContainerInfos(sourceContainerId, ModificationContainerType.COMPOSITE),
-                new ModificationContainerInfos(nodeGroupUuid, ModificationContainerType.GROUP),
-                null)), contexts));
-        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, URI_NETWORK_MODIF_MOVE, false,
-                Map.of("build", WireMock.equalTo("false")), expectedMoveBodyJson);
+        expectedMoveBodyJson = mapper.writeValueAsString(Pair.of(List.of(requestCase2), contexts));
+        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, networkModifMoveUri(nodeGroupUuid), false,
+                moveParams(nodeGroupUuid, false), expectedMoveBodyJson);
 
         // --- Case 3: node source → composite target ---
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/network-composite-modifications/children-uuids"))
@@ -3460,8 +3441,7 @@ class NetworkModificationTest {
                         .withBody(mapper.writeValueAsString(List.of()))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
 
-        ModificationMoveRequest requestCase3 = new ModificationMoveRequest(
-                modificationUuid, nodeLocation(nodeUuid), compositeLocation(targetContainerId), null);
+        ModificationMoveInfos requestCase3 = new ModificationMoveInfos(modificationUuid, null, targetContainerId, null);
 
         mockMvc.perform(put(URI_STUDY_MODIF_MOVE, studyUuid, nodeUuid)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -3471,13 +3451,9 @@ class NetworkModificationTest {
         checkUpdateStatusMessagesReceived(studyUuid, nodeUuid, output);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid);
         checkElementUpdatedMessageSent(studyUuid, userId);
-        expectedMoveBodyJson = mapper.writeValueAsString(Pair.of(List.of(new ModificationMoveInfos(
-                modificationUuid,
-                new ModificationContainerInfos(nodeGroupUuid, ModificationContainerType.GROUP),
-                new ModificationContainerInfos(targetContainerId, ModificationContainerType.COMPOSITE),
-                null)), contexts));
-        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, URI_NETWORK_MODIF_MOVE, false,
-                Map.of("build", WireMock.equalTo("false")), expectedMoveBodyJson);
+        expectedMoveBodyJson = mapper.writeValueAsString(Pair.of(List.of(requestCase3), contexts));
+        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, networkModifMoveUri(nodeGroupUuid), false,
+                moveParams(nodeGroupUuid, false), expectedMoveBodyJson);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/references", Map.of(
                 "uuids", WireMock.matching(".*")), 3);
     }
@@ -3506,7 +3482,7 @@ class NetworkModificationTest {
                                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
         );
 
-        UUID groupStubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(URI_NETWORK_MODIF_MOVE))
+        UUID groupStubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathMatching(URI_NETWORK_MODIF_MOVE_PATTERN))
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(new NetworkModificationsResult(List.of(modification1), List.of(Optional.empty()))))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
@@ -3522,11 +3498,12 @@ class NetworkModificationTest {
                 .willReturn(WireMock.ok())
         ).getId();
 
-        // source = node1, target = node2 — origin node derived from the source location
+        // source = node1, target = node2 — node1 given as origin node
+        ModificationMoveInfos moveInfos = new ModificationMoveInfos(modification1, null, null, null);
         mockMvc.perform(put(URI_STUDY_MODIF_MOVE, studyUuid, nodeUuid2)
+                        .queryParam("originNodeUuid", nodeUuid1.toString())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(List.of(
-                                new ModificationMoveRequest(modification1, nodeLocation(nodeUuid1), nodeLocation(nodeUuid2), null))))
+                        .content(mapper.writeValueAsString(List.of(moveInfos)))
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
 
@@ -3536,16 +3513,11 @@ class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
         checkElementUpdatedMessageSent(studyUuid, userId);
 
-        Pair<List<ModificationMoveInfos>, List<ModificationApplicationContext>> expectedBody = Pair.of(
-                List.of(new ModificationMoveInfos(modification1,
-                        new ModificationContainerInfos(node1.getModificationGroupUuid(), ModificationContainerType.GROUP),
-                        new ModificationContainerInfos(node2.getModificationGroupUuid(), ModificationContainerType.GROUP),
-                        null)),
+        Pair<List<ModificationMoveInfos>, List<ModificationApplicationContext>> expectedBody = Pair.of(List.of(moveInfos),
                 List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node2.getId(), NETWORK_UUID)));
         String expectedBodyStr = mapper.writeValueAsString(expectedBody);
-        WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, URI_NETWORK_MODIF_MOVE, false, Map.of(
-                        "build", WireMock.equalTo("true")),
-                expectedBodyStr);
+        WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, networkModifMoveUri(node2.getModificationGroupUuid()), false,
+                moveParams(node1.getModificationGroupUuid(), true), expectedBodyStr);
 
         WireMockUtils.verifyGetRequest(wireMockServer, referencesStubId, "/v1/references",
                 Map.of("uuids", WireMock.matching(".*")));

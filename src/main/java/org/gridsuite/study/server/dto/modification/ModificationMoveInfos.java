@@ -13,9 +13,12 @@ import java.util.UUID;
 
 /**
  * @author Hugo Marcellin <hugo.marcelin at rte-france.com>
+ *
+ * One move of a batch, forwarded as is to the network-modification-server: origin and target nodes (hence groups)
+ * are given once per request, a null composite designates the node's own group.
  */
 public record ModificationMoveInfos(
         UUID modificationUuid,
-        @Schema(description = "current container; resolved to the parent composite or the origin node's group when omitted") ModificationContainerInfos source,
-        @Schema(description = "destination container; defaults to the target node's group") ModificationContainerInfos target,
+        @Schema(description = "composite currently containing the modification; the origin node's group when null") UUID sourceCompositeUuid,
+        @Schema(description = "composite to move the modification into; the target node's group when null") UUID targetCompositeUuid,
         @Schema(description = "insert before this modification of the target container; appends when null") UUID beforeUuid) { }

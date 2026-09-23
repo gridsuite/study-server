@@ -74,7 +74,7 @@ public class RebuildNodeService {
     public void moveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<ModificationMoveInfos> modificationMoveInfos, String userId) {
         handleRebuildNode(studyUuid, targetNodeUuid, originNodeUuid, userId, () -> {
             boolean isTargetInDifferentNodeTree = studyService.invalidateNodeTreeWhenMoveModifications(studyUuid, targetNodeUuid, originNodeUuid);
-            studyService.moveNetworkModifications(studyUuid, targetNodeUuid, modificationMoveInfos, isTargetInDifferentNodeTree, userId);
+            studyService.moveNetworkModifications(studyUuid, originNodeUuid, targetNodeUuid, modificationMoveInfos, isTargetInDifferentNodeTree, userId);
         });
     }
 
