@@ -676,7 +676,7 @@ class NetworkModificationTreeTest {
         //      n1  n4
         //     /  \
         //    n2  n3
-        final NetworkModificationNode n1 = NetworkModificationTreeTest.buildNetworkModificationConstructionNode("n1", "n1", UUID.randomUUID(), "variant1",
+        final NetworkModificationNode n1 = NetworkModificationTreeTest.buildNetworkModificationConstructionNode("n1", "n1", MODIFICATION_GROUP_UUID_2, "variant1",
                 randomUuidsResultStack(), BuildStatus.NOT_BUILT);
         createNode(studyId, root, n1, userId);
         final NetworkModificationNode n2 = NetworkModificationTreeTest.buildNetworkModificationConstructionNode("n2", "n2", UUID.randomUUID(), "variant2",
@@ -1873,5 +1873,4 @@ class NetworkModificationTreeTest {
         assertEquals(studyUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_SPREADSHEET_NODE_ALIASES, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
     }
-
 }
