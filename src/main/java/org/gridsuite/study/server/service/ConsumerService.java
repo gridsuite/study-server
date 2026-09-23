@@ -706,6 +706,7 @@ public class ConsumerService {
             }
         };
     }
+
     @Bean
     public Consumer<Message<String>> consumeShortCircuitAnalysisRunning() {
         return message -> {
