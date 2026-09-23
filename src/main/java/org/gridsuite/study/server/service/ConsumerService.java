@@ -562,6 +562,11 @@ public class ConsumerService {
     }
 
     @Bean
+    public Consumer<Message<String>> consumeDsRunning() {
+        return message -> consumeCalculationRunning(message, DYNAMIC_SIMULATION);
+    }
+
+    @Bean
     public Consumer<Message<String>> consumeDsStopped() {
         return message -> consumeCalculationStopped(message, DYNAMIC_SIMULATION);
     }
@@ -582,6 +587,11 @@ public class ConsumerService {
     }
 
     @Bean
+    public Consumer<Message<String>> consumeDsaRunning() {
+        return message -> consumeCalculationRunning(message, DYNAMIC_SECURITY_ANALYSIS);
+    }
+
+    @Bean
     public Consumer<Message<String>> consumeDsaStopped() {
         return message -> consumeCalculationStopped(message, DYNAMIC_SECURITY_ANALYSIS);
     }
@@ -599,6 +609,11 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeDmcResult() {
         return message -> consumeCalculationResult(message, DYNAMIC_MARGIN_CALCULATION);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeDmcRunning() {
+        return message -> consumeCalculationRunning(message, DYNAMIC_MARGIN_CALCULATION);
     }
 
     @Bean

@@ -4,9 +4,9 @@ spring:
   cloud:
     function:
       definition: "consumeSaResult;consumeSaRunning;consumeSaStopped;consumeSaFailed;consumeSaCancelFailed;\
-      consumeDsDebug;consumeDsResult;consumeDsStopped;consumeDsFailed;consumeDsCancelFailed;\
-      consumeDsaDebug;consumeDsaResult;consumeDsaStopped;consumeDsaFailed;consumeDsaCancelFailed;\
-      consumeDmcDebug;consumeDmcResult;consumeDmcStopped;consumeDmcFailed;consumeDmcCancelFailed;\
+      consumeDsDebug;consumeDsResult;consumeDsRunning;consumeDsStopped;consumeDsFailed;consumeDsCancelFailed;\
+      consumeDsaDebug;consumeDsaResult;consumeDsaRunning;consumeDsaStopped;consumeDsaFailed;consumeDsaCancelFailed;\
+      consumeDmcDebug;consumeDmcResult;consumeDmcRunning;consumeDmcStopped;consumeDmcFailed;consumeDmcCancelFailed;\
       consumeBuildResult;consumeBuildStopped;consumeBuildFailed;\
       consumeCaseImportSucceeded;consumeCaseImportFailed;\
       consumeSensitivityAnalysisResult;consumeSensitivityAnalysisRunning;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;consumeSensitivityAnalysisCancelFailed;\
@@ -46,6 +46,9 @@ spring:
         consumeDsResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.result
           group: studyDsResultGroup
+        consumeDsRunning-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.running
+          group: studyDsResultGroup
         consumeDsStopped-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.stopped
           group: studyDsStoppedGroup
@@ -61,6 +64,9 @@ spring:
         consumeDsaResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}dsa.result
           group: studyDsaResultGroup
+        consumeDsaRunning-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}dsa.running
+          group: studyDsaResultGroup
         consumeDsaStopped-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}dsa.stopped
           group: studyDsaStoppedGroup
@@ -75,6 +81,9 @@ spring:
           group: studyDsaDebugGroup
         consumeDmcResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}dmc.result
+          group: studyDsaResultGroup
+        consumeDmcRunning-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}dmc.running
           group: studyDsaResultGroup
         consumeDmcStopped-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}dmc.stopped
