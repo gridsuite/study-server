@@ -3,7 +3,7 @@ spring:
     name: study-server
   cloud:
     function:
-      definition: "consumeSaResult;consumeSaStopped;consumeSaFailed;consumeSaCancelFailed;\
+      definition: "consumeSaResult;consumeSaPreloading;consumeSaStopped;consumeSaFailed;consumeSaCancelFailed;\
       consumeDsDebug;consumeDsResult;consumeDsStopped;consumeDsFailed;consumeDsCancelFailed;\
       consumeDsaDebug;consumeDsaResult;consumeDsaStopped;consumeDsaFailed;consumeDsaCancelFailed;\
       consumeDmcDebug;consumeDmcResult;consumeDmcStopped;consumeDmcFailed;consumeDmcCancelFailed;\
@@ -27,6 +27,9 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}quota.update
         consumeSaResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.result
+          group: studySaResultGroup
+        consumeSaPreloading-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.preloading
           group: studySaResultGroup
         consumeSaStopped-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.stopped

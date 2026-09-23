@@ -514,6 +514,15 @@ public class ConsumerService {
             }));
     }
 
+    public void consumeCalculationPreloading(Message<String> msg, ComputationType computationType) {
+        Optional.ofNullable(msg.getHeaders().get(RESULT_UUID, String.class))
+                .map(UUID::fromString)
+                .flatMap(_ -> getNodeReceiver(msg)).ifPresent(receiverObj -> {
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType());
+                });
+    }
+
     private void handleLoadFlowSuccess(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
         // Build 1st level children if loadflow is converged, and node is a security type
         if (userId != null && networkModificationTreeService.isSecurityNode(nodeUuid)) {
@@ -607,6 +616,11 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeSaResult() {
         return message -> consumeCalculationResult(message, SECURITY_ANALYSIS);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeSaPreloading() {
+        return message -> consumeCalculationPreloading(message, SECURITY_ANALYSIS);
     }
 
     @Bean
