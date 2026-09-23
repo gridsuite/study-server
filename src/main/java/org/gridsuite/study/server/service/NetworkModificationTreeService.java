@@ -69,7 +69,6 @@ public class NetworkModificationTreeService {
     private final UserAdminService userAdminService;
 
     private final StudyServerExecutionService studyServerExecutionService;
-    private final DirectoryService directoryService;
 
     public NetworkModificationTreeService(NodeRepository nodesRepository,
                                           RootNodeInfoRepository rootNodeInfoRepository,
@@ -82,7 +81,7 @@ public class NetworkModificationTreeService {
                                           NetworkService networkStoreService,
                                           ReportService reportService,
                                           UserAdminService userAdminService,
-                                          StudyServerExecutionService studyServerExecutionService, DirectoryService directoryService) {
+                                          StudyServerExecutionService studyServerExecutionService) {
         this.nodesRepository = nodesRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.networkModificationService = networkModificationService;
@@ -95,7 +94,6 @@ public class NetworkModificationTreeService {
         this.reportService = reportService;
         this.userAdminService = userAdminService;
         this.studyServerExecutionService = studyServerExecutionService;
-        this.directoryService = directoryService;
     }
 
     private NetworkModificationNodeInfoEntity createNetworkModificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {

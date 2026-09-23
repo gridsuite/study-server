@@ -636,11 +636,6 @@ public class StudyService {
     }
 
     private void deleteModificationsFromGroup(Pair<UUID, UUID> groupUuidNodeUuid, String userId) {
-        // fetch the references data in order to remove those references from directory-server
-        // TODO : should not be needed anymore now that the references of stashed netmods are already removed -> do I remove this ?
-        List<ModificationReference> referencesToBeDeleted = networkModificationService.getModificationReferences(groupUuidNodeUuid.getFirst());
-        removeReferences(referencesToBeDeleted, userId);
-
         networkModificationService.deleteModifications(groupUuidNodeUuid.getFirst());
     }
 
