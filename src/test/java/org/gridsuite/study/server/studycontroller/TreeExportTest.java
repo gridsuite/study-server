@@ -115,7 +115,7 @@ class TreeExportTest extends StudyTestBase {
         String rootNetworkCaseName = exportInfos.rootNetworks().getFirst().caseInfos().getCaseName();
         String expectedCaseEntry = "cases/" + rootNetworkCaseUuid + "/" + rootNetworkCaseName;
         assertEquals(List.of(expectedCaseEntry), zipEntryNames.stream().filter(name -> name.startsWith("cases/")).toList());
-        assertTrue(zipEntryNames.containsAll(List.of("computationParameters/filterDefinitions.json", "computationParameters/contingencyListDefinitions.json")));
+        assertTrue(zipEntryNames.containsAll(List.of("computationParameters/filters.json", "computationParameters/contingencyList.json")));
         // Verify the case content download call
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
@@ -176,8 +176,8 @@ class TreeExportTest extends StudyTestBase {
         Set<JsonNode> expectedContingencyLists = Set.of(
                 objectMapper.readTree("{\"uuid\":\"" + identifierList + "\",\"name\":\"nameI\",\"content\":" + identifierListJson + "}"),
                 objectMapper.readTree("{\"uuid\":\"" + filterBasedList + "\",\"name\":\"nameF\",\"content\":" + filterBasedListJson + "}"));
-        assertEquals(expectedFilters, readDefinitions(zipContents.get("computationParameters/filterDefinitions.json")));
-        assertEquals(expectedContingencyLists, readDefinitions(zipContents.get("computationParameters/contingencyListDefinitions.json")));
+        assertEquals(expectedFilters, readDefinitions(zipContents.get("computationParameters/filters.json")));
+        assertEquals(expectedContingencyLists, readDefinitions(zipContents.get("computationParameters/contingencyList.json")));
 
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
