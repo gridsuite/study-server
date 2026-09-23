@@ -273,44 +273,37 @@ class RootNetworkApplicabilityTest {
         updateRootNetwork(studyEntity.getId(), rootNetworkUuid, ROOT_NETWORK_TAG_2);
 
         ArgumentCaptor<List<UUID>> groupUuidsCaptor = ArgumentCaptor.captor();
-        verify(networkModificationService, times(1)).renameRootNetworkTag(groupUuidsCaptor.capture(), eq(ROOT_NETWORK_TAG_1), eq(ROOT_NETWORK_TAG_2));
+        verify(networkModificationService, times(1)).renameRootNetworkTag(groupUuidsCaptor.capture(), eq(ROOT_NETWORK_TAG_1), eq(ROOT_NETWORK_TAG_2), eq(USER_ID));
         assertEquals(Set.of(firstNode.getModificationGroupUuid(), secondNode.getModificationGroupUuid()), Set.copyOf(groupUuidsCaptor.getValue()));
 
         // an update carrying no tag at all leaves it as it was, so it is not a rename
         updateRootNetwork(studyEntity.getId(), rootNetworkUuid, null);
-        verify(networkModificationService, times(1)).renameRootNetworkTag(any(), any(), any());
+        verify(networkModificationService, times(1)).renameRootNetworkTag(any(), any(), any(), any());
 
         // and neither is an update carrying the tag the root network already has
         updateRootNetwork(studyEntity.getId(), rootNetworkUuid, ROOT_NETWORK_TAG_2);
-        verify(networkModificationService, times(1)).renameRootNetworkTag(any(), any(), any());
+        verify(networkModificationService, times(1)).renameRootNetworkTag(any(), any(), any(), any());
     }
 
     @Test
-    void testRenamingARootNetworkTagNeedsWritePermissionOnTheSharedModifications() throws Exception {
+    void testARefusedRenamingLeavesTheRootNetworkTagAlone() throws Exception {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
         UUID rootNetworkUuid = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).getFirst().rootNetworkUuid();
 
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
-        NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
+        networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
 
         // the study points to a shared modification the user is not allowed to write on
-        UUID sharedModificationUuid = UUID.randomUUID();
-        doReturn(Set.of(sharedModificationUuid)).when(networkModificationService).getReferencedModificationUuids(List.of(firstNode.getModificationGroupUuid()));
         doThrow(HttpClientErrorException.create(HttpStatus.FORBIDDEN, "Forbidden", null, null, null))
-            .when(directoryService).checkPermission(Set.of(sharedModificationUuid), null, USER_ID, PermissionType.WRITE, false);
+            .when(networkModificationService).renameRootNetworkTag(any(), eq(ROOT_NETWORK_TAG_1), eq(ROOT_NETWORK_TAG_2), eq(USER_ID));
 
         UUID studyUuid = studyEntity.getId();
         RootNetworkInfos renamingTagInfos = RootNetworkInfos.builder().id(rootNetworkUuid).tag(ROOT_NETWORK_TAG_2).build();
         assertThrows(HttpClientErrorException.class, () -> studyService.updateRootNetworkRequest(studyUuid, renamingTagInfos, USER_ID));
 
-        // neither the tag nor the applicabilities are touched
+        // the tag the study holds is rolled back along with the refused rename
         assertEquals(ROOT_NETWORK_TAG_1, rootNetworkService.getRootNetworkTag(rootNetworkUuid));
-        verify(networkModificationService, never()).renameRootNetworkTag(any(), any(), any());
-
-        // an update keeping the tag is no rename, so it needs no permission
-        updateRootNetwork(studyUuid, rootNetworkUuid, ROOT_NETWORK_TAG_1);
-        verify(directoryService, times(1)).checkPermission(any(), any(), any(), any(), anyBoolean());
     }
 
     @Test

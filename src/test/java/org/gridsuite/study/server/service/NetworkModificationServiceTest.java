@@ -18,15 +18,14 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -36,6 +35,7 @@ import static org.mockito.Mockito.when;
 class NetworkModificationServiceTest {
 
     private static final String NETWORK_MODIFICATION_SERVER_URI = "http://network-modification-server";
+    private static final String USER_ID = "userId";
     private static final String RESPONSE = "{\"id\":\"modification\"}";
 
     @Mock
@@ -163,12 +163,16 @@ class NetworkModificationServiceTest {
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
                 + "?groupUuids=" + firstGroupUuid + "&groupUuids=" + secondGroupUuid + "&oldTag=PH1&newTag=PH2";
 
-        networkModificationService.renameRootNetworkTag(List.of(firstGroupUuid, secondGroupUuid), "PH1", "PH2");
+        networkModificationService.renameRootNetworkTag(List.of(firstGroupUuid, secondGroupUuid), "PH1", "PH2", USER_ID);
 
-        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+        // the server needs the user to tell whether the rename is allowed
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, USER_ID);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        verify(restTemplate).exchange(expectedUrl, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
 
         // there is nothing to rename without a group
-        networkModificationService.renameRootNetworkTag(List.of(), "PH1", "PH2");
+        networkModificationService.renameRootNetworkTag(List.of(), "PH1", "PH2", USER_ID);
 
         verifyNoMoreInteractions(restTemplate);
     }
@@ -197,18 +201,5 @@ class NetworkModificationServiceTest {
 
         networkModificationService.hasModificationReferences(List.of(modificationUuid));
         verify(restTemplate).getForObject(eq(expectedUrl), eq(Boolean.class));
-    }
-
-    @Test
-    void testGetReferencedModifications() {
-        UUID groupUuid = UUID.randomUUID();
-        UUID sharedModificationUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/references?uuids=" + groupUuid;
-        when(restTemplate.exchange(expectedUrl, HttpMethod.GET, null, new ParameterizedTypeReference<Set<UUID>>() { }))
-            .thenReturn(ResponseEntity.ok(Set.of(sharedModificationUuid)));
-
-        assertThat(networkModificationService.getReferencedModificationUuids(List.of(groupUuid))).containsExactly(sharedModificationUuid);
-        assertThat(networkModificationService.getReferencedModificationUuids(List.of())).isEmpty();
-        verifyNoMoreInteractions(restTemplate);
     }
 }

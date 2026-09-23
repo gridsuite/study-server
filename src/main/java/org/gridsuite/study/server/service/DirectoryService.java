@@ -159,7 +159,7 @@ public class DirectoryService {
         restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.POST, requestEntity, ElementAttributes.class);
     }
 
-    public void checkPermission(Collection<UUID> elementUuids, UUID targetDirectoryUuid, String userId, PermissionType permissionType, boolean recursiveCheck) {
+    public void checkPermission(List<UUID> elementUuids, UUID targetDirectoryUuid, String userId, PermissionType permissionType, boolean recursiveCheck) {
         HttpHeaders headers = new HttpHeaders();
         headers.add(HEADER_USER_ID, userId);
 

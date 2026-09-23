@@ -394,9 +394,10 @@ public class NetworkModificationService {
     }
 
     /**
-     * Renames a root network tag in the applicabilities held by the modifications of the given groups.
+     * Renames a root network tag in the applicabilities held by the modifications of the given groups. The server
+     * refuses it when the user cannot write on a shared modification these groups point to.
      */
-    public void renameRootNetworkTag(List<UUID> groupUuids, String oldTag, String newTag) {
+    public void renameRootNetworkTag(List<UUID> groupUuids, String oldTag, String newTag, String userId) {
         Objects.requireNonNull(oldTag);
         Objects.requireNonNull(newTag);
         if (CollectionUtils.isEmpty(groupUuids)) {
@@ -411,6 +412,7 @@ public class NetworkModificationService {
                 .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         restTemplate.exchange(path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
@@ -722,24 +724,6 @@ public class NetworkModificationService {
                 .queryParam(UUIDS, containerUuids)
                 .build().toUriString();
         return Boolean.TRUE.equals(restTemplate.getForObject(getNetworkModificationServerURI(false) + path, Boolean.class));
-    }
-
-    /**
-     * @return the shared modifications IDs the given containers point to, directly or through other shared modifications
-     */
-    public Set<UUID> getReferencedModificationUuids(List<UUID> containerUuids) {
-        if (containerUuids.isEmpty()) {
-            return Set.of();
-        }
-        String path = UriComponentsBuilder.fromPath("containers/references")
-                .queryParam(UUIDS, containerUuids)
-                .build().toUriString();
-        return restTemplate.exchange(
-                getNetworkModificationServerURI(false) + path,
-                HttpMethod.GET,
-                null,
-                new ParameterizedTypeReference<Set<UUID>>() { }
-        ).getBody();
     }
 
     /**
