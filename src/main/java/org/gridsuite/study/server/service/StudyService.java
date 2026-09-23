@@ -42,6 +42,7 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
+import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
@@ -95,6 +96,7 @@ public class StudyService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
     public static final String STUDY_NOT_FOUND = "Study not found";
+    private final NodeRepository nodeRepository;
 
     NotificationService notificationService;
 
@@ -197,7 +199,7 @@ public class StudyService {
         RootNetworkNodeInfoService rootNetworkNodeInfoService,
         DirectoryService directoryService,
         ComputationParametersService computationParametersService,
-        WorkspaceService workspaceService) {
+        WorkspaceService workspaceService, NodeRepository nodeRepository) {
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
@@ -232,6 +234,7 @@ public class StudyService {
         this.directoryService = directoryService;
         this.computationParametersService = computationParametersService;
         this.workspaceService = workspaceService;
+        this.nodeRepository = nodeRepository;
     }
 
     private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid) {
@@ -1031,18 +1034,14 @@ public class StudyService {
     }
 
     public void assertIsNodeExist(UUID studyUuid, UUID nodeUuid) {
-        boolean exists = networkModificationTreeService.getAllNodes(studyUuid).stream()
-                .anyMatch(nodeEntity -> nodeUuid.equals(nodeEntity.getIdNode()));
-
-        if (!exists) {
+        if (!nodeRepository.existsByStudyIdAndNodeId(studyUuid, nodeUuid)) {
             throw new StudyException(NOT_FOUND, "Node not found");
         }
     }
 
     public void assertIsStudyExist(UUID studyUuid) {
-        boolean exists = studyRepository.existsById(studyUuid);
-        if (!exists) {
-            throw new StudyException(NOT_FOUND, "Node not found");
+        if (!studyRepository.existsById(studyUuid)) {
+            throw new StudyException(NOT_FOUND, "Study not found");
         }
     }
 
