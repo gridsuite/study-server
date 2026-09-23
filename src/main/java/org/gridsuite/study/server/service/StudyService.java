@@ -1844,6 +1844,7 @@ public class StudyService {
             }
 
             // Update ModificationReference data
+            // TODO this logic ought to be moved in network modification server
             List<UUID> allModificationUuids = modificationInfos.stream().map(ModificationMoveInfos::modificationUuid).toList();
             List<ModificationReference> allReferencesToMove = networkModificationService.getModificationReferences(allModificationUuids);
             Map<UUID, List<ModificationReference>> referencesByModification = allReferencesToMove.stream()
