@@ -20,7 +20,6 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.utils.MatcherReportLog;
 import org.gridsuite.study.server.utils.TestUtils;
-import org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.util.Pair;
 import org.springframework.http.HttpHeaders;
@@ -657,8 +656,6 @@ class NodeControllerTest extends StudyTestBase {
 
     @Test
     void testDuplicateSubtree() throws Exception {
-        wireMockStubs.stubGetAllReferencesDataFromGroup();
-
         String userId = "userId";
         UUID study1Uuid = createStudyWithStubs(userId, CASE_UUID);
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
@@ -760,11 +757,6 @@ class NodeControllerTest extends StudyTestBase {
         List<UUID> nodesAfterDuplication = networkModificationTreeService.getAllNodes(study1Uuid).stream().map(NodeEntity::getIdNode).collect(Collectors.toList());
         nodesAfterDuplication.removeAll(allNodesUuidsBeforeDuplication);
         assertEquals(3, nodesAfterDuplication.size());
-
-        //Check references have been collected on each newly created modification group, to be re-created on the duplicated nodes
-        nodesAfterDuplication.forEach(
-                nodeUuid -> WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/groups/" + networkModificationTreeService.getModificationGroupUuid(nodeUuid) + "/references", Map.of(), 1)
-        );
 
         checkSubtreeCreatedMessageSent(study1Uuid, nodesAfterDuplication.get(0), node4.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);

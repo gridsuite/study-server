@@ -54,8 +54,8 @@ public class NetworkModificationService {
     private static final String QUERY_PARAM_ACTION = "action";
     private static final String QUERY_PARAM_NAME = "name";
     private static final String QUERY_PARAM_GROUP_UUID = "groupUuid";
-    private static final String QUERY_PARAM_NODE_UUID = "nodeUuid";
-    private static final String QUERY_PARAM_STUDY_UUID = "studyUuid";
+    public static final String QUERY_PARAM_NODE_CONTAINER_UUID = "nodeContainerUuid";
+    private static final String QUERY_PARAM_STUDY_ROOT_CONTAINER_UUID = "studyRootContainerUuid";
     private static final String QUERY_PARAM_ROOT_NETWORK_TAG = "rootNetworkTag";
     private static final String QUERY_PARAM_GROUP_UUIDS = "groupUuids";
     private static final String QUERY_PARAM_ROOT_NETWORK_TAGS = "rootNetworkTags";
@@ -296,8 +296,8 @@ public class NetworkModificationService {
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
                 .queryParam(UUIDS, modificationsUuids)
                 .queryParam(GROUP_UUID, groupUUid)
-                .queryParam(QUERY_PARAM_STUDY_UUID, studyUuid)
-                .queryParam(QUERY_PARAM_NODE_UUID, nodeUuid)
+                .queryParam(QUERY_PARAM_STUDY_ROOT_CONTAINER_UUID, studyUuid)
+                .queryParam(QUERY_PARAM_NODE_CONTAINER_UUID, nodeUuid)
                 .queryParam(QUERY_PARAM_STASHED, false)
                 .buildAndExpand()
                 .toUriString();
@@ -546,7 +546,7 @@ public class NetworkModificationService {
 
     public UUID assembleModificationsIntoComposite(@NonNull List<UUID> modificationsUuids, UUID nodeUuid, String userId) {
         var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH)
-                .queryParam(QUERY_PARAM_NODE_UUID, nodeUuid);
+                .queryParam(QUERY_PARAM_NODE_CONTAINER_UUID, nodeUuid);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -590,8 +590,8 @@ public class NetworkModificationService {
         Objects.requireNonNull(sourceGroupUuid);
         var path = UriComponentsBuilder.fromPath("groups/{uuid}/duplicate")
                 .queryParam(QUERY_PARAM_GROUP_UUID, groupUuid)
-                .queryParam(QUERY_PARAM_NODE_UUID, newNodeUuid)
-                .queryParam(QUERY_PARAM_STUDY_UUID, studyUuid)
+                .queryParam(QUERY_PARAM_NODE_CONTAINER_UUID, newNodeUuid)
+                .queryParam(QUERY_PARAM_STUDY_ROOT_CONTAINER_UUID, studyUuid)
                 .buildAndExpand(sourceGroupUuid)
                 .toUriString();
 
@@ -673,8 +673,8 @@ public class NetworkModificationService {
         Objects.requireNonNull(groupUUid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + "/references")
                 .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
-                .queryParam(QUERY_PARAM_NODE_UUID, newNodeUuid)
-                .queryParam(QUERY_PARAM_STUDY_UUID, studyUuid)
+                .queryParam(QUERY_PARAM_NODE_CONTAINER_UUID, newNodeUuid)
+                .queryParam(QUERY_PARAM_STUDY_ROOT_CONTAINER_UUID, studyUuid)
                 .buildAndExpand(groupUUid)
                 .toUriString();
 
