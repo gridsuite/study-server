@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.config;
 
 import jakarta.persistence.EntityManagerFactory;
+import org.gridsuite.study.server.repository.QuotaConsumptionRepository;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.dynamicsimulation.EventRepository;
@@ -72,6 +73,11 @@ public @interface DisableJpa {
         @Bean
         public NodeActivityRepository nodeActivityRepository() {
             return mock(NodeActivityRepository.class);
+        }
+
+        @Bean
+        public QuotaConsumptionRepository quotaConsumptionRepository() {
+            return mock(QuotaConsumptionRepository.class);
         }
 
         @Bean
