@@ -71,7 +71,7 @@ class NodePositionTest {
     void testDeleteNode() {
         List<AbstractNode> children = createNodeTree().getChildren();
 
-        networkModificationTreeService.doStashNode(getNode("N2", children).getId(), false);
+        networkModificationTreeService.doStashNode(getNode("N2", children).getId(), false, "userId");
 
         children = networkModificationTreeService.getStudyTree(studyUuid, studyTestUtils.getOneRootNetworkUuid(studyUuid)).getChildren();
         //               root
