@@ -163,16 +163,12 @@ class NetworkModificationServiceTest {
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
                 + "?groupUuids=" + firstGroupUuid + "&groupUuids=" + secondGroupUuid + "&oldTag=PH1&newTag=PH2";
 
-        networkModificationService.renameRootNetworkTag(List.of(firstGroupUuid, secondGroupUuid), "PH1", "PH2", USER_ID);
+        networkModificationService.renameRootNetworkTag(List.of(firstGroupUuid, secondGroupUuid), "PH1", "PH2");
 
-        // the server needs the user to tell whether the rename is allowed
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, USER_ID);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        verify(restTemplate).exchange(expectedUrl, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
 
         // there is nothing to rename without a group
-        networkModificationService.renameRootNetworkTag(List.of(), "PH1", "PH2", USER_ID);
+        networkModificationService.renameRootNetworkTag(List.of(), "PH1", "PH2");
 
         verifyNoMoreInteractions(restTemplate);
     }
@@ -190,6 +186,24 @@ class NetworkModificationServiceTest {
         // there is nothing to drop without a group or without a tag
         networkModificationService.deleteRootNetworkTags(List.of(), List.of("PH1"));
         networkModificationService.deleteRootNetworkTags(List.of(groupUuid), List.of());
+
+        verifyNoMoreInteractions(restTemplate);
+    }
+
+    @Test
+    void testAssertReferencedModificationsAreWritable() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/references/authorized?uuids=" + groupUuid;
+
+        networkModificationService.assertReferencedModificationsAreWritable(List.of(groupUuid), USER_ID);
+
+        // the server needs the user to tell whether the shared modifications are writable
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, USER_ID);
+        verify(restTemplate).exchange(expectedUrl, HttpMethod.GET, new HttpEntity<>(headers), Void.class);
+
+        // there is nothing to check without a container
+        networkModificationService.assertReferencedModificationsAreWritable(List.of(), USER_ID);
 
         verifyNoMoreInteractions(restTemplate);
     }

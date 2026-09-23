@@ -394,10 +394,9 @@ public class NetworkModificationService {
     }
 
     /**
-     * Renames a root network tag in the applicabilities held by the modifications of the given groups. The server
-     * refuses it when the user cannot write on a shared modification these groups point to.
+     * Renames a root network tag in the applicabilities held by the modifications of the given groups.
      */
-    public void renameRootNetworkTag(List<UUID> groupUuids, String oldTag, String newTag, String userId) {
+    public void renameRootNetworkTag(List<UUID> groupUuids, String oldTag, String newTag) {
         Objects.requireNonNull(oldTag);
         Objects.requireNonNull(newTag);
         if (CollectionUtils.isEmpty(groupUuids)) {
@@ -412,7 +411,6 @@ public class NetworkModificationService {
                 .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         restTemplate.exchange(path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
@@ -724,6 +722,24 @@ public class NetworkModificationService {
                 .queryParam(UUIDS, containerUuids)
                 .build().toUriString();
         return Boolean.TRUE.equals(restTemplate.getForObject(getNetworkModificationServerURI(false) + path, Boolean.class));
+    }
+
+    /**
+     * Asserts that the user may write on every shared modification the given containers point to, directly or through
+     * other shared modifications. Throws when they cannot.
+     */
+    public void assertReferencedModificationsAreWritable(List<UUID> containerUuids, String userId) {
+        if (containerUuids.isEmpty()) {
+            return;
+        }
+        String path = UriComponentsBuilder.fromPath("containers/references/authorized")
+                .queryParam(UUIDS, containerUuids)
+                .build().toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, new HttpEntity<>(headers), Void.class);
     }
 
     /**
