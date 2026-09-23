@@ -514,7 +514,7 @@ public class ConsumerService {
             }));
     }
 
-    public void consumeCalculationPreloading(Message<String> msg, ComputationType computationType) {
+    public void consumeCalculationRunning(Message<String> msg, ComputationType computationType) {
         getNodeReceiver(msg).ifPresent(receiverObj -> {
             UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
             notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType());
@@ -617,8 +617,8 @@ public class ConsumerService {
     }
 
     @Bean
-    public Consumer<Message<String>> consumeSaPreloading() {
-        return message -> consumeCalculationPreloading(message, SECURITY_ANALYSIS);
+    public Consumer<Message<String>> consumeSaRunning() {
+        return message -> consumeCalculationRunning(message, SECURITY_ANALYSIS);
     }
 
     @Bean

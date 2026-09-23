@@ -70,7 +70,6 @@ public class NotificationService {
     public static final String UPDATE_TYPE_LOADFLOW_STATUS = "loadflow_status";
     public static final String UPDATE_TYPE_LOADFLOW_FAILED = "loadflow_failed";
     public static final String UPDATE_TYPE_SECURITY_ANALYSIS_FAILED = "securityAnalysis_failed";
-    public static final String UPDATE_TYPE_SECURITY_ANALYSIS_PRELOADING = "securityAnalysisPreloading";
     public static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
     public static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";
     public static final String UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT = "sensitivityAnalysisResult";
