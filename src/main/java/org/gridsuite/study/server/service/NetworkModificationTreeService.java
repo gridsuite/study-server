@@ -244,7 +244,7 @@ public class NetworkModificationTreeService {
                 insertMode
         );
 
-        // Then we create the modification group and recerate references
+        // Then we create the modification group and recreate references
         networkModificationService.duplicateModificationsGroup(modificationGroupUuid, newGroupUuid, node.getId(), studyUuid, userId);
 
         return node.getId();

@@ -323,9 +323,9 @@ class NetworkModificationTreeTest {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(List.of("S1", "S2")));
                 } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID_3 + "/.*") && request.getMethod().equals("GET")) {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(List.of()));
-                } else if (path.matches("/v1/groups/.*/references.*") && request.getMethod().equals("DELETE")) {
+                } else if (path.startsWith("/v1/groups/") && path.contains("references") && request.getMethod().equals("DELETE")) {
                     return new MockResponse(HttpStatus.OK.value());
-                } else if (path.matches("/v1/groups/.*/references.*") && request.getMethod().equals("PUT")) {
+                } else if (path.startsWith("/v1/groups/") && path.contains("references") && request.getMethod().equals("PUT")) {
                     return new MockResponse(HttpStatus.OK.value());
                 } else if (path.matches("/v1/groups/.*") && request.getMethod().equals("DELETE")) {
                     return new MockResponse(HttpStatus.OK.value());
