@@ -3386,7 +3386,7 @@ class NetworkModificationTest {
         UUID modificationUuid = UUID.randomUUID();
         UUID sourceContainerId = UUID.randomUUID();
         UUID targetContainerId = UUID.randomUUID();
-        UUID beforeUuid = UUID.randomUUID();
+        UUID insertBeforeUuid = UUID.randomUUID();
 
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/references"))
                 .willReturn(WireMock.ok()
@@ -3403,8 +3403,8 @@ class NetworkModificationTest {
                 List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(
                         studyTestUtils.getOneRootNetworkUuid(studyUuid), nodeUuid, NETWORK_UUID));
 
-        // --- Case 1: composite source → node target, with a beforeUuid ---
-        ModificationMoveInfos requestCase1 = new ModificationMoveInfos(modificationUuid, sourceContainerId, null, beforeUuid);
+        // --- Case 1: composite source → node target, with a insertBeforeUuid ---
+        ModificationMoveInfos requestCase1 = new ModificationMoveInfos(modificationUuid, sourceContainerId, null, insertBeforeUuid);
 
         mockMvc.perform(put(URI_STUDY_MODIF_MOVE, studyUuid, nodeUuid)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -3420,7 +3420,7 @@ class NetworkModificationTest {
         WireMockUtilsCriteria.verifyPutRequest(wireMockServer, networkModifMoveUri(nodeGroupUuid), false,
                 moveParams(nodeGroupUuid, false), expectedMoveBodyJson);
 
-        // --- Case 2: composite source → node target, no beforeUuid ---
+        // --- Case 2: composite source → node target, no insertBeforeUuid ---
         ModificationMoveInfos requestCase2 = new ModificationMoveInfos(modificationUuid, sourceContainerId, null, null);
 
         mockMvc.perform(put(URI_STUDY_MODIF_MOVE, studyUuid, nodeUuid)

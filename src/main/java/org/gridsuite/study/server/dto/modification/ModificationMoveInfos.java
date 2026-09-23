@@ -21,4 +21,4 @@ public record ModificationMoveInfos(
         UUID modificationUuid,
         @Schema(description = "composite currently containing the modification; the origin node's group when null") UUID sourceCompositeUuid,
         @Schema(description = "composite to move the modification into; the target node's group when null") UUID targetCompositeUuid,
-        @Schema(description = "insert before this modification of the target container; appends when null") UUID beforeUuid) { }
+        @Schema(description = "insert before this modification of the target container; appends when null") UUID insertBeforeUuid) { }
