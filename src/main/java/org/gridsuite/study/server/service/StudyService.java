@@ -1034,8 +1034,12 @@ public class StudyService {
     }
 
     public void assertIsNodeExist(UUID studyUuid, UUID nodeUuid) {
+        assertIsNodeExist(studyUuid, nodeUuid, new StudyException(NOT_FOUND, "Node not found"));
+    }
+
+    public void assertIsNodeExist(UUID studyUuid, UUID nodeUuid, StudyException exception) {
         if (!nodeRepository.existsByStudyIdAndNodeId(studyUuid, nodeUuid)) {
-            throw new StudyException(NOT_FOUND, "Node not found");
+            throw exception;
         }
     }
 

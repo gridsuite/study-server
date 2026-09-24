@@ -25,6 +25,7 @@ import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.nodeactivity.NodeActivityInfos;
@@ -49,6 +50,7 @@ import java.util.stream.Stream;
 import static org.gridsuite.study.server.StudyConstants.CASE_FORMAT;
 import static org.gridsuite.study.server.StudyConstants.CompositeModificationsActionType;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MOVE_NETWORK_MODIFICATION_FORBIDDEN;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.*;
 
 /**
@@ -661,8 +663,8 @@ public class StudyController {
             @RequestBody List<ModificationMoveInfos> modificationMoveInfos,
             @RequestHeader(HEADER_USER_ID) String userId) {
         UUID sourceNodeUuid = Objects.requireNonNullElse(originNodeUuid, targetNodeUuid);
-        studyService.assertIsStudyAndNodeExist(studyUuid, sourceNodeUuid);
         studyService.assertIsStudyAndNodeExist(studyUuid, targetNodeUuid);
+        studyService.assertIsNodeExist(studyUuid, sourceNodeUuid, new StudyException(MOVE_NETWORK_MODIFICATION_FORBIDDEN));
         studyService.assertIsNodeNotReadOnly(targetNodeUuid);
         rebuildNodeService.moveNetworkModifications(studyUuid, targetNodeUuid, sourceNodeUuid, modificationMoveInfos, userId);
         return ResponseEntity.ok().build();
