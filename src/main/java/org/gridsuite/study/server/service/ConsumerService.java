@@ -13,6 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.computation.ComputationParameterUUIDs;
@@ -32,6 +33,7 @@ import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
@@ -80,6 +82,9 @@ public class ConsumerService {
     private final NodeActivityRunnerService nodeActivityRunnerService;
     private final NodeActivityService nodeActivityService;
     private final WorkspaceService workspaceService;
+
+    @Value("${study.enable-operation-quotas}")
+    private boolean shouldCheckOperationQuotas;
 
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
@@ -397,6 +402,9 @@ public class ConsumerService {
     }
 
     private void handleQuotaEnd(ComputationType computationType, String userId, UUID resultUuid) {
+        if (!shouldCheckOperationQuotas) {
+            return;
+        }
         QuotaType quotaType = QuotaType.mapFromComputationType(computationType);
         userAdminService.releaseQuota(userId, resultUuid);
         notificationService.emitQuotaChange(userId, quotaType);
@@ -809,5 +817,21 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeNetworkExportFinished() {
         return this::consumeNetworkExportFinished;
+    }
+
+    @Bean
+    public Consumer<Message<Map<ReferenceType, List<ReferenceAttributes>>>> consumeSharedElementUpdate() {
+        return message -> handleSharedElementUpdate(message.getPayload());
+    }
+
+    private void handleSharedElementUpdate(Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType) {
+        Map<UUID, List<UUID>> modificationUuidsByNode = new HashMap<>();
+        referencesByType.forEach((_, references) -> references.forEach(ref -> {
+            UUID nodeId = ref.getReferenceNodeId();
+            if (nodeId != null) {
+                modificationUuidsByNode.computeIfAbsent(nodeId, k -> new ArrayList<>()).add(ref.getReferenceId());
+            }
+        }));
+        modificationUuidsByNode.forEach(studyService::sharedModificationsUpdatedNotification);
     }
 }
