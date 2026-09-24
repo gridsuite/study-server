@@ -33,6 +33,22 @@ public class ReferenceAttributes {
     @NonNull
     private ReferenceType referenceType;
 
+    public UUID getReferenceNodeId() {
+        switch (referenceType) {
+            case STUDY_NODE:
+                return getReferenceContainer().getContainerId();
+            case STUDY_NODE_NETWORK_MODIFICATION:
+                return getReferenceContainer().getRootContainerId();
+            default:
+                return null;
+        }
+
+    }
+
+    public UUID getRootContainerId() {
+        return referenceContainer.getRootContainerId();
+    }
+
     public static ReferenceAttributes createReferenceAttributes(UUID referenceId, UUID rootContainerId, UUID containerId, ReferenceType referenceType) {
         return new ReferenceAttributes(referenceId, ReferenceContainer.builder().rootContainerId(rootContainerId).containerId(containerId).build(), referenceType);
     }
