@@ -550,22 +550,22 @@ public class StudyController {
                 inUpstreamBuiltParentNode, nominalVoltages));
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements-by-global-filter")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements-from-filters")
     @Operation(summary = "Get network elements infos by evaluating a global filter")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The list of network elements infos matching the filter"),
         @ApiResponse(responseCode = "404", description = "The study/root network/node is not found")
     })
-    public ResponseEntity<String> getNetworkElementsInfosByGlobalFilter(
+    public ResponseEntity<String> getNetworkElementsInfosFromFilters(
             @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "The equipment type to filter and return") @RequestParam(name = "equipmentType") @NonNull EquipmentType equipmentType,
             @Parameter(description = "Info type (e.g., LIST, TAB, MAP, FORM)") @RequestParam(name = "infoType", defaultValue = "LIST") String infoType,
-            @RequestBody @NonNull GlobalFilter filter) {
+            @RequestBody @NonNull List<UUID> filterUuids) {
         studyService.assertIsRootNetworkAndNodeInStudy(studyUuid, rootNetworkUuid, nodeUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
-                .body(studyService.getNetworkElementsInfosByGlobalFilter(studyUuid, nodeUuid, rootNetworkUuid, equipmentType, infoType, filter));
+                .body(studyService.getNetworkElementsInfosFromFilters(studyUuid, nodeUuid, rootNetworkUuid, equipmentType, infoType, filterUuids));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements/{elementId}")
