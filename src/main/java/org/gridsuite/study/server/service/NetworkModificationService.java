@@ -146,8 +146,7 @@ public class NetworkModificationService {
     }
 
     /**
-     * @param userId the user the modifications are read for, null for a read of our own: the network-modification
-     * server then answers no permission on the shared modifications, which it has no one to resolve them for
+     * @param userId the user the modifications are read for, to supply if permissions are needed
      */
     public String getModifications(UUID groupUUid, boolean stashedModifications, boolean onlyMetadata, String userId) {
         Objects.requireNonNull(groupUUid);
