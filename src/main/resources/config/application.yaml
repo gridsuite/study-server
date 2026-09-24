@@ -16,13 +16,17 @@ spring:
       consumeStateEstimationResult;consumeStateEstimationRunning;consumeStateEstimationDebug;consumeStateEstimationStopped;consumeStateEstimationFailed;\
       consumePccMinResult;consumePccMinRunning;consumePccMinStopped;consumePccMinFailed;\
       consumeAsymmetricalLoadResult;consumeAsymmetricalLoadRunning;consumeAsymmetricalLoadStopped;consumeAsymmetricalLoadFailed;\
-      consumeNetworkExportFinished"
+      consumeNetworkExportFinished;\
+      consumeSharedElementUpdate"
     stream:
       bindings:
         publishStudyUpdate-out-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}study.update
         publishElementUpdate-out-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}element.update
+        consumeSharedElementUpdate-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}element.shared.update
+          group: studySharedElementUpdateGroup
         publishQuotaUpdate-out-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}quota.update
         consumeSaResult-in-0:
