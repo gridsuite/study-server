@@ -35,6 +35,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -144,18 +145,23 @@ class LoadFLowUnitTest {
         StudyEntity studyEntity = new StudyEntity();
         studyEntity.setId(studyUuid);
 
-        when(studyRepository.findById(studyUuid)).thenReturn(Optional.of(studyEntity));
-        doReturn(false).when(networkModificationTreeService).isSecurityNode(nodeUuid);
-        doReturn(Map.of()).when(networkModificationTreeService).getComputationReports(nodeUuid, rootNetworkUuid);
-        doReturn(variantId).when(networkModificationTreeService).getVariantId(nodeUuid, rootNetworkUuid);
-        when(rootNetworkService.getNetworkUuid(rootNetworkUuid)).thenReturn(networkUuid);
-        when(loadFlowRestService.runLoadFlow(any(), any(), any(), any(), any(), anyString())).thenReturn(loadflowResultUuid);
+        ReflectionTestUtils.setField(loadFlowService, "shouldCheckOperationQuotas", true);
+        try {
+            when(studyRepository.findById(studyUuid)).thenReturn(Optional.of(studyEntity));
+            doReturn(false).when(networkModificationTreeService).isSecurityNode(nodeUuid);
+            doReturn(Map.of()).when(networkModificationTreeService).getComputationReports(nodeUuid, rootNetworkUuid);
+            doReturn(variantId).when(networkModificationTreeService).getVariantId(nodeUuid, rootNetworkUuid);
+            when(rootNetworkService.getNetworkUuid(rootNetworkUuid)).thenReturn(networkUuid);
+            when(loadFlowRestService.runLoadFlow(any(), any(), any(), any(), any(), anyString())).thenReturn(loadflowResultUuid);
 
-        loadFlowService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId, null);
+            loadFlowService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId, null);
 
-        verify(userAdminService, times(1)).registerQuotaConsumption(loadflowResultUuid, null);
-        verify(notificationService, times(1)).emitStudyChanged(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), anyString());
-        verify(notificationService, times(1)).emitElementUpdated(studyUuid, userId);
+            verify(userAdminService, times(1)).registerQuotaConsumption(loadflowResultUuid, null);
+            verify(notificationService, times(1)).emitStudyChanged(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), anyString());
+            verify(notificationService, times(1)).emitElementUpdated(studyUuid, userId);
+        } finally {
+            ReflectionTestUtils.setField(loadFlowService, "shouldCheckOperationQuotas", false);
+        }
     }
 
     @Test
