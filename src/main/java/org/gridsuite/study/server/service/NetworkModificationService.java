@@ -107,17 +107,17 @@ public class NetworkModificationService {
         return restTemplate.getForObject(getNetworkModificationServerURI(false) + path, String.class);
     }
 
-    public String getNetworkModificationsFromComposite(List<UUID> compositeModificationUuids, boolean onlyMetadata) {
+    public String getNetworkModificationsFromComposite(List<UUID> compositeModificationUuids, boolean onlyMetadata, String userId) {
         String path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + NETWORK_MODIFICATIONS_PATH)
             .queryParam(UUIDS, compositeModificationUuids)
             .queryParam("onlyMetadata", onlyMetadata)
             .build().toUriString();
-        return restTemplate.getForObject(getNetworkModificationServerURI(false) + path, String.class);
+        return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, userIdEntity(userId), String.class).getBody();
     }
 
-    public String getNetworkModification(UUID networkModificationUuid) {
+    public String getNetworkModification(UUID networkModificationUuid, String userId) {
         String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + "/{uuid}").buildAndExpand(networkModificationUuid).toUriString();
-        return restTemplate.getForObject(getNetworkModificationServerURI(false) + path, String.class);
+        return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, userIdEntity(userId), String.class).getBody();
     }
 
     public String getBusBarSectionsForNewCoupler(String voltageLevelId, Integer busBarCount, Integer sectionCount, List<String> switchKindList) {
@@ -145,7 +145,11 @@ public class NetworkModificationService {
         restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, new HttpEntity<>(metadata, headers), Void.class);
     }
 
-    public String getModifications(UUID groupUUid, boolean stashedModifications, boolean onlyMetadata) {
+    /**
+     * @param userId the user the modifications are read for, null for a read of our own: the network-modification
+     * server then answers no permission on the shared modifications, which it has no one to resolve them for
+     */
+    public String getModifications(UUID groupUUid, boolean stashedModifications, boolean onlyMetadata, String userId) {
         Objects.requireNonNull(groupUUid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + NETWORK_MODIFICATIONS_PATH)
             .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
@@ -154,7 +158,19 @@ public class NetworkModificationService {
             .buildAndExpand(groupUUid)
             .toUriString();
 
-        return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, String.class).getBody();
+        return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, userIdEntity(userId), String.class).getBody();
+    }
+
+    /**
+     * @return what carries the user to the network-modification server, nothing when there is no user to carry
+     */
+    private static HttpEntity<Void> userIdEntity(String userId) {
+        if (userId == null) {
+            return null;
+        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        return new HttpEntity<>(headers);
     }
 
     public String getModificationsToExport(UUID groupUUid) {
