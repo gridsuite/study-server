@@ -2545,14 +2545,13 @@ class NetworkModificationTest {
 
         UUID compositeModification = UUID.randomUUID();
         String modificationUuidListBody = mapper.writeValueAsString(
-                List.of(new ModificationMoveOrCopyInfos(compositeModification, null)));
+                List.of(new ModificationCopyInfos(compositeModification, null)));
 
         UUID copiedComposite = UUID.randomUUID();
         UUID copiedChild1 = UUID.randomUUID();
         UUID copiedChild2 = UUID.randomUUID();
 
-        wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/containers/.*"))
-                .withQueryParam("action", WireMock.equalTo("COPY"))
+        wireMockServer.stubFor(WireMock.put(WireMock.urlPathMatching(URI_NETWORK_MODIF_COPY_PATTERN))
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(new NetworkModificationsResult(List.of(copiedComposite), List.of())))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
@@ -2581,7 +2580,7 @@ class NetworkModificationTest {
                 .willReturn(WireMock.ok()
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
 
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=COPY",
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}",
                         studyUuid, nodeUuid1, studyUuid, nodeUuid1)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody)
@@ -2594,7 +2593,7 @@ class NetworkModificationTest {
 
         Pair<List<UUID>, List<ModificationApplicationContext>> modificationBody = Pair.of(List.of(compositeModification),
                 List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(studyTestUtils.getOneRootNetworkUuid(studyUuid), node1.getId(), NETWORK_UUID)));
-        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, "/v1/containers/" + node1.getModificationGroupUuid(), Map.of("action", WireMock.equalTo("COPY")),
+        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, "/v1/groups/" + node1.getModificationGroupUuid() + "/network-modifications/copy", Map.of(),
                 mapper.writeValueAsString(modificationBody));
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/network-composite-modifications/children-uuids", Map.of("uuids", WireMock.matching(".*")), 1);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/references", Map.of("uuids", WireMock.matching(".*")), 1);
