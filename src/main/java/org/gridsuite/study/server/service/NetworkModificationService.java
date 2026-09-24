@@ -640,16 +640,6 @@ public class NetworkModificationService {
                 new ParameterizedTypeReference<Map<UUID, UUID>>() { });
     }
 
-    public void deleteStashedModifications(UUID groupUUid) {
-        Objects.requireNonNull(groupUUid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + "/stashed-modifications")
-                .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
-                .buildAndExpand(groupUUid)
-                .toUriString();
-
-        restTemplate.delete(getNetworkModificationServerURI(false) + path);
-    }
-
     public void verifyModifications(UUID groupUuid, Set<UUID> modificationUuids) {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + NETWORK_MODIFICATIONS_PATH + DELIMITER + "verify")
             .queryParam("uuids", modificationUuids)
