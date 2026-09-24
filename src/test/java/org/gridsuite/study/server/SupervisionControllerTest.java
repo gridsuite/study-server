@@ -345,7 +345,7 @@ class SupervisionControllerTest {
     }
 
     @Test
-    void testInvalidateStudy() throws Exception {
+    void testUnloadStudy() throws Exception {
         initStudy();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(STUDY_UUID);
         UUID secondRootNetworkUuid = UUID.randomUUID();
@@ -355,7 +355,7 @@ class SupervisionControllerTest {
         Mockito.doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
         Mockito.doNothing().when(networkStoreService).deleteNetwork(SECOND_NETWORK_UUID);
 
-        mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/invalidate", STUDY_UUID))
+        mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/unload", STUDY_UUID))
                 .andExpect(status().isOk());
 
         // Check that both root network underlying networks have been erased
