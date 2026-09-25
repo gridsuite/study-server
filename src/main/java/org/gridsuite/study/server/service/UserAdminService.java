@@ -111,6 +111,9 @@ public class UserAdminService {
 
     @Transactional
     public void releaseQuota(String sub, UUID resultUuid) {
+        if (resultUuid == null) {
+            return;
+        }
         quotaConsumptionRepository.findById(resultUuid).ifPresent(mapping -> {
             releaseQuotaId(sub, mapping.getQuotaId());
             quotaConsumptionRepository.delete(mapping);
