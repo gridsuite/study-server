@@ -956,9 +956,10 @@ public class StudyController {
                                                                                                @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                                                @RequestParam(name = "onlyStashed", required = false, defaultValue = "false") Boolean onlyStashed,
                                                                                                @Parameter(description = "Only metadata") @RequestParam(name = "onlyMetadata", required = false,
-                                                                                                       defaultValue = "false") Boolean onlyMetadata) {
+                                                                                                       defaultValue = "false") Boolean onlyMetadata,
+                                                                                               @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(networkModificationTreeService.getNetworkModifications(nodeUuid, onlyStashed, onlyMetadata));
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(networkModificationTreeService.getNetworkModifications(nodeUuid, onlyStashed, onlyMetadata, userId));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/export", produces = MediaType.APPLICATION_JSON_VALUE)
