@@ -121,7 +121,7 @@ class NetworkModificationServiceTest {
         UUID secondUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications?uuids=" + firstUuid + "&uuids=" + secondUuid;
 
-        networkModificationService.updateNetworkModificationsMetadata(List.of(firstUuid, secondUuid), RESPONSE);
+        networkModificationService.updateNetworkModificationsMetadata(List.of(firstUuid, secondUuid), RESPONSE, "userId");
 
         verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
     }

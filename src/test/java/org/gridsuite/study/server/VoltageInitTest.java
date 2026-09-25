@@ -810,7 +810,7 @@ class VoltageInitTest {
 
         // clone and insert again voltage-init modification to modificationNode3Uuid, with LF result -> node is invalidated
         when(loadFlowRestService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
-        when(networkModificationService.duplicateModificationsFromGroup(any(), any(), any())).thenReturn(null);
+        when(networkModificationService.duplicateModificationsFromGroup(any(), any(), any(), any())).thenReturn(null);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyNameUserIdUuid, firstRootNetworkUuid,
                 modificationNode3Uuid)
             .header("userId", "userId")).andExpect(status().isOk());
