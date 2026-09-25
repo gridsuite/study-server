@@ -180,11 +180,11 @@ public class SupervisionController {
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping(value = "/studies/{studyUuid}/invalidate")
+    @DeleteMapping(value = "/studies/{studyUuid}/unload")
     @Operation(summary = "Invalidate all node tree, clean stashed elements and delete root networks")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "study has been invalidated")})
-    public ResponseEntity<Void> invalidateStudy(@PathVariable("studyUuid") UUID studyUuid) {
-        supervisionService.invalidateStudy(studyUuid);
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "study has been unloaded")})
+    public ResponseEntity<Void> unloadStudy(@PathVariable("studyUuid") UUID studyUuid) {
+        supervisionService.unloadStudy(studyUuid);
         return ResponseEntity.ok().build();
     }
 

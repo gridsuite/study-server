@@ -15,13 +15,18 @@ spring:
       consumeLoadFlowResult;consumeLoadFlowStopped;consumeLoadFlowFailed;consumeLoadFlowCancelFailed;\
       consumeStateEstimationResult;consumeStateEstimationDebug;consumeStateEstimationStopped;consumeStateEstimationFailed;\
       consumePccMinResult;consumePccMinStopped;consumePccMinFailed;\
-      consumeNetworkExportFinished"
+      consumeAsymmetricalLoadResult;consumeAsymmetricalLoadStopped;consumeAsymmetricalLoadFailed;\
+      consumeNetworkExportFinished;\
+      consumeSharedElementUpdate"
     stream:
       bindings:
         publishStudyUpdate-out-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}study.update
         publishElementUpdate-out-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}element.update
+        consumeSharedElementUpdate-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}element.shared.update
+          group: studySharedElementUpdateGroup
         publishQuotaUpdate-out-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}quota.update
         consumeSaResult-in-0:
@@ -164,6 +169,15 @@ spring:
           group: studyPccMinStoppedGroup
         consumePccMinFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}pccmin.run.dlx
+          group: dlq
+        consumeAsymmetricalLoadResult-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}asymmetricalload.result
+          group: studyPccMinResultGroup
+        consumeAsymmetricalLoadStopped-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}asymmetricalload.stopped
+          group: studyPccMinStoppedGroup
+        consumeAsymmetricalLoadFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}asymmetricalload.run.dlx
           group: dlq
         consumeCaseImportSucceeded-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.succeeded
