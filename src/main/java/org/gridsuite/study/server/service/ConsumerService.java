@@ -33,6 +33,7 @@ import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
@@ -81,6 +82,9 @@ public class ConsumerService {
     private final NodeActivityRunnerService nodeActivityRunnerService;
     private final NodeActivityService nodeActivityService;
     private final WorkspaceService workspaceService;
+
+    @Value("${study.enable-operation-quotas}")
+    private boolean shouldCheckOperationQuotas;
 
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
@@ -398,6 +402,9 @@ public class ConsumerService {
     }
 
     private void handleQuotaEnd(ComputationType computationType, String userId, UUID resultUuid) {
+        if (!shouldCheckOperationQuotas) {
+            return;
+        }
         QuotaType quotaType = QuotaType.mapFromComputationType(computationType);
         userAdminService.releaseQuota(userId, resultUuid);
         notificationService.emitQuotaChange(userId, quotaType);
