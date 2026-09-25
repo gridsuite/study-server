@@ -42,6 +42,7 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
+import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
@@ -95,6 +96,7 @@ public class StudyService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
     public static final String STUDY_NOT_FOUND = "Study not found";
+    private final NodeRepository nodeRepository;
 
     NotificationService notificationService;
 
@@ -197,7 +199,7 @@ public class StudyService {
         RootNetworkNodeInfoService rootNetworkNodeInfoService,
         DirectoryService directoryService,
         ComputationParametersService computationParametersService,
-        WorkspaceService workspaceService) {
+        WorkspaceService workspaceService, NodeRepository nodeRepository) {
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
@@ -232,6 +234,7 @@ public class StudyService {
         this.directoryService = directoryService;
         this.computationParametersService = computationParametersService;
         this.workspaceService = workspaceService;
+        this.nodeRepository = nodeRepository;
     }
 
     private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid) {
@@ -1031,18 +1034,18 @@ public class StudyService {
     }
 
     public void assertIsNodeExist(UUID studyUuid, UUID nodeUuid) {
-        boolean exists = networkModificationTreeService.getAllNodes(studyUuid).stream()
-                .anyMatch(nodeEntity -> nodeUuid.equals(nodeEntity.getIdNode()));
+        assertIsNodeExist(studyUuid, nodeUuid, new StudyException(NOT_FOUND, "Node not found"));
+    }
 
-        if (!exists) {
-            throw new StudyException(NOT_FOUND, "Node not found");
+    public void assertIsNodeExist(UUID studyUuid, UUID nodeUuid, StudyException exception) {
+        if (!nodeRepository.existsByStudyIdAndNodeId(studyUuid, nodeUuid)) {
+            throw exception;
         }
     }
 
     public void assertIsStudyExist(UUID studyUuid) {
-        boolean exists = studyRepository.existsById(studyUuid);
-        if (!exists) {
-            throw new StudyException(NOT_FOUND, "Node not found");
+        if (!studyRepository.existsById(studyUuid)) {
+            throw new StudyException(NOT_FOUND, "Study not found");
         }
     }
 
@@ -1825,26 +1828,14 @@ public class StudyService {
     @Transactional
     public void moveNetworkModifications(
             @NonNull UUID studyUuid,
-            UUID sourceNodeUuid,
+            @NonNull UUID originNodeUuid,
             @NonNull UUID targetNodeUuid,
-            @NonNull List<ModificationMoveOrCopyInfos> modificationInfos,
-            ModificationContainerInfos targetModificationContainer,
-            UUID beforeUuid,
+            @NonNull List<ModificationMoveInfos> modificationInfos,
             boolean isTargetInDifferentNodeTree,
             String userId) {
-        ModificationContainerInfos resolvedTarget = resolveContainer(targetModificationContainer, targetNodeUuid);
-        Map<ModificationContainerInfos, List<UUID>> modificationUuidsBySource = resolveAndGroupBySource(modificationInfos, sourceNodeUuid);
-
-        Map<ModificationContainerInfos, UUID> originNodeBySource = new LinkedHashMap<>();
-        modificationUuidsBySource.keySet().forEach(source ->
-                originNodeBySource.put(source, networkModificationTreeService.getNodeUuidByModificationGroup(source.id())));
-        Set<UUID> originNodesTouched = originNodeBySource.values().stream()
-                .filter(node -> node != null && !node.equals(targetNodeUuid))
-                .collect(Collectors.toCollection(LinkedHashSet::new));
-
+        boolean isSameNode = originNodeUuid.equals(targetNodeUuid);
         List<UUID> targetChildrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
-        Map<UUID, List<UUID>> originChildrenUuidsByNode = originNodesTouched.stream()
-                .collect(Collectors.toMap(Function.identity(), networkModificationTreeService::getChildrenUuids, (a, b) -> a, LinkedHashMap::new));
+        List<UUID> originChildrenUuids = isSameNode ? List.of() : networkModificationTreeService.getChildrenUuids(originNodeUuid);
 
         try {
             StudyEntity studyEntity = getStudy(studyUuid);
@@ -1852,66 +1843,53 @@ public class StudyService {
             List<ModificationApplicationContext> applicationContexts = studyEntity.getRootNetworks().stream()
                     .map(rn -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rn.getId(), targetNodeUuid, rn.getNetworkUuid()))
                     .toList();
-            List<UUID> allModificationUuids = modificationInfos.stream().map(ModificationMoveOrCopyInfos::modificationUuid).toList();
+
+            // Send all modifications operations in bulk
+            NetworkModificationsResult result = networkModificationService.moveModifications(
+                    networkModificationTreeService.getModificationGroupUuid(originNodeUuid),
+                    networkModificationTreeService.getModificationGroupUuid(targetNodeUuid),
+                    modificationInfos, applicationContexts, isTargetInDifferentNodeTree);
+            if (result != null && isTargetInDifferentNodeTree) {
+                emitNetworkModificationImpactsForAllRootNetworks(result.modificationResults(), studyEntity, targetNodeUuid);
+            }
+
+            // Update ModificationReference data
+            // TODO this logic ought to be moved in network modification server
+            List<UUID> allModificationUuids = modificationInfos.stream().map(ModificationMoveInfos::modificationUuid).toList();
             List<ModificationReference> allReferencesToMove = networkModificationService.getModificationReferences(allModificationUuids);
-
-            for (Map.Entry<ModificationContainerInfos, List<UUID>> entry : modificationUuidsBySource.entrySet()) {
-                ModificationContainerInfos source = entry.getKey();
-                List<UUID> modificationUuidsToMove = entry.getValue();
-                UUID originNodeUuid = originNodeBySource.get(source);
-                Set<UUID> modificationUuidsToMoveSet = new HashSet<>(modificationUuidsToMove);
-                List<ModificationReference> referencesToMove = allReferencesToMove.stream()
-                        .filter(reference -> modificationUuidsToMoveSet.contains(reference.modificationUuid()))
-                        .toList();
-
-                NetworkModificationsResult result = networkModificationService.moveModifications(
-                        new MoveModificationInfos(source, resolvedTarget, beforeUuid),
-                        Pair.of(modificationUuidsToMove, applicationContexts),
-                        isTargetInDifferentNodeTree);
-
-                if (result != null && isTargetInDifferentNodeTree) {
-                    emitNetworkModificationImpactsForAllRootNetworks(result.modificationResults(), studyEntity, targetNodeUuid);
-                }
-                boolean isSameNode = targetNodeUuid.equals(originNodeUuid) || originNodeUuid == null;
-                moveElementReferences(source, resolvedTarget, referencesToMove, userId, studyUuid, targetNodeUuid, isSameNode);
+            Map<UUID, List<ModificationReference>> referencesByModification = allReferencesToMove.stream()
+                    .collect(Collectors.groupingBy(ModificationReference::modificationUuid));
+            for (ModificationMoveInfos move : modificationInfos) {
+                moveElementReferences(move.sourceCompositeUuid(), move.targetCompositeUuid(),
+                        referencesByModification.getOrDefault(move.modificationUuid(), List.of()),
+                        userId, studyUuid, targetNodeUuid, isSameNode);
             }
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, targetNodeUuid, targetChildrenUuids);
-            originChildrenUuidsByNode.forEach((originNodeUuid, children) ->
-                    notificationService.emitModificationsUpdated(studyUuid, originNodeUuid, children));
+            if (!isSameNode) {
+                notificationService.emitModificationsUpdated(studyUuid, originNodeUuid, originChildrenUuids);
+            }
         }
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     /**
-     * Updates node-references to shared composites impacted by a move, based on source/target container types:
-     * - group -> composite: the reference now targets the composite it was moved into
-     * - composite -> group: the reference now targets the node it was moved into
-     * - composite -> different composite: the reference now targets the new composite (independent of node,
-     *   since a composite's own identity - not the node it happens to be attached to - is what the reference tracks)
-     * - moved to a different node (from a node-level group): the existing reference is repointed, not duplicated
+     * Repoints (never duplicates) node-references to shared composites when a move changes the modification's container:
+     * - landing in a composite: the reference now targets that composite
+     * - landing in a node's group: the reference now targets that node
+     * Nothing to do when the modification stays in the same container (reorder).
      */
-    private void moveElementReferences(ModificationContainerInfos containerSource, ModificationContainerInfos containerTarget,
+    private void moveElementReferences(UUID sourceCompositeUuid, UUID targetCompositeUuid,
                                        List<ModificationReference> modificationReferences,
                                        String userId, UUID studyUuid,
                                        UUID targetNodeUuid, boolean isSameNode) {
-        if (modificationReferences.isEmpty()) {
+        if (modificationReferences.isEmpty() || isSameNode && Objects.equals(sourceCompositeUuid, targetCompositeUuid)) {
             return;
         }
 
-        if (isSameNode) {
-            if (containerTarget.isComposite() && containerSource.isGroup()) {
-                // Node -> composite
-                updateElementsReferences(modificationReferences, targetNodeUuid, containerTarget.id(), ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION, userId);
-            } else if (containerTarget.isGroup() && containerSource.isComposite()) {
-                // Composite -> node
-                updateElementsReferences(modificationReferences, studyUuid, targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE, userId);
-            } else if (containerTarget.isComposite() && containerSource.isComposite() && !containerSource.id().equals(containerTarget.id())) {
-                // Composite -> composite
-                updateElementsReferences(modificationReferences, targetNodeUuid, containerTarget.id(), ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION, userId);
-            }
+        if (targetCompositeUuid != null) {
+            updateElementsReferences(modificationReferences, targetNodeUuid, targetCompositeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION, userId);
         } else {
-            // Node  -> Node
             updateElementsReferences(modificationReferences, studyUuid, targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE, userId);
         }
     }
@@ -1920,45 +1898,6 @@ public class StudyService {
                                           ReferenceAttributes.ReferenceType targetReferenceType, String userId) {
         modificationReferences.forEach(ref -> directoryService.updateElementReference(ref.referencedId(),
                 ReferenceAttributes.createReferenceAttributes(ref.modificationUuid(), rootContainerId, containerId, targetReferenceType), userId));
-    }
-
-    private Map<ModificationContainerInfos, List<UUID>> resolveAndGroupBySource(List<ModificationMoveOrCopyInfos> modificationInfos, UUID fallbackSourceNodeUuid) {
-        List<UUID> modificationUuidsNeedingSourceLookup = modificationInfos.stream()
-                .filter(info -> !hasModificationSource(info.source()))
-                .map(ModificationMoveOrCopyInfos::modificationUuid)
-                .toList();
-        Map<UUID, UUID> parentCompositeByModificationUuid = modificationUuidsNeedingSourceLookup.isEmpty()
-                ? Map.of()
-                : networkModificationService.findParentComposites(modificationUuidsNeedingSourceLookup);
-
-        return modificationInfos.stream()
-                .collect(Collectors.groupingBy(
-                        info -> resolveSourceContainer(info.source(), info.modificationUuid(), fallbackSourceNodeUuid, parentCompositeByModificationUuid),
-                        LinkedHashMap::new,
-                        Collectors.mapping(ModificationMoveOrCopyInfos::modificationUuid, Collectors.toList())));
-    }
-
-    private boolean hasModificationSource(ModificationContainerInfos source) {
-        return source != null && source.id() != null;
-    }
-
-    private ModificationContainerInfos resolveSourceContainer(ModificationContainerInfos source, UUID modificationUuid, UUID originNodeUuid,
-                                                                Map<UUID, UUID> parentCompositeByModificationUuid) {
-        if (hasModificationSource(source)) {
-            return source;
-        }
-        UUID parentCompositeUuid = parentCompositeByModificationUuid.get(modificationUuid);
-        if (parentCompositeUuid != null) {
-            return new ModificationContainerInfos(parentCompositeUuid, ModificationContainerType.COMPOSITE);
-        }
-        return new ModificationContainerInfos(networkModificationTreeService.getModificationGroupUuid(originNodeUuid), ModificationContainerType.GROUP);
-    }
-
-    private ModificationContainerInfos resolveContainer(ModificationContainerInfos container, UUID nodeUuid) {
-        if (container != null && container.id() != null) {
-            return container;
-        }
-        return new ModificationContainerInfos(networkModificationTreeService.getModificationGroupUuid(nodeUuid), ModificationContainerType.GROUP);
     }
 
     private void emitNetworkModificationImpactsForAllRootNetworks(List<Optional<NetworkModificationResult>> modificationResults, StudyEntity studyEntity, UUID impactedNode) {
