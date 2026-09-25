@@ -409,6 +409,19 @@ public class StudyService {
         networkModificationService.renameRootNetworkTag(getStudyModificationGroupUuids(studyUuid), previousTag, newTag);
     }
 
+    /**
+     * Renaming a tag rewrites the applicabilities the shared modifications of the study contain for every study
+     * referencing them: only a user allowed to write on all of them may do it.
+     */
+    private void assertCanRenameRootNetworkTag(UUID studyUuid, String userId) {
+        networkModificationService.assertReferencedModificationsAreWritable(getStudyModificationGroupUuids(studyUuid), userId);
+    }
+
+    public boolean hasSharedModifications(UUID studyUuid) {
+        List<UUID> groupUuids = getStudyModificationGroupUuids(studyUuid);
+        return !groupUuids.isEmpty() && networkModificationService.hasModificationReferences(groupUuids);
+    }
+
     private List<UUID> getStudyModificationGroupUuids(UUID studyUuid) {
         return networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid).stream()
                 .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
@@ -418,6 +431,10 @@ public class StudyService {
     @Transactional
     public void updateRootNetworkRequest(UUID studyUuid, RootNetworkInfos rootNetworkInfos, String userId) {
         rootNetworkService.assertCanModifyRootNetwork(studyUuid, rootNetworkInfos.getId(), rootNetworkInfos.getName(), rootNetworkInfos.getTag());
+        String newTag = rootNetworkInfos.getTag();
+        if (newTag != null && !newTag.equals(rootNetworkService.getRootNetworkTag(rootNetworkInfos.getId()))) {
+            assertCanRenameRootNetworkTag(studyUuid, userId);
+        }
         StudyEntity studyEntity = getStudy(studyUuid);
 
         if (rootNetworkInfos.hasCaseToImport()) {
