@@ -21,6 +21,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -99,12 +100,12 @@ public class DirectoryService {
 
     public boolean elementExists(UUID directoryUuid, String elementName, String type) {
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/directories/{directoryUuid}/elements/{elementName}/types/{type}");
-        String path = pathBuilder.buildAndExpand(directoryUuid, elementName, type).toUriString();
+        String path = pathBuilder.encode().buildAndExpand(directoryUuid, elementName, type).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<Void> request = new HttpEntity<>(headers);
-        ResponseEntity<Void> response = restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.HEAD, request, Void.class);
+        ResponseEntity<Void> response = restTemplate.exchange(URI.create(getDirectoryServerServerBaseUri() + path), HttpMethod.HEAD, request, Void.class);
         return response.getStatusCode() == HttpStatus.OK;
     }
 

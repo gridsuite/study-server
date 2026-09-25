@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -58,6 +59,7 @@ public class SingleLineDiagramService {
         }
 
         var path = uriComponentsBuilder
+            .encode()
             .buildAndExpand(networkUuid, voltageLevelId)
             .toUriString();
 
@@ -66,7 +68,7 @@ public class SingleLineDiagramService {
 
         HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(sldRequestInfos, headers);
 
-        return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, httpEntity, byte[].class);
+        return restTemplate.postForObject(URI.create(singleLineDiagramServerBaseUri + path), httpEntity, byte[].class);
     }
 
     public String generateVoltageLevelSvgAndMetadata(UUID networkUuid, String variantId, String voltageLevelId, Map<String, Object> sldRequestInfos) {
@@ -91,13 +93,13 @@ public class SingleLineDiagramService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        var path = uriComponentsBuilder.buildAndExpand(networkUuid, substationId).toUriString();
+        var path = uriComponentsBuilder.encode().buildAndExpand(networkUuid, substationId).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(sldRequestInfos, headers);
-        return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, httpEntity, byte[].class);
+        return restTemplate.postForObject(URI.create(singleLineDiagramServerBaseUri + path), httpEntity, byte[].class);
     }
 
     public String generateSubstationSvgAndMetadata(UUID networkUuid, String variantId, String substationId, Map<String, Object> sldRequestInfos) {

@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
@@ -64,7 +65,7 @@ class DirectoryServiceTest {
     @Test
     void testElementExists() {
         UUID directoryUuid = UUID.randomUUID();
-        String expectedUrl = DIRECTORY_SERVER_URI + "/v1/directories/" + directoryUuid + "/elements/elementName/types/STUDY";
+        URI expectedUrl = URI.create(DIRECTORY_SERVER_URI + "/v1/directories/" + directoryUuid + "/elements/elementName/types/STUDY");
         when(restTemplate.exchange(eq(expectedUrl), eq(HttpMethod.HEAD), org.mockito.ArgumentMatchers.<HttpEntity<Void>>any(), eq(Void.class)))
             .thenReturn(ResponseEntity.ok().build());
 
@@ -74,9 +75,19 @@ class DirectoryServiceTest {
     }
 
     @Test
+    void testElementExistsWithSpecialCharactersInName() {
+        UUID directoryUuid = UUID.randomUUID();
+        URI expectedUrl = URI.create(DIRECTORY_SERVER_URI + "/v1/directories/" + directoryUuid + "/elements/study%20%231%3F%2Fa/types/STUDY");
+        when(restTemplate.exchange(eq(expectedUrl), eq(HttpMethod.HEAD), org.mockito.ArgumentMatchers.<HttpEntity<Void>>any(), eq(Void.class)))
+            .thenReturn(ResponseEntity.ok().build());
+
+        assertThat(directoryService.elementExists(directoryUuid, "study #1?/a", "STUDY")).isTrue();
+    }
+
+    @Test
     void testElementDoesNotExist() {
         UUID directoryUuid = UUID.randomUUID();
-        String expectedUrl = DIRECTORY_SERVER_URI + "/v1/directories/" + directoryUuid + "/elements/elementName/types/STUDY";
+        URI expectedUrl = URI.create(DIRECTORY_SERVER_URI + "/v1/directories/" + directoryUuid + "/elements/elementName/types/STUDY");
         when(restTemplate.exchange(eq(expectedUrl), eq(HttpMethod.HEAD), org.mockito.ArgumentMatchers.<HttpEntity<Void>>any(), eq(Void.class)))
             .thenReturn(ResponseEntity.noContent().build());
 

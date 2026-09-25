@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -199,8 +200,8 @@ public class NetworkMapService {
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        String path = builder.buildAndExpand(networkUuid, equipmentId).toUriString();
-        return restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
+        String path = builder.encode().buildAndExpand(networkUuid, equipmentId).toUriString();
+        return restTemplate.getForObject(URI.create(networkMapServerBaseUri + path), String.class);
     }
 
     public String getHvdcLineShuntCompensators(UUID networkUuid, String variantId, String hvdcId) {
@@ -209,8 +210,8 @@ public class NetworkMapService {
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        String path = builder.buildAndExpand(networkUuid, hvdcId).toUriString();
-        return restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
+        String path = builder.encode().buildAndExpand(networkUuid, hvdcId).toUriString();
+        return restTemplate.getForObject(URI.create(networkMapServerBaseUri + path), String.class);
     }
 
     public String getVoltageLevelSubstationId(UUID networkUuid, String variantId,
