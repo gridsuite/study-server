@@ -14,10 +14,10 @@ import java.util.UUID;
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
  */
-public record ExportedElement(UUID uuid, String name, JsonNode content) {
+public record ExportedElementInfos(UUID uuid, String name, JsonNode content) {
 
-    public static ExportedElement of(JsonNode content, Map<UUID, String> names) {
+    public static ExportedElementInfos of(JsonNode content, Map<UUID, String> names) {
         UUID uuid = UUID.fromString(content.get("id").asText());
-        return new ExportedElement(uuid, names.get(uuid), content);
+        return new ExportedElementInfos(uuid, names.get(uuid), content);
     }
 }

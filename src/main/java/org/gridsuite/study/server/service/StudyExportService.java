@@ -152,7 +152,7 @@ public class StudyExportService {
                 FILTERS_JSON, filterUuids.isEmpty() ? "[]" : filterService.getFilters(filterUuids)).entrySet()) {
             objectMapper.writeValue(parametersDir.resolve(contents.getKey()).toFile(),
                     StreamSupport.stream(objectMapper.readTree(contents.getValue()).spliterator(), false)
-                            .map(content -> ExportedElement.of(content, names))
+                            .map(content -> ExportedElementInfos.of(content, names))
                             .toList());
         }
     }
