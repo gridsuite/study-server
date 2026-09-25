@@ -39,6 +39,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.MediaType;
+import org.springframework.messaging.Message;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -50,6 +51,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
@@ -78,6 +80,7 @@ class SupervisionControllerTest {
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final UUID STUDY_UUID = UUID.randomUUID();
     private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
+    private static final long TIMEOUT = 1000;
 
     private static final UUID SECOND_NETWORK_UUID = UUID.randomUUID();
     private static final UUID SECOND_CASE_UUID = UUID.randomUUID();
@@ -162,6 +165,8 @@ class SupervisionControllerTest {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         rootNetworkNodeInfoRepository.deleteAll();
         studyRepository.deleteAll();
+        // Each test must consume the notifications it triggers, so nothing leaks into the next test
+        TestUtils.assertQueuesEmptyThenClear(List.of(ELEMENT_UPDATE_DESTINATION), output);
     }
 
     private StudyEntity initStudy() throws Exception {
@@ -256,6 +261,11 @@ class SupervisionControllerTest {
         mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/nodes/builds", STUDY_UUID))
             .andExpect(status().isOk());
 
+        // Root network is LOADED, so unbuilding the tree emits an element.update notification for the study
+        Message<byte[]> elementUpdateMessage = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
+        assertNotNull(elementUpdateMessage);
+        assertEquals(STUDY_UUID.toString(), String.valueOf(elementUpdateMessage.getHeaders().get("elementUuid")));
+
         assertIndexationCount(74, 0);
         assertIndexationStatus(STUDY_UUID, RootNetworkIndexationStatus.INDEXED.name());
         Mockito.verify(networkService, Mockito.times(1)).deleteVariants(eq(NETWORK_UUID), any());
@@ -345,7 +355,7 @@ class SupervisionControllerTest {
     }
 
     @Test
-    void testInvalidateStudy() throws Exception {
+    void testUnloadStudy() throws Exception {
         initStudy();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(STUDY_UUID);
         UUID secondRootNetworkUuid = UUID.randomUUID();
@@ -355,7 +365,7 @@ class SupervisionControllerTest {
         Mockito.doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
         Mockito.doNothing().when(networkStoreService).deleteNetwork(SECOND_NETWORK_UUID);
 
-        mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/invalidate", STUDY_UUID))
+        mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/unload", STUDY_UUID))
                 .andExpect(status().isOk());
 
         // Check that both root network underlying networks have been erased
@@ -388,7 +398,7 @@ class SupervisionControllerTest {
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         List<UUID> loadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
         assertEquals(List.of(STUDY_UUID), loadedStudyUuids);
-        mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/invalidate", STUDY_UUID))
+        mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/unload", STUDY_UUID))
                 .andExpect(status().isOk());
         mvcResult = mockMvc.perform(get("/v1/supervision/studies/loaded")
                         .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
