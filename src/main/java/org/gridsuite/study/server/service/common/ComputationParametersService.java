@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.service.common;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.UserProfileInfos;
@@ -26,11 +27,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.util.EnumMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -47,10 +46,6 @@ public class ComputationParametersService {
 
     private final UserAdminService userAdminService;
     private final ObjectMapper objectMapper;
-    private final SecurityAnalysisRestService securityAnalysisService;
-    private final SensitivityAnalysisRestService sensitivityAnalysisService;
-    private final VoltageInitRestService voltageInitService;
-    private final PccMinRestService pccMinService;
     private final List<ComputationParametersDefinition> computationParametersDefinitions;
 
     // this is useful to avoid repetitive calls when doing operation on all computation types (duplicate, delete, export)
@@ -79,10 +74,6 @@ public class ComputationParametersService {
 
         this.userAdminService = userAdminService;
         this.objectMapper = objectMapper;
-        this.securityAnalysisService = securityAnalysisService;
-        this.sensitivityAnalysisService = sensitivityAnalysisService;
-        this.voltageInitService = voltageInitService;
-        this.pccMinService = pccMinService;
         this.computationParametersDefinitions = List.of(
                 new ComputationParametersDefinition(
                         ComputationType.LOAD_FLOW,
@@ -248,26 +239,16 @@ public class ComputationParametersService {
         }
     }
 
-    public void exportParameters(StudyEntity studyEntity, String userId, Path parametersDir, Set<UUID> filterUuids, Set<UUID> contingencyListUuids) throws IOException {
-        Files.createDirectories(parametersDir);
+    public Map<ComputationType, String> exportParameters(StudyEntity studyEntity, String userId) throws JsonProcessingException {
+        Map<ComputationType, String> parametersByType = new EnumMap<>(ComputationType.class);
         for (ComputationParametersDefinition definition : computationParametersDefinitions) {
             UUID parametersUuid = definition.studyParameterGetter().apply(studyEntity);
             if (parametersUuid == null) {
                 continue;
             }
             Object parameters = definition.parametersFetcher().apply(parametersUuid, userId);
-            String json = parameters instanceof String parametersJson ? parametersJson : objectMapper.writeValueAsString(parameters);
-            Files.writeString(parametersDir.resolve(definition.type().name() + ".json"), json);
-            switch (definition.type()) {
-                case SECURITY_ANALYSIS -> contingencyListUuids.addAll(securityAnalysisService.getContingencyListUuids(parametersUuid));
-                case SENSITIVITY_ANALYSIS -> {
-                    filterUuids.addAll(sensitivityAnalysisService.getFilterUuids(parametersUuid));
-                    contingencyListUuids.addAll(sensitivityAnalysisService.getContingencyListUuids(parametersUuid));
-                }
-                case VOLTAGE_INITIALIZATION -> filterUuids.addAll(voltageInitService.getFilterUuids(parametersUuid));
-                case PCC_MIN -> filterUuids.addAll(pccMinService.getFilterUuids(parametersUuid));
-                default -> { }
-            }
+            parametersByType.put(definition.type(), parameters instanceof String parametersJson ? parametersJson : objectMapper.writeValueAsString(parameters));
         }
+        return parametersByType;
     }
 }

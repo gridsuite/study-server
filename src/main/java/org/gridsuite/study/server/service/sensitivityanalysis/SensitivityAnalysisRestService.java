@@ -361,16 +361,6 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
         return getRestTemplate().getForObject(getBaseUri() + path, String.class);
     }
 
-    public List<UUID> getFilterUuids(UUID parameterUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/{parameterUuid}/filter-uuids").buildAndExpand(parameterUuid).toUriString();
-        return getRestTemplate().exchange(getBaseUri() + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<UUID>>() { }).getBody();
-    }
-
-    public List<UUID> getContingencyListUuids(UUID parameterUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/{parameterUuid}/contingency-list-uuids").buildAndExpand(parameterUuid).toUriString();
-        return getRestTemplate().exchange(getBaseUri() + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<UUID>>() { }).getBody();
-    }
-
     public void updateParameters(UUID parameterUuid, @Nullable String parameters) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
         HttpHeaders headers = new HttpHeaders();

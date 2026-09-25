@@ -77,7 +77,6 @@ class TreeExportTest extends StudyTestBase {
                         .withBody("dummy case content".getBytes())));
         // Stub the computation parameters fetches
         computationServerStubs.stubGetParametersAny("{}");
-        computationServerStubs.stubGetReferencedUuidsAny();
         // Export as zip
         MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName").header(HEADER_USER_ID, "testUser"))
                 .andExpect(status().isOk())
@@ -121,7 +120,6 @@ class TreeExportTest extends StudyTestBase {
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
         // Verify the computation parameters fetches
         computationServerStubs.verifyParametersGetAny(10);
-        computationServerStubs.verifyReferencedUuidsGetAny(5);
     }
 
     @Test
@@ -139,9 +137,14 @@ class TreeExportTest extends StudyTestBase {
         wireMockStubs.directoryServer.stubCheckPermission(List.of(studyUuid), null, "testUser", PermissionType.READ, false, HttpStatus.OK.value());
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + CASE_UUID))
                 .willReturn(WireMock.aResponse().withStatus(200).withHeader("Content-Type", "application/octet-stream").withBody("dummy case content".getBytes())));
-        computationServerStubs.stubGetParametersAny("{}");
-        stubJsonGet("/v1/parameters/[^/]+/filter-uuids", "[\"" + filterA + "\",\"" + deletedFilter + "\"]");
-        stubJsonGet("/v1/parameters/[^/]+/contingency-list-uuids", "[\"" + identifierList + "\",\"" + filterBasedList + "\"]");
+        // all computation servers share the same stub: the references are extracted from the security analysis,
+        // sensitivity analysis, voltage init and pcc min parameters json
+        computationServerStubs.stubGetParametersAny("{"
+                + "\"contingencyListsInfos\":[{\"contingencyLists\":[\"" + identifierList + "\"],\"activated\":true}],"
+                + "\"sensitivityInjectionsSet\":[{\"monitoredBranches\":[\"" + filterA + "\"],\"injections\":[\"" + deletedFilter + "\"],"
+                + "\"contingencies\":[\"" + filterBasedList + "\"]}],"
+                + "\"variableQGenerators\":[{\"filterId\":\"" + filterA + "\",\"filterName\":\"nameA\"}],"
+                + "\"filters\":[\"" + filterA + "\"]}");
         String filterAJson = "{\"id\":\"" + filterA + "\",\"type\":\"EXPERT\",\"rules\":{\"dataType\":\"COMBINATOR\",\"rules\":["
                 + "{\"dataType\":\"FILTER_UUID\",\"field\":\"ID\",\"operator\":\"IS_PART_OF\",\"values\":[\"" + filterC + "\"]}]}}";
         String filterBJson = "{\"id\":\"" + filterB + "\",\"type\":\"IDENTIFIER_LIST\"}";
@@ -182,7 +185,6 @@ class TreeExportTest extends StudyTestBase {
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
         computationServerStubs.verifyParametersGetAny(10);
-        computationServerStubs.verifyReferencedUuidsGetAny(5);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/contingency-lists/filter-uuids", false, Map.of("ids", WireMock.matching(".*")), 1);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/filters/referenced-filter-uuids", false, Map.of("ids", WireMock.matching(".*")), 1);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/filters/metadata", false, Map.of("ids", WireMock.matching(".*")), 1);
@@ -222,7 +224,6 @@ class TreeExportTest extends StudyTestBase {
                 .willReturn(WireMock.aResponse().withStatus(200).withHeader("Content-Type", "application/octet-stream")
                         .withBody("dummy case content".getBytes())));
         computationServerStubs.stubGetParametersAny("{}");
-        computationServerStubs.stubGetReferencedUuidsAny();
         // Capture the real zip file path as it is matched, so the test can clean it up itself:
         // the service's own Files.deleteIfExists call on this path is mocked to fail below.
         AtomicReference<Path> capturedZipFile = new AtomicReference<>();
@@ -255,6 +256,5 @@ class TreeExportTest extends StudyTestBase {
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
         computationServerStubs.verifyParametersGetAny(10);
-        computationServerStubs.verifyReferencedUuidsGetAny(5);
     }
 }

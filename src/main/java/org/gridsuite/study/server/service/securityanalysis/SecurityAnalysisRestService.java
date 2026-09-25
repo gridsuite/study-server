@@ -19,7 +19,6 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
@@ -306,11 +305,6 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
     public String getParameters(UUID parameterUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
         return restTemplate.getForObject(getBaseUri() + path, String.class);
-    }
-
-    public List<UUID> getContingencyListUuids(UUID parameterUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{parameterUuid}/contingency-list-uuids").buildAndExpand(parameterUuid).toUriString();
-        return restTemplate.exchange(getBaseUri() + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<UUID>>() { }).getBody();
     }
 
     public void updateParameters(UUID parameterUuid, @Nullable String parameters) {
