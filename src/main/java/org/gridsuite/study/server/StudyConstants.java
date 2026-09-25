@@ -117,11 +117,6 @@ public final class StudyConstants {
         STATE_VARIABLE
     }
 
-    public enum ModificationsActionType {
-        MOVE,
-        COPY,
-    }
-
     public enum CompositeModificationsActionType {
         SPLIT, // the network modifications contained into the composite modifications are extracted and inserted one by one
         INSERT // the composite modifications are fully inserted as composite modifications
