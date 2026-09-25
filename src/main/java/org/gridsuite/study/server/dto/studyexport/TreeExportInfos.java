@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.dto.studyexport;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -15,6 +16,7 @@ import java.util.UUID;
 public record TreeExportInfos(
         UUID studyUuid,
         List<RootNetworkExportInfos> rootNetworks,
-        NodeTreeExportInfos nodeTree
+        NodeTreeExportInfos nodeTree,
+        Map<String, String> computationParameters
 ) {
 }

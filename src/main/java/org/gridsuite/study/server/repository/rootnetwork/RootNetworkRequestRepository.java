@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.repository.rootnetwork;
 
+import org.gridsuite.study.server.dto.RootNetworkAction;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -16,6 +17,8 @@ public interface RootNetworkRequestRepository extends JpaRepository<RootNetworkR
     List<RootNetworkRequestEntity> findAllByStudyUuid(UUID studyUuid);
 
     int countAllByStudyUuid(UUID studyUuid);
+
+    int countAllByStudyUuidAndActionRequest(UUID studyUuid, RootNetworkAction actionRequest);
 
     Optional<RootNetworkRequestRepository> findByNameAndStudyUuid(String name, UUID studyUuid);
 
