@@ -123,7 +123,7 @@ class TreeExportTest extends StudyTestBase {
     }
 
     @Test
-    void testExportStudyWithFilterAndContingencyListDefinitions() throws Exception {
+    void testExportStudyWithFilterAndContingencyList() throws Exception {
         UUID studyUuid = createStudyWithStubs("testUser", CASE_UUID);
         ReflectionTestUtils.setField(caseService, "caseServerBaseUri", wireMockServer.baseUrl());
         filterService.setBaseUri(wireMockServer.baseUrl());
@@ -137,8 +137,6 @@ class TreeExportTest extends StudyTestBase {
         wireMockStubs.directoryServer.stubCheckPermission(List.of(studyUuid), null, "testUser", PermissionType.READ, false, HttpStatus.OK.value());
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + CASE_UUID))
                 .willReturn(WireMock.aResponse().withStatus(200).withHeader("Content-Type", "application/octet-stream").withBody("dummy case content".getBytes())));
-        // all computation servers share the same stub: the references are extracted from the security analysis,
-        // sensitivity analysis, voltage init and pcc min parameters json
         computationServerStubs.stubGetParametersAny("{"
                 + "\"contingencyListsInfos\":[{\"contingencyLists\":[\"" + identifierList + "\"],\"activated\":true}],"
                 + "\"sensitivityInjectionsSet\":[{\"monitoredBranches\":[\"" + filterA + "\"],\"injections\":[\"" + deletedFilter + "\"],"
@@ -179,8 +177,8 @@ class TreeExportTest extends StudyTestBase {
         Set<JsonNode> expectedContingencyLists = Set.of(
                 objectMapper.readTree("{\"uuid\":\"" + identifierList + "\",\"name\":\"nameI\",\"content\":" + identifierListJson + "}"),
                 objectMapper.readTree("{\"uuid\":\"" + filterBasedList + "\",\"name\":\"nameF\",\"content\":" + filterBasedListJson + "}"));
-        assertEquals(expectedFilters, readDefinitions(zipContents.get("computationParameters/filters.json")));
-        assertEquals(expectedContingencyLists, readDefinitions(zipContents.get("computationParameters/contingencyList.json")));
+        assertEquals(expectedFilters, readJson(zipContents.get("computationParameters/filters.json")));
+        assertEquals(expectedContingencyLists, readJson(zipContents.get("computationParameters/contingencyList.json")));
 
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
@@ -197,10 +195,10 @@ class TreeExportTest extends StudyTestBase {
                 .willReturn(WireMock.ok().withHeader("Content-Type", "application/json").withBody(body)));
     }
 
-    private Set<JsonNode> readDefinitions(String json) throws IOException {
-        Set<JsonNode> definitions = new HashSet<>();
-        objectMapper.readTree(json).forEach(definitions::add);
-        return definitions;
+    private Set<JsonNode> readJson(String json) throws IOException {
+        Set<JsonNode> jsonNodes = new HashSet<>();
+        objectMapper.readTree(json).forEach(jsonNodes::add);
+        return jsonNodes;
     }
 
     @Test
