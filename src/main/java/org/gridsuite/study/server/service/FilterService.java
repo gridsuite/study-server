@@ -22,6 +22,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -134,5 +135,19 @@ public class FilterService {
         HttpEntity<String> request = new HttpEntity<>(filters, headers);
 
         return restTemplate.postForObject(uriComponent.toUriString(), request, String.class);
+    }
+
+    public List<UUID> getReferencedFilterUuids(Collection<UUID> filterUuids) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_API_VERSION + "/filters/referenced-filter-uuids")
+                .queryParam(IDS, filterUuids)
+                .toUriString();
+        return restTemplate.exchange(getBaseUri() + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<UUID>>() { }).getBody();
+    }
+
+    public String getFilters(Collection<UUID> filterUuids) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_API_VERSION + "/filters/metadata")
+                .queryParam(IDS, filterUuids)
+                .toUriString();
+        return restTemplate.getForObject(getBaseUri() + path, String.class);
     }
 }
