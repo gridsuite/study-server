@@ -152,11 +152,12 @@ class NetworkModificationControllerTest {
         mockMvc.perform(put(BASE_URL + "/network-modifications")
                 .param("uuids", firstUuid.toString(), secondUuid.toString())
                 .content(metadata)
-                .contentType(MediaType.APPLICATION_JSON))
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("userId", "userId"))
             .andExpect(status().isOk())
             .andExpect(content().string(""));
 
-        verify(networkModificationService).updateNetworkModificationsMetadata(List.of(firstUuid, secondUuid), metadata);
+        verify(networkModificationService).updateNetworkModificationsMetadata(List.of(firstUuid, secondUuid), metadata, "userId");
     }
 
     @Test
