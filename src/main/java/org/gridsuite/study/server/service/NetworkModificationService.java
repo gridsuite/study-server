@@ -278,7 +278,6 @@ public class NetworkModificationService {
             .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
             .queryParam(UUIDS, modificationsUuids)
             .queryParam(GROUP_UUID, groupUUid)
-            .queryParam(HEADER_USER_ID, userId)
             .buildAndExpand()
             .toUriString();
 
@@ -535,7 +534,7 @@ public class NetworkModificationService {
     public ModificationReference extractCompositeModificationToShare(@NonNull UUID groupUuid, @NonNull UUID modificationUuid, @NonNull String name, String description) {
         String path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + "{modificationUuid}" + DELIMITER + "share")
                 .queryParam(QUERY_PARAM_NAME, name)
-                .queryParam(QUERY_PARAM_DESCRIPTION, description)
+                .queryParam(QUERY_PARAM_DESCRIPTION, URLEncoder.encode(description))
                 .queryParam(QUERY_PARAM_GROUP_UUID, groupUuid)
                 .buildAndExpand(modificationUuid)
                 .toUriString();
