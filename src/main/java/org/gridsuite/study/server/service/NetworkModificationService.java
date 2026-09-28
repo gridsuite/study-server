@@ -51,7 +51,6 @@ public class NetworkModificationService {
     private static final String NETWORK_MODIFICATIONS_COUNT_PATH = "network-modifications-count";
     private static final String QUERY_PARAM_ACTION = "action";
     private static final String QUERY_PARAM_NAME = "name";
-    private static final String QUERY_PARAM_DESCRIPTION = "description";
     private static final String QUERY_PARAM_GROUP_UUID = "groupUuid";
     private static final String QUERY_PARAM_ROOT_NETWORK_TAG = "rootNetworkTag";
     private static final String QUERY_PARAM_GROUP_UUIDS = "groupUuids";
