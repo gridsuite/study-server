@@ -47,6 +47,8 @@ public class NetworkModificationService {
     private static final String COMPOSITE_PATH = "network-composite-modifications" + DELIMITER;
     private static final String GROUPS = "groups";
     private static final String GROUP_PATH = GROUPS + DELIMITER + "{groupUuid}";
+    private static final String CONTAINERS = "containers";
+    private static final String CONTAINER_PATH = CONTAINERS + DELIMITER + "{containerUuid}";
     private static final String NETWORK_MODIFICATIONS_PATH = "network-modifications";
     private static final String NETWORK_MODIFICATIONS_COUNT_PATH = "network-modifications-count";
     private static final String QUERY_PARAM_ACTION = "action";
@@ -106,7 +108,7 @@ public class NetworkModificationService {
     }
 
     public String getNetworkModificationsFromComposite(List<UUID> compositeModificationUuids, boolean onlyMetadata) {
-        String path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + NETWORK_MODIFICATIONS_PATH)
+        String path = UriComponentsBuilder.fromPath(CONTAINERS + DELIMITER + NETWORK_MODIFICATIONS_PATH)
             .queryParam(UUIDS, compositeModificationUuids)
             .queryParam("onlyMetadata", onlyMetadata)
             .build().toUriString();
@@ -145,8 +147,7 @@ public class NetworkModificationService {
 
     public String getModifications(UUID groupUUid, boolean stashedModifications, boolean onlyMetadata) {
         Objects.requireNonNull(groupUUid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + NETWORK_MODIFICATIONS_PATH)
-            .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
+        var path = UriComponentsBuilder.fromPath(CONTAINER_PATH + DELIMITER + NETWORK_MODIFICATIONS_PATH)
             .queryParam(QUERY_PARAM_ONLY_STASHED, stashedModifications)
             .queryParam("onlyMetadata", onlyMetadata)
             .buildAndExpand(groupUUid)
@@ -157,8 +158,7 @@ public class NetworkModificationService {
 
     public String getModificationsToExport(UUID groupUUid) {
         Objects.requireNonNull(groupUUid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + NETWORK_MODIFICATIONS_PATH + DELIMITER + "export")
-            .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
+        var path = UriComponentsBuilder.fromPath(CONTAINER_PATH + DELIMITER + NETWORK_MODIFICATIONS_PATH + DELIMITER + "export")
             .buildAndExpand(groupUUid)
             .toUriString();
 
@@ -167,7 +167,7 @@ public class NetworkModificationService {
 
     public Integer getModificationsCount(UUID groupUUid, boolean stashedModifications) {
         Objects.requireNonNull(groupUUid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + NETWORK_MODIFICATIONS_COUNT_PATH)
+        var path = UriComponentsBuilder.fromPath(CONTAINER_PATH + DELIMITER + NETWORK_MODIFICATIONS_COUNT_PATH)
             .queryParam(QUERY_PARAM_STASHED, stashedModifications)
             .buildAndExpand(groupUUid)
             .toUriString();
@@ -178,7 +178,6 @@ public class NetworkModificationService {
     public void deleteModifications(UUID groupUUid) {
         Objects.requireNonNull(groupUUid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
-            .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
             .buildAndExpand(groupUUid)
             .toUriString();
 
@@ -194,7 +193,6 @@ public class NetworkModificationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(toJson(groupUuids), headers);
         var path = UriComponentsBuilder.fromPath(GROUPS)
-                .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
                 .toUriString();
 
         restTemplate.exchange(getNetworkModificationServerURI(false) + path,
@@ -361,7 +359,7 @@ public class NetworkModificationService {
      */
     public List<ModificationReference> getModificationReferences(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "references");
+        var path = UriComponentsBuilder.fromPath(CONTAINER_PATH + DELIMITER + "references");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -620,7 +618,6 @@ public class NetworkModificationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(toJson(groupUuids), headers);
         var path = UriComponentsBuilder.fromPath(GROUPS + "/stashed-modifications")
-                .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
                 .toUriString();
 
         restTemplate.exchange(getNetworkModificationServerURI(false) + path,
@@ -630,7 +627,7 @@ public class NetworkModificationService {
     }
 
     public void verifyModifications(UUID groupUuid, Set<UUID> modificationUuids) {
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + NETWORK_MODIFICATIONS_PATH + DELIMITER + "verify")
+        var path = UriComponentsBuilder.fromPath(CONTAINER_PATH + DELIMITER + NETWORK_MODIFICATIONS_PATH + DELIMITER + "verify")
             .queryParam("uuids", modificationUuids)
             .buildAndExpand(groupUuid)
             .toUriString();
