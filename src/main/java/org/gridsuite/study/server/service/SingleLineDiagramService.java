@@ -53,12 +53,13 @@ public class SingleLineDiagramService {
             }).getBody();
     }
 
-
     private URI buildUriFromPath(String path, String variantId, Object... uriVariables) {
 
-        UriComponentsBuilder builder = UriComponentsBuilder
-                .fromUriString(singleLineDiagramServerBaseUri)
-                .path(path);
+        String baseUri = singleLineDiagramServerBaseUri.endsWith(DELIMITER)
+                ? singleLineDiagramServerBaseUri
+                : singleLineDiagramServerBaseUri + DELIMITER;
+
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUri).path(path);
 
         if (!StringUtils.isBlank(variantId)) {
             builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
