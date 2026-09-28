@@ -9,10 +9,7 @@ package org.gridsuite.study.server;
 import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.ReferenceAttributes;
 import org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType;
-import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
-import org.gridsuite.study.server.dto.modification.ModificationContainerInfos;
-import org.gridsuite.study.server.dto.modification.ModificationContainerType;
-import org.gridsuite.study.server.dto.modification.ModificationMoveOrCopyInfos;
+import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -84,8 +81,8 @@ class NetworkModificationReferencingInfosUpdateTest {
 
         when(networkModificationService.getModificationReferences(List.of(modificationReferenceToMoveUuid))).thenReturn(List.of(modificationReference));
 
-        when(networkModificationTreeService.getNodeUuidByModificationGroup(group1Uuid)).thenReturn(node1Uuid);
-        when(networkModificationTreeService.getNodeUuidByModificationGroup(group2Uuid)).thenReturn(node2Uuid);
+        when(networkModificationTreeService.getModificationGroupUuid(node1Uuid)).thenReturn(group1Uuid);
+        when(networkModificationTreeService.getModificationGroupUuid(node2Uuid)).thenReturn(group2Uuid);
     }
 
     @AfterEach
@@ -96,41 +93,32 @@ class NetworkModificationReferencingInfosUpdateTest {
     @Test
     void testMoveNetworkModification() {
         // Composite1 -> composite2
-        ModificationContainerInfos sourceContainer = new ModificationContainerInfos(composite1Uuid, ModificationContainerType.COMPOSITE);
-        ModificationContainerInfos targetContainer = new ModificationContainerInfos(composite2Uuid, ModificationContainerType.COMPOSITE);
         ReferenceAttributes referenceAttributesExpected =
             ReferenceAttributes.createReferenceAttributes(modificationReferenceToMoveUuid, node1Uuid, composite2Uuid, ReferenceType.STUDY_NODE_NETWORK_MODIFICATION);
-        testMoveNetworkModification(null, node1Uuid, sourceContainer, targetContainer, referenceAttributesExpected);
+        testMoveNetworkModification(node1Uuid, node1Uuid, composite1Uuid, composite2Uuid, referenceAttributesExpected);
 
         // Group (node1) -> composite2
-        sourceContainer = new ModificationContainerInfos(group1Uuid, ModificationContainerType.GROUP);
-        targetContainer = new ModificationContainerInfos(composite2Uuid, ModificationContainerType.COMPOSITE);
         referenceAttributesExpected =
             ReferenceAttributes.createReferenceAttributes(modificationReferenceToMoveUuid, node1Uuid, composite2Uuid, ReferenceType.STUDY_NODE_NETWORK_MODIFICATION);
-        testMoveNetworkModification(node1Uuid, node1Uuid, sourceContainer, targetContainer, referenceAttributesExpected);
+        testMoveNetworkModification(node1Uuid, node1Uuid, null, composite2Uuid, referenceAttributesExpected);
 
         // Composite1 -> Group (node1)
-        sourceContainer = new ModificationContainerInfos(composite1Uuid, ModificationContainerType.COMPOSITE);
-        targetContainer = new ModificationContainerInfos(group1Uuid, ModificationContainerType.GROUP);
         referenceAttributesExpected = ReferenceAttributes.createReferenceAttributes(modificationReferenceToMoveUuid, studyUuid, node1Uuid, ReferenceType.STUDY_NODE);
-        testMoveNetworkModification(null, node1Uuid, sourceContainer, targetContainer, referenceAttributesExpected);
+        testMoveNetworkModification(node1Uuid, node1Uuid, composite1Uuid, null, referenceAttributesExpected);
 
         // Group (node1) -> Group (node2)
-        sourceContainer = new ModificationContainerInfos(group1Uuid, ModificationContainerType.GROUP);
-        targetContainer = new ModificationContainerInfos(group2Uuid, ModificationContainerType.GROUP);
         referenceAttributesExpected = ReferenceAttributes.createReferenceAttributes(modificationReferenceToMoveUuid, studyUuid, node2Uuid, ReferenceType.STUDY_NODE);
-        testMoveNetworkModification(node1Uuid, node2Uuid, sourceContainer, targetContainer, referenceAttributesExpected);
+        testMoveNetworkModification(node1Uuid, node2Uuid, null, null, referenceAttributesExpected);
     }
 
-    private void testMoveNetworkModification(UUID sourceNodeUuid, UUID targetNodeUuid, ModificationContainerInfos sourceContainer,
-                                             ModificationContainerInfos targetContainer, ReferenceAttributes referenceAttributesExpected) {
+    private void testMoveNetworkModification(UUID originNodeUuid, UUID targetNodeUuid, UUID sourceCompositeUuid,
+                                             UUID targetCompositeUuid, ReferenceAttributes referenceAttributesExpected) {
         final String userId = "userId";
         boolean isTargetInDifferentNodeTree = false;
         reset(directoryService);
 
-        ModificationMoveOrCopyInfos modificationMoveInfos = new ModificationMoveOrCopyInfos(modificationReferenceToMoveUuid, sourceContainer);
-        studyService.moveNetworkModifications(studyUuid, sourceNodeUuid, targetNodeUuid, List.of(modificationMoveInfos), targetContainer,
-            UUID.randomUUID(), isTargetInDifferentNodeTree, userId);
+        ModificationMoveInfos modificationMoveInfos = new ModificationMoveInfos(modificationReferenceToMoveUuid, sourceCompositeUuid, targetCompositeUuid, null);
+        studyService.moveNetworkModifications(studyUuid, originNodeUuid, targetNodeUuid, List.of(modificationMoveInfos), isTargetInDifferentNodeTree, userId);
 
         ArgumentCaptor<ReferenceAttributes> referenceAttributesCaptor = ArgumentCaptor.forClass(ReferenceAttributes.class);
         ArgumentCaptor<UUID> sharedModificationUuidCaptor = ArgumentCaptor.forClass(UUID.class);
