@@ -71,19 +71,23 @@ public class SingleLineDiagramService {
     }
 
     public String generateVoltageLevelSvgAndMetadata(UUID networkUuid, String variantId, String voltageLevelId, Map<String, Object> sldRequestInfos) {
-        var uriComponentsBuilder = UriComponentsBuilder
-            .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION
-                + "/svg-and-metadata/{networkUuid}/{voltageLevelId}");
+
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder
+                .fromUriString(singleLineDiagramServerBaseUri)
+                .path(SINGLE_LINE_DIAGRAM_API_VERSION
+                        + "/svg-and-metadata/{networkUuid}/{voltageLevelId}");
+
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
+
+        URI uri = uriComponentsBuilder.encode().buildAndExpand(networkUuid, voltageLevelId).toUri();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(sldRequestInfos, headers);
-        var path = uriComponentsBuilder.encode().buildAndExpand(networkUuid, voltageLevelId).toUriString();
-        return restTemplate.postForObject(URI.create(singleLineDiagramServerBaseUri + path), httpEntity, String.class);
+        return restTemplate.postForObject(uri, httpEntity, String.class);
     }
 
     public byte[] generateSubstationSvg(UUID networkUuid, String variantId, String substationId, Map<String, Object> sldRequestInfos) {
