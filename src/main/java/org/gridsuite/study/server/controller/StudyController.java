@@ -949,6 +949,13 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(libraries);
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/network-modifications/references/exists")
+    @Operation(summary = "Whether the study contains a shared modification, including nested in its composites")
+    @ApiResponse(responseCode = "200", description = "true if at least one shared modification is found")
+    public ResponseEntity<Boolean> hasSharedModifications(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.hasSharedModifications(studyUuid));
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", produces = MediaType.TEXT_PLAIN_VALUE)
     @Operation(summary = "Get network modifications from a node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications was returned"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
