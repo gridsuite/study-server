@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -81,8 +82,8 @@ public class SingleLineDiagramService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(sldRequestInfos, headers);
-        var path = uriComponentsBuilder.buildAndExpand(networkUuid, voltageLevelId).toUriString();
-        return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, httpEntity, String.class);
+        var path = uriComponentsBuilder.encode().buildAndExpand(networkUuid, voltageLevelId).toUriString();
+        return restTemplate.postForObject(URI.create(singleLineDiagramServerBaseUri + path), httpEntity, String.class);
     }
 
     public byte[] generateSubstationSvg(UUID networkUuid, String variantId, String substationId, Map<String, Object> sldRequestInfos) {

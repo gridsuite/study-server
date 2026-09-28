@@ -706,6 +706,24 @@ public class NetworkModificationService {
     }
 
     /**
+     * Asserts that the user may write on every shared modification the given containers point to, directly or through
+     * other shared modifications. Throws when they cannot.
+     */
+    public void assertReferencedModificationsAreWritable(List<UUID> containerUuids, String userId) {
+        if (containerUuids.isEmpty()) {
+            return;
+        }
+        String path = UriComponentsBuilder.fromPath("containers/references/authorized")
+                .queryParam(UUIDS, containerUuids)
+                .build().toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, new HttpEntity<>(headers), Void.class);
+    }
+
+    /**
      * References among {@code modificationUuids} and among the modifications nested in them: getReferences() does not
      * descend into composites, so a reference sitting inside a copied/inserted composite must be looked up explicitly.
      */
