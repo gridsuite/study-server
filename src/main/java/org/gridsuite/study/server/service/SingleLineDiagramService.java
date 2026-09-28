@@ -53,6 +53,19 @@ public class SingleLineDiagramService {
             }).getBody();
     }
 
+
+    private URI buildUriFromPath(String path, String variantId, Object... uriVariables) {
+
+        UriComponentsBuilder builder = UriComponentsBuilder
+                .fromUriString(singleLineDiagramServerBaseUri)
+                .path(path);
+
+        if (!StringUtils.isBlank(variantId)) {
+            builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        return builder.buildAndExpand(uriVariables).toUri();
+    }
+
     public byte[] generateVoltageLevelSvg(UUID networkUuid, String variantId, String voltageLevelId, Map<String, Object> sldRequestInfos) {
         var uriComponentsBuilder = UriComponentsBuilder
             .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg/{networkUuid}/{voltageLevelId}");
@@ -72,21 +85,9 @@ public class SingleLineDiagramService {
         return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, httpEntity, byte[].class);
     }
 
-    private URI getUriFromPath(String path, String variantId, Object... uriVariables) {
-
-        UriComponentsBuilder builder = UriComponentsBuilder
-                .fromUriString(singleLineDiagramServerBaseUri)
-                .path(path);
-
-        if (!StringUtils.isBlank(variantId)) {
-            builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        return builder.buildAndExpand(uriVariables).toUri();
-    }
-
     public String generateVoltageLevelSvgAndMetadata(UUID networkUuid, String variantId, String voltageLevelId, Map<String, Object> sldRequestInfos) {
 
-        URI uri = getUriFromPath(SINGLE_LINE_DIAGRAM_API_VERSION
+        URI uri = buildUriFromPath(SINGLE_LINE_DIAGRAM_API_VERSION
                 + "/svg-and-metadata/{networkUuid}/{voltageLevelId}", variantId, networkUuid, voltageLevelId);
 
         HttpHeaders headers = new HttpHeaders();
@@ -113,7 +114,7 @@ public class SingleLineDiagramService {
 
     public String generateSubstationSvgAndMetadata(UUID networkUuid, String variantId, String substationId, Map<String, Object> sldRequestInfos) {
 
-        URI uri = getUriFromPath(SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg-and-metadata/{networkUuid}/{substationId}",
+        URI uri = buildUriFromPath(SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg-and-metadata/{networkUuid}/{substationId}",
                 variantId,
                 networkUuid, substationId);
 
