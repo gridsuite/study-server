@@ -106,4 +106,7 @@ public interface NodeRepository extends JpaRepository<NodeEntity, UUID> {
     List<NodeEntity> findAllByStudyIdAndStashedAndParentNodeIdNodeOrderByStashDateDesc(UUID id, boolean stashed, UUID parentNode);
 
     Optional<NodeEntity> findByStudyIdAndType(UUID id, NodeType type);
+
+    @NativeQuery("SELECT EXISTS ( SELECT 1 FROM NODE n WHERE n.study_id = :studyId AND n.id_node = :nodeId )")
+    boolean existsByStudyIdAndNodeId(UUID studyId, UUID nodeId);
 }
