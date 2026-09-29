@@ -114,7 +114,7 @@ class StudyServiceDynamicSimulationTest {
         // call method to be tested
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, UUID.randomUUID(), "caseName", "", UUID.randomUUID());
         studyRepository.save(studyEntity);
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(studyEntity.getId(), NODE_UUID, ROOTNETWORK_UUID, "testUserId", false);
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(studyEntity.getId(), NODE_UUID, ROOTNETWORK_UUID, "testUserId", false, null);
 
         // check result
         assertThat(resultUuid).isEqualTo(RESULT_UUID);

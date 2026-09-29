@@ -132,10 +132,10 @@ public class NetworkModificationTreeService {
     }
 
     private void assertNoMaxBuilds(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
-        Map<QuotaType, Integer> userMaxQuotas = userAdminService.getUserMaxQuota(userId);
+        Map<QuotaType, QuotaState> userQuotaState = userAdminService.getUserQuotaState(userId);
 
         // check restrictions on node builds number
-        Integer maxBuilds = userMaxQuotas.get(QuotaType.BUILD);
+        Integer maxBuilds = Optional.ofNullable(userQuotaState.get(QuotaType.BUILD)).map(QuotaState::max).orElse(null);
         if (maxBuilds != null) {
             long nbBuiltNodes = countBuiltNodes(studyUuid, rootNetworkUuid);
             if (nbBuiltNodes >= maxBuilds) {
@@ -333,7 +333,7 @@ public class NetworkModificationTreeService {
         NetworkModificationNodeInfoEntity nodeToStashInfo = getNetworkModificationNodeInfoEntity(nodeId);
         NodeEntity nodeToStash = nodeToStashInfo.getNode();
         UUID modificationGroupUuid = nodeToStashInfo.getModificationGroupUuid();
-        networkModificationService.deleteStashedModifications(modificationGroupUuid);
+        networkModificationService.deleteStashedModificationsFromGroups(List.of(modificationGroupUuid));
         if (!stashChildren) {
             insertNodesToParent(nodeToStash.getParentNode(), nodeToStashInfo.getColumnPosition(), getChildren(nodeId));
         } else {
@@ -1439,11 +1439,5 @@ public class NetworkModificationTreeService {
         } else {
             notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_ALL_COMPUTATION_STATUS);
         }
-    }
-
-    @Transactional(readOnly = true)
-    public UUID getNodeUuidByModificationGroup(UUID groupUuid) {
-        var node = networkModificationNodeInfoRepository.findByModificationGroupUuidIn(List.of(groupUuid));
-        return node.isEmpty() ? null : node.getFirst().getIdNode();
     }
 }

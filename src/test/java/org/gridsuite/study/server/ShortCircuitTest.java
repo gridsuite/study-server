@@ -199,8 +199,8 @@ class ShortCircuitTest implements WithAssertions {
         userAdminService.setUserAdminServerBaseUri(wireMockServer.baseUrl());
 
         // Stub quota operations to avoid HTTP latency inside @Transactional causing race conditions with @PostCompletion notifications
-        doNothing().when(userAdminService).startOperationWithQuota(any(), any(), any());
-        doNothing().when(userAdminService).endOperationWithQuota(any(), any(), any());
+        doNothing().when(userAdminService).registerQuotaConsumption(any(), any());
+        doNothing().when(userAdminService).releaseQuota(any(), any());
     }
 
     @Test
@@ -610,8 +610,8 @@ class ShortCircuitTest implements WithAssertions {
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), shortCircuitAnalysisFailedDestination);
             return resultUuid;
-        }).when(shortCircuitService).runShortCircuit(any(), any(), any(), any(), anyBoolean(), any());
-        shortCircuitService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, Optional.empty(), false, "user_1");
+        }).when(shortCircuitService).runShortCircuit(any(), any(), any(), any(), anyBoolean(), any(), any());
+        shortCircuitService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, Optional.empty(), false, "user_1", null);
 
         // Test reset uuid result in the database
         assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, ComputationType.SHORT_CIRCUIT));

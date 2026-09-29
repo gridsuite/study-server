@@ -572,9 +572,9 @@ class SensitivityAnalysisTest {
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), SENSITIVITY_ANALYSIS_FAILED_DESTINATION);
             return resultUuid;
-        }).when(sensitivityAnalysisServiceMock).runSensitivityAnalysis(any(), any(), any(), any());
+        }).when(sensitivityAnalysisServiceMock).runSensitivityAnalysis(any(), any(), any(), any(), any());
         assertNotNull(studyEntity.getId());
-        sensitivityAnalysisServiceMock.runSensitivityAnalysis(studyEntity.getId(), modificationNode.getId(), firstRootNetworkUuid, "testUserId");
+        sensitivityAnalysisServiceMock.runSensitivityAnalysis(studyEntity.getId(), modificationNode.getId(), firstRootNetworkUuid, "testUserId", null);
 
         // Test reset uuid result in the database
         assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), firstRootNetworkUuid, SENSITIVITY_ANALYSIS));

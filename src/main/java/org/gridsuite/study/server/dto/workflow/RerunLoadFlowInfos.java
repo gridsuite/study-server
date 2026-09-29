@@ -20,6 +20,7 @@ public class RerunLoadFlowInfos extends AbstractWorkflowInfos {
     UUID loadflowResultUuid;
     String userId;
     boolean withRatioTapChangers;
+    UUID quotaId;
 
     @Override
     public WorkflowType getType() {

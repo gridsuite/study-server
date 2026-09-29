@@ -415,7 +415,7 @@ public class SupervisionService {
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 
-    public void invalidateStudy(UUID studyUuid) {
+    public void unloadStudy(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         // remove all stashed nodes and stashed network modifications
