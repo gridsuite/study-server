@@ -334,8 +334,7 @@ public class NetworkModificationTreeService {
         NetworkModificationNodeInfoEntity nodeToStashInfo = getNetworkModificationNodeInfoEntity(nodeId);
         NodeEntity nodeToStash = nodeToStashInfo.getNode();
         UUID modificationGroupUuid = nodeToStashInfo.getModificationGroupUuid();
-        networkModificationService.deleteStashedModificationsFromGroups(List.of(modificationGroupUuid));
-        networkModificationService.removeReferences(modificationGroupUuid, userId);
+        networkModificationService.deleteStashedModificationsFromGroups(List.of(modificationGroupUuid), userId);
         if (!stashChildren) {
             insertNodesToParent(nodeToStash.getParentNode(), nodeToStashInfo.getColumnPosition(), getChildren(nodeId));
         } else {

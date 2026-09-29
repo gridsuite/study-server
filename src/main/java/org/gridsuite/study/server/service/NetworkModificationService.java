@@ -617,13 +617,14 @@ public class NetworkModificationService {
         return json;
     }
 
-    public void deleteStashedModificationsFromGroups(List<UUID> groupUuids) {
+    public void deleteStashedModificationsFromGroups(List<UUID> groupUuids, String userId) {
         Objects.requireNonNull(groupUuids);
         if (groupUuids.isEmpty()) {
             return;
         }
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HEADER_USER_ID, userId);
         HttpEntity<String> httpEntity = new HttpEntity<>(toJson(groupUuids), headers);
         var path = UriComponentsBuilder.fromPath(GROUPS + "/stashed-modifications")
                 .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
@@ -633,31 +634,6 @@ public class NetworkModificationService {
                 HttpMethod.DELETE,
                 httpEntity,
                 new ParameterizedTypeReference<Map<UUID, UUID>>() { });
-    }
-
-    public void deleteStashedModifications(UUID groupUUid) {
-        Objects.requireNonNull(groupUUid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + "/stashed-modifications")
-                .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
-                .buildAndExpand(groupUUid)
-                .toUriString();
-
-        restTemplate.delete(getNetworkModificationServerURI(false) + path);
-    }
-
-    public void removeReferences(UUID groupUUid, String userId) {
-        Objects.requireNonNull(groupUUid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + "/references")
-                .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
-                .buildAndExpand(groupUUid)
-                .toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set(HEADER_USER_ID, userId);
-
-        HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
-        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.DELETE, httpEntity, Void.class);
     }
 
     public void restoreReferences(UUID groupUUid, UUID studyUuid, UUID newNodeUuid, String userId) {
