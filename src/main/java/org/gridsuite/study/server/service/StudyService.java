@@ -1940,23 +1940,10 @@ public class StudyService {
         duplicateModificationsOrInsertComposites(targetStudyUuid, targetNodeUuid,
                 (groupUuid, modificationApplicationContexts) -> {
                     NetworkModificationsResult result = networkModificationService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts));
-                    createElementsReferences(networkModificationService.getChildrenModificationsReferences(result.modificationUuids()), targetStudyUuid, targetNodeUuid, userId);
+                    directoryService.createElementsReferences(networkModificationService.getChildrenModificationsReferences(result.modificationUuids()), targetStudyUuid, targetNodeUuid, userId);
                     return result;
                 },
                 userId);
-    }
-
-    private void createElementsReferences(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, String userId) {
-        references.forEach(ref -> {
-            boolean insideComposite = ref.containerId() != null;
-            ReferenceAttributes referenceAttributes = ReferenceAttributes.createReferenceAttributes(
-                    ref.modificationUuid(),
-                    insideComposite ? nodeUuid : studyUuid,
-                    insideComposite ? ref.containerId() : nodeUuid,
-                    insideComposite ? ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION
-                            : ReferenceAttributes.ReferenceType.STUDY_NODE);
-            directoryService.createElementReference(ref.referencedId(), referenceAttributes, userId);
-        });
     }
 
     @Transactional
@@ -2005,7 +1992,7 @@ public class StudyService {
             directoryService.createElement(parentDirectoryUuid, description, modificationUuid, name, DirectoryService.MODIFICATION, userId);
             // extraction replaced the local composite by a new reference modification, in the node group or in a parent
             // composite: register it on the shared element
-            createElementsReferences(List.of(newReference), studyUuid, nodeUuid, userId);
+            directoryService.createElementsReferences(List.of(newReference), studyUuid, nodeUuid, userId);
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
         }

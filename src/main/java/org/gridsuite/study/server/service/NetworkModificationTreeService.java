@@ -69,6 +69,7 @@ public class NetworkModificationTreeService {
     private final UserAdminService userAdminService;
 
     private final StudyServerExecutionService studyServerExecutionService;
+    private final DirectoryService directoryService;
 
     public NetworkModificationTreeService(NodeRepository nodesRepository,
                                           RootNodeInfoRepository rootNodeInfoRepository,
@@ -81,7 +82,8 @@ public class NetworkModificationTreeService {
                                           NetworkService networkStoreService,
                                           ReportService reportService,
                                           UserAdminService userAdminService,
-                                          StudyServerExecutionService studyServerExecutionService) {
+                                          StudyServerExecutionService studyServerExecutionService,
+                                          DirectoryService directoryService) {
         this.nodesRepository = nodesRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.networkModificationService = networkModificationService;
@@ -94,6 +96,7 @@ public class NetworkModificationTreeService {
         this.reportService = reportService;
         this.userAdminService = userAdminService;
         this.studyServerExecutionService = studyServerExecutionService;
+        this.directoryService = directoryService;
     }
 
     private NetworkModificationNodeInfoEntity createNetworkModificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {
@@ -886,10 +889,8 @@ public class NetworkModificationTreeService {
             modificationNodeToRestore.setColumnPosition(getNextColumnPosition(anchorNodeId));
             NodeEntity newNode = nodesRepository.save(nodeToRestore);
             // restore the references pointing from directory server to netmod-server
-            if (this.hasModifications(newNode.getIdNode(), false)) {
-                UUID modificationGroupUuid = getModificationGroupUuid(newNode.getIdNode());
-                networkModificationService.restoreElementReferences(modificationGroupUuid, studyId, newNode.getIdNode(), userId);
-            }
+            List<ModificationReference> modificationsReferences = networkModificationService.getModificationReferences(getModificationGroupUuid(newNode.getIdNode()));
+            directoryService.createElementsReferences(modificationsReferences, studyId, newNode.getIdNode(), userId);
             if (hasChildren(nodeId)) {
                 restoreNodeChildren(studyId, nodeId);
                 notificationService.emitSubtreeInserted(studyId, nodeId, anchorNodeId);
