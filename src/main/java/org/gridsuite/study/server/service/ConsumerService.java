@@ -523,6 +523,7 @@ public class ConsumerService {
     }
 
     public void consumeCalculationRunning(Message<String> msg, ComputationType computationType) {
+        boolean isPresent = getNodeReceiver(msg).isPresent();
         getNodeReceiver(msg).ifPresent(receiverObj -> {
             UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
             notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType());
