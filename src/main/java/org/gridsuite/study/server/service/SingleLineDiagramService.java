@@ -54,7 +54,6 @@ public class SingleLineDiagramService {
     }
 
     private URI buildUriFromPath(String path, String variantId, Object... uriVariables) {
-
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(singleLineDiagramServerBaseUri).path(path);
 
         if (!StringUtils.isBlank(variantId)) {
