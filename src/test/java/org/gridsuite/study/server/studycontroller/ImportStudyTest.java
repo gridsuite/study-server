@@ -120,8 +120,8 @@ class ImportStudyTest extends StudyTestBase {
         AbstractNode n2 = n1.getChildren().getFirst();
         assertEquals("N2", n2.getName());
         assertEquals("CONSTRUCTION", ((NetworkModificationNode) n2).getNodeType().name());
-        assertNotEquals(modificationGroupUuid1, ((NetworkModificationNode) n1).getModificationGroupUuid());
-        assertNotEquals(modificationGroupUuid2, ((NetworkModificationNode) n2).getModificationGroupUuid());
+        assertEquals(modificationGroupUuid1, ((NetworkModificationNode) n1).getModificationGroupUuid());
+        assertEquals(modificationGroupUuid2, ((NetworkModificationNode) n2).getModificationGroupUuid());
     }
 
     private void assertRootNetworkCreated(UUID studyUuid, String name, String tag, UUID duplicatedCaseUuid) {
