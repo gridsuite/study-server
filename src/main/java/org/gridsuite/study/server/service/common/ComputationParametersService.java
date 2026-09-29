@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
@@ -55,7 +54,8 @@ public class ComputationParametersService {
             Function<UserProfileInfos, UUID> profileParameterGetter,
             ComputationParameters service,
             BiConsumer<ComputationParameterUUIDs.ComputationParameterUUIDsBuilder, UUID> parametersSetter,
-            BiFunction<UUID, String, ?> parametersFetcher
+            // null for the computations whose parameters are not exported
+            Function<UUID, ?> parametersFetcher
     ) {
     }
 
@@ -81,70 +81,70 @@ public class ComputationParametersService {
                         UserProfileInfos::getLoadFlowParameterId,
                     loadFlowRestService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::loadFlowParametersUuid,
-                        (uuid, userId) -> loadFlowRestService.getParameters(uuid)),
+                        loadFlowRestService::getParameters),
                 new ComputationParametersDefinition(
                         ComputationType.SHORT_CIRCUIT,
                         StudyEntity::getShortCircuitParametersUuid,
                         UserProfileInfos::getShortcircuitParameterId,
                         shortCircuitService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::shortCircuitParametersUuid,
-                        (uuid, userId) -> shortCircuitService.getParameters(uuid)),
+                        shortCircuitService::getParameters),
                 new ComputationParametersDefinition(
                         ComputationType.DYNAMIC_SIMULATION,
                         StudyEntity::getDynamicSimulationParametersUuid,
                         UserProfileInfos::getDynamicSimulationParameterId,
                         dynamicSimulationRestService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::dynamicSimulationParametersUuid,
-                        (uuid, userId) -> dynamicSimulationRestService.getParameters(uuid)),
+                        null),
                 new ComputationParametersDefinition(
                         ComputationType.VOLTAGE_INITIALIZATION,
                         StudyEntity::getVoltageInitParametersUuid,
                         UserProfileInfos::getVoltageInitParameterId,
                         voltageInitService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::voltageInitParametersUuid,
-                        (uuid, userId) -> voltageInitService.getParameters(uuid)),
+                        voltageInitService::getParameters),
                 new ComputationParametersDefinition(
                         ComputationType.SECURITY_ANALYSIS,
                         StudyEntity::getSecurityAnalysisParametersUuid,
                         UserProfileInfos::getSecurityAnalysisParameterId,
                         securityAnalysisService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::securityAnalysisParametersUuid,
-                        (uuid, userId) -> securityAnalysisService.getParameters(uuid)),
+                        securityAnalysisService::getParameters),
                 new ComputationParametersDefinition(
                         ComputationType.SENSITIVITY_ANALYSIS,
                         StudyEntity::getSensitivityAnalysisParametersUuid,
                         UserProfileInfos::getSensitivityAnalysisParameterId,
                         sensitivityAnalysisService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::sensitivityAnalysisParametersUuid,
-                        (uuid, userId) -> sensitivityAnalysisService.getParameters(uuid)),
+                        sensitivityAnalysisService::getParameters),
                 new ComputationParametersDefinition(
                         ComputationType.DYNAMIC_SECURITY_ANALYSIS,
                         StudyEntity::getDynamicSecurityAnalysisParametersUuid,
                         UserProfileInfos::getDynamicSecurityAnalysisParameterId,
                         dynamicSecurityAnalysisRestService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::dynamicSecurityAnalysisParametersUuid,
-                        (uuid, userId) -> dynamicSecurityAnalysisRestService.getParameters(uuid)),
+                        null),
                 new ComputationParametersDefinition(
                         ComputationType.DYNAMIC_MARGIN_CALCULATION,
                         StudyEntity::getDynamicMarginCalculationParametersUuid,
                         UserProfileInfos::getDynamicMarginCalculationParameterId,
                         dynamicMarginCalculationRestService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::dynamicMarginCalculationParametersUuid,
-                        dynamicMarginCalculationRestService::getParameters),
+                        null),
                 new ComputationParametersDefinition(
                         ComputationType.STATE_ESTIMATION,
                         StudyEntity::getStateEstimationParametersUuid,
                         userProfileInfos -> null,
                         stateEstimationService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::stateEstimationParametersUuid,
-                        (uuid, userId) -> stateEstimationService.getStateEstimationParameters(uuid)),
+                        null),
                 new ComputationParametersDefinition(
                         ComputationType.PCC_MIN,
                         StudyEntity::getPccMinParametersUuid,
                         UserProfileInfos::getPccMinParameterId,
                         pccMinService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::pccMinParametersUuid,
-                        (uuid, userId) -> pccMinService.getParameters(uuid))
+                        pccMinService::getParameters)
         );
     }
 
@@ -239,14 +239,14 @@ public class ComputationParametersService {
         }
     }
 
-    public Map<ComputationType, String> exportParameters(StudyEntity studyEntity, String userId) throws JsonProcessingException {
+    public Map<ComputationType, String> exportParameters(StudyEntity studyEntity) throws JsonProcessingException {
         Map<ComputationType, String> parametersByType = new EnumMap<>(ComputationType.class);
         for (ComputationParametersDefinition definition : computationParametersDefinitions) {
             UUID parametersUuid = definition.studyParameterGetter().apply(studyEntity);
-            if (parametersUuid == null) {
+            if (parametersUuid == null || definition.parametersFetcher() == null) {
                 continue;
             }
-            Object parameters = definition.parametersFetcher().apply(parametersUuid, userId);
+            Object parameters = definition.parametersFetcher().apply(parametersUuid);
             parametersByType.put(definition.type(), parameters instanceof String parametersJson ? parametersJson : objectMapper.writeValueAsString(parameters));
         }
         return parametersByType;

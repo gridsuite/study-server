@@ -86,7 +86,7 @@ public class StudyExportService {
         Path tempDir = createTempWorkDir(studyUuid);
         Path zipFile = null;
         try {
-            zipFile = compressStudyToZip(studyUuid, userId, tempDir);
+            zipFile = compressStudyToZip(studyUuid, tempDir);
             InputStream stream = Files.newInputStream(zipFile, StandardOpenOption.DELETE_ON_CLOSE);
             zipFile = null;
             return new InputStreamResource(stream);
@@ -111,7 +111,7 @@ public class StudyExportService {
     /**
      * Build tree.json and the case files under tempDir, then compress them into a temp zip file
      */
-    private Path compressStudyToZip(UUID studyUuid, String userId, Path tempDir) throws IOException {
+    private Path compressStudyToZip(UUID studyUuid, Path tempDir) throws IOException {
         TreeExportInfos treeExportInfos = studyService.buildTreeExport(studyUuid);
         Path studyJsonPath = tempDir.resolve(TREE_JSON_FILE_NAME);
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(studyJsonPath.toFile(), treeExportInfos);
@@ -121,7 +121,7 @@ public class StudyExportService {
             String caseName = rootNetworkInfos.caseInfos().getCaseName();
             exportCaseFile(caseUuid, caseName, casesDir);
         }
-        exportParameters(studyUuid, userId, tempDir);
+        exportParameters(studyUuid, tempDir);
         Path zipFile = createTempExportFile(studyUuid);
         try (OutputStream fos = Files.newOutputStream(zipFile);
              ZipOutputStream zipOut = new ZipOutputStream(fos)) {
@@ -130,11 +130,11 @@ public class StudyExportService {
         return zipFile;
     }
 
-    private void exportParameters(UUID studyUuid, String userId, Path tempDir) throws IOException {
+    private void exportParameters(UUID studyUuid, Path tempDir) throws IOException {
         Path parametersDir = Files.createDirectories(tempDir.resolve(PARAMETERS_FOLDER));
         Set<UUID> filterUuids = new HashSet<>();
         Set<UUID> contingencyListUuids = new HashSet<>();
-        for (Map.Entry<ComputationType, String> parameters : computationParametersService.exportParameters(studyService.getStudy(studyUuid), userId).entrySet()) {
+        for (Map.Entry<ComputationType, String> parameters : computationParametersService.exportParameters(studyService.getStudy(studyUuid)).entrySet()) {
             Files.writeString(parametersDir.resolve(parameters.getKey().name() + ".json"), parameters.getValue());
             ExportedParametersReferences references = readParametersReferences(parameters.getKey(), parameters.getValue());
             filterUuids.addAll(references.getFilterUuids());
@@ -160,9 +160,11 @@ public class StudyExportService {
     private ExportedParametersReferences readParametersReferences(ComputationType type, String parametersJson) throws IOException {
         Class<? extends ExportedParametersReferences> referencesClass = switch (type) {
             case SECURITY_ANALYSIS -> SecurityAnalysisExportedParameters.class;
+            case SHORT_CIRCUIT -> ShortCircuitExportedParameters.class;
             case SENSITIVITY_ANALYSIS -> SensitivityAnalysisExportedParameters.class;
             case VOLTAGE_INITIALIZATION -> VoltageInitExportedParameters.class;
             case PCC_MIN -> PccMinExportedParameters.class;
+            // LOAD_FLOW: the load flow parameters do not reference any filter or contingency list
             default -> null;
         };
         return referencesClass == null ? new ExportedParametersReferences() { } : objectMapper.readValue(parametersJson, referencesClass);

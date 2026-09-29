@@ -9,6 +9,7 @@ package org.gridsuite.study.server.dto.studyexport.parameters;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -49,6 +50,29 @@ class ExportedParametersReferencesTest {
         SensitivityAnalysisExportedParameters parameters = objectMapper.readValue(json, SensitivityAnalysisExportedParameters.class);
         assertEquals(Set.of(ID_1, ID_2, ID_3, ID_4, ID_5), parameters.getFilterUuids());
         assertEquals(Set.of(ID_3, ID_5), parameters.getContingencyListUuids());
+    }
+
+    @Test
+    void testSensitivityAnalysisNodesReferences() throws Exception {
+        String json = "{\"sensitivityNodes\":[{\"monitoredVoltageLevels\":[\"" + ID_1 + "\"],\"equipmentsInVoltageRegulation\":[\"" + ID_2 + "\"],"
+                + "\"contingencies\":[\"" + ID_3 + "\"],\"activated\":true},{\"monitoredVoltageLevels\":null}]}";
+        SensitivityAnalysisExportedParameters parameters = objectMapper.readValue(json, SensitivityAnalysisExportedParameters.class);
+        assertEquals(Set.of(ID_1, ID_2), parameters.getFilterUuids());
+        assertEquals(Set.of(ID_3), parameters.getContingencyListUuids());
+    }
+
+    @Test
+    void testShortCircuitReferences() throws Exception {
+        String clusters = "[{\"alpha\":0.9,\"filters\":[{\"filterId\":\"" + ID_1 + "\",\"filterName\":\"f1\"},{\"filterId\":\"" + ID_2 + "\"}],\"active\":true},"
+                + "{\"filters\":null}]";
+        String nodeCluster = "[{\"filterId\":\"" + ID_3 + "\",\"filterName\":\"f3\"}]";
+        String json = objectMapper.writeValueAsString(Map.of("provider", "Courcirc", "specificParametersPerProvider", Map.of(
+                "Courcirc", Map.of("powerElectronicsClusters", clusters, "nodeClusterFilterIds", nodeCluster, "other", "value"),
+                "OtherProvider", Map.of("nodeClusterFilterIds", ""))));
+        ShortCircuitExportedParameters parameters = objectMapper.readValue(json, ShortCircuitExportedParameters.class);
+        assertEquals(Set.of(ID_1, ID_2, ID_3), parameters.getFilterUuids());
+        assertEquals(Set.of(), parameters.getContingencyListUuids());
+        assertEquals(Set.of(), objectMapper.readValue("{}", ShortCircuitExportedParameters.class).getFilterUuids());
     }
 
     @Test

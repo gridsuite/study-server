@@ -25,7 +25,7 @@ public record SensitivityAnalysisExportedParameters(
         List<SensitivityFactor> sensitivityInjection,
         List<SensitivityFactor> sensitivityHVDC,
         List<SensitivityFactor> sensitivityPST,
-        List<SensitivityFactor> sensitivityNodes
+        List<SensitivityNodes> sensitivityNodes
 ) implements ExportedParametersReferences {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record SensitivityFactor(
@@ -33,28 +33,42 @@ public record SensitivityAnalysisExportedParameters(
             List<UUID> injections,
             List<UUID> hvdcs,
             List<UUID> psts,
+            List<UUID> contingencies
+    ) {
+        Stream<UUID> filterUuids() {
+            return Stream.of(monitoredBranches, injections, hvdcs, psts)
+                    .flatMap(ExportedParametersReferences::nullSafe);
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record SensitivityNodes(
             List<UUID> monitoredVoltageLevels,
             List<UUID> equipmentsInVoltageRegulation,
             List<UUID> contingencies
     ) {
         Stream<UUID> filterUuids() {
-            return Stream.of(monitoredBranches, injections, hvdcs, psts, monitoredVoltageLevels, equipmentsInVoltageRegulation)
+            return Stream.of(monitoredVoltageLevels, equipmentsInVoltageRegulation)
                     .flatMap(ExportedParametersReferences::nullSafe);
         }
     }
 
     private Stream<SensitivityFactor> allFactors() {
-        return Stream.of(sensitivityInjectionsSet, sensitivityInjection, sensitivityHVDC, sensitivityPST, sensitivityNodes)
+        return Stream.of(sensitivityInjectionsSet, sensitivityInjection, sensitivityHVDC, sensitivityPST)
                 .flatMap(ExportedParametersReferences::nullSafe);
     }
 
     @Override
     public Set<UUID> getFilterUuids() {
-        return toUuidSet(allFactors().flatMap(SensitivityFactor::filterUuids));
+        return toUuidSet(Stream.concat(
+                allFactors().flatMap(SensitivityFactor::filterUuids),
+                nullSafe(sensitivityNodes).flatMap(SensitivityNodes::filterUuids)));
     }
 
     @Override
     public Set<UUID> getContingencyListUuids() {
-        return toUuidSet(allFactors().flatMap(factor -> nullSafe(factor.contingencies())));
+        return toUuidSet(Stream.concat(
+                allFactors().flatMap(factor -> nullSafe(factor.contingencies())),
+                nullSafe(sensitivityNodes).flatMap(nodes -> nullSafe(nodes.contingencies()))));
     }
 }
