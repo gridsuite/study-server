@@ -304,7 +304,7 @@ class NetworkModificationTreeTest {
                     return new MockResponse(
                             HttpStatus.OK.value(),
                             Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE),
-                            "{}"
+                            objectMapper.writeValueAsString(List.of())
                     );
                 } else if (path.matches("/v1/network-modifications.*")) {
                     return new MockResponse(HttpStatus.OK.value());
