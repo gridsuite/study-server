@@ -656,6 +656,10 @@ public class StudyService {
     }
 
     private void deleteModificationsFromGroup(Pair<UUID, UUID> groupUuidNodeUuid, String userId) {
+        // fetch the references data in order to remove those references from directory-server
+        List<ModificationReference> referencesToBeDeleted = networkModificationService.getModificationReferences(groupUuidNodeUuid.getFirst());
+        removeReferences(referencesToBeDeleted, userId);
+
         networkModificationService.deleteModifications(groupUuidNodeUuid.getFirst());
     }
 
