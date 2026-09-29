@@ -888,7 +888,7 @@ public class NetworkModificationTreeService {
             // restore the references pointing from directory server to netmod-server
             if (this.hasModifications(newNode.getIdNode(), false)) {
                 UUID modificationGroupUuid = getModificationGroupUuid(newNode.getIdNode());
-                networkModificationService.restoreReferences(modificationGroupUuid, studyId, newNode.getIdNode(), userId);
+                networkModificationService.restoreElementReferences(modificationGroupUuid, studyId, newNode.getIdNode(), userId);
             }
             if (hasChildren(nodeId)) {
                 restoreNodeChildren(studyId, nodeId);

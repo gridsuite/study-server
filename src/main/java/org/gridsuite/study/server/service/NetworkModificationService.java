@@ -636,7 +636,7 @@ public class NetworkModificationService {
                 new ParameterizedTypeReference<Map<UUID, UUID>>() { });
     }
 
-    public void restoreReferences(UUID groupUUid, UUID studyUuid, UUID newNodeUuid, String userId) {
+    public void restoreElementReferences(UUID groupUUid, UUID studyUuid, UUID newNodeUuid, String userId) {
         Objects.requireNonNull(groupUUid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + "/references")
                 .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
