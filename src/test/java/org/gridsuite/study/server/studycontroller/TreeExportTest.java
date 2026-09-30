@@ -124,7 +124,7 @@ class TreeExportTest extends StudyTestBase {
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
         // Verify the computation parameters and network modifications fetches
-        computationServerStubs.verifyParametersGetAny(10);
+        computationServerStubs.verifyParametersGetAny(6);
         verifyGetGroupModifications();
     }
 
@@ -189,7 +189,7 @@ class TreeExportTest extends StudyTestBase {
 
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
-        computationServerStubs.verifyParametersGetAny(10);
+        computationServerStubs.verifyParametersGetAny(6);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/contingency-lists/filter-uuids", false, Map.of("ids", WireMock.matching(".*")), 1);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/filters/referenced-filter-uuids", false, Map.of("ids", WireMock.matching(".*")), 1);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/filters/metadata", false, Map.of("ids", WireMock.matching(".*")), 1);
@@ -325,7 +325,7 @@ class TreeExportTest extends StudyTestBase {
         }
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
-        computationServerStubs.verifyParametersGetAny(10);
+        computationServerStubs.verifyParametersGetAny(6);
         verifyGetGroupModifications();
     }
 }
