@@ -304,7 +304,7 @@ class NetworkModificationTreeTest {
                     return new MockResponse(
                             HttpStatus.OK.value(),
                             Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE),
-                            "{}"
+                            objectMapper.writeValueAsString(List.of())
                     );
                 } else if (path.matches("/v1/network-modifications.*")) {
                     return new MockResponse(HttpStatus.OK.value());
@@ -313,6 +313,9 @@ class NetworkModificationTreeTest {
                 } else if (path.matches("/v1/containers/" + MODIFICATION_GROUP_UUID_2 + "/network-modifications-count.*") && request.getMethod().equals("GET")) {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(2));
                 } else if (path.matches("/v1/containers/" + MODIFICATION_GROUP_UUID_3 + "/network-modifications-count.*") && request.getMethod().equals("GET")) {
+                    return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(0));
+                } else if (path.startsWith("/v1/containers/") && path.contains("/network-modifications-count") && Objects.equals(request.getMethod(), "GET")) {
+                    // by default nodes contain no modifications
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(0));
                 } else if (path.matches("/v1/containers/" + MODIFICATION_GROUP_UUID + "/.*") && request.getMethod().equals("GET")) {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(List.of()));
@@ -669,7 +672,7 @@ class NetworkModificationTreeTest {
         //      n1  n4
         //     /  \
         //    n2  n3
-        final NetworkModificationNode n1 = NetworkModificationTreeTest.buildNetworkModificationConstructionNode("n1", "n1", UUID.randomUUID(), "variant1",
+        final NetworkModificationNode n1 = NetworkModificationTreeTest.buildNetworkModificationConstructionNode("n1", "n1", MODIFICATION_GROUP_UUID_2, "variant1",
                 randomUuidsResultStack(), BuildStatus.NOT_BUILT);
         createNode(studyId, root, n1, userId);
         final NetworkModificationNode n2 = NetworkModificationTreeTest.buildNetworkModificationConstructionNode("n2", "n2", UUID.randomUUID(), "variant2",
@@ -1009,8 +1012,11 @@ class NetworkModificationTreeTest {
 
     private void restoreNode(UUID studyUuid, List<UUID> nodeIds, UUID anchorNodeId, String userId) throws Exception {
         String param = nodeIds.stream().map(UUID::toString).reduce("", (a1, a2) -> a1 + "," + a2).substring(1);
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/restore?anchorNodeId={anchorNodeId}", studyUuid, anchorNodeId).header(USER_ID_HEADER, userId)
-                        .queryParam("ids", param))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/restore", studyUuid)
+                        .header(USER_ID_HEADER, userId)
+                        .queryParam("anchorNodeId", anchorNodeId.toString())
+                        .queryParam("ids", param)
+                )
                 .andExpect(status().isOk());
 
         for (int i = 0; i < nodeIds.size(); i++) {
@@ -1863,5 +1869,4 @@ class NetworkModificationTreeTest {
         assertEquals(studyUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_SPREADSHEET_NODE_ALIASES, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
     }
-
 }
