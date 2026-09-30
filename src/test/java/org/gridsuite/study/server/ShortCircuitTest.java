@@ -55,9 +55,9 @@ import java.util.*;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.matching;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.gridsuite.study.server.StudyConstants.HEADER_BUS_ID;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-import static org.gridsuite.study.server.StudyConstants.HEADER_BUS_ID;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_DEBUG;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.utils.TestUtils.STUDY_UPDATE_DESTINATION;
