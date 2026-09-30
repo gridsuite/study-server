@@ -232,4 +232,21 @@ public class StateEstimationRestService extends AbstractComputationRestService i
             .buildAndExpand(resultUuid).toUriString();
         return getRestTemplate().exchange(getBaseUri() + path, HttpMethod.GET, null, Resource.class);
     }
+
+    public String runLogicalComputation(UUID networkUuid, String variantId, UUID parametersUuid) {
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/networks/{networkUuid}/logical-controls");
+        if (parametersUuid != null) {
+            uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
+        }
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        var path = uriComponentsBuilder.buildAndExpand(networkUuid).toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
+
+        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, String.class).getBody();
+    }
 }

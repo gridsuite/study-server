@@ -33,6 +33,7 @@ import static org.mockito.Mockito.*;
 class NetworkModificationServiceTest {
 
     private static final String NETWORK_MODIFICATION_SERVER_URI = "http://network-modification-server";
+    private static final String USER_ID = "userId";
     private static final String RESPONSE = "{\"id\":\"modification\"}";
     private static final String USER_ID = "userId";
 
@@ -232,6 +233,24 @@ class NetworkModificationServiceTest {
         // there is nothing to drop without a group or without a tag
         networkModificationService.deleteRootNetworkTags(List.of(), List.of("PH1"));
         networkModificationService.deleteRootNetworkTags(List.of(groupUuid), List.of());
+
+        verifyNoMoreInteractions(restTemplate);
+    }
+
+    @Test
+    void testAssertReferencedModificationsAreWritable() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/references/authorized?uuids=" + groupUuid;
+
+        networkModificationService.assertReferencedModificationsAreWritable(List.of(groupUuid), USER_ID);
+
+        // the server needs the user to tell whether the shared modifications are writable
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, USER_ID);
+        verify(restTemplate).exchange(expectedUrl, HttpMethod.GET, new HttpEntity<>(headers), Void.class);
+
+        // there is nothing to check without a container
+        networkModificationService.assertReferencedModificationsAreWritable(List.of(), USER_ID);
 
         verifyNoMoreInteractions(restTemplate);
     }
