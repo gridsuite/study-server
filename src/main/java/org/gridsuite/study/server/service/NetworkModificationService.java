@@ -696,7 +696,7 @@ public class NetworkModificationService {
     }
 
     public boolean hasModificationReferences(List<UUID> containerUuids) {
-        String path = UriComponentsBuilder.fromPath("containers/references/exists")
+        String path = UriComponentsBuilder.fromPath(CONTAINERS + DELIMITER + "references/exists")
                 .queryParam(UUIDS, containerUuids)
                 .build().toUriString();
         return Boolean.TRUE.equals(restTemplate.getForObject(getNetworkModificationServerURI(false) + path, Boolean.class));
@@ -710,7 +710,7 @@ public class NetworkModificationService {
         if (containerUuids.isEmpty()) {
             return;
         }
-        String path = UriComponentsBuilder.fromPath("containers/references/authorized")
+        String path = UriComponentsBuilder.fromPath(CONTAINERS + DELIMITER + "references/authorized")
                 .queryParam(UUIDS, containerUuids)
                 .build().toUriString();
 
