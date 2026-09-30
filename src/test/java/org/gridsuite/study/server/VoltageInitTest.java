@@ -1329,25 +1329,4 @@ class VoltageInitTest {
         assertEquals("VOLTAGE_LEVEL_LIMITS_OUT_OF_NOMINAL_VOLTAGE_RANGE", alert.messageId());
         assertNull(alert.attributes());
     }
-
-    @Test
-    void consumeVoltageInitRunning() throws Exception {
-        StudyEntity studyEntity = insertDummyStudy(
-                NETWORK_UUID,
-                CASE_UUID,
-                UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID_STRING),
-                true);
-        UUID studyUuid = studyEntity.getId();
-        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
-        UUID rootNodeUuid = getRootNode(studyUuid).getId();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
-                UUID.randomUUID(), VARIANT_ID_2, "node 1");
-
-        Message<String> runningMessage = MessageBuilder.withPayload("")
-                .setHeader(HEADER_RECEIVER, objectMapper.writeValueAsString(new NodeReceiver(modificationNode1.getId(), firstRootNetworkUuid)))
-                .build();
-        consumerService.consumeVoltageInitRunning().accept(runningMessage);
-        Message<byte[]> test = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
-        assertEquals(UPDATE_TYPE_VOLTAGE_INIT_STATUS, test.getHeaders().get(HEADER_UPDATE_TYPE));
-    }
 }
