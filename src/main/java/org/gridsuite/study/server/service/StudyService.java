@@ -1663,6 +1663,7 @@ public class StudyService {
             }
             // the applicability of a reference modification is held by its parent (the shared modification itself),
             // so changing it requires the right to write on it
+            // TODO : identifier ici les modifications qui sont des sous modifications de références et donc sont soumises au test sur les droits
             assertCanUpdateSharedModifications(new ArrayList<>(modificationsUuids), userId);
             networkModificationService.updateRootNetworkApplicability(new ArrayList<>(modificationsUuids),
                     rootNetworkService.getRootNetworkTag(rootNetworkUuid), applicable);
