@@ -44,6 +44,7 @@ public class FilterService {
     public static final String FILTER_END_POINT_EVALUATE_IDS = "/filters/evaluate/identifiables";
     public static final String FILTER_END_POINT_EXPORT = "/filters/{id}/export";
     public static final String FILTERS_END_POINT_EXPORT = "/filters/export";
+    private static final String EMPTY_JSON_ARRAY = "[]";
 
     private final RestTemplate restTemplate;
 
@@ -145,6 +146,9 @@ public class FilterService {
     }
 
     public String getFilters(Collection<UUID> filterUuids) {
+        if (filterUuids.isEmpty()) {
+            return EMPTY_JSON_ARRAY;
+        }
         String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_API_VERSION + "/filters/metadata")
                 .queryParam(IDS, filterUuids)
                 .toUriString();

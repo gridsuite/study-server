@@ -55,6 +55,8 @@ public class StudyExportService {
     public static final String PARAMETERS_FOLDER = "computationParameters";
     public static final String CONTINGENCY_LIST_JSON = "contingencyList.json";
     public static final String FILTERS_JSON = "filters.json";
+    public static final String ID = "id";
+    public static final String JSON = ".json";
 
     private final StudyService studyService;
     private final CaseService caseService;
@@ -136,7 +138,7 @@ public class StudyExportService {
         Set<UUID> filterUuids = new HashSet<>();
         Set<UUID> contingencyListUuids = new HashSet<>();
         for (Map.Entry<ComputationType, String> parameters : computationParametersService.exportParameters(studyService.getStudy(studyUuid)).entrySet()) {
-            Files.writeString(parametersDir.resolve(parameters.getKey().name() + ".json"), parameters.getValue());
+            Files.writeString(parametersDir.resolve(parameters.getKey().name() + JSON), parameters.getValue());
             ExportedParameters exportedParameters = readParametersReferences(parameters.getKey(), parameters.getValue());
             filterUuids.addAll(exportedParameters.getFilterUuids());
             contingencyListUuids.addAll(exportedParameters.getContingencyListUuids());
@@ -148,8 +150,8 @@ public class StudyExportService {
             filterUuids.addAll(filterService.getReferencedFilterUuids(filterUuids));
         }
         Map<UUID, String> names = directoryService.getElementNames(Stream.concat(filterUuids.stream(), contingencyListUuids.stream()).collect(Collectors.toSet()));
-        List<ExportedElementInfos> contingencyLists = contingencyListUuids.isEmpty() ? List.of() : toExportedElements(actionsService.getContingencyLists(contingencyListUuids), names);
-        List<ExportedElementInfos> filters = filterUuids.isEmpty() ? List.of() : toExportedElements(filterService.getFilters(filterUuids), names);
+        List<ExportedElementInfos> contingencyLists = toExportedElements(actionsService.getContingencyLists(contingencyListUuids), names);
+        List<ExportedElementInfos> filters = toExportedElements(filterService.getFilters(filterUuids), names);
         objectMapper.writeValue(parametersDir.resolve(CONTINGENCY_LIST_JSON).toFile(), contingencyLists);
         objectMapper.writeValue(parametersDir.resolve(FILTERS_JSON).toFile(), filters);
     }
@@ -157,7 +159,7 @@ public class StudyExportService {
     private List<ExportedElementInfos> toExportedElements(String content, Map<UUID, String> names) throws IOException {
         List<ExportedElementInfos> elements = new ArrayList<>();
         for (JsonNode jsonNodeContent : objectMapper.readTree(content)) {
-            UUID uuid = UUID.fromString(jsonNodeContent.get("id").asText());
+            UUID uuid = UUID.fromString(jsonNodeContent.get(ID).asText());
             elements.add(new ExportedElementInfos(uuid, names.get(uuid), jsonNodeContent));
         }
         return elements;

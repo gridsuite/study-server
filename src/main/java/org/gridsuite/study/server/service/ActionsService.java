@@ -35,6 +35,7 @@ public class ActionsService {
 
     private static final String NETWORK_UUID = "networkUuid";
     private static final String CONTINGENCY_LIST_IDS = "ids";
+    private static final String EMPTY_JSON_ARRAY = "[]";
 
     public static final ContingencyCount EMPTY_CONTINGENCY_COUNT = new ContingencyCount(Map.of());
 
@@ -70,6 +71,9 @@ public class ActionsService {
     }
 
     public String getContingencyLists(Collection<UUID> ids) {
+        if (ids.isEmpty()) {
+            return EMPTY_JSON_ARRAY;
+        }
         return restTemplate.postForObject(actionsServerBaseUri + DELIMITER + ACTIONS_API_VERSION + "/contingency-lists", ids, String.class);
     }
 }
