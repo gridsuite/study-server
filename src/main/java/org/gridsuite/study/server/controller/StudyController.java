@@ -1048,6 +1048,20 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/name-and-description/{uuid}")
+    @Operation(summary = "Updates the metadata of a network modification")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Update the metadata of a network modification"), @ApiResponse(responseCode = "404",
+            description = "The study/node is not found")})
+    public ResponseEntity<Void> updateNetworkModificationsMetadata(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                   @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                   @Parameter(description = "modification UUID") @PathVariable("uuid") UUID networkModificationUuid,
+                                                                   @RequestBody NetworkModificationMetadata metadata,
+                                                                   @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        rebuildNodeService.updateNetworkModificationsNameAndDescription(studyUuid, nodeUuid, networkModificationUuid, userId, metadata);
+        return ResponseEntity.ok().build();
+    }
+
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", params = "applicable")
     @Operation(summary = "Update the applicability of network modifications for a node on a specific root network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Update the applicability of network modifications on a node in a specific root network"),

@@ -61,6 +61,11 @@ public class RebuildNodeService {
             () -> studyService.updateNetworkModificationsMetadata(studyUuid, nodeUuid, modificationsUuids, userId, metadata));
     }
 
+    public void updateNetworkModificationsNameAndDescription(UUID studyUuid, UUID nodeUuid, UUID modificationsUuid, String userId, NetworkModificationMetadata metadata) {
+        handleRebuildNode(studyUuid, nodeUuid, userId,
+                () -> studyService.updateNetworkModificationsNameAndDescription(studyUuid, nodeUuid, modificationsUuid, userId, metadata));
+    }
+
     public void updateNetworkModificationsApplicability(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Set<UUID> modificationsUuids, String userId, boolean applicable) {
         handleRebuildNode(studyUuid, nodeUuid, userId,
             () -> studyService.updateNetworkModificationsApplicabilityInRootNetwork(studyUuid, nodeUuid, rootNetworkUuid, modificationsUuids, userId, applicable));

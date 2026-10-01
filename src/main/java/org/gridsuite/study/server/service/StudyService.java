@@ -1639,6 +1639,23 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
+    @Transactional
+    public void updateNetworkModificationsNameAndDescription(UUID studyUuid, UUID nodeUuid, UUID modificationsUuid, String userId, NetworkModificationMetadata metadata) {
+        List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
+        try {
+            if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
+                throw new StudyException(NOT_ALLOWED);
+            }
+            networkModificationService.updateNetworkModificationNameAndDescription(modificationsUuid, metadata, userId);
+            if (metadata.getActivated() != null || metadata.getName() != null) {
+                invalidateNodeTree(studyUuid, nodeUuid);
+            }
+        } finally {
+            notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
+        }
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
     /**
      * A shared modification holds the applicabilities used by every study referencing it: only a user allowed to write
      * on the shared element may change them.
@@ -2000,7 +2017,8 @@ public class StudyService {
             // the applied modifications are left unchanged : the node does not need to be rebuilt
             ModificationReference newReference = networkModificationService.extractCompositeModificationToShare(groupUuid, modificationUuid, name, description);
             // the composite modification keeps its uuid when extracted, so it is shared under that same uuid
-            directoryService.createElement(parentDirectoryUuid, description, modificationUuid, name, DirectoryService.MODIFICATION, userId);
+            // description is null as it is provided by the referenced modification
+            directoryService.createElement(parentDirectoryUuid, null, modificationUuid, name, DirectoryService.MODIFICATION, userId);
             // extraction replaced the local composite by a new reference modification, in the node group or in a parent
             // composite: register it on the shared element
             createElementsReferences(List.of(newReference), studyUuid, nodeUuid, userId);
