@@ -7,7 +7,7 @@
 package org.gridsuite.study.server.controller;
 
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.service.NetworkModificationService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,9 +18,9 @@ import java.util.UUID;
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION)
 public class NetworkModificationController {
-    private final NetworkModificationService networkModificationService;
+    private final NetworkModificationRestService networkModificationService;
 
-    public NetworkModificationController(NetworkModificationService networkModificationService) {
+    public NetworkModificationController(NetworkModificationRestService networkModificationService) {
         this.networkModificationService = networkModificationService;
     }
 
