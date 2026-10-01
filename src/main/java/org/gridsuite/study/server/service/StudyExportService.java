@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
@@ -28,6 +29,7 @@ import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -36,7 +38,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -136,9 +137,9 @@ public class StudyExportService {
         Set<UUID> contingencyListUuids = new HashSet<>();
         for (Map.Entry<ComputationType, String> parameters : computationParametersService.exportParameters(studyService.getStudy(studyUuid)).entrySet()) {
             Files.writeString(parametersDir.resolve(parameters.getKey().name() + ".json"), parameters.getValue());
-            ExportedParametersReferences references = readParametersReferences(parameters.getKey(), parameters.getValue());
-            filterUuids.addAll(references.getFilterUuids());
-            contingencyListUuids.addAll(references.getContingencyListUuids());
+            ExportedParameters exportedParameters = readParametersReferences(parameters.getKey(), parameters.getValue());
+            filterUuids.addAll(exportedParameters.getFilterUuids());
+            contingencyListUuids.addAll(exportedParameters.getContingencyListUuids());
         }
         if (!contingencyListUuids.isEmpty()) {
             filterUuids.addAll(actionsService.getReferencedFilterUuids(contingencyListUuids));
@@ -147,18 +148,23 @@ public class StudyExportService {
             filterUuids.addAll(filterService.getReferencedFilterUuids(filterUuids));
         }
         Map<UUID, String> names = directoryService.getElementNames(Stream.concat(filterUuids.stream(), contingencyListUuids.stream()).collect(Collectors.toSet()));
-        for (Map.Entry<String, String> contents : Map.of(
-                CONTINGENCY_LIST_JSON, contingencyListUuids.isEmpty() ? "[]" : actionsService.getContingencyLists(contingencyListUuids),
-                FILTERS_JSON, filterUuids.isEmpty() ? "[]" : filterService.getFilters(filterUuids)).entrySet()) {
-            objectMapper.writeValue(parametersDir.resolve(contents.getKey()).toFile(),
-                    StreamSupport.stream(objectMapper.readTree(contents.getValue()).spliterator(), false)
-                            .map(content -> ExportedElementInfos.of(content, names))
-                            .toList());
-        }
+        List<ExportedElementInfos> contingencyLists = contingencyListUuids.isEmpty() ? List.of() : toExportedElements(actionsService.getContingencyLists(contingencyListUuids), names);
+        List<ExportedElementInfos> filters = filterUuids.isEmpty() ? List.of() : toExportedElements(filterService.getFilters(filterUuids), names);
+        objectMapper.writeValue(parametersDir.resolve(CONTINGENCY_LIST_JSON).toFile(), contingencyLists);
+        objectMapper.writeValue(parametersDir.resolve(FILTERS_JSON).toFile(), filters);
     }
 
-    private ExportedParametersReferences readParametersReferences(ComputationType type, String parametersJson) throws IOException {
-        Class<? extends ExportedParametersReferences> referencesClass = switch (type) {
+    private List<ExportedElementInfos> toExportedElements(String content, Map<UUID, String> names) throws IOException {
+        List<ExportedElementInfos> elements = new ArrayList<>();
+        for (JsonNode jsonNodeContent : objectMapper.readTree(content)) {
+            UUID uuid = UUID.fromString(jsonNodeContent.get("id").asText());
+            elements.add(new ExportedElementInfos(uuid, names.get(uuid), jsonNodeContent));
+        }
+        return elements;
+    }
+
+    private ExportedParameters readParametersReferences(ComputationType type, String parametersJson) throws IOException {
+        Class<? extends ExportedParameters> referencesClass = switch (type) {
             case SECURITY_ANALYSIS -> SecurityAnalysisExportedParameters.class;
             case SHORT_CIRCUIT -> ShortCircuitExportedParameters.class;
             case SENSITIVITY_ANALYSIS -> SensitivityAnalysisExportedParameters.class;
@@ -167,7 +173,7 @@ public class StudyExportService {
             // LOAD_FLOW: the load flow parameters do not reference any filter or contingency list
             default -> null;
         };
-        return referencesClass == null ? new ExportedParametersReferences() { } : objectMapper.readValue(parametersJson, referencesClass);
+        return referencesClass == null ? new ExportedParameters() { } : objectMapper.readValue(parametersJson, referencesClass);
     }
 
     private Path createTempWorkDir(UUID studyUuid) {

@@ -13,8 +13,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.dto.studyexport.parameters.ExportedParametersReferences.nullSafe;
-import static org.gridsuite.study.server.dto.studyexport.parameters.ExportedParametersReferences.toUuidSet;
+import static org.gridsuite.study.server.dto.studyexport.parameters.ExportedParameters.nullSafe;
+import static org.gridsuite.study.server.dto.studyexport.parameters.ExportedParameters.toUuidSet;
 
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
@@ -26,7 +26,7 @@ public record VoltageInitExportedParameters(
         List<FilterEquipments> variableQGenerators,
         List<FilterEquipments> variableTwoWindingsTransformers,
         List<FilterEquipments> variableShuntCompensators
-) implements ExportedParametersReferences {
+) implements ExportedParameters {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record VoltageLimit(List<FilterEquipments> filters) { }
@@ -39,7 +39,7 @@ public record VoltageInitExportedParameters(
         Stream<FilterEquipments> limitFilters = Stream.concat(nullSafe(voltageLimitsModification), nullSafe(voltageLimitsDefault))
                 .flatMap(voltageLimit -> nullSafe(voltageLimit.filters()));
         Stream<FilterEquipments> variableFilters = Stream.of(variableQGenerators, variableTwoWindingsTransformers, variableShuntCompensators)
-                .flatMap(ExportedParametersReferences::nullSafe);
+                .flatMap(ExportedParameters::nullSafe);
         return toUuidSet(Stream.concat(limitFilters, variableFilters).map(FilterEquipments::filterId));
     }
 }

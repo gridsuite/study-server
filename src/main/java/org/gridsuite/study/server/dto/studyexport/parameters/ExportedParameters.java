@@ -16,7 +16,7 @@ import java.util.stream.Stream;
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
  */
-public interface ExportedParametersReferences {
+public interface ExportedParameters {
 
     default Set<UUID> getFilterUuids() {
         return Set.of();

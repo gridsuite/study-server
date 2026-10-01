@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
  */
-class ExportedParametersReferencesTest {
+class ExportedParametersTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 

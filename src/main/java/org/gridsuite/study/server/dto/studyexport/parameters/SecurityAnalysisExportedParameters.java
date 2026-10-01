@@ -12,14 +12,14 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.dto.studyexport.parameters.ExportedParametersReferences.nullSafe;
-import static org.gridsuite.study.server.dto.studyexport.parameters.ExportedParametersReferences.toUuidSet;
+import static org.gridsuite.study.server.dto.studyexport.parameters.ExportedParameters.nullSafe;
+import static org.gridsuite.study.server.dto.studyexport.parameters.ExportedParameters.toUuidSet;
 
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record SecurityAnalysisExportedParameters(List<ContingencyListsInfos> contingencyListsInfos) implements ExportedParametersReferences {
+public record SecurityAnalysisExportedParameters(List<ContingencyListsInfos> contingencyListsInfos) implements ExportedParameters {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record ContingencyListsInfos(List<UUID> contingencyLists) { }

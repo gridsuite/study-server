@@ -13,8 +13,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.dto.studyexport.parameters.ExportedParametersReferences.nullSafe;
-import static org.gridsuite.study.server.dto.studyexport.parameters.ExportedParametersReferences.toUuidSet;
+import static org.gridsuite.study.server.dto.studyexport.parameters.ExportedParameters.nullSafe;
+import static org.gridsuite.study.server.dto.studyexport.parameters.ExportedParameters.toUuidSet;
 
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
@@ -26,7 +26,7 @@ public record SensitivityAnalysisExportedParameters(
         List<SensitivityFactor> sensitivityHVDC,
         List<SensitivityFactor> sensitivityPST,
         List<SensitivityNodes> sensitivityNodes
-) implements ExportedParametersReferences {
+) implements ExportedParameters {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record SensitivityFactor(
             List<UUID> monitoredBranches,
@@ -37,7 +37,7 @@ public record SensitivityAnalysisExportedParameters(
     ) {
         Stream<UUID> filterUuids() {
             return Stream.of(monitoredBranches, injections, hvdcs, psts)
-                    .flatMap(ExportedParametersReferences::nullSafe);
+                    .flatMap(ExportedParameters::nullSafe);
         }
     }
 
@@ -49,13 +49,13 @@ public record SensitivityAnalysisExportedParameters(
     ) {
         Stream<UUID> filterUuids() {
             return Stream.of(monitoredVoltageLevels, equipmentsInVoltageRegulation)
-                    .flatMap(ExportedParametersReferences::nullSafe);
+                    .flatMap(ExportedParameters::nullSafe);
         }
     }
 
     private Stream<SensitivityFactor> allFactors() {
         return Stream.of(sensitivityInjectionsSet, sensitivityInjection, sensitivityHVDC, sensitivityPST)
-                .flatMap(ExportedParametersReferences::nullSafe);
+                .flatMap(ExportedParameters::nullSafe);
     }
 
     @Override
