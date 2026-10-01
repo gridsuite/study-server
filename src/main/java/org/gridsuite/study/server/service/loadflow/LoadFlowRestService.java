@@ -319,6 +319,15 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
         return restTemplate.getForObject(getBaseUri() + DELIMITER + LOADFLOW_API_VERSION + "/specific-parameters", String.class);
     }
 
+    public String getSpecificParameters(String provider) {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/specific-parameters")
+            .queryParam("provider", provider)
+            .build()
+            .toUriString();
+        return restTemplate.getForObject(getBaseUri() + path, String.class);
+    }
+
     public String getDefaultLimitReductions() {
         return restTemplate.getForObject(getBaseUri() + DELIMITER + LOADFLOW_API_VERSION + "/parameters/default-limit-reductions", String.class);
     }
@@ -333,5 +342,9 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         restTemplate.put(getBaseUri() + path, new HttpEntity<>(parameters, headers));
+    }
+
+    public String getDefaultValues() {
+        return restTemplate.getForObject(getBaseUri() + DELIMITER + LOADFLOW_API_VERSION + "/parameters/default-values", String.class);
     }
 }

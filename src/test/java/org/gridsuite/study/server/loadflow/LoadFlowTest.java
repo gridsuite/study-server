@@ -785,21 +785,36 @@ class LoadFlowTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
 
+        wireMockStubs.userAdminServer.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
         wireMockStubs.loadflowServer.stubGetLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING, LOADFLOW_DEFAULT_PARAMETERS_JSON, false);
+        wireMockStubs.loadflowServer.stubGetDefaultValues(LOADFLOW_DEFAULT_PARAMETERS_JSON);
+        wireMockStubs.loadflowServer.stubGetSpecificParameters(PROVIDER, "{}");
+
         //get initial loadFlow parameters
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)).andExpectAll(
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
+                .header("userId", NO_PROFILE_USER_ID)).andExpectAll(
                 status().isOk()).andReturn();
+        wireMockStubs.userAdminServer.verifyGetUserProfile(NO_PROFILE_USER_ID);
         wireMockStubs.loadflowServer.verifyGetLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING);
+        wireMockStubs.loadflowServer.verifyGetDefaultValues();
+        wireMockStubs.loadflowServer.verifyGetSpecificParameters(PROVIDER);
 
         JSONAssert.assertEquals(LOADFLOW_DEFAULT_PARAMETERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
 
         updateParametersAndDoChecks(studyNameUserIdUuid, LOADFLOW_DEFAULT_PARAMETERS_JSON, LOADFLOW_PARAMETERS_UUID_STRING, "userId", HttpStatus.OK, null, false, null, false);
 
+        wireMockStubs.userAdminServer.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
         wireMockStubs.loadflowServer.stubGetLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING, LOADFLOW_DEFAULT_PARAMETERS_JSON, false);
+        wireMockStubs.loadflowServer.stubGetDefaultValues(LOADFLOW_DEFAULT_PARAMETERS_JSON);
+        wireMockStubs.loadflowServer.stubGetSpecificParameters(PROVIDER, "{}");
+
         //checking update is registered
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)).andExpectAll(
-                status().isOk()).andReturn();
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
+            .header("userId", NO_PROFILE_USER_ID)).andExpectAll(status().isOk()).andReturn();
+        wireMockStubs.userAdminServer.verifyGetUserProfile(NO_PROFILE_USER_ID);
         wireMockStubs.loadflowServer.verifyGetLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING);
+        wireMockStubs.loadflowServer.verifyGetDefaultValues();
+        wireMockStubs.loadflowServer.verifyGetSpecificParameters(PROVIDER);
 
         JSONAssert.assertEquals(LOADFLOW_DEFAULT_PARAMETERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
 
@@ -809,11 +824,18 @@ class LoadFlowTest {
         createParametersAndDoChecks(studyNameUserIdUuid, LOADFLOW_DEFAULT_PARAMETERS_JSON, "userId", null, false, null);
         UUID study2loadFlowParametersUuid = studyRepository.findById(studyNameUserIdUuid).orElseThrow().getLoadFlowParametersUuid();
 
+        wireMockStubs.userAdminServer.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
         wireMockStubs.loadflowServer.stubGetLoadflowParameters(study2loadFlowParametersUuid.toString(), LOADFLOW_DEFAULT_PARAMETERS_JSON, false);
+        wireMockStubs.loadflowServer.stubGetDefaultValues(LOADFLOW_DEFAULT_PARAMETERS_JSON);
+        wireMockStubs.loadflowServer.stubGetSpecificParameters(PROVIDER, "{}");
+
         //get initial loadFlow parameters
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)).andExpectAll(
-                status().isOk()).andReturn();
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
+            .header("userId", NO_PROFILE_USER_ID)).andExpectAll(status().isOk()).andReturn();
+        wireMockStubs.userAdminServer.verifyGetUserProfile(NO_PROFILE_USER_ID);
         wireMockStubs.loadflowServer.verifyGetLoadflowParameters(study2loadFlowParametersUuid.toString());
+        wireMockStubs.loadflowServer.verifyGetDefaultValues();
+        wireMockStubs.loadflowServer.verifyGetSpecificParameters(PROVIDER);
 
         JSONAssert.assertEquals(LOADFLOW_DEFAULT_PARAMETERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
     }

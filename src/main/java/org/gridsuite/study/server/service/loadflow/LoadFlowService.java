@@ -7,6 +7,10 @@
 
 package org.gridsuite.study.server.service.loadflow;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.powsybl.loadflow.LoadFlowParameters;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
@@ -24,6 +28,7 @@ import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.UncheckedIOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -36,6 +41,7 @@ import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 @Service
 public class LoadFlowService extends AbstractComputationService {
     private final LoadFlowRestService loadflowRestService;
+    private final ObjectMapper objectMapper;
 
     public LoadFlowService(StudyRepository studyRepository,
                            LoadFlowRestService loadflowRestService,
@@ -44,10 +50,12 @@ public class LoadFlowService extends AbstractComputationService {
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            NetworkModificationTreeService networkModificationTreeService,
                            RootNetworkService rootNetworkService,
-                           UserAdminService userAdminService) {
+                           UserAdminService userAdminService,
+                           ObjectMapper objectMapper) {
         super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService,
             rootNetworkService, computationParametersService, userAdminService);
         this.loadflowRestService = loadflowRestService;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
@@ -105,11 +113,188 @@ public class LoadFlowService extends AbstractComputationService {
         return loadflowRestService.getLoadFlowProvider(studyEntity.getLoadFlowParametersUuid());
     }
 
+    private String computeDifferences(ObjectNode studyParametersNode,
+                                      String referenceLoadflowParameters,
+                                      String defaultSpecificLoadflowParameters) {
+        try {
+            JsonNode referenceParametersNode = objectMapper.readTree(referenceLoadflowParameters);
+            JsonNode referenceCommonParametersNode = getCommonParametersNode(referenceParametersNode);
+            ObjectNode parametersDifferencesNode = objectMapper.createObjectNode();
+
+            computeCommonParametersDifferences(studyParametersNode.path("commonParameters"), referenceCommonParametersNode, parametersDifferencesNode);
+            computeSpecificParametersDifferences(studyParametersNode, defaultSpecificLoadflowParameters, parametersDifferencesNode);
+
+            if (!parametersDifferencesNode.isEmpty()) {
+                studyParametersNode.set("parametersDifferences", parametersDifferencesNode);
+            }
+
+            return objectMapper.writeValueAsString(studyParametersNode);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private void computeCommonParametersDifferences(JsonNode studyCommonParametersNode,
+                                                    JsonNode referenceCommonParametersNode,
+                                                    ObjectNode parametersDifferencesNode) {
+        if (!studyCommonParametersNode.isObject() || !referenceCommonParametersNode.isObject()) {
+            return;
+        }
+
+        studyCommonParametersNode.properties().iterator().forEachRemaining(entry -> {
+            String parameterName = entry.getKey();
+            JsonNode studyValue = entry.getValue();
+            JsonNode referenceValue = referenceCommonParametersNode.get(parameterName);
+            if (!Objects.equals(studyValue, referenceValue)) {
+                parametersDifferencesNode.set(parameterName, createDifferenceNode(studyValue, referenceValue));
+            }
+        });
+    }
+
+    private void computeSpecificParametersDifferences(ObjectNode studyParametersNode,
+                                                      String defaultSpecificLoadflowParameters,
+                                                      ObjectNode parametersDifferencesNode) throws JsonProcessingException {
+        JsonNode providerNode = studyParametersNode.get("provider");
+        JsonNode studySpecificParametersPerProviderNode = studyParametersNode.get("specificParametersPerProvider");
+
+        if (providerNode == null
+            || !providerNode.isTextual()
+            || studySpecificParametersPerProviderNode == null
+            || !studySpecificParametersPerProviderNode.isObject()) {
+            return;
+        }
+
+        String provider = providerNode.asText();
+        JsonNode studyProviderSpecificParametersNode = studySpecificParametersPerProviderNode.get(provider);
+
+        if (studyProviderSpecificParametersNode == null || !studyProviderSpecificParametersNode.isObject()) {
+            return;
+        }
+
+        JsonNode defaultSpecificParametersByProviderNode = objectMapper.readTree(defaultSpecificLoadflowParameters);
+        JsonNode defaultSpecificParameterDefinitionsNode = defaultSpecificParametersByProviderNode.get(provider);
+        if (defaultSpecificParameterDefinitionsNode == null || !defaultSpecificParameterDefinitionsNode.isArray()) {
+            return;
+        }
+
+        Map<String, JsonNode> defaultValuesByParameterName = new HashMap<>();
+
+        for (JsonNode parameterDefinitionNode : defaultSpecificParameterDefinitionsNode) {
+            JsonNode namesNode = parameterDefinitionNode.get("names");
+
+            if (namesNode == null
+                || !namesNode.isArray()
+                || namesNode.isEmpty()
+                || !namesNode.get(0).isTextual()) {
+                continue;
+            }
+
+            String parameterName = namesNode.get(0).asText();
+            JsonNode defaultValue = parameterDefinitionNode.get("defaultValue");
+            defaultValuesByParameterName.put(parameterName, defaultValue);
+        }
+
+        studyProviderSpecificParametersNode.properties().iterator().forEachRemaining(entry -> {
+            String parameterName = entry.getKey();
+            JsonNode studyValue = entry.getValue();
+            JsonNode defaultValue = defaultValuesByParameterName.get(parameterName);
+            if (defaultValue == null) {
+                return;
+            }
+            JsonNode normalizedStudyValue = normalizeSpecificParameterValue(studyValue.asText(), defaultValue);
+            if (!Objects.equals(normalizedStudyValue, defaultValue)) {
+                parametersDifferencesNode.set(parameterName, createDifferenceNode(studyValue, defaultValue));
+            }
+        });
+    }
+
+    private JsonNode normalizeSpecificParameterValue(String value, JsonNode defaultValue) {
+        if (defaultValue == null || defaultValue.isNull()) {
+            return value == null
+                ? objectMapper.nullNode()
+                : objectMapper.valueToTree(value);
+        }
+
+        if (defaultValue.isBoolean()) {
+            return objectMapper.valueToTree(Boolean.parseBoolean(value));
+        }
+
+        if (defaultValue.isInt()) {
+            try {
+                return objectMapper.valueToTree(Integer.parseInt(value));
+            } catch (NumberFormatException e) {
+                return objectMapper.valueToTree(value);
+            }
+        }
+
+        if (defaultValue.isLong()) {
+            try {
+                return objectMapper.valueToTree(Long.parseLong(value));
+            } catch (NumberFormatException e) {
+                return objectMapper.valueToTree(value);
+            }
+        }
+
+        if (defaultValue.isFloatingPointNumber()) {
+            try {
+                return objectMapper.readTree(value);
+            } catch (JsonProcessingException e) {
+                return objectMapper.valueToTree(value);
+            }
+        }
+
+        if (defaultValue.isContainerNode()) {
+            try {
+                return objectMapper.readTree(value);
+            } catch (JsonProcessingException e) {
+                return objectMapper.valueToTree(value);
+            }
+        }
+
+        return objectMapper.valueToTree(value);
+    }
+
+    private ObjectNode createDifferenceNode(JsonNode value, JsonNode defaultValue) {
+        ObjectNode differenceNode = objectMapper.createObjectNode();
+        differenceNode.set("value", value);
+        differenceNode.set("defaultValue", defaultValue);
+        return differenceNode;
+    }
+
     @Transactional
-    public String getLoadFlowParametersValues(UUID studyUuid) {
+    public String getLoadFlowParametersValues(UUID studyUuid, String userId) {
+        // get study loadflow parameters
         StudyEntity studyEntity = getStudy(studyUuid);
-        UUID loadFlowParamsUuid = loadflowRestService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
-        return loadflowRestService.getParameters(loadFlowParamsUuid);
+        UUID studyLoadFlowParamsUuid = loadflowRestService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
+        String studyLoadflowParameters = loadflowRestService.getParameters(studyLoadFlowParamsUuid);
+
+        String referenceLoadflowParameters;
+
+        // get reference loadflow parameters from user profile, if defined, or else from default parameters
+        UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
+        if (userProfileInfos != null && userProfileInfos.getLoadFlowParameterId() != null) {
+            UUID referenceLoadFlowParamsUuid = userProfileInfos.getLoadFlowParameterId();
+            referenceLoadflowParameters = loadflowRestService.getParameters(referenceLoadFlowParamsUuid);
+        } else {
+            referenceLoadflowParameters = loadflowRestService.getDefaultValues();
+        }
+
+        try {
+            // get reference specific loadflow parameters for the provider
+            ObjectNode studyParametersNode = (ObjectNode) objectMapper.readTree(studyLoadflowParameters);
+            String provider = studyParametersNode.path("provider").asText();
+            String referenceSpecificLoadflowParameters = loadflowRestService.getSpecificParameters(provider);
+
+            // compute all the differencs between study and reference loadflow parameters
+            return computeDifferences(studyParametersNode, referenceLoadflowParameters, referenceSpecificLoadflowParameters);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private JsonNode getCommonParametersNode(JsonNode referenceParametersNode) {
+        JsonNode commonParametersNode = referenceParametersNode.get("commonParameters");
+        return commonParametersNode != null ? commonParametersNode : referenceParametersNode;
     }
 
     @Transactional
