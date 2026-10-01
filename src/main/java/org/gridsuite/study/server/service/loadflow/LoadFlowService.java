@@ -137,10 +137,6 @@ public class LoadFlowService extends AbstractComputationService {
     private void computeCommonParametersDifferences(JsonNode studyCommonParametersNode,
                                                     JsonNode referenceCommonParametersNode,
                                                     ObjectNode parametersDifferencesNode) {
-        if (!studyCommonParametersNode.isObject() || !referenceCommonParametersNode.isObject()) {
-            return;
-        }
-
         studyCommonParametersNode.properties().iterator().forEachRemaining(entry -> {
             String parameterName = entry.getKey();
             JsonNode studyValue = entry.getValue();
@@ -157,17 +153,14 @@ public class LoadFlowService extends AbstractComputationService {
         JsonNode providerNode = studyParametersNode.get("provider");
         JsonNode studySpecificParametersPerProviderNode = studyParametersNode.get("specificParametersPerProvider");
 
-        if (providerNode == null
-            || !providerNode.isTextual()
-            || studySpecificParametersPerProviderNode == null
-            || !studySpecificParametersPerProviderNode.isObject()) {
+        if (studySpecificParametersPerProviderNode == null) {
             return;
         }
 
         String provider = providerNode.asText();
         JsonNode studyProviderSpecificParametersNode = studySpecificParametersPerProviderNode.get(provider);
 
-        if (studyProviderSpecificParametersNode == null || !studyProviderSpecificParametersNode.isObject()) {
+        if (studyProviderSpecificParametersNode == null) {
             return;
         }
 
@@ -198,9 +191,6 @@ public class LoadFlowService extends AbstractComputationService {
             String parameterName = entry.getKey();
             JsonNode studyValue = entry.getValue();
             JsonNode defaultValue = defaultValuesByParameterName.get(parameterName);
-            if (defaultValue == null) {
-                return;
-            }
             JsonNode normalizedStudyValue = normalizeSpecificParameterValue(studyValue.asText(), defaultValue);
             if (!Objects.equals(normalizedStudyValue, defaultValue)) {
                 parametersDifferencesNode.set(parameterName, createDifferenceNode(studyValue, defaultValue));
@@ -210,40 +200,24 @@ public class LoadFlowService extends AbstractComputationService {
 
     private JsonNode normalizeSpecificParameterValue(String value, JsonNode defaultValue) {
         if (defaultValue == null || defaultValue.isNull()) {
-            return value == null
-                ? objectMapper.nullNode()
-                : objectMapper.valueToTree(value);
+            return objectMapper.valueToTree(value);
         }
 
         if (defaultValue.isBoolean()) {
             return objectMapper.valueToTree(Boolean.parseBoolean(value));
         }
 
-        if (defaultValue.isInt()) {
+        if (defaultValue.isInt() || defaultValue.isLong()) {
             try {
-                return objectMapper.valueToTree(Integer.parseInt(value));
+                return defaultValue.isInt()
+                    ? objectMapper.valueToTree(Integer.parseInt(value))
+                    : objectMapper.valueToTree(Long.parseLong(value));
             } catch (NumberFormatException e) {
                 return objectMapper.valueToTree(value);
             }
         }
 
-        if (defaultValue.isLong()) {
-            try {
-                return objectMapper.valueToTree(Long.parseLong(value));
-            } catch (NumberFormatException e) {
-                return objectMapper.valueToTree(value);
-            }
-        }
-
-        if (defaultValue.isFloatingPointNumber()) {
-            try {
-                return objectMapper.readTree(value);
-            } catch (JsonProcessingException e) {
-                return objectMapper.valueToTree(value);
-            }
-        }
-
-        if (defaultValue.isContainerNode()) {
+        if (defaultValue.isFloatingPointNumber() || defaultValue.isContainerNode()) {
             try {
                 return objectMapper.readTree(value);
             } catch (JsonProcessingException e) {

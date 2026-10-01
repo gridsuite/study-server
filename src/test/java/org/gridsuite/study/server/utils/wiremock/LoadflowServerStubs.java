@@ -148,7 +148,11 @@ public class LoadflowServerStubs {
     }
 
     public void verifyGetLoadflowParameters(String parametersUuid) {
-        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/parameters/" + parametersUuid, Map.of());
+        verifyGetLoadflowParameters(parametersUuid, 1);
+    }
+
+    public void verifyGetLoadflowParameters(String parametersUuid, int nbRequests) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/parameters/" + parametersUuid, Map.of(), nbRequests);
     }
 
     public void stubPutLoadflowParameters(String parametersUuid, String parameters) {
