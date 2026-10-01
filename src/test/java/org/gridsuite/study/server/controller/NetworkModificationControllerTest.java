@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.controller;
 
-import org.gridsuite.study.server.service.NetworkModificationService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,7 +33,7 @@ class NetworkModificationControllerTest {
     private static final String RESPONSE = "{\"name\":\"modification\"}";
 
     @Mock
-    private NetworkModificationService networkModificationService;
+    private NetworkModificationRestService networkModificationService;
 
     private MockMvc mockMvc;
 
