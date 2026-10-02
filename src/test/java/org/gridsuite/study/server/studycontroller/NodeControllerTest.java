@@ -743,7 +743,9 @@ class NodeControllerTest extends StudyTestBase {
         assertEquals(0, allNodes.stream().filter(nodeEntity -> nodeEntity.getParentNode() != null && nodeEntity.getParentNode().getIdNode().equals(node4.getId())).count());
 
         // duplicate the node1 after node4
-        List<UUID> allNodesBeforeDuplication = networkModificationTreeService.getAllNodes(study1Uuid).stream().map(NodeEntity::getIdNode).collect(Collectors.toList());
+        List<UUID> allNodesUuidsBeforeDuplication = networkModificationTreeService.getAllNodes(study1Uuid)
+                .stream().map(NodeEntity::getIdNode)
+                .toList();
         UUID stubDuplicateUuid = wireMockStubs.stubDuplicateModificationGroup();
 
         mockMvc.perform(post(STUDIES_URL +
@@ -753,7 +755,7 @@ class NodeControllerTest extends StudyTestBase {
             .andExpect(status().isOk());
 
         List<UUID> nodesAfterDuplication = networkModificationTreeService.getAllNodes(study1Uuid).stream().map(NodeEntity::getIdNode).collect(Collectors.toList());
-        nodesAfterDuplication.removeAll(allNodesBeforeDuplication);
+        nodesAfterDuplication.removeAll(allNodesUuidsBeforeDuplication);
         assertEquals(3, nodesAfterDuplication.size());
 
         checkSubtreeCreatedMessageSent(study1Uuid, nodesAfterDuplication.get(0), node4.getId());
