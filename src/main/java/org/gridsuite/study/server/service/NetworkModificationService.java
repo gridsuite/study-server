@@ -158,16 +158,20 @@ public class NetworkModificationService {
         return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, userIdEntity(userId), String.class).getBody();
     }
 
-    /**
-     * @return what carries the user to the network-modification server, nothing when there is no user to carry
-     */
     private static HttpEntity<Void> userIdEntity(String userId) {
+        return userIdEntity(userId, null);
+    }
+
+    private static <T> HttpEntity<T> userIdEntity(String userId, T body) {
         if (userId == null) {
             return null;
         }
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
-        return new HttpEntity<>(headers);
+        if (body != null) {
+            headers.setContentType(MediaType.APPLICATION_JSON);
+        }
+        return new HttpEntity<>(body, headers);
     }
 
     public String getModificationsToExport(UUID groupUUid) {
@@ -256,13 +260,7 @@ public class NetworkModificationService {
                 .buildAndExpand()
                 .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set(HEADER_USER_ID, userId);
-
-        HttpEntity<String> httpEntity = new HttpEntity<>(createEquipmentAttributes, headers);
-
-        restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
+        restTemplate.exchange(path, HttpMethod.PUT, userIdEntity(userId, createEquipmentAttributes), Void.class);
     }
 
     public void stashModifications(UUID groupUUid, List<UUID> modificationsUuids) {
@@ -293,12 +291,7 @@ public class NetworkModificationService {
             .buildAndExpand()
             .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set(HEADER_USER_ID, userId);
-
-        HttpEntity<NetworkModificationMetadata> httpEntity = new HttpEntity<>(metadata, headers);
-        restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
+        restTemplate.exchange(path, HttpMethod.PUT, userIdEntity(userId, metadata), Void.class);
     }
 
     public void restoreModifications(UUID groupUUid, List<UUID> modificationsUuids) {
@@ -732,10 +725,7 @@ public class NetworkModificationService {
                 .queryParam(UUIDS, containerUuids)
                 .build().toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-
-        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, new HttpEntity<>(headers), Void.class);
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, userIdEntity(userId), Void.class);
     }
 
     /**
