@@ -35,7 +35,6 @@ class NetworkModificationServiceTest {
     private static final String NETWORK_MODIFICATION_SERVER_URI = "http://network-modification-server";
     private static final String USER_ID = "userId";
     private static final String RESPONSE = "{\"id\":\"modification\"}";
-    private static final String USER_ID = "userId";
 
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
