@@ -87,6 +87,22 @@ public class NetworkModificationService {
                 .toUriString();
     }
 
+    private static HttpEntity<Void> userIdEntity(String userId) {
+        return userIdEntity(userId, null);
+    }
+
+    private static <T> HttpEntity<T> userIdEntity(String userId, T body) {
+        if (userId == null) {
+            return null;
+        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        if (body != null) {
+            headers.setContentType(MediaType.APPLICATION_JSON);
+        }
+        return new HttpEntity<>(body, headers);
+    }
+
     public String getLineTypesCatalog() {
         return restTemplate.getForObject(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + "/catalog/line_types", String.class);
     }
@@ -156,22 +172,6 @@ public class NetworkModificationService {
             .toUriString();
 
         return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, userIdEntity(userId), String.class).getBody();
-    }
-
-    private static HttpEntity<Void> userIdEntity(String userId) {
-        return userIdEntity(userId, null);
-    }
-
-    private static <T> HttpEntity<T> userIdEntity(String userId, T body) {
-        if (userId == null) {
-            return null;
-        }
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        if (body != null) {
-            headers.setContentType(MediaType.APPLICATION_JSON);
-        }
-        return new HttpEntity<>(body, headers);
     }
 
     public String getModificationsToExport(UUID groupUUid) {
