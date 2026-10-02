@@ -34,7 +34,6 @@ class NetworkModificationControllerTest {
     private static final String BASE_URL = "/v1";
     private static final String USER_ID = "userId";
     private static final String RESPONSE = "{\"name\":\"modification\"}";
-    private static final String USER_ID = "userId";
 
     @Mock
     private NetworkModificationService networkModificationService;
