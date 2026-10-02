@@ -3662,8 +3662,7 @@ class NetworkModificationTest {
                 "ids", equalTo(sharedUuid.toString()),
                 "accessType", equalTo("WRITE")));
 
-        // the applicability is updated for the tag of the root network, the sub modifications of the composite being
-        // handled by the network modification server itself
+        // the applicability is updated for the tag of the root network, on the composite alone
         WireMockUtilsCriteria.verifyPutRequest(wireMockServer, "/v1/network-modifications/root-network-applicability", false, Map.of(
                 "uuids", equalTo(compositeUuid.toString()),
                 "rootNetworkTag", equalTo(rootNetworkTag),
