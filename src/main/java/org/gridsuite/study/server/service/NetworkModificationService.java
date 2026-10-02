@@ -289,7 +289,7 @@ public class NetworkModificationService {
         restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
-    public void updateNetworkModificationNameAndDescription(UUID networkModificationUuid, NetworkModificationMetadata metadata, String userId) {
+    public void updateNetworkModificationNameAndDescription(UUID networkModificationUuid, String metadata, String userId) {
         String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + DELIMITER + "name-and-description" + DELIMITER + networkModificationUuid.toString())
                 .build().toUriString();
         HttpHeaders headers = new HttpHeaders();

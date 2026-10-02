@@ -1639,23 +1639,6 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    @Transactional
-    public void updateNetworkModificationsNameAndDescription(UUID studyUuid, UUID nodeUuid, UUID modificationsUuid, String userId, NetworkModificationMetadata metadata) {
-        List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
-        try {
-            if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
-                throw new StudyException(NOT_ALLOWED);
-            }
-            networkModificationService.updateNetworkModificationNameAndDescription(modificationsUuid, metadata, userId);
-            if (metadata.getActivated() != null || metadata.getName() != null) {
-                invalidateNodeTree(studyUuid, nodeUuid);
-            }
-        } finally {
-            notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
-        }
-        notificationService.emitElementUpdated(studyUuid, userId);
-    }
-
     /**
      * A shared modification holds the applicabilities used by every study referencing it: only a user allowed to write
      * on the shared element may change them.
