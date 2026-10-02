@@ -2486,13 +2486,14 @@ public class StudyService {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, true);
         StudyEntity studyEntity = getStudy(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid);
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         // Get the list of equipment ids that match the filter
-        List<String> equipmentIds = filterService.convertFiltersToNetworkElementIds(rootNetworkService.getNetworkUuid(rootNetworkUuid), filterUuids, variantId);
+        List<String> equipmentIds = filterService.evaluateFiltersToNetworkElementIds(networkUuid, filterUuids, variantId);
         LoadFlowParameters loadFlowParameters = loadFlowService.getCommonParameters(studyEntity);
 
         return networkMapService.getElementsInfosByIds(
-            rootNetworkService.getNetworkUuid(rootNetworkUuid),
-            networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid),
+            networkUuid,
+            variantId,
             String.valueOf(equipmentType),
             infoType,
             getOptionalParameters(String.valueOf(equipmentType), studyEntity, loadFlowParameters),

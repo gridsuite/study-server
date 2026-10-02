@@ -120,10 +120,10 @@ public class FilterService {
         return restTemplate.getForObject(uriComponent.toUriString(), String.class);
     }
 
-    public List<String> convertFiltersToNetworkElementIds(UUID networkUuid, List<UUID> filtersUuid, String variantId) {
+    public List<String> evaluateFiltersToNetworkElementIds(UUID networkUuid, List<UUID> filtersUuid, String variantId) {
         Objects.requireNonNull(networkUuid);
         Objects.requireNonNull(filtersUuid);
-        String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTERS_END_POINT_EXPORT + DELIMITER + "onlyIds";
+        String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTER_END_POINT_EVALUATE + DELIMITER + "onlyIds";
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(endPointUrl);
         uriComponentsBuilder.queryParam(NETWORK_UUID, networkUuid);

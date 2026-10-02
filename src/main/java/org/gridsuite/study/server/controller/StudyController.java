@@ -553,9 +553,9 @@ public class StudyController {
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements-from-filters")
-    @Operation(summary = "Get network elements infos by evaluating a global filter")
+    @Operation(summary = "Get network elements infos by evaluating a list of filters")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The list of network elements infos matching the filter"),
+        @ApiResponse(responseCode = "200", description = "The list of network elements infos matching the filters"),
         @ApiResponse(responseCode = "404", description = "The study/root network/node is not found")
     })
     public ResponseEntity<String> getNetworkElementsInfosFromFilters(

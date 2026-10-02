@@ -764,7 +764,7 @@ class NetworkMapTest {
         assertTrue(resultList.stream().anyMatch(info -> "GEN1".equals(info.getId()) && "Generator 1".equals(info.getName())));
         assertTrue(resultList.stream().anyMatch(info -> "GEN2".equals(info.getId()) && "Generator 2".equals(info.getName())));
 
-        wireMockStubs.verifyEvaluateFiltersToEquipmentIds(globalFilterStubUuid, List.of(filterUuid.toString()), NETWORK_UUID_STRING);
+        wireMockStubs.verifyEvaluateFiltersToEquipmentIds(globalFilterStubUuid, List.of(filterUuid), NETWORK_UUID_STRING);
         wireMockStubs.verifyNetworkElementsByIdsPost(elementsByIdsStubUuid, NETWORK_UUID_STRING, equipmentType, infoType, "[\"GEN1\",\"GEN2\"]");
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)));
