@@ -84,18 +84,18 @@ class NetworkModificationServiceTest {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-composite-modifications/network-modifications?uuids=" + firstUuid + "&uuids=" + secondUuid + "&onlyMetadata=false";
-        when(restTemplate.getForObject(expectedUrl, String.class)).thenReturn(RESPONSE);
+        expectUserIdIsForwarded(expectedUrl);
 
-        assertThat(networkModificationService.getNetworkModificationsFromComposite(List.of(firstUuid, secondUuid), false)).isEqualTo(RESPONSE);
+        assertThat(networkModificationService.getNetworkModificationsFromComposite(List.of(firstUuid, secondUuid), false, USER_ID)).isEqualTo(RESPONSE);
     }
 
     @Test
     void testGetNetworkModification() {
         UUID modificationUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid;
-        when(restTemplate.getForObject(expectedUrl, String.class)).thenReturn(RESPONSE);
+        expectUserIdIsForwarded(expectedUrl);
 
-        assertThat(networkModificationService.getNetworkModification(modificationUuid)).isEqualTo(RESPONSE);
+        assertThat(networkModificationService.getNetworkModification(modificationUuid, USER_ID)).isEqualTo(RESPONSE);
     }
 
     @Test
@@ -265,5 +265,12 @@ class NetworkModificationServiceTest {
 
         networkModificationService.hasModificationReferences(List.of(modificationUuid));
         verify(restTemplate).getForObject(eq(expectedUrl), eq(Boolean.class));
+    }
+
+    private void expectUserIdIsForwarded(String expectedUrl) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, USER_ID);
+        when(restTemplate.exchange(eq(expectedUrl), eq(HttpMethod.GET), eq(new HttpEntity<>(headers)), eq(String.class)))
+            .thenReturn(ResponseEntity.ok(RESPONSE));
     }
 }

@@ -88,6 +88,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
@@ -1544,17 +1545,17 @@ class NetworkModificationTreeTest {
                 randomUuidsResultStack(), BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId()))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId()).header(HEADER_USER_ID, "userId"))
             .andExpect(status().isNotFound());
 
         // No network modification for a root node
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), root.getId()))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), root.getId()).header(HEADER_USER_ID, "userId"))
             .andExpect(status().isNotFound());
 
         node = NetworkModificationTreeTest.buildNetworkModificationConstructionNode("modification node 2", "", MODIFICATION_GROUP_UUID, VARIANT_ID,
                 randomUuidsResultStack(), BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId()))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId()).header(HEADER_USER_ID, "userId"))
             .andExpect(status().isOk())
             .andReturn().getResponse().getContentAsString();
     }
@@ -1600,7 +1601,7 @@ class NetworkModificationTreeTest {
                 randomUuidsResultStack(), BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId(), true))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId(), true).header(HEADER_USER_ID, "userId"))
             .andExpect(status().isNotFound());
 
         node = NetworkModificationTreeTest.buildNetworkModificationConstructionNode("modification node 3", "", UUID.fromString(MODIFICATION_GROUP_UUID_STRING), VARIANT_ID,
@@ -1623,11 +1624,11 @@ class NetworkModificationTreeTest {
                 randomUuidsResultStack(), BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId(), false))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId(), false).header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isNotFound());
 
         // No network modification for a root node
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), root.getId(), false))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), root.getId(), false).header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isNotFound());
 
         node = NetworkModificationTreeTest.buildNetworkModificationConstructionNode("modification node 3", "", UUID.fromString(MODIFICATION_GROUP_UUID_STRING), VARIANT_ID,

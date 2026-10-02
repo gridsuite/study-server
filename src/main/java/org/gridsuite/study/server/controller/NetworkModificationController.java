@@ -45,13 +45,14 @@ public class NetworkModificationController {
 
     @GetMapping(value = "/network-composite-modifications/network-modifications")
     public ResponseEntity<String> getNetworkModificationsFromComposite(@RequestParam("uuids") List<UUID> compositeModificationUuids,
-                                                                       @RequestParam(name = "onlyMetadata", defaultValue = "true") boolean onlyMetadata) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationService.getNetworkModificationsFromComposite(compositeModificationUuids, onlyMetadata));
+                                                                       @RequestParam(name = "onlyMetadata", defaultValue = "true") boolean onlyMetadata,
+                                                                       @RequestHeader(HEADER_USER_ID) String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationService.getNetworkModificationsFromComposite(compositeModificationUuids, onlyMetadata, userId));
     }
 
     @GetMapping(value = "/network-modifications/{uuid}")
-    public ResponseEntity<String> getNetworkModification(@PathVariable UUID uuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationService.getNetworkModification(uuid));
+    public ResponseEntity<String> getNetworkModification(@PathVariable UUID uuid, @RequestHeader(HEADER_USER_ID) String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationService.getNetworkModification(uuid, userId));
     }
 
     @GetMapping(value = "/network-modifications/busbar-sections-for-new-coupler")
