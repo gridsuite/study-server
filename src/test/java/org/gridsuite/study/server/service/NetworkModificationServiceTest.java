@@ -263,4 +263,14 @@ class NetworkModificationServiceTest {
         networkModificationService.hasModificationReferences(List.of(modificationUuid));
         verify(restTemplate).getForObject(eq(expectedUrl), eq(Boolean.class));
     }
+
+    @Test
+    void testUpdateNetworkModificationsNameAndDescription() {
+        UUID modificationUuid = UUID.randomUUID();
+        String metadata = "";
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/name-and-description/" + modificationUuid;
+
+        networkModificationService.updateNetworkModificationNameAndDescription(modificationUuid, metadata, USER_ID);
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+    }
 }
