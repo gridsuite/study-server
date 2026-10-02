@@ -112,9 +112,12 @@ class NetworkModificationServiceTest {
         UUID modificationUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid;
 
-        networkModificationService.updateNetworkModification(modificationUuid, RESPONSE);
+        networkModificationService.updateNetworkModification(modificationUuid, RESPONSE, USER_ID);
 
-        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HEADER_USER_ID, USER_ID);
+        verify(restTemplate).exchange(expectedUrl, HttpMethod.PUT, new HttpEntity<>(RESPONSE, headers), Void.class);
     }
 
     @Test
@@ -149,7 +152,8 @@ class NetworkModificationServiceTest {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        networkModificationService.deleteStashedModificationsFromGroups(List.of(firstUuid, secondUuid));
+        headers.set(HEADER_USER_ID, USER_ID);
+        networkModificationService.deleteStashedModificationsFromGroups(List.of(firstUuid, secondUuid), USER_ID);
         HttpEntity<String> httpEntity = new HttpEntity<>("[\"" + firstUuid + "\",\"" + secondUuid + "\"]", headers);
         verify(restTemplate).exchange(expectedUrl, HttpMethod.DELETE, httpEntity, new ParameterizedTypeReference<Map<UUID, UUID>>() { });
     }

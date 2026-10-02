@@ -32,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class NetworkModificationControllerTest {
 
     private static final String BASE_URL = "/v1";
+    private static final String USER_ID = "userId";
     private static final String RESPONSE = "{\"name\":\"modification\"}";
     private static final String USER_ID = "userId";
 
@@ -147,12 +148,13 @@ class NetworkModificationControllerTest {
         UUID modificationUuid = UUID.randomUUID();
 
         mockMvc.perform(put(BASE_URL + "/network-modifications/{uuid}", modificationUuid)
+                .header(HEADER_USER_ID, USER_ID)
                 .content(RESPONSE)
                 .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(content().string(""));
 
-        verify(networkModificationService).updateNetworkModification(modificationUuid, RESPONSE);
+        verify(networkModificationService).updateNetworkModification(modificationUuid, RESPONSE, USER_ID);
     }
 
     @Test
