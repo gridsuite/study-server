@@ -112,9 +112,12 @@ class NetworkModificationServiceTest {
         UUID modificationUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid;
 
-        networkModificationService.updateNetworkModification(modificationUuid, RESPONSE);
+        networkModificationService.updateNetworkModification(modificationUuid, RESPONSE, USER_ID);
 
-        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HEADER_USER_ID, USER_ID);
+        verify(restTemplate).exchange(expectedUrl, HttpMethod.PUT, new HttpEntity<>(RESPONSE, headers), Void.class);
     }
 
     @Test
