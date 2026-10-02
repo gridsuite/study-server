@@ -209,10 +209,8 @@ public class LoadFlowService extends AbstractComputationService {
 
         if (defaultValue.isInt() || defaultValue.isLong()) {
             try {
-                return defaultValue.isInt()
-                    ? objectMapper.valueToTree(Integer.parseInt(value))
-                    : objectMapper.valueToTree(Long.parseLong(value));
-            } catch (NumberFormatException e) {
+                return objectMapper.valueToTree(defaultValue.isInt() ? Integer.parseInt(value) : objectMapper.valueToTree(Long.parseLong(value)));
+            } catch (NumberFormatException _) {
                 return objectMapper.valueToTree(value);
             }
         }
@@ -220,7 +218,7 @@ public class LoadFlowService extends AbstractComputationService {
         if (defaultValue.isFloatingPointNumber() || defaultValue.isContainerNode()) {
             try {
                 return objectMapper.readTree(value);
-            } catch (JsonProcessingException e) {
+            } catch (JsonProcessingException _) {
                 return objectMapper.valueToTree(value);
             }
         }
