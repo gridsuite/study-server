@@ -148,7 +148,11 @@ public class LoadflowServerStubs {
     }
 
     public void verifyGetLoadflowParameters(String parametersUuid) {
-        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/parameters/" + parametersUuid, Map.of());
+        verifyGetLoadflowParameters(parametersUuid, 1);
+    }
+
+    public void verifyGetLoadflowParameters(String parametersUuid, int nbRequests) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/parameters/" + parametersUuid, Map.of(), nbRequests);
     }
 
     public void stubPutLoadflowParameters(String parametersUuid, String parameters) {
@@ -269,4 +273,28 @@ public class LoadflowServerStubs {
         WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/results/invalidate-status", Map.of("resultUuid", new RegexPattern(".*")), null);
     }
 
+    public void stubGetDefaultValues(String parameters) {
+        wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/parameters/default-values"))
+            .willReturn(WireMock.ok().withBody(parameters)
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
+        );
+    }
+
+    public void verifyGetDefaultValues() {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/parameters/default-values", Map.of());
+    }
+
+    public UUID stubGetSpecificParameters(String provider, String responseBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/specific-parameters"))
+                .withQueryParam("provider", WireMock.equalTo(provider))
+                .willReturn(WireMock.okJson(responseBody)))
+            .getId();
+    }
+
+    public void verifyGetSpecificParameters(String provider) {
+        WireMockUtilsCriteria.verifyGetRequest(
+                    wireMock,
+                    "/v1/specific-parameters",
+                    Map.of("provider", WireMock.equalTo(provider)));
+    }
 }
