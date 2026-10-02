@@ -450,6 +450,26 @@ public class WireMockStubs {
         ).getId();
     }
 
+    public UUID stubEvaluateFiltersToEquipmentIds(String networkUuid, List<UUID> filterUuids, String responseBody) {
+        MappingBuilder requestPatternBuilder = WireMock.get(WireMock.urlPathEqualTo("/v1/filters/evaluate/onlyIds"))
+                .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid));
+        StringValuePattern[] idMatchers = filterUuids.stream()
+                .map(filterUuid -> WireMock.equalTo(filterUuid.toString()))
+                .toArray(StringValuePattern[]::new);
+        requestPatternBuilder.withQueryParam(IDS, WireMock.havingExactly(idMatchers));
+        return wireMock.stubFor(requestPatternBuilder.willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))
+        ).getId();
+    }
+
+    public void verifyEvaluateFiltersToEquipmentIds(UUID stubUuid, List<UUID> filtersUuid, String networkUuid) {
+        StringValuePattern[] idMatchers = filtersUuid.stream()
+                                .map((UUID value) -> WireMock.equalTo(value.toString()))
+                                .toArray(StringValuePattern[]::new);
+        verifyGetRequestWithMultiValueParams(wireMock, stubUuid, "/v1/filters/evaluate/onlyIds",
+                Map.of(NETWORK_UUID, WireMock.havingExactly(WireMock.equalTo(networkUuid)),
+                        IDS, WireMock.havingExactly(idMatchers)));
+    }
+
     public UUID stubFilterEvaluateNotFoundError(String networkUuid) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/filters/evaluate"))
                 .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
