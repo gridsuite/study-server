@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
+import lombok.Setter;
 import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.BuildInfos;
@@ -59,10 +60,13 @@ public class NetworkModificationService {
     private static final String QUERY_PARAM_ROOT_NETWORK_TAGS = "rootNetworkTags";
     private static final String ROOT_NETWORK_TAG_PATH = "root-network-tag";
     private static final String PARAM_USER_INPUT = "userInput";
+    public static final String NEW_TAG = "newTag";
+    public static final String EXISTING_TAGS = "existingTags";
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final RootNetworkService rootNetworkService;
+    @Setter
     private String networkModificationServerBaseUri;
 
     @Autowired
@@ -73,10 +77,6 @@ public class NetworkModificationService {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.rootNetworkService = rootNetworkService;
-    }
-
-    public void setNetworkModificationServerBaseUri(String networkModificationServerBaseUri) {
-        this.networkModificationServerBaseUri = networkModificationServerBaseUri;
     }
 
     private String getNetworkModificationServerURI(boolean addNetworksPart) {
@@ -408,7 +408,7 @@ public class NetworkModificationService {
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + ROOT_NETWORK_TAG_PATH)
                 .queryParam(QUERY_PARAM_GROUP_UUIDS, groupUuids)
                 .queryParam("oldTag", oldTag)
-                .queryParam("newTag", newTag)
+                .queryParam(NEW_TAG, newTag)
                 .buildAndExpand()
                 .toUriString();
 
@@ -416,6 +416,25 @@ public class NetworkModificationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         restTemplate.exchange(path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
+    }
+
+    public void initRootNetworkTag(List<UUID> groupUuids, List<String> existingTags, String newTag) {
+        Objects.requireNonNull(newTag);
+        if (CollectionUtils.isEmpty(groupUuids)) {
+            return;
+        }
+        var path = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + ROOT_NETWORK_TAG_PATH)
+                .queryParam(QUERY_PARAM_GROUP_UUIDS, groupUuids)
+                .queryParam(EXISTING_TAGS, existingTags)
+                .queryParam(NEW_TAG, newTag)
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        restTemplate.exchange(path, HttpMethod.POST, new HttpEntity<>(headers), Void.class);
     }
 
     /**

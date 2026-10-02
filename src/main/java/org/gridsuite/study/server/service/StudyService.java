@@ -368,11 +368,13 @@ public class StudyService {
         StudyEntity studyEntity = getStudy(studyUuid);
         Optional<RootNetworkRequestEntity> rootNetworkCreationRequestEntityOpt = rootNetworkService.getRootNetworkRequest(rootNetworkInfos.getId());
         if (rootNetworkCreationRequestEntityOpt.isPresent()) {
-            rootNetworkInfos.setName(rootNetworkCreationRequestEntityOpt.get().getName());
-            rootNetworkInfos.setTag(rootNetworkCreationRequestEntityOpt.get().getTag());
-            rootNetworkInfos.setDescription(rootNetworkCreationRequestEntityOpt.get().getDescription());
+            RootNetworkRequestEntity rootNetworkCreationRequestEntity = rootNetworkCreationRequestEntityOpt.get();
+            rootNetworkInfos.setName(rootNetworkCreationRequestEntity.getName());
+            rootNetworkInfos.setTag(rootNetworkCreationRequestEntity.getTag());
+            rootNetworkInfos.setDescription(rootNetworkCreationRequestEntity.getDescription());
+            initRootNetworkTagInApplicability(studyUuid, rootNetworkInfos.getTag());
             rootNetworkService.createRootNetwork(studyEntity, rootNetworkInfos);
-            rootNetworkService.deleteRootNetworkRequest(rootNetworkCreationRequestEntityOpt.get());
+            rootNetworkService.deleteRootNetworkRequest(rootNetworkCreationRequestEntity);
             //update study entity to multi root
             if (studyEntity.isMonoRoot()) {
                 studyEntity.setMonoRoot(false);
@@ -407,6 +409,14 @@ public class StudyService {
             return;
         }
         networkModificationService.renameRootNetworkTag(getStudyModificationGroupUuids(studyUuid), previousTag, newTag);
+    }
+
+    private void initRootNetworkTagInApplicability(UUID studyUuid, String newTag) {
+        List<String> existingTags = new ArrayList<>();
+        for (RootNetworkEntity rootNetworkEntity : rootNetworkService.getStudyRootNetworks(studyUuid)) {
+            existingTags.add(rootNetworkEntity.getTag());
+        }
+        networkModificationService.initRootNetworkTag(getStudyModificationGroupUuids(studyUuid), existingTags, newTag);
     }
 
     /**
