@@ -84,12 +84,12 @@ public class DynamicSecurityAnalysisService extends AbstractComputationService {
     }
 
     @Transactional
-    public UUID runDynamicSecurityAnalysis(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, boolean debug) {
+    public UUID runDynamicSecurityAnalysis(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, boolean debug, UUID quotaId) {
         StudyEntity studyEntity = getStudy(studyUuid);
 
         UUID result = handleDynamicSecurityAnalysisRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
 
-        handleQuotaStart(userId, result, DYNAMIC_SECURITY_ANALYSIS);
+        handleQuotaStart(result, quotaId);
         return result;
     }
 

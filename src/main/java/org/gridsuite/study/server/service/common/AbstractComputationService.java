@@ -8,7 +8,6 @@
 package org.gridsuite.study.server.service.common;
 
 import org.gridsuite.study.server.dto.ComputationType;
-import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -18,6 +17,7 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.UserAdminService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -42,6 +42,9 @@ public abstract class AbstractComputationService {
     protected final RootNetworkService rootNetworkService;
     protected final ComputationParametersService computationParametersService;
     protected final UserAdminService userAdminService;
+
+    @Value("${study.enable-operation-quotas}")
+    private boolean shouldCheckOperationQuotas;
 
     protected AbstractComputationService(StudyRepository studyRepository, NotificationService notificationService,
                                          NetworkModificationTreeService networkModificationTreeService,
@@ -123,9 +126,10 @@ public abstract class AbstractComputationService {
         rootNetworkNodeInfoService.updateComputationResultUuid(nodeUuid, rootNetworkUuid, computationResultUuid, computationType);
     }
 
-    protected void handleQuotaStart(String userId, UUID result, ComputationType computationType) {
-        QuotaType quotaType = QuotaType.mapFromComputationType(computationType);
-        userAdminService.startOperationWithQuota(userId, quotaType, result);
-        notificationService.emitQuotaChange(userId, quotaType);
+    protected void handleQuotaStart(UUID result, UUID quotaId) {
+        if (!shouldCheckOperationQuotas) {
+            return;
+        }
+        userAdminService.registerQuotaConsumption(result, quotaId);
     }
 }

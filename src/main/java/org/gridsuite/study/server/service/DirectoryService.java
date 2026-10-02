@@ -11,6 +11,7 @@ import lombok.NonNull;
 import lombok.Setter;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ElementAttributes;
+import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.ReferenceAttributes;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -106,6 +107,19 @@ public class DirectoryService {
         HttpEntity<Void> request = new HttpEntity<>(headers);
         ResponseEntity<Void> response = restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.HEAD, request, Void.class);
         return response.getStatusCode() == HttpStatus.OK;
+    }
+
+    public void createElementsReferences(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, String userId) {
+        references.forEach(ref -> {
+            boolean insideComposite = ref.containerId() != null;
+            ReferenceAttributes referenceAttributes = ReferenceAttributes.createReferenceAttributes(
+                    ref.modificationUuid(),
+                    insideComposite ? nodeUuid : studyUuid,
+                    insideComposite ? ref.containerId() : nodeUuid,
+                    insideComposite ? ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION
+                            : ReferenceAttributes.ReferenceType.STUDY_NODE);
+            createElementReference(ref.referencedId(), referenceAttributes, userId);
+        });
     }
 
     public void createElementReference(@NonNull UUID elementUuid, @NonNull ReferenceAttributes referenceAttributes, String userId) {

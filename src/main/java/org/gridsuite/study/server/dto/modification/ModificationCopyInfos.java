@@ -14,7 +14,7 @@ import java.util.UUID;
  * @author Maissa Souissi <maissa.souissi at rte-france.com>
  */
 
-public record ModificationMoveOrCopyInfos(
+public record ModificationCopyInfos(
         UUID modificationUuid,
         @Schema(description = "current source container of the moved/copied modification") ModificationContainerInfos source) {
 }

@@ -11,6 +11,7 @@ package org.gridsuite.study.server.service;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
+import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -33,6 +35,7 @@ public class SingleLineDiagramService {
 
     private final RestTemplate restTemplate;
 
+    @Setter
     private String singleLineDiagramServerBaseUri;
 
     public SingleLineDiagramService(@Value("${powsybl.services.single-line-diagram-server.base-uri:http://single-line-diagram-server/}") String singleLineDiagramServerBaseUri,
@@ -48,6 +51,15 @@ public class SingleLineDiagramService {
         return restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.GET, null,
             new ParameterizedTypeReference<List<String>>() {
             }).getBody();
+    }
+
+    private URI buildUriFromPath(String path, String variantId, Object... uriVariables) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(singleLineDiagramServerBaseUri).path(path);
+
+        if (!StringUtils.isBlank(variantId)) {
+            builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        return builder.buildAndExpand(uriVariables).toUri();
     }
 
     public byte[] generateVoltageLevelSvg(UUID networkUuid, String variantId, String voltageLevelId, Map<String, Object> sldRequestInfos) {
@@ -70,19 +82,15 @@ public class SingleLineDiagramService {
     }
 
     public String generateVoltageLevelSvgAndMetadata(UUID networkUuid, String variantId, String voltageLevelId, Map<String, Object> sldRequestInfos) {
-        var uriComponentsBuilder = UriComponentsBuilder
-            .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION
-                + "/svg-and-metadata/{networkUuid}/{voltageLevelId}");
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
+
+        URI uri = buildUriFromPath(SINGLE_LINE_DIAGRAM_API_VERSION
+                + "/svg-and-metadata/{networkUuid}/{voltageLevelId}", variantId, networkUuid, voltageLevelId);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(sldRequestInfos, headers);
-        var path = uriComponentsBuilder.buildAndExpand(networkUuid, voltageLevelId).toUriString();
-        return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, httpEntity, String.class);
+        return restTemplate.postForObject(uri, httpEntity, String.class);
     }
 
     public byte[] generateSubstationSvg(UUID networkUuid, String variantId, String substationId, Map<String, Object> sldRequestInfos) {
@@ -101,17 +109,16 @@ public class SingleLineDiagramService {
     }
 
     public String generateSubstationSvgAndMetadata(UUID networkUuid, String variantId, String substationId, Map<String, Object> sldRequestInfos) {
-        var uriComponentsBuilder = UriComponentsBuilder
-            .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg-and-metadata/{networkUuid}/{substationId}");
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
+
+        URI uri = buildUriFromPath(SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg-and-metadata/{networkUuid}/{substationId}",
+                variantId,
+                networkUuid, substationId);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(sldRequestInfos, headers);
-        return restTemplate.postForEntity(singleLineDiagramServerBaseUri + uriComponentsBuilder.build().toUriString(), httpEntity, String.class, networkUuid, substationId).getBody();
+        return restTemplate.postForEntity(uri, httpEntity, String.class).getBody();
     }
 
     public String generateNetworkAreaDiagram(UUID networkUuid, String variantId, Map<String, Object> nadRequestInfos) {
@@ -145,7 +152,4 @@ public class SingleLineDiagramService {
         restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.DELETE, httpEntity, Void.class);
     }
 
-    public void setSingleLineDiagramServerBaseUri(String singleLineDiagramServerBaseUri) {
-        this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
-    }
 }
