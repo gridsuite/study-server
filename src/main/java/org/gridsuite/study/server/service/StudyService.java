@@ -412,14 +412,9 @@ public class StudyService {
     }
 
     private void initRootNetworkTagInApplicability(UUID studyUuid, String newTag) {
-        if (newTag == null) {
-            return;
-        }
         List<String> existingTags = new ArrayList<>();
         for (RootNetworkEntity rootNetworkEntity : rootNetworkService.getStudyRootNetworks(studyUuid)) {
-            if (rootNetworkEntity.getTag() != null) {
-                existingTags.add(rootNetworkEntity.getTag());
-            }
+            existingTags.add(rootNetworkEntity.getTag());
         }
         networkModificationService.initRootNetworkTag(getStudyModificationGroupUuids(studyUuid), existingTags, newTag);
     }

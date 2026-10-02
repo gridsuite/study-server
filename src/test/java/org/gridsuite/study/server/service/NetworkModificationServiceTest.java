@@ -219,7 +219,17 @@ class NetworkModificationServiceTest {
 
         // there is nothing to rename without a group
         networkModificationService.renameRootNetworkTag(List.of(), "PH1", "PH2");
+        verifyNoMoreInteractions(restTemplate);
+    }
 
+    @Test
+    void testInitRootNetworkTag() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
+                + "?groupUuids=" + groupUuid + "&existingTags=PH1&existingTags=PH2&newTag=PH3";
+        networkModificationService.initRootNetworkTag(List.of(groupUuid), List.of("PH1", "PH2"), "PH3");
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.POST), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+        networkModificationService.initRootNetworkTag(List.of(), List.of("PH1"), "PH3");
         verifyNoMoreInteractions(restTemplate);
     }
 
