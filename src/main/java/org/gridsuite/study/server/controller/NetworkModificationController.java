@@ -74,6 +74,14 @@ public class NetworkModificationController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping(value = "/network-modifications/name-and-description/{uuid}")
+    public ResponseEntity<Void> updateModificationNameAndDescription(@PathVariable UUID uuid,
+                                                                     @RequestHeader(HEADER_USER_ID) String userId,
+                                                                     @RequestBody String metadata) {
+        networkModificationService.updateNetworkModificationNameAndDescription(uuid, metadata, userId);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping(value = "/containers/references/exists")
     public ResponseEntity<Boolean> hasModificationReferences(@RequestParam("uuids") List<UUID> containerUuids) {
         return ResponseEntity.ok().body(networkModificationService.hasModificationReferences(containerUuids));

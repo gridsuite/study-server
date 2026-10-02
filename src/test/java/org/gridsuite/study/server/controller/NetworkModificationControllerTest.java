@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -163,7 +164,26 @@ class NetworkModificationControllerTest {
     }
 
     @Test
-    void testhasModificationReference() throws Exception {
+    void testUpdateNetworkModificationsNameAndDescription() throws Exception {
+        UUID modificationUuid = UUID.randomUUID();
+        String userId = "user";
+        String metadata = "{\"message\":{\"name\":\"newName\",\"description\":\"newDescription\"}}";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HEADER_USER_ID, userId);
+
+        mockMvc.perform(put(BASE_URL + "/network-modifications/name-and-description/" + modificationUuid)
+                        .headers(headers)
+                        .content(metadata)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().string(""));
+
+        verify(networkModificationService).updateNetworkModificationNameAndDescription(modificationUuid, metadata, userId);
+    }
+
+    @Test
+    void testHasModificationReference() throws Exception {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
 

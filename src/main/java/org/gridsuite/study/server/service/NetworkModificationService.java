@@ -290,6 +290,15 @@ public class NetworkModificationService {
         restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
+    public void updateNetworkModificationNameAndDescription(UUID networkModificationUuid, String metadata, String userId) {
+        String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + DELIMITER + "name-and-description" + DELIMITER + networkModificationUuid.toString())
+                .build().toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HEADER_USER_ID, userId);
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, new HttpEntity<>(metadata, headers), Void.class);
+    }
+
     public void restoreModifications(UUID groupUUid, List<UUID> modificationsUuids, UUID studyUuid, UUID nodeUuid, String userId) {
         Objects.requireNonNull(groupUUid);
         Objects.requireNonNull(modificationsUuids);
@@ -523,7 +532,8 @@ public class NetworkModificationService {
      * @return the reference modification left in place of the composite modification, either in the group of the node
      * or in a parent composite
      */
-    public ModificationReference extractCompositeModificationToShare(@NonNull UUID groupUuid, @NonNull UUID modificationUuid, @NonNull String name) {
+    public ModificationReference extractCompositeModificationToShare(@NonNull UUID groupUuid, @NonNull UUID modificationUuid, @NonNull String name, String description) {
+
         String path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + "{modificationUuid}" + DELIMITER + "share")
                 .queryParam(QUERY_PARAM_NAME, name)
                 .queryParam(QUERY_PARAM_GROUP_UUID, groupUuid)
@@ -533,7 +543,7 @@ public class NetworkModificationService {
         return restTemplate.exchange(
                 getNetworkModificationServerURI(false) + path,
                 HttpMethod.POST,
-                null,
+                new HttpEntity<>(description),
                 ModificationReference.class
         ).getBody();
     }
