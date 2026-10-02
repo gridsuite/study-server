@@ -723,7 +723,7 @@ class NetworkMapTest {
 
         String equipmentType = "GENERATOR";
         String infoType = "FORM";
-        UUID filterUuid = UUID.randomUUID();
+        List<UUID> filterUuids = List.of(UUID.randomUUID());
 
         // Response from global filter evaluation
         String filterEvaluateResponse = "[\"GEN1\",\"GEN2\"]";
@@ -736,7 +736,7 @@ class NetworkMapTest {
 
         UUID globalFilterStubUuid = wireMockStubs.stubEvaluateFiltersToEquipmentIds(
                 NETWORK_UUID_STRING,
-                List.of(filterUuid),
+                filterUuids,
                 filterEvaluateResponse
         );
 
@@ -752,7 +752,7 @@ class NetworkMapTest {
                         .queryParam("equipmentType", equipmentType)
                         .queryParam("infoType", infoType)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(List.of(filterUuid))))
+                        .content(objectMapper.writeValueAsString(filterUuids)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
@@ -764,7 +764,7 @@ class NetworkMapTest {
         assertTrue(resultList.stream().anyMatch(info -> "GEN1".equals(info.getId()) && "Generator 1".equals(info.getName())));
         assertTrue(resultList.stream().anyMatch(info -> "GEN2".equals(info.getId()) && "Generator 2".equals(info.getName())));
 
-        wireMockStubs.verifyEvaluateFiltersToEquipmentIds(globalFilterStubUuid, List.of(filterUuid), NETWORK_UUID_STRING);
+        wireMockStubs.verifyEvaluateFiltersToEquipmentIds(globalFilterStubUuid, filterUuids, NETWORK_UUID_STRING);
         wireMockStubs.verifyNetworkElementsByIdsPost(elementsByIdsStubUuid, NETWORK_UUID_STRING, equipmentType, infoType, "[\"GEN1\",\"GEN2\"]");
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)));
