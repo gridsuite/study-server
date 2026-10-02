@@ -1331,7 +1331,7 @@ public class StudyController {
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                           @RequestHeader(HEADER_USER_ID) String userId) {
         // unbuildStudyNode only reaches the children of a security node whose loadflow has run
-        NodeActivityType unbuildType = studyService.isSecurityNodeWithLoadflowDone(nodeUuid, rootNetworkUuid)
+        NodeActivityType unbuildType = networkModificationTreeService.isSecurityNodeWithLoadFlowDone(nodeUuid, rootNetworkUuid)
             ? UNBUILD_CHILDREN : UNBUILD;
         nodeActivityRunnerService.runWith(unbuildType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> studyService.unbuildStudyNode(studyUuid, nodeUuid, rootNetworkUuid, userId));
