@@ -100,23 +100,31 @@ public class PccMinService extends AbstractComputationService {
     }
 
     @Transactional
-    public boolean setPccMinParameters(UUID studyUuid, String parameters, String userId) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        boolean userProfileIssue = createOrUpdatePccMinParameters(studyEntity, parameters, userId);
+    public void setPccMinParameters(UUID studyUuid, String parameters, String userId) {
+        createOrUpdatePccMinParameters(getStudy(studyUuid), parameters);
+        invalidateAndNotifyParametersChanged(studyUuid, userId);
+    }
 
-        rootNetworkNodeInfoService.invalidatePccMinStatusOnAllNodes(studyEntity.getId());
-        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
-        notificationService.emitElementUpdated(studyUuid, userId);
-        notificationService.emitComputationParamsChanged(studyUuid, PCC_MIN);
+    @Transactional
+    public boolean resetPccMinParameters(UUID studyUuid, String userId) {
+        boolean userProfileIssue = resetParameters(getStudy(studyUuid), userId);
+        invalidateAndNotifyParametersChanged(studyUuid, userId);
         return userProfileIssue;
     }
 
-    public boolean createOrUpdatePccMinParameters(StudyEntity studyEntity, String parameters, String userId) {
+    private void invalidateAndNotifyParametersChanged(UUID studyUuid, String userId) {
+        rootNetworkNodeInfoService.invalidatePccMinStatusOnAllNodes(studyUuid);
+        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
+        notificationService.emitElementUpdated(studyUuid, userId);
+        notificationService.emitComputationParamsChanged(studyUuid, PCC_MIN);
+    }
+
+    public boolean resetParameters(StudyEntity studyEntity, String userId) {
         UUID existingPccMinParametersUuid = studyEntity.getPccMinParametersUuid();
         boolean userProfileIssue = false;
 
-        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
-        if (parameters == null && userProfileInfos.getPccMinParameterId() != null) {
+        UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
+        if (userProfileInfos.getPccMinParameterId() != null) {
             // reset case, with existing profile, having default pcc min params
             try {
                 UUID pccMinParametersFromProfileUuid = pccMinRestService.duplicateParameters(userProfileInfos.getPccMinParameterId());
@@ -130,13 +138,20 @@ public class PccMinService extends AbstractComputationService {
                 // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
             }
         }
+        // no params in profile, or duplication failed: fall back to default params
+        createOrUpdatePccMinParameters(studyEntity, null);
+        return userProfileIssue;
+    }
+
+    public void createOrUpdatePccMinParameters(StudyEntity studyEntity, String parameters) {
+        UUID existingPccMinParametersUuid = studyEntity.getPccMinParametersUuid();
+
         if (existingPccMinParametersUuid == null) {
             existingPccMinParametersUuid = pccMinRestService.createPccMinParameters(parameters);
             studyEntity.setPccMinParametersUuid(existingPccMinParametersUuid);
         } else {
             pccMinRestService.updatePccMinParameters(existingPccMinParametersUuid, parameters);
         }
-        return userProfileIssue;
     }
 
     public String getPccMinParametersByUuid(UUID parameterUuid) {
