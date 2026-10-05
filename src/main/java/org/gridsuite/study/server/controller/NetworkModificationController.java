@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION)
 public class NetworkModificationController {
@@ -60,8 +62,9 @@ public class NetworkModificationController {
     }
 
     @PutMapping(value = "/network-modifications/{uuid}")
-    public ResponseEntity<Void> updateNetworkModification(@PathVariable UUID uuid, @RequestBody String modificationInfos) {
-        networkModificationService.updateNetworkModification(uuid, modificationInfos);
+    public ResponseEntity<Void> updateNetworkModification(@PathVariable UUID uuid, @RequestBody String modificationInfos,
+                                                          @RequestHeader(HEADER_USER_ID) String userId) {
+        networkModificationService.updateNetworkModification(uuid, modificationInfos, userId);
         return ResponseEntity.ok().build();
     }
 
