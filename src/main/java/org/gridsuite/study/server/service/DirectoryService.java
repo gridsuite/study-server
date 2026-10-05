@@ -110,16 +110,29 @@ public class DirectoryService {
     }
 
     public void createElementsReferences(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, String userId) {
-        references.forEach(ref -> {
-            boolean insideComposite = ref.containerId() != null;
-            ReferenceAttributes referenceAttributes = ReferenceAttributes.createReferenceAttributes(
-                    ref.modificationUuid(),
-                    insideComposite ? nodeUuid : studyUuid,
-                    insideComposite ? ref.containerId() : nodeUuid,
-                    insideComposite ? ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION
-                            : ReferenceAttributes.ReferenceType.STUDY_NODE);
-            createElementReference(ref.referencedId(), referenceAttributes, userId);
-        });
+        references.forEach(ref -> createElementReference(ref.referencedId(), toReferenceAttributes(ref, studyUuid, nodeUuid), userId));
+    }
+
+    public void updateElementsReferences(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, String userId) {
+        references.forEach(ref -> updateElementReference(ref.referencedId(), toReferenceAttributes(ref, studyUuid, nodeUuid), userId));
+    }
+
+    public void removeElementsReferences(List<ModificationReference> references, String userId) {
+        references.forEach(ref -> removeElementReference(ref.referencedId(), ref.modificationUuid(), userId));
+    }
+
+    /**
+     * a modification-reference at the root of the node group is registered as used by the node of the study,
+     * one nested in a composite as used by this composite of the node
+     */
+    private static ReferenceAttributes toReferenceAttributes(ModificationReference ref, UUID studyUuid, UUID nodeUuid) {
+        boolean insideComposite = ref.containerId() != null;
+        return ReferenceAttributes.createReferenceAttributes(
+                ref.modificationUuid(),
+                insideComposite ? nodeUuid : studyUuid,
+                insideComposite ? ref.containerId() : nodeUuid,
+                insideComposite ? ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION
+                        : ReferenceAttributes.ReferenceType.STUDY_NODE);
     }
 
     public void createElementReference(@NonNull UUID elementUuid, @NonNull ReferenceAttributes referenceAttributes, String userId) {
