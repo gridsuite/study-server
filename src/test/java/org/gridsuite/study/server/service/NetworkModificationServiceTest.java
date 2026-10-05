@@ -83,7 +83,7 @@ class NetworkModificationServiceTest {
     void testGetNetworkModificationsFromComposite() {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-composite-modifications/network-modifications?uuids=" + firstUuid + "&uuids=" + secondUuid + "&onlyMetadata=false";
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/network-modifications?uuids=" + firstUuid + "&uuids=" + secondUuid + "&onlyMetadata=false";
         when(restTemplate.getForObject(expectedUrl, String.class)).thenReturn(RESPONSE);
 
         assertThat(networkModificationService.getNetworkModificationsFromComposite(List.of(firstUuid, secondUuid), false)).isEqualTo(RESPONSE);
@@ -135,7 +135,7 @@ class NetworkModificationServiceTest {
     void testDeleteModificationsGroups() {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups?errorOnGroupNotFound=false";
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -148,7 +148,7 @@ class NetworkModificationServiceTest {
     void testDeleteStashedModificationsGroups() {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/stashed-modifications?errorOnGroupNotFound=false";
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/stashed-modifications";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -194,7 +194,7 @@ class NetworkModificationServiceTest {
     @Test
     void testGetReferencesFromGroup() {
         UUID groupUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/" + groupUuid + "/references";
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/" + groupUuid + "/references";
         List<ModificationReference> expected = List.of(new ModificationReference(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()));
         when(restTemplate.exchange(
                 eq(expectedUrl),
