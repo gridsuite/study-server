@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.util.List;
 import java.util.UUID;
 
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -30,6 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class NetworkModificationControllerTest {
 
     private static final String BASE_URL = "/v1";
+    private static final String USER_ID = "userId";
     private static final String RESPONSE = "{\"name\":\"modification\"}";
 
     @Mock
@@ -135,12 +137,13 @@ class NetworkModificationControllerTest {
         UUID modificationUuid = UUID.randomUUID();
 
         mockMvc.perform(put(BASE_URL + "/network-modifications/{uuid}", modificationUuid)
+                .header(HEADER_USER_ID, USER_ID)
                 .content(RESPONSE)
                 .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(content().string(""));
 
-        verify(networkModificationService).updateNetworkModification(modificationUuid, RESPONSE);
+        verify(networkModificationService).updateNetworkModification(modificationUuid, RESPONSE, USER_ID);
     }
 
     @Test
