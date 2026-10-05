@@ -443,6 +443,10 @@ class StateEstimationTest {
         createOrUpdateParametersAndDoChecks(ids2.studyId, estimParametersJson, "userId", HttpStatus.OK);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING)));
 
+        //reset state estimation parameters to default ones
+        resetParametersAndDoChecks(ids2.studyId, "userId");
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING)));
+
         // insert a study with a wrong state estimation parameters uuid
         StudyNodeIds ids3 = createStudyAndNode(VARIANT_ID, "node 3", UUID.fromString(WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING));
 
@@ -461,6 +465,19 @@ class StateEstimationTest {
                     .content(parameters))
             .andExpect(status().is(status.value()));
 
+        checkParametersChangedMessagesReceived(studyNameUserIdUuid);
+    }
+
+    private void resetParametersAndDoChecks(UUID studyNameUserIdUuid, String userId) throws Exception {
+        mockMvc.perform(
+                post("/v1/studies/{studyUuid}/state-estimation/parameters/reset", studyNameUserIdUuid)
+                    .header("userId", userId))
+            .andExpect(status().isOk());
+
+        checkParametersChangedMessagesReceived(studyNameUserIdUuid);
+    }
+
+    private void checkParametersChangedMessagesReceived(UUID studyNameUserIdUuid) {
         Message<byte[]> stateEstimationStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(studyNameUserIdUuid, stateEstimationStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS, stateEstimationStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));

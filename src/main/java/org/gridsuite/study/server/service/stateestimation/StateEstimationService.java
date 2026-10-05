@@ -109,6 +109,12 @@ public class StateEstimationService extends AbstractComputationService {
         );
     }
 
+    /** no state estimation parameters in user profile: always reset to default parameters */
+    @Transactional
+    public void resetStateEstimationParametersValues(UUID studyUuid, String userId) {
+        setStateEstimationParametersValues(studyUuid, null, userId);
+    }
+
     private void invalidateStateEstimationStatusOnAllNodes(UUID studyUuid) {
         stateEstimationRestService.invalidateStateEstimationStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, STATE_ESTIMATION));
     }
