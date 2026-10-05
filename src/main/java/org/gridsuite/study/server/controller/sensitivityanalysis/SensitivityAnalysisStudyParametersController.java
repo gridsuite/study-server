@@ -42,13 +42,23 @@ public class SensitivityAnalysisStudyParametersController {
     }
 
     @PostMapping(value = "/parameters")
-    @Operation(summary = "set sensitivity analysis parameters on study, reset to default ones if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters are set"),
-        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    @Operation(summary = "set sensitivity analysis parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters are set")})
     public ResponseEntity<Void> setSensitivityAnalysisParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String sensitivityAnalysisParameters,
+            @RequestBody String sensitivityAnalysisParameters,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        return sensitivityAnalysisService.setSensitivityAnalysisParameters(studyUuid, sensitivityAnalysisParameters, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
+        sensitivityAnalysisService.setSensitivityAnalysisParameters(studyUuid, sensitivityAnalysisParameters, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/parameters/reset")
+    @Operation(summary = "reset sensitivity analysis parameters on study to the user profile or default ones")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters are reset"),
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    public ResponseEntity<Void> resetSensitivityAnalysisParameters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        return sensitivityAnalysisService.resetSensitivityAnalysisParameters(studyUuid, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 }

@@ -58,8 +58,6 @@ class SensitivityAnalysisStudyParametersControllerTest {
     @Test
     void testSetSensitivityAnalysisParameters() throws Exception {
         UUID studyUuid = UUID.randomUUID();
-        when(sensitivityAnalysisService.setSensitivityAnalysisParameters(studyUuid, PARAMETERS, USER_ID)).thenReturn(false);
-
         mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
                 .header(HEADER_USER_ID, USER_ID)
                 .content(PARAMETERS)
@@ -71,15 +69,28 @@ class SensitivityAnalysisStudyParametersControllerTest {
     }
 
     @Test
-    void testSetSensitivityAnalysisParametersReturnsNoContent() throws Exception {
+    void testResetSensitivityAnalysisParameters() throws Exception {
         UUID studyUuid = UUID.randomUUID();
-        when(sensitivityAnalysisService.setSensitivityAnalysisParameters(studyUuid, null, USER_ID)).thenReturn(true);
+        when(sensitivityAnalysisService.resetSensitivityAnalysisParameters(studyUuid, USER_ID)).thenReturn(false);
 
-        mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
+        mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid)
+                .header(HEADER_USER_ID, USER_ID))
+            .andExpect(status().isOk())
+            .andExpect(content().string(""));
+
+        verify(sensitivityAnalysisService).resetSensitivityAnalysisParameters(studyUuid, USER_ID);
+    }
+
+    @Test
+    void testResetSensitivityAnalysisParametersReturnsNoContent() throws Exception {
+        UUID studyUuid = UUID.randomUUID();
+        when(sensitivityAnalysisService.resetSensitivityAnalysisParameters(studyUuid, USER_ID)).thenReturn(true);
+
+        mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid)
                 .header(HEADER_USER_ID, USER_ID))
             .andExpect(status().isNoContent())
             .andExpect(content().string(""));
 
-        verify(sensitivityAnalysisService).setSensitivityAnalysisParameters(studyUuid, null, USER_ID);
+        verify(sensitivityAnalysisService).resetSensitivityAnalysisParameters(studyUuid, USER_ID);
     }
 }
