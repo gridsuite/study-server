@@ -15,6 +15,7 @@ import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.dto.computation.ComputationParameterUUIDs;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.client.RemoteServiceName;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
@@ -55,7 +56,7 @@ public class ComputationParametersService {
     // this is useful to avoid repetitive calls when doing operation on all computation types (duplicate, delete, export)
     private record ComputationParametersDefinition(
             ComputationType type,
-            String serviceName,
+            RemoteServiceName serviceName,
             Function<StudyEntity, UUID> studyParameterGetter,
             Function<UserProfileInfos, UUID> profileParameterGetter,
             ComputationParameters service,
@@ -85,7 +86,7 @@ public class ComputationParametersService {
         this.computationParametersDefinitions = List.of(
                 new ComputationParametersDefinition(
                         ComputationType.LOAD_FLOW,
-                        "loadflow-server",
+                        RemoteServiceName.LOADFLOW_SERVER,
                         StudyEntity::getLoadFlowParametersUuid,
                         UserProfileInfos::getLoadFlowParameterId,
                     loadFlowRestService,
@@ -93,7 +94,7 @@ public class ComputationParametersService {
                         loadFlowRestService::getParameters),
                 new ComputationParametersDefinition(
                         ComputationType.SHORT_CIRCUIT,
-                        "shortcircuit-server",
+                        RemoteServiceName.SHORTCIRCUIT_SERVER,
                         StudyEntity::getShortCircuitParametersUuid,
                         UserProfileInfos::getShortcircuitParameterId,
                         shortCircuitService,
@@ -101,7 +102,7 @@ public class ComputationParametersService {
                         shortCircuitService::getParameters),
                 new ComputationParametersDefinition(
                         ComputationType.DYNAMIC_SIMULATION,
-                        "dynamic-simulation-server",
+                        RemoteServiceName.DYNAMIC_SIMULATION_SERVER,
                         StudyEntity::getDynamicSimulationParametersUuid,
                         UserProfileInfos::getDynamicSimulationParameterId,
                         dynamicSimulationRestService,
@@ -109,7 +110,7 @@ public class ComputationParametersService {
                         null),
                 new ComputationParametersDefinition(
                         ComputationType.VOLTAGE_INITIALIZATION,
-                        "voltage-init-server",
+                        RemoteServiceName.VOLTAGE_INIT_SERVER,
                         StudyEntity::getVoltageInitParametersUuid,
                         UserProfileInfos::getVoltageInitParameterId,
                         voltageInitService,
@@ -117,7 +118,7 @@ public class ComputationParametersService {
                         voltageInitService::getParameters),
                 new ComputationParametersDefinition(
                         ComputationType.SECURITY_ANALYSIS,
-                        "security-analysis-server",
+                        RemoteServiceName.SECURITY_ANALYSIS_SERVER,
                         StudyEntity::getSecurityAnalysisParametersUuid,
                         UserProfileInfos::getSecurityAnalysisParameterId,
                         securityAnalysisService,
@@ -125,7 +126,7 @@ public class ComputationParametersService {
                         securityAnalysisService::getParameters),
                 new ComputationParametersDefinition(
                         ComputationType.SENSITIVITY_ANALYSIS,
-                        "sensitivity-analysis-server",
+                        RemoteServiceName.SENSITIVITY_ANALYSIS_SERVER,
                         StudyEntity::getSensitivityAnalysisParametersUuid,
                         UserProfileInfos::getSensitivityAnalysisParameterId,
                         sensitivityAnalysisService,
@@ -133,7 +134,7 @@ public class ComputationParametersService {
                         sensitivityAnalysisService::getParameters),
                 new ComputationParametersDefinition(
                         ComputationType.DYNAMIC_SECURITY_ANALYSIS,
-                        "dynamic-security-analysis-server",
+                        RemoteServiceName.DYNAMIC_SECURITY_ANALYSIS_SERVER,
                         StudyEntity::getDynamicSecurityAnalysisParametersUuid,
                         UserProfileInfos::getDynamicSecurityAnalysisParameterId,
                         dynamicSecurityAnalysisRestService,
@@ -141,7 +142,7 @@ public class ComputationParametersService {
                         null),
                 new ComputationParametersDefinition(
                         ComputationType.DYNAMIC_MARGIN_CALCULATION,
-                        "dynamic-margin-calculation-server",
+                        RemoteServiceName.DYNAMIC_MARGIN_CALCULATION_SERVER,
                         StudyEntity::getDynamicMarginCalculationParametersUuid,
                         UserProfileInfos::getDynamicMarginCalculationParameterId,
                         dynamicMarginCalculationRestService,
@@ -149,7 +150,7 @@ public class ComputationParametersService {
                         null),
                 new ComputationParametersDefinition(
                         ComputationType.STATE_ESTIMATION,
-                        "state-estimation-server",
+                        RemoteServiceName.STATE_ESTIMATION_SERVER,
                         StudyEntity::getStateEstimationParametersUuid,
                         userProfileInfos -> null,
                         stateEstimationService,
@@ -157,7 +158,7 @@ public class ComputationParametersService {
                         null),
                 new ComputationParametersDefinition(
                         ComputationType.PCC_MIN,
-                        "pcc-min-server",
+                        RemoteServiceName.PCC_MIN_SERVER,
                         StudyEntity::getPccMinParametersUuid,
                         UserProfileInfos::getPccMinParameterId,
                         pccMinService,
@@ -264,7 +265,7 @@ public class ComputationParametersService {
                 .map(ServiceStatusInfos::name)
                 .collect(Collectors.toSet());
         for (ComputationParametersDefinition definition : computationParametersDefinitions) {
-            if (definition.parametersFetcher() == null || downServices.contains(definition.serviceName())) {
+            if (definition.parametersFetcher() == null || downServices.contains(definition.serviceName().name())) {
                 continue;
             }
             UUID parametersUuid = definition.studyParameterGetter().apply(studyEntity);
