@@ -658,12 +658,7 @@ class LoadFlowTest {
         if (shouldDuplicate) {
             wireMockStubs.loadflowServer.stubDuplicateLoadflowParameters(duplicateFromUuid, objectMapper.writeValueAsString(duplicatedLoadflowParametersUuid), duplicateIsNotFound);
         }
-        mockMvc.perform(
-                post("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
-                    .header("userId", userId)
-                    .contentType(MediaType.ALL)
-                    .content(parameters == null ? "" : parameters))
-                .andExpect(status().is(status.value()));
+        setOrResetParameters(studyNameUserIdUuid, parameters, userId, status);
         wireMockStubs.loadflowServer.verifyPutLoadflowParameters(loadflowParametersUuid, parameters);
         if (parameters == null || parameters.isEmpty()) {
             wireMockStubs.userAdminServer.verifyGetUserProfile(userId);
@@ -681,12 +676,7 @@ class LoadFlowTest {
         wireMockStubs.loadflowServer.stubDuplicateLoadflowParameters(duplicateFromUuid, objectMapper.writeValueAsString(duplicatedLoadflowParametersUuid), false);
         wireMockStubs.loadflowServer.stubDeleteLoadFlowParameters(loadflowParametersUuid);
 
-        mockMvc.perform(
-                        post("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
-                                .header("userId", userId)
-                                .contentType(MediaType.ALL)
-                                .content(""))
-                .andExpect(status().is(HttpStatus.OK.value()));
+        setOrResetParameters(studyNameUserIdUuid, "", userId, HttpStatus.OK);
         wireMockStubs.userAdminServer.verifyGetUserProfile(userId);
         wireMockStubs.loadflowServer.verifyDuplicateLoadflowParameters(duplicateFromUuid);
         wireMockStubs.loadflowServer.verifyDeleteLoadFlowParameters(loadflowParametersUuid);
@@ -704,12 +694,7 @@ class LoadFlowTest {
         if (shouldDuplicate) {
             wireMockStubs.loadflowServer.stubDuplicateLoadflowParameters(duplicateFromUuid, objectMapper.writeValueAsString(UUID.randomUUID()), false);
         }
-        mockMvc.perform(
-                        post("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
-                                .header("userId", userId)
-                                .contentType(MediaType.ALL)
-                                .content(parameters == null ? "" : parameters))
-                .andExpect(status().is(HttpStatus.OK.value()));
+        setOrResetParameters(studyNameUserIdUuid, parameters, userId, HttpStatus.OK);
         if (parameters == null || parameters.isEmpty()) {
             wireMockStubs.userAdminServer.verifyGetUserProfile(userId);
         }
@@ -719,6 +704,21 @@ class LoadFlowTest {
             wireMockStubs.loadflowServer.verifyCreateLoadflowParameters();
         }
         testMessages(studyNameUserIdUuid);
+    }
+
+    /** empty parameters means a reset to the user profile/default parameters */
+    private void setOrResetParameters(UUID studyUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
+        if (parameters == null || parameters.isEmpty()) {
+            mockMvc.perform(post("/v1/studies/{studyUuid}/loadflow/parameters/reset", studyUuid)
+                            .header("userId", userId))
+                    .andExpect(status().is(status.value()));
+        } else {
+            mockMvc.perform(post("/v1/studies/{studyUuid}/loadflow/parameters", studyUuid)
+                            .header("userId", userId)
+                            .contentType(MediaType.ALL)
+                            .content(parameters))
+                    .andExpect(status().is(status.value()));
+        }
     }
 
     private void testMessages(UUID studyNameUserIdUuid) {
@@ -897,7 +897,7 @@ class LoadFlowTest {
         wireMockStubs.reportServer.stubDeleteReport();
 
         // run loadflow invalidation on all study after parameter change
-        loadFlowService.setLoadFlowParameters(studyUuid, null, NO_PROFILE_USER_ID);
+        loadFlowService.resetLoadFlowParameters(studyUuid, NO_PROFILE_USER_ID);
 
         wireMockStubs.userAdminServer.verifyGetUserProfile(NO_PROFILE_USER_ID);
         wireMockStubs.loadflowServer.verifyPutLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING, null);

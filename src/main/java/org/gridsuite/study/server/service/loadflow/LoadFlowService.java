@@ -155,15 +155,13 @@ public class LoadFlowService extends AbstractComputationService {
     }
 
     @Transactional
-    public boolean setLoadFlowParameters(UUID studyUuid, String parameters, String userId) {
-        return setComputationParameters(
+    public void setLoadFlowParameters(UUID studyUuid, String parameters, String userId) {
+        setComputationParameters(
             studyUuid,
             parameters,
             userId,
             StudyEntity::getLoadFlowParametersUuid,
             StudyEntity::setLoadFlowParametersUuid,
-            UserProfileInfos::getLoadFlowParameterId,
-            loadflowRestService,
             loadflowRestService::createLoadFlowParameters,
             loadflowRestService::updateLoadFlowParameters,
             LOAD_FLOW,
@@ -181,6 +179,35 @@ public class LoadFlowService extends AbstractComputationService {
             NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS,
             NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS,
             NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS
+        );
+    }
+
+    @Transactional
+    public boolean resetLoadFlowParameters(UUID studyUuid, String userId) {
+        return resetComputationParameters(
+                studyUuid,
+                userId,
+                StudyEntity::getLoadFlowParametersUuid,
+                StudyEntity::setLoadFlowParametersUuid,
+                UserProfileInfos::getLoadFlowParameterId,
+                loadflowRestService,
+                loadflowRestService::createLoadFlowParameters,
+                loadflowRestService::updateLoadFlowParameters,
+                LOAD_FLOW,
+                List.of(
+                        this::invalidateAllStudyLoadFlowStatus,
+                        rootNetworkNodeInfoService::invalidateSecurityAnalysisStatusOnAllNodes,
+                        rootNetworkNodeInfoService::invalidateSensitivityAnalysisStatusOnAllNodes,
+                        rootNetworkNodeInfoService::invalidateDynamicSimulationStatusOnAllNodes,
+                        rootNetworkNodeInfoService::invalidateDynamicSecurityAnalysisStatusOnAllNodes,
+                        rootNetworkNodeInfoService::invalidateDynamicMarginCalculationStatusOnAllNodes
+                ),
+                NotificationService.UPDATE_TYPE_LOADFLOW_STATUS,
+                NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS,
+                NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS,
+                NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS,
+                NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS,
+                NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS
         );
     }
 

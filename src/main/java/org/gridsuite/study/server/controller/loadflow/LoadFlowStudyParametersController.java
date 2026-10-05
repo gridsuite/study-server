@@ -39,17 +39,29 @@ public class LoadFlowStudyParametersController {
     }
 
     @PostMapping(value = "/parameters")
-    @Operation(summary = "set loadflow parameters on study, reset to default ones if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters are set"),
-                           @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    @Operation(summary = "set loadflow parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters are set")})
     public ResponseEntity<Void> setLoadflowParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String lfParameter,
+            @RequestBody String lfParameter,
             @RequestHeader(HEADER_USER_ID) String userId) {
         // only what this actually unbuilds: the security nodes holding a loadflow result, and their children
-        boolean userProfileIssue = nodeActivityRunnerService.runWith(
+        nodeActivityRunnerService.runWith(
             UNBUILD_ALL, studyUuid, loadFlowService.getNodesInvalidatedByLoadFlowParameters(studyUuid),
             () -> loadFlowService.setLoadFlowParameters(studyUuid, lfParameter, userId)
+        );
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/parameters/reset")
+    @Operation(summary = "reset to default ones if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    public ResponseEntity<Void> resetLoadflowParameters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        boolean userProfileIssue = nodeActivityRunnerService.runWith(
+                UNBUILD_ALL, studyUuid, loadFlowService.getNodesInvalidatedByLoadFlowParameters(studyUuid),
+                () -> loadFlowService.resetLoadFlowParameters(studyUuid, userId)
         );
         return userProfileIssue ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
