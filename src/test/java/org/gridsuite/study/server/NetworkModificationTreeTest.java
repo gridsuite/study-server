@@ -301,7 +301,7 @@ class NetworkModificationTreeTest {
                             Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE),
                             "{}"
                     );
-                } else if (path.matches("/v1/groups/.*/references") && Objects.equals(request.getMethod(), "GET")) {
+                } else if (path.matches("/v1/containers/.*/references") && Objects.equals(request.getMethod(), "GET")) {
                     return new MockResponse(
                             HttpStatus.OK.value(),
                             Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE),
@@ -309,20 +309,20 @@ class NetworkModificationTreeTest {
                     );
                 } else if (path.matches("/v1/network-modifications.*")) {
                     return new MockResponse(HttpStatus.OK.value());
-                } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID + "/network-modifications-count.*") && request.getMethod().equals("GET")) {
+                } else if (path.matches("/v1/containers/" + MODIFICATION_GROUP_UUID + "/network-modifications-count.*") && request.getMethod().equals("GET")) {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(0));
-                } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID_2 + "/network-modifications-count.*") && request.getMethod().equals("GET")) {
+                } else if (path.matches("/v1/containers/" + MODIFICATION_GROUP_UUID_2 + "/network-modifications-count.*") && request.getMethod().equals("GET")) {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(2));
-                } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID_3 + "/network-modifications-count.*") && request.getMethod().equals("GET")) {
+                } else if (path.matches("/v1/containers/" + MODIFICATION_GROUP_UUID_3 + "/network-modifications-count.*") && request.getMethod().equals("GET")) {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(0));
-                } else if (path.startsWith("/v1/groups/") && path.contains("/network-modifications-count") && Objects.equals(request.getMethod(), "GET")) {
+                } else if (path.startsWith("/v1/containers/") && path.contains("/network-modifications-count") && Objects.equals(request.getMethod(), "GET")) {
                     // by default nodes contain no modifications
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(0));
-                } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID + "/.*") && request.getMethod().equals("GET")) {
+                } else if (path.matches("/v1/containers/" + MODIFICATION_GROUP_UUID + "/.*") && request.getMethod().equals("GET")) {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(List.of()));
-                } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID_2 + "/.*") && request.getMethod().equals("GET")) {
+                } else if (path.matches("/v1/containers/" + MODIFICATION_GROUP_UUID_2 + "/.*") && request.getMethod().equals("GET")) {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(List.of("S1", "S2")));
-                } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID_3 + "/.*") && request.getMethod().equals("GET")) {
+                } else if (path.matches("/v1/containers/" + MODIFICATION_GROUP_UUID_3 + "/.*") && request.getMethod().equals("GET")) {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(List.of()));
                 } else if (path.matches("/v1/groups/.*") && request.getMethod().equals("DELETE")) {
                     return new MockResponse(HttpStatus.OK.value());
