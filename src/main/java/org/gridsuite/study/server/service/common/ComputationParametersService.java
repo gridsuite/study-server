@@ -162,6 +162,7 @@ public class ComputationParametersService {
         );
     }
 
+    //TODO : delete this method one finished refactor
     public <T> boolean createOrUpdateParameters(
             StudyEntity studyEntity,
             T parameters,
@@ -200,6 +201,46 @@ public class ComputationParametersService {
         }
 
         createOrUpdateParameters(studyEntity, parameters, studyParameterGetter, studyParameterSetter, createParameters, updateParameters);
+        return userProfileIssue;
+    }
+
+    public <T> boolean resetParameters(
+            StudyEntity studyEntity,
+            String userId,
+            Function<StudyEntity, UUID> studyParameterGetter,
+            BiConsumer<StudyEntity, UUID> studyParameterSetter,
+            Function<UserProfileInfos, UUID> profileParameterGetter,
+            ComputationParameters computationParameters,
+            Function<T, UUID> createParameters,
+            BiConsumer<UUID, T> updateParameters,
+            String computationType
+    ) {
+        boolean userProfileIssue = false;
+        UUID existingParametersUuid = studyParameterGetter.apply(studyEntity);
+
+        UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
+        UUID profileParameterId = userProfileInfos == null ? null : profileParameterGetter.apply(userProfileInfos);
+
+        if (profileParameterId != null) {
+            try {
+                UUID parametersFromProfileUuid = computationParameters.duplicateParameters(profileParameterId);
+                studyParameterSetter.accept(studyEntity, parametersFromProfileUuid);
+                computationParameters.doDeleteComputationParameters(existingParametersUuid, computationType, LOGGER);
+                return false;
+            } catch (Exception e) {
+                userProfileIssue = true;
+                LOGGER.error(
+                        "Could not duplicate {} parameters with id '{}' from user/profile '{}/{}'. Using default parameters",
+                        computationType,
+                        profileParameterId,
+                        userId,
+                        userProfileInfos.getName(),
+                        e
+                );
+            }
+        }
+
+        createOrUpdateParameters(studyEntity, null, studyParameterGetter, studyParameterSetter, createParameters, updateParameters);
         return userProfileIssue;
     }
 

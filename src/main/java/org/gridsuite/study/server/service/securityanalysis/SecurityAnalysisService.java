@@ -98,10 +98,25 @@ public class SecurityAnalysisService extends AbstractComputationService {
     }
 
     @Transactional
-    public boolean setSecurityAnalysisParametersValues(UUID studyUuid, String parameters, String userId) {
-        return setComputationParameters(
+    public void setSecurityAnalysisParametersValues(UUID studyUuid, String parameters, String userId) {
+        setComputationParameters(
                 studyUuid,
                 parameters,
+                userId,
+                StudyEntity::getSecurityAnalysisParametersUuid,
+                StudyEntity::setSecurityAnalysisParametersUuid,
+                securityAnalysisRestService::createSecurityAnalysisParameters,
+                securityAnalysisRestService::updateSecurityAnalysisParameters,
+                SECURITY_ANALYSIS,
+                List.of(rootNetworkNodeInfoService::invalidateSecurityAnalysisStatusOnAllNodes),
+                NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS
+        );
+    }
+
+    @Transactional
+    public boolean resetSecurityAnalysisParametersValues(UUID studyUuid, String userId) {
+        return resetComputationParameters(
+                studyUuid,
                 userId,
                 StudyEntity::getSecurityAnalysisParametersUuid,
                 StudyEntity::setSecurityAnalysisParametersUuid,
