@@ -265,7 +265,7 @@ public class ComputationParametersService {
                 .map(ServiceStatusInfos::name)
                 .collect(Collectors.toSet());
         for (ComputationParametersDefinition definition : computationParametersDefinitions) {
-            if (definition.parametersFetcher() == null || downServices.contains(definition.serviceName().name())) {
+            if (definition.parametersFetcher() == null || downServices.contains(definition.serviceName().serviceName())) {
                 continue;
             }
             UUID parametersUuid = definition.studyParameterGetter().apply(studyEntity);
