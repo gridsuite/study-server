@@ -66,10 +66,25 @@ public class DynamicSecurityAnalysisService extends AbstractComputationService {
     }
 
     @Transactional
-    public boolean setDynamicSecurityAnalysisParameters(UUID studyUuid, String dsaParameter, String userId) {
-        return setComputationParameters(
+    public void setDynamicSecurityAnalysisParameters(UUID studyUuid, String dsaParameter, String userId) {
+        setComputationParameters(
                 studyUuid,
                 dsaParameter,
+                userId,
+                StudyEntity::getDynamicSecurityAnalysisParametersUuid,
+                StudyEntity::setDynamicSecurityAnalysisParametersUuid,
+                dynamicSecurityAnalysisRestService::createParameters,
+                dynamicSecurityAnalysisRestService::updateParameters,
+                DYNAMIC_SECURITY_ANALYSIS,
+                List.of(rootNetworkNodeInfoService::invalidateDynamicSecurityAnalysisStatusOnAllNodes),
+                NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS
+        );
+    }
+
+    @Transactional
+    public boolean resetDynamicSecurityAnalysisParameters(UUID studyUuid, String userId) {
+        return resetComputationParameters(
+                studyUuid,
                 userId,
                 StudyEntity::getDynamicSecurityAnalysisParametersUuid,
                 StudyEntity::setDynamicSecurityAnalysisParametersUuid,
