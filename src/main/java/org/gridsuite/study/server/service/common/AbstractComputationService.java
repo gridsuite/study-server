@@ -90,34 +90,6 @@ public abstract class AbstractComputationService {
         return userProfileIssue;
     }
 
-    //TODO : delete this function after end of refactoring
-    protected <T> boolean setComputationParameters(UUID studyUuid, T parameters, String userId,
-                                                 Function<StudyEntity, UUID> studyParameterGetter,
-                                                 BiConsumer<StudyEntity, UUID> studyParameterSetter,
-                                                 Function<UserProfileInfos, UUID> profileParameterGetter,
-                                                 ComputationParameters computationParameters,
-                                                 Function<T, UUID> createParameters,
-                                                 BiConsumer<UUID, T> updateParameters,
-                                                 ComputationType computationType,
-                                                 List<Consumer<UUID>> statusInvalidations,
-                                                 String... statusUpdateTypes) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        boolean userProfileIssue = computationParametersService.createOrUpdateParameters(
-                studyEntity,
-                parameters,
-                userId,
-                studyParameterGetter,
-                studyParameterSetter,
-                profileParameterGetter,
-                computationParameters,
-                createParameters,
-                updateParameters,
-                computationType.getLabel()
-        );
-        emitComputationParametersChanged(studyUuid, userId, computationType, statusInvalidations, statusUpdateTypes);
-        return userProfileIssue;
-    }
-
     protected <T> void setComputationParameters(UUID studyUuid, T parameters, String userId,
                                               Function<StudyEntity, UUID> studyParameterGetter,
                                               BiConsumer<StudyEntity, UUID> studyParameterSetter,
