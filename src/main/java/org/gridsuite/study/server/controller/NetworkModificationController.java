@@ -74,7 +74,7 @@ public class NetworkModificationController {
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/network-modifications/name-and-description/{uuid}")
+    @PutMapping(value = "/network-modifications/{uuid}/name-and-description")
     public ResponseEntity<Void> updateModificationNameAndDescription(@PathVariable UUID uuid,
                                                                      @RequestHeader(HEADER_USER_ID) String userId,
                                                                      @RequestBody String metadata) {

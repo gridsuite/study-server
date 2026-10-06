@@ -172,7 +172,7 @@ class NetworkModificationControllerTest {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set(HEADER_USER_ID, userId);
 
-        mockMvc.perform(put(BASE_URL + "/network-modifications/name-and-description/" + modificationUuid)
+        mockMvc.perform(put(BASE_URL + "/network-modifications/" + modificationUuid + "/name-and-description")
                         .headers(headers)
                         .content(metadata)
                         .contentType(MediaType.APPLICATION_JSON))

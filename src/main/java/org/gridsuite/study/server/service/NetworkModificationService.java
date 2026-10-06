@@ -289,7 +289,7 @@ public class NetworkModificationService {
     }
 
     public void updateNetworkModificationNameAndDescription(UUID networkModificationUuid, String metadata, String userId) {
-        String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + DELIMITER + "name-and-description" + DELIMITER + networkModificationUuid.toString())
+        String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + DELIMITER + networkModificationUuid.toString() + DELIMITER + "name-and-description")
                 .build().toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
