@@ -112,7 +112,7 @@ public class VoltageInitService extends AbstractComputationService {
     }
 
     @Transactional
-    public boolean setVoltageInitParameters(UUID studyUuid, StudyVoltageInitParameters parameters, String userId) {
+    public void setVoltageInitParameters(UUID studyUuid, StudyVoltageInitParameters parameters, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
         var voltageInitParameters = studyEntity.getVoltageInitParameters();
         if (voltageInitParameters == null) {
@@ -121,7 +121,20 @@ public class VoltageInitService extends AbstractComputationService {
         } else {
             voltageInitParameters.setApplyModifications(parameters.isApplyModifications());
         }
-        boolean userProfileIssue = createOrUpdateVoltageInitParameters(studyEntity, parameters.getComputationParameters(), userId);
+        createOrUpdateVoltageInitParameters(studyEntity, parameters.getComputationParameters());
+        emitComputationParametersChanged(
+                studyUuid,
+                userId,
+                VOLTAGE_INITIALIZATION,
+                List.of(this::invalidateVoltageInitStatusOnAllNodes),
+                NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS
+        );
+    }
+
+    @Transactional
+    public boolean resetVoltageInitParameters(UUID studyUuid, String userId) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        boolean userProfileIssue = resetVoltageInitParameters(studyEntity, userId);
         emitComputationParametersChanged(
                 studyUuid,
                 userId,
@@ -136,11 +149,25 @@ public class VoltageInitService extends AbstractComputationService {
         voltageInitRestService.invalidateVoltageInitStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, VOLTAGE_INITIALIZATION));
     }
 
-    public boolean createOrUpdateVoltageInitParameters(StudyEntity studyEntity, VoltageInitParametersInfos parameters, String userId) {
+    public void createOrUpdateVoltageInitParameters(StudyEntity studyEntity, VoltageInitParametersInfos parameters) {
+        UUID existingVoltageInitParametersUuid = studyEntity.getVoltageInitParametersUuid();
+
+        if (existingVoltageInitParametersUuid == null) {
+            existingVoltageInitParametersUuid = voltageInitRestService.createVoltageInitParameters(parameters);
+            studyEntity.setVoltageInitParametersUuid(existingVoltageInitParametersUuid);
+        } else {
+            VoltageInitParametersInfos oldParameters = voltageInitRestService.getVoltageInitParameters(existingVoltageInitParametersUuid);
+            if (Objects.isNull(parameters) || !parameters.equals(oldParameters)) {
+                voltageInitRestService.updateVoltageInitParameters(existingVoltageInitParametersUuid, parameters);
+            }
+        }
+    }
+
+    public boolean resetVoltageInitParameters(StudyEntity studyEntity, String userId) {
         boolean userProfileIssue = false;
         UUID existingVoltageInitParametersUuid = studyEntity.getVoltageInitParametersUuid();
-        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
-        if (parameters == null && userProfileInfos.getVoltageInitParameterId() != null) {
+        UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
+        if (userProfileInfos.getVoltageInitParameterId() != null) {
             // reset case, with existing profile, having default voltage init params
             try {
                 UUID voltageInitParametersFromProfileUuid = voltageInitRestService.duplicateParameters(userProfileInfos.getVoltageInitParameterId());
@@ -156,15 +183,10 @@ public class VoltageInitService extends AbstractComputationService {
         }
 
         if (existingVoltageInitParametersUuid == null) {
-            existingVoltageInitParametersUuid = voltageInitRestService.createVoltageInitParameters(parameters);
-            studyEntity.setVoltageInitParametersUuid(existingVoltageInitParametersUuid);
+            studyEntity.setVoltageInitParametersUuid(voltageInitRestService.createVoltageInitParameters(null));
         } else {
-            VoltageInitParametersInfos oldParameters = voltageInitRestService.getVoltageInitParameters(existingVoltageInitParametersUuid);
-            if (Objects.isNull(parameters) || !parameters.equals(oldParameters)) {
-                voltageInitRestService.updateVoltageInitParameters(existingVoltageInitParametersUuid, parameters);
-            }
+            voltageInitRestService.updateVoltageInitParameters(existingVoltageInitParametersUuid, null);
         }
-
         return userProfileIssue;
     }
 

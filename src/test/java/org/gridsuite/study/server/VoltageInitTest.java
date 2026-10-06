@@ -455,11 +455,22 @@ class VoltageInitTest {
                 post("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)
                         .header("userId", userId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(parameters != null
-                            ? objectMapper.writeValueAsString(parameters)
-                            : objectMapper.writeValueAsString(createStudyVoltageInitParameters(false))))
+                        .content(objectMapper.writeValueAsString(parameters)))
             .andExpect(status().is(status.value()));
 
+        checkParametersChangedMessagesReceived(studyNameUserIdUuid);
+    }
+
+    private void resetParametersAndDoChecks(UUID studyNameUserIdUuid, String userId, HttpStatusCode status) throws Exception {
+        mockMvc.perform(
+                post("/v1/studies/{studyUuid}/voltage-init/parameters/reset", studyNameUserIdUuid)
+                        .header("userId", userId))
+            .andExpect(status().is(status.value()));
+
+        checkParametersChangedMessagesReceived(studyNameUserIdUuid);
+    }
+
+    private void checkParametersChangedMessagesReceived(UUID studyNameUserIdUuid) {
         Message<byte[]> voltageInitStatusMessage = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS, voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
@@ -1154,33 +1165,33 @@ class VoltageInitTest {
     void testResetVoltageInitParametersUserHasNoProfile(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID, VOLTAGE_INIT_PARAMETERS_UUID, false);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, null, NO_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyNameUserIdUuid, NO_PROFILE_USER_ID, HttpStatus.OK);
 
-        var requests = TestUtils.getRequestsDone(3, server);
+        var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + NO_PROFILE_USER_ID + "/profile")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + VOLTAGE_INIT_PARAMETERS_UUID_STRING))); // get/update existing with dft
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + VOLTAGE_INIT_PARAMETERS_UUID_STRING))); // update existing with dft
     }
 
     @Test
     void testResetVoltageInitParametersUserHasNoParamsInProfile(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID, VOLTAGE_INIT_PARAMETERS_UUID, false);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, null, NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyNameUserIdUuid, NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
-        var requests = TestUtils.getRequestsDone(3, server);
+        var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + NO_PARAMS_IN_PROFILE_USER_ID + "/profile")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + VOLTAGE_INIT_PARAMETERS_UUID_STRING))); // get/update existing with dft
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + VOLTAGE_INIT_PARAMETERS_UUID_STRING))); // update existing with dft
     }
 
     @Test
     void testResetVoltageInitParametersUserHasInvalidParamsInProfile(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID, VOLTAGE_INIT_PARAMETERS_UUID, false);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, null, INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
+        resetParametersAndDoChecks(studyNameUserIdUuid, INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
 
-        var requests = TestUtils.getRequestsDone(4, server);
+        var requests = TestUtils.getRequestsDone(3, server);
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + VOLTAGE_INIT_PARAMETERS_UUID_STRING))); // get/update existing with dft
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + VOLTAGE_INIT_PARAMETERS_UUID_STRING))); // update existing with dft
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + PROFILE_VOLTAGE_INIT_INVALID_PARAMETERS_UUID_STRING + "/duplicate"))); // post duplicate ko
     }
 
@@ -1198,7 +1209,7 @@ class VoltageInitTest {
                 .andExpect(status().isOk());
         consumeVoltageInitResult(studyEntity.getId(), firstRootNetworkUuid, modificationNode1.getId(), VOLTAGE_INIT_RESULT_UUID, false);
 
-        createOrUpdateParametersAndDoChecks(studyUuid, null, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyUuid, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
         var requests = TestUtils.getRequestsDone(5, server);
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING
@@ -1213,7 +1224,7 @@ class VoltageInitTest {
     void testResetVoltageInitParametersUserHasValidParamsInProfileButNoExistingVoltageInitParams(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID, null, false);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, null, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyNameUserIdUuid, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
