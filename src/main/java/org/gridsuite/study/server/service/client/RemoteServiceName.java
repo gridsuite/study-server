@@ -28,6 +28,7 @@ public enum RemoteServiceName {
     DYNAMIC_MAPPING_SERVER,
     DYNAMIC_SECURITY_ANALYSIS_SERVER,
     DYNAMIC_SIMULATION_SERVER,
+    DYNAMIC_MARGIN_CALCULATION_SERVER,
     EXPLORE_SERVER,
     FILTER_SERVER,
     GATEWAY,
@@ -49,7 +50,8 @@ public enum RemoteServiceName {
     TIMESERIES_SERVER,
     USER_ADMIN_SERVER,
     USER_IDENTITY_SERVER,
-    VOLTAGE_INIT_SERVER;
+    VOLTAGE_INIT_SERVER,
+    STATE_ESTIMATION_SERVER;
 
     /**
      * Service name in the format found in {@link RemoteServicesProperties.Service#getName() Service.name}
