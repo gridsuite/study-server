@@ -167,7 +167,13 @@ class NetworkModificationControllerTest {
     void testUpdateNetworkModificationsNameAndDescription() throws Exception {
         UUID modificationUuid = UUID.randomUUID();
         String userId = "user";
-        String metadata = "{\"message\":{\"name\":\"newName\",\"description\":\"newDescription\"}}";
+        String metadata =
+                "{\"message\":" +
+                    "{" +
+                        "\"name\":\"newName\"," +
+                        "\"description\":\"newDescription\"" +
+                    "}" +
+                "}";
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set(HEADER_USER_ID, userId);
