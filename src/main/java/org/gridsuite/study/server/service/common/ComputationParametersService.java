@@ -269,11 +269,10 @@ public class ComputationParametersService {
                 continue;
             }
             UUID parametersUuid = definition.studyParameterGetter().apply(studyEntity);
-            if (parametersUuid == null) {
-                continue;
+            if (parametersUuid != null) {
+                Object parameters = definition.parametersFetcher().apply(parametersUuid);
+                parametersByType.put(definition.type(), parameters instanceof String parametersJson ? parametersJson : objectMapper.writeValueAsString(parameters));
             }
-            Object parameters = definition.parametersFetcher().apply(parametersUuid);
-            parametersByType.put(definition.type(), parameters instanceof String parametersJson ? parametersJson : objectMapper.writeValueAsString(parameters));
         }
         return parametersByType;
     }
