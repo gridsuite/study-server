@@ -269,11 +269,11 @@ class LoadFlowTest {
             wireMockStubs.loadflowServer.stubGetLoadflowStatus(UUID.fromString(LOADFLOW_RESULT_UUID), objectMapper.writeValueAsString(LoadFlowStatus.CONVERGED), false);
         }
         MessageHeaders messageHeaders = new MessageHeaders(
-                Map.of(
-                        "resultUuid", LOADFLOW_RESULT_UUID,
-                        "withRatioTapChangers", false,
-                        HEADER_RECEIVER, resultUuidJson,
-                        USER_ID_HEADER, "userId"));
+            Map.of(
+                "resultUuid", LOADFLOW_RESULT_UUID,
+                "withRatioTapChangers", false,
+                HEADER_RECEIVER, resultUuidJson,
+                USER_ID_HEADER, "userId"));
         consumerService.consumeLoadFlowResult().accept(MessageBuilder.createMessage("", messageHeaders));
         checkLoadFlowStatusesThen(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
 
@@ -292,23 +292,23 @@ class LoadFlowTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationConstructionNode(studyNameUserIdUuid, rootNodeUuid,
-                UUID.randomUUID(), VARIANT_ID, "node 1");
+            UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         NetworkModificationNode modificationNode2 = createNetworkModificationConstructionNode(studyNameUserIdUuid,
-                modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID, "node 2");
+            modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID, "node 2");
         UUID modificationNode2Uuid = modificationNode2.getId();
 
         NetworkModificationNode modificationNode3 = createNetworkModificationConstructionNode(studyNameUserIdUuid,
-                modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 3");
+            modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 3");
 
         NetworkModificationNode modificationNode4 = createNetworkModificationNode(studyNameUserIdUuid,
-                modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 4", NetworkModificationNodeType.SECURITY);
+            modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 4", NetworkModificationNodeType.SECURITY);
 
         // run a loadflow on root node (not allowed)
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, UUID.randomUUID(), rootNodeUuid)
-                        .header("userId", "userId"))
-                .andExpect(status().isForbidden());
+                .header("userId", "userId"))
+            .andExpect(status().isForbidden());
 
         // run LF with failed status
         testLoadFlowFailed(studyNameUserIdUuid, modificationNode2.getId());
@@ -329,8 +329,8 @@ class LoadFlowTest {
 
         // run a loadflow
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)
-                        .header("userId", "userId"))
-                .andExpect(status().isOk());
+                .header("userId", "userId"))
+            .andExpect(status().isOk());
 
         wireMockStubs.loadflowServer.verifyRunLoadflow(networkUuid);
 
@@ -353,7 +353,7 @@ class LoadFlowTest {
         // get loadflow result
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/result", studyNameUserIdUuid, firstRootNetworkUuid,
                 modificationNodeUuid)).andExpectAll(
-                status().isOk()).andReturn();
+            status().isOk()).andReturn();
 
         assertEquals(TestUtils.resourceToString("/loadflow-result.json"), mvcResult.getResponse().getContentAsString());
 
@@ -362,18 +362,18 @@ class LoadFlowTest {
         // get loadflow status
         wireMockStubs.loadflowServer.stubGetLoadflowStatus(loadflowResultUuid, objectMapper.writeValueAsString(LoadFlowStatus.CONVERGED), false);
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/status?withRatioTapChangers={withRatioTapChangers}", studyNameUserIdUuid,
-                        firstRootNetworkUuid, modificationNodeUuid, false))
-                .andExpect(status().isOk())
-                .andReturn();
+                firstRootNetworkUuid, modificationNodeUuid, false))
+            .andExpect(status().isOk())
+            .andReturn();
         assertEquals(LoadFlowStatus.CONVERGED.name(), mvcResult.getResponse().getContentAsString());
         wireMockStubs.loadflowServer.verifyGetLoadflowStatus(loadflowResultUuid);
 
         // stop loadflow
         wireMockStubs.loadflowServer.stubStopLoadflow(loadflowResultUuid, modificationNodeUuid, firstRootNetworkUuid, objectMapper.writeValueAsString(LoadFlowStatus.CONVERGED));
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/stop?withRatioTapChangers={withRatioTapChangers}", studyNameUserIdUuid,
-                        firstRootNetworkUuid, modificationNodeUuid, false)
-                        .header(HEADER_USER_ID, "userId"))
-                .andExpect(status().isOk());
+                firstRootNetworkUuid, modificationNodeUuid, false)
+                .header(HEADER_USER_ID, "userId"))
+            .andExpect(status().isOk());
         wireMockStubs.loadflowServer.verifyStopLoadflow(loadflowResultUuid);
         checkUpdateStatusMessageReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
     }
@@ -434,7 +434,7 @@ class LoadFlowTest {
 
         wireMockStubs.loadflowServer.stubGetComputation(LOADFLOW_RESULT_UUID);
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/computation/result/enum-values?computingType={computingType}&enumName={enumName}",
-                studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, LOAD_FLOW, "computation")).andReturn();
+        studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, LOAD_FLOW, "computation")).andReturn();
         wireMockStubs.loadflowServer.verifyGetComputation(LOADFLOW_RESULT_UUID);
 
         wireMockStubs.loadflowServer.stubGetLimitViolation(LOADFLOW_RESULT_UUID, LIMIT_VIOLATIONS_JSON, false);
