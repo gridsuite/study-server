@@ -673,7 +673,7 @@ class LoadFlowTest {
     }
 
     private void updateParametersAndDoChecksForResetLoadFlowParameters(UUID studyNameUserIdUuid, String loadflowParametersUuid, String userId, String returnedUserProfileJson,
-           String duplicateFromUuid) throws Exception {
+            String duplicateFromUuid) throws Exception {
         UUID duplicatedLoadflowParametersUuid = UUID.randomUUID();
         wireMockStubs.userAdminServer.stubGetUserProfile(userId, returnedUserProfileJson);
         wireMockStubs.loadflowServer.stubDuplicateLoadflowParameters(duplicateFromUuid, objectMapper.writeValueAsString(duplicatedLoadflowParametersUuid), false);
@@ -693,7 +693,7 @@ class LoadFlowTest {
     }
 
     private void createParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String userId, String returnedUserProfileJson, boolean shouldDuplicate,
-     String duplicateFromUuid) throws Exception {
+            String duplicateFromUuid) throws Exception {
         String createdLoadflowParametersUuid = UUID.randomUUID().toString();
         wireMockStubs.loadflowServer.stubCreateLoadflowParameters(objectMapper.writeValueAsString(createdLoadflowParametersUuid));
         if (parameters == null || parameters.isEmpty()) {
