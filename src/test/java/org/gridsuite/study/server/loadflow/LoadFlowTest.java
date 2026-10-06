@@ -434,7 +434,7 @@ class LoadFlowTest {
 
         wireMockStubs.loadflowServer.stubGetComputation(LOADFLOW_RESULT_UUID);
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/computation/result/enum-values?computingType={computingType}&enumName={enumName}",
-        studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, LOAD_FLOW, "computation")).andReturn();
+                studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, LOAD_FLOW, "computation")).andReturn();
         wireMockStubs.loadflowServer.verifyGetComputation(LOADFLOW_RESULT_UUID);
 
         wireMockStubs.loadflowServer.stubGetLimitViolation(LOADFLOW_RESULT_UUID, LIMIT_VIOLATIONS_JSON, false);
@@ -647,7 +647,7 @@ class LoadFlowTest {
     }
 
     private void updateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String loadflowParametersUuid, String userId, HttpStatusCode status, String returnedUserProfileJson,
-                                             boolean shouldDuplicate, String duplicateFromUuid, boolean duplicateIsNotFound) throws Exception {
+             boolean shouldDuplicate, String duplicateFromUuid, boolean duplicateIsNotFound) throws Exception {
         wireMockStubs.loadflowServer.stubPutLoadflowParameters(loadflowParametersUuid, parameters);
         UUID duplicatedLoadflowParametersUuid = UUID.randomUUID();
         if (parameters == null || parameters.isEmpty()) {
@@ -657,10 +657,10 @@ class LoadFlowTest {
             wireMockStubs.loadflowServer.stubDuplicateLoadflowParameters(duplicateFromUuid, objectMapper.writeValueAsString(duplicatedLoadflowParametersUuid), duplicateIsNotFound);
         }
         mockMvc.perform(
-                        post("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
-                                .header("userId", userId)
-                                .contentType(MediaType.ALL)
-                                .content(parameters == null ? "" : parameters))
+                    post("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
+                        .header("userId", userId)
+                        .contentType(MediaType.ALL)
+                        .content(parameters == null ? "" : parameters))
                 .andExpect(status().is(status.value()));
         wireMockStubs.loadflowServer.verifyPutLoadflowParameters(loadflowParametersUuid, parameters);
         if (parameters == null || parameters.isEmpty()) {
@@ -673,7 +673,7 @@ class LoadFlowTest {
     }
 
     private void updateParametersAndDoChecksForResetLoadFlowParameters(UUID studyNameUserIdUuid, String loadflowParametersUuid, String userId, String returnedUserProfileJson,
-                                                                       String duplicateFromUuid) throws Exception {
+                                       String duplicateFromUuid) throws Exception {
         UUID duplicatedLoadflowParametersUuid = UUID.randomUUID();
         wireMockStubs.userAdminServer.stubGetUserProfile(userId, returnedUserProfileJson);
         wireMockStubs.loadflowServer.stubDuplicateLoadflowParameters(duplicateFromUuid, objectMapper.writeValueAsString(duplicatedLoadflowParametersUuid), false);
@@ -693,7 +693,7 @@ class LoadFlowTest {
     }
 
     private void createParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String userId, String returnedUserProfileJson, boolean shouldDuplicate,
-                                             String duplicateFromUuid) throws Exception {
+                     String duplicateFromUuid) throws Exception {
         String createdLoadflowParametersUuid = UUID.randomUUID().toString();
         wireMockStubs.loadflowServer.stubCreateLoadflowParameters(objectMapper.writeValueAsString(createdLoadflowParametersUuid));
         if (parameters == null || parameters.isEmpty()) {
@@ -934,8 +934,8 @@ class LoadFlowTest {
 
         wireMockStubs.loadflowServer.stubGetLoadflowModifications(UUID.fromString(LOADFLOW_RESULT_UUID), LOADFLOW_MODIFICATIONS, false);
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/modifications", studyUuid, rootNetworkUuid, node1.getId()))
-                .andExpect(status().isOk())
-                .andReturn();
+            .andExpect(status().isOk())
+            .andReturn();
         wireMockStubs.loadflowServer.verifyGetLoadflowModifications(UUID.fromString(LOADFLOW_RESULT_UUID));
 
         assertEquals(LOADFLOW_MODIFICATIONS, mvcResult.getResponse().getContentAsString());
@@ -951,11 +951,11 @@ class LoadFlowTest {
 
         wireMockStubs.loadflowServer.stubGetLoadflowModifications(UUID.fromString(LOADFLOW_ERROR_RESULT_UUID), null, true);
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/modifications", studyUuid, rootNetworkUuid, node1.getId()))
-                .andExpect(status().isNotFound());
+            .andExpect(status().isNotFound());
 
         updateLoadflowResultUuid(node1.getId(), rootNetworkUuid, UUID.fromString(LOADFLOW_ERROR_RESULT_UUID));
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/modifications", studyUuid, rootNetworkUuid, node1.getId()))
-                .andExpect(status().isNotFound());
+            .andExpect(status().isNotFound());
         wireMockStubs.loadflowServer.verifyGetLoadflowModifications(UUID.fromString(LOADFLOW_ERROR_RESULT_UUID));
     }
 
@@ -1016,7 +1016,7 @@ class LoadFlowTest {
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
 
         rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
-                RootNetworkNodeInfo.builder().variantId(variantId).build());
+            RootNetworkNodeInfo.builder().variantId(variantId).build());
 
         verify(studyService, times(1)).getRootNetworksToBuildNewNode(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
 
