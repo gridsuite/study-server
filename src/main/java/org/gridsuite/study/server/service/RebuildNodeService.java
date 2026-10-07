@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.service;
 
+import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
 import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
@@ -42,7 +43,7 @@ public class RebuildNodeService {
     }
 
     private void handleCreateNetworkModification(UUID studyUuid, UUID nodeUuid, String modificationAttributes, String userId) {
-        studyService.invalidateNodeTreeWithLF(studyUuid, nodeUuid);
+        networkModificationTreeService.invalidateNodeTreeWithLF(studyUuid, nodeUuid, InvalidateNodeTreeParameters.ComputationsInvalidationMode.ALL);
         studyService.createNetworkModification(studyUuid, nodeUuid, modificationAttributes, userId);
     }
 
