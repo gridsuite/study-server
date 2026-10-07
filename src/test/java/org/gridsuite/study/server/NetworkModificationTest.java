@@ -3619,7 +3619,7 @@ class NetworkModificationTest {
 
         // Stub verifyModifications
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(
-                        "/v1/groups/" + node.getModificationGroupUuid() + "/network-modifications/verify"))
+                        "/v1/containers/" + node.getModificationGroupUuid() + "/network-modifications/verify"))
                 .willReturn(WireMock.ok()));
 
         // Stub the references lookup (network-modification-server wire names): the modification is a reference, so a
@@ -3651,7 +3651,7 @@ class NetworkModificationTest {
 
         // Verify that verifyModifications was called with the composite UUID
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer,
-                "/v1/groups/" + node.getModificationGroupUuid() + "/network-modifications/verify",
+                "/v1/containers/" + node.getModificationGroupUuid() + "/network-modifications/verify",
                 Map.of("uuids", equalTo(compositeUuid.toString())));
 
         // the references are looked up to check the rights on the shared modifications, if any
@@ -3663,8 +3663,7 @@ class NetworkModificationTest {
                 "ids", equalTo(sharedUuid.toString()),
                 "accessType", equalTo("WRITE")));
 
-        // the applicability is updated for the tag of the root network, the sub modifications of the composite being
-        // handled by the network modification server itself
+        // the applicability is updated for the tag of the root network, on the composite alone
         WireMockUtilsCriteria.verifyPutRequest(wireMockServer, "/v1/network-modifications/root-network-applicability", false, Map.of(
                 "uuids", equalTo(compositeUuid.toString()),
                 "rootNetworkTag", equalTo(rootNetworkTag),
