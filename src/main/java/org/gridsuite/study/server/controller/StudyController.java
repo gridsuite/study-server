@@ -665,10 +665,10 @@ public class StudyController {
         studyService.assertIsStudyAndNodeExist(studyUuid, targetNodeUuid);
         studyService.assertIsNodeExist(studyUuid, sourceNodeUuid, new StudyException(MOVE_NETWORK_MODIFICATION_FORBIDDEN));
         studyService.assertIsNodeNotReadOnly(targetNodeUuid);
-        nodeActivityRunnerService.runWithNetworkModification(studyUuid, targetNodeUuid, originNodeUuid, userId,
+        nodeActivityRunnerService.runWithNetworkModification(studyUuid, targetNodeUuid, sourceNodeUuid, userId,
             () -> {
-                boolean isTargetInDifferentNodeTree = networkModificationService.invalidateNodeTreeWhenMoveModifications(studyUuid, targetNodeUuid, originNodeUuid);
-                networkModificationService.moveNetworkModifications(studyUuid, originNodeUuid, targetNodeUuid, modificationMoveInfos, isTargetInDifferentNodeTree, userId);
+                boolean isTargetInDifferentNodeTree = networkModificationService.invalidateNodeTreeWhenMoveModifications(studyUuid, targetNodeUuid, sourceNodeUuid);
+                networkModificationService.moveNetworkModifications(studyUuid, sourceNodeUuid, targetNodeUuid, modificationMoveInfos, isTargetInDifferentNodeTree, userId);
             });
         return ResponseEntity.ok().build();
     }
@@ -700,7 +700,7 @@ public class StudyController {
         UUID newCompositeUuid = nodeActivityRunnerService.runWithNetworkModification(studyUuid, nodeUuid, userId,
             () -> {
                 networkModificationService.invalidateNodeTreeWhenMoveModification(studyUuid, nodeUuid);
-                networkModificationService.assembleModificationsIntoComposite(studyUuid, nodeUuid, modificationsUuids, userId);
+                return networkModificationService.assembleModificationsIntoComposite(studyUuid, nodeUuid, modificationsUuids, userId);
             });
         return ResponseEntity.ok().body(newCompositeUuid);
     }

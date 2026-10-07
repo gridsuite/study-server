@@ -63,14 +63,22 @@ public class NodeActivityRunnerService {
     }
 
     public <T> T runWithNetworkModification(UUID studyUuid, UUID nodeUuid, String userId, Runnable action) {
+        return runWithNetworkModification(studyUuid, nodeUuid, nodeUuid, userId, asSupplier(action));
+    }
+
+    public <T> T runWithNetworkModification(UUID studyUuid, UUID nodeUuid, String userId, Supplier<T> action) {
         return runWithNetworkModification(studyUuid, nodeUuid, nodeUuid, userId, action);
     }
 
     public <T> T runWithNetworkModification(UUID studyUuid, UUID node1Uuid, UUID node2Uuid, String userId, Runnable action) {
+        return runWithNetworkModification(studyUuid, node1Uuid, node2Uuid, userId, asSupplier(action));
+    }
+
+    private <T> T runWithNetworkModification(UUID studyUuid, UUID node1Uuid, UUID node2Uuid, String userId, Supplier<T> action) {
         Map<UUID, Set<UUID>> rootNetworkUuidsByNodeBuilt = networkModificationService.getSecurityNodesToRebuild(studyUuid, node1Uuid, node2Uuid);
 
         T result = runWith(EDIT_MODIFICATIONS, studyUuid,
-            Stream.of(node1Uuid, node2Uuid).distinct().toList(), asSupplier(action));
+            Stream.of(node1Uuid, node2Uuid).distinct().toList(), action);
 
         rebuildSecurityNodesIfNeeded(studyUuid, rootNetworkUuidsByNodeBuilt, userId);
 

@@ -49,6 +49,7 @@ import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurit
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
@@ -220,8 +221,11 @@ class NetworkModificationTest {
     @MockitoSpyBean
     private NetworkModificationTreeService networkModificationTreeService;
 
+    @MockitoSpyBean
+    private NetworkModificationService networkModificationService;
+
     @Autowired
-    private NetworkModificationRestService networkModificationService;
+    private NetworkModificationRestService networkModificationRestService;
 
     @Autowired
     private DirectoryService directoryService;
@@ -334,7 +338,7 @@ class NetworkModificationTest {
         dynamicSimulationRestService.setBaseUri(baseUrl);
         dynamicSecurityAnalysisRestService.setBaseUri(baseUrl);
 
-        networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
+        networkModificationRestService.setNetworkModificationServerBaseUri(baseUrl);
         directoryService.setDirectoryServerServerBaseUri(baseUrl);
         userAdminService.setUserAdminServerBaseUri(baseUrl);
 
@@ -624,7 +628,7 @@ class NetworkModificationTest {
          */
 
         // just test asserts
-        doNothing().when(studyService).buildNode(any(), any(), any(), any());
+        doNothing().when(networkModificationService).buildNode(any(), any(), any(), any());
 
         // Build all nodes is ok
         testBuildAsserts(studyNameUserIdUuid, rootNetworkUuid,

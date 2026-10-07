@@ -1615,15 +1615,6 @@ public class StudyService {
     }
 
     @Transactional
-    public Map<UUID, NodeBuildStatus> getNodeBuildStatusByRootNetwork(UUID studyUuid, UUID nodeUuid) {
-        return rootNetworkService.getStudyRootNetworks(studyUuid).stream().collect(Collectors.toMap(
-            RootNetworkEntity::getId,
-            rn -> rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rn.getId()).map(rni -> rni.getNodeBuildStatus().toDto()).orElseThrow(() -> new StudyException(NOT_FOUND,
-                    "Root network not found"))
-        ));
-    }
-
-    @Transactional
     public RootNetworkIndexationStatus getRootNetworkIndexationStatus(UUID studyUuid, UUID rootNetworkUuid) {
         StudyEntity study = getStudy(studyUuid);
         RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
