@@ -191,8 +191,7 @@ public class LoadFlowService extends AbstractComputationService {
                 StudyEntity::setLoadFlowParametersUuid,
                 UserProfileInfos::getLoadFlowParameterId,
                 loadflowRestService,
-                loadflowRestService::createLoadFlowParameters,
-                loadflowRestService::updateLoadFlowParameters,
+                loadflowRestService::resetLoadFlowParameters,
                 LOAD_FLOW,
                 List.of(
                         this::invalidateAllStudyLoadFlowStatus,

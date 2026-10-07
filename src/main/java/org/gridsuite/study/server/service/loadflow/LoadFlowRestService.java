@@ -256,7 +256,7 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
         return restTemplate.postForObject(baseUri + path, null, UUID.class);
     }
 
-    public void updateLoadFlowParameters(UUID parametersUuid, @Nullable String parameters) {
+    public void updateLoadFlowParameters(UUID parametersUuid, String parameters) {
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(parametersUuid)
@@ -268,6 +268,15 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
         restTemplate.put(baseUri + path, httpEntity);
+    }
+
+    public void resetLoadFlowParameters(UUID parametersUuid) {
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI + "/reset")
+                .buildAndExpand(parametersUuid)
+                .toUriString();
+
+        restTemplate.put(baseUri + path, null);
     }
 
     @Override
