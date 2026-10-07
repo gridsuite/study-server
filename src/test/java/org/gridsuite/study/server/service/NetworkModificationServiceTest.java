@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -32,6 +33,7 @@ import static org.mockito.Mockito.*;
 class NetworkModificationServiceTest {
 
     private static final String NETWORK_MODIFICATION_SERVER_URI = "http://network-modification-server";
+    private static final String USER_ID = "userId";
     private static final String RESPONSE = "{\"id\":\"modification\"}";
 
     @Mock
@@ -81,7 +83,7 @@ class NetworkModificationServiceTest {
     void testGetNetworkModificationsFromComposite() {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-composite-modifications/network-modifications?uuids=" + firstUuid + "&uuids=" + secondUuid + "&onlyMetadata=false";
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/network-modifications?uuids=" + firstUuid + "&uuids=" + secondUuid + "&onlyMetadata=false";
         when(restTemplate.getForObject(expectedUrl, String.class)).thenReturn(RESPONSE);
 
         assertThat(networkModificationService.getNetworkModificationsFromComposite(List.of(firstUuid, secondUuid), false)).isEqualTo(RESPONSE);
@@ -110,9 +112,12 @@ class NetworkModificationServiceTest {
         UUID modificationUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid;
 
-        networkModificationService.updateNetworkModification(modificationUuid, RESPONSE);
+        networkModificationService.updateNetworkModification(modificationUuid, RESPONSE, USER_ID);
 
-        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HEADER_USER_ID, USER_ID);
+        verify(restTemplate).exchange(expectedUrl, HttpMethod.PUT, new HttpEntity<>(RESPONSE, headers), Void.class);
     }
 
     @Test
@@ -130,7 +135,7 @@ class NetworkModificationServiceTest {
     void testDeleteModificationsGroups() {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups?errorOnGroupNotFound=false";
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -143,11 +148,12 @@ class NetworkModificationServiceTest {
     void testDeleteStashedModificationsGroups() {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/stashed-modifications?errorOnGroupNotFound=false";
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/stashed-modifications";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        networkModificationService.deleteStashedModificationsFromGroups(List.of(firstUuid, secondUuid));
+        headers.set(HEADER_USER_ID, USER_ID);
+        networkModificationService.deleteStashedModificationsFromGroups(List.of(firstUuid, secondUuid), USER_ID);
         HttpEntity<String> httpEntity = new HttpEntity<>("[\"" + firstUuid + "\",\"" + secondUuid + "\"]", headers);
         verify(restTemplate).exchange(expectedUrl, HttpMethod.DELETE, httpEntity, new ParameterizedTypeReference<Map<UUID, UUID>>() { });
     }
@@ -188,7 +194,7 @@ class NetworkModificationServiceTest {
     @Test
     void testGetReferencesFromGroup() {
         UUID groupUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/" + groupUuid + "/references";
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/" + groupUuid + "/references";
         List<ModificationReference> expected = List.of(new ModificationReference(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()));
         when(restTemplate.exchange(
                 eq(expectedUrl),
@@ -230,6 +236,24 @@ class NetworkModificationServiceTest {
         // there is nothing to drop without a group or without a tag
         networkModificationService.deleteRootNetworkTags(List.of(), List.of("PH1"));
         networkModificationService.deleteRootNetworkTags(List.of(groupUuid), List.of());
+
+        verifyNoMoreInteractions(restTemplate);
+    }
+
+    @Test
+    void testAssertReferencedModificationsAreWritable() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/references/authorized?uuids=" + groupUuid;
+
+        networkModificationService.assertReferencedModificationsAreWritable(List.of(groupUuid), USER_ID);
+
+        // the server needs the user to tell whether the shared modifications are writable
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, USER_ID);
+        verify(restTemplate).exchange(expectedUrl, HttpMethod.GET, new HttpEntity<>(headers), Void.class);
+
+        // there is nothing to check without a container
+        networkModificationService.assertReferencedModificationsAreWritable(List.of(), USER_ID);
 
         verifyNoMoreInteractions(restTemplate);
     }

@@ -86,8 +86,9 @@ public class PccMinController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min has been stopped")})
     public ResponseEntity<Void> stopPccMin(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        rootNetworkNodeInfoService.stopPccMin(studyUuid, nodeUuid, rootNetworkUuid);
+                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                           @RequestHeader(HEADER_USER_ID) String userId) {
+        rootNetworkNodeInfoService.stopPccMin(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 

@@ -9,10 +9,13 @@ package org.gridsuite.study.server.service.common;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.ComputationType;
+import org.gridsuite.study.server.dto.ServiceStatusInfos;
+import org.gridsuite.study.server.dto.ServiceStatusInfos.ServiceStatus;
 import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.dto.computation.ComputationParameterUUIDs;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.client.RemoteServiceName;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
@@ -30,9 +33,11 @@ import org.springframework.stereotype.Service;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * @author Abdelsalem HEDHILI <abdelsalem.hedhili at rte-france.com>
@@ -44,12 +49,14 @@ public class ComputationParametersService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ComputationParametersService.class);
 
     private final UserAdminService userAdminService;
+    private final RemoteServicesInspector remoteServicesInspector;
     private final ObjectMapper objectMapper;
     private final List<ComputationParametersDefinition> computationParametersDefinitions;
 
     // this is useful to avoid repetitive calls when doing operation on all computation types (duplicate, delete, export)
     private record ComputationParametersDefinition(
             ComputationType type,
+            RemoteServiceName serviceName,
             Function<StudyEntity, UUID> studyParameterGetter,
             Function<UserProfileInfos, UUID> profileParameterGetter,
             ComputationParameters service,
@@ -70,13 +77,16 @@ public class ComputationParametersService {
                                         StateEstimationRestService stateEstimationService,
                                         PccMinRestService pccMinService,
                                         UserAdminService userAdminService,
+                                        RemoteServicesInspector remoteServicesInspector,
                                         ObjectMapper objectMapper) {
 
         this.userAdminService = userAdminService;
+        this.remoteServicesInspector = remoteServicesInspector;
         this.objectMapper = objectMapper;
         this.computationParametersDefinitions = List.of(
                 new ComputationParametersDefinition(
                         ComputationType.LOAD_FLOW,
+                        RemoteServiceName.LOADFLOW_SERVER,
                         StudyEntity::getLoadFlowParametersUuid,
                         UserProfileInfos::getLoadFlowParameterId,
                     loadFlowRestService,
@@ -84,6 +94,7 @@ public class ComputationParametersService {
                         loadFlowRestService::getParameters),
                 new ComputationParametersDefinition(
                         ComputationType.SHORT_CIRCUIT,
+                        RemoteServiceName.SHORTCIRCUIT_SERVER,
                         StudyEntity::getShortCircuitParametersUuid,
                         UserProfileInfos::getShortcircuitParameterId,
                         shortCircuitService,
@@ -91,6 +102,7 @@ public class ComputationParametersService {
                         shortCircuitService::getParameters),
                 new ComputationParametersDefinition(
                         ComputationType.DYNAMIC_SIMULATION,
+                        RemoteServiceName.DYNAMIC_SIMULATION_SERVER,
                         StudyEntity::getDynamicSimulationParametersUuid,
                         UserProfileInfos::getDynamicSimulationParameterId,
                         dynamicSimulationRestService,
@@ -98,6 +110,7 @@ public class ComputationParametersService {
                         null),
                 new ComputationParametersDefinition(
                         ComputationType.VOLTAGE_INITIALIZATION,
+                        RemoteServiceName.VOLTAGE_INIT_SERVER,
                         StudyEntity::getVoltageInitParametersUuid,
                         UserProfileInfos::getVoltageInitParameterId,
                         voltageInitService,
@@ -105,6 +118,7 @@ public class ComputationParametersService {
                         voltageInitService::getParameters),
                 new ComputationParametersDefinition(
                         ComputationType.SECURITY_ANALYSIS,
+                        RemoteServiceName.SECURITY_ANALYSIS_SERVER,
                         StudyEntity::getSecurityAnalysisParametersUuid,
                         UserProfileInfos::getSecurityAnalysisParameterId,
                         securityAnalysisService,
@@ -112,6 +126,7 @@ public class ComputationParametersService {
                         securityAnalysisService::getParameters),
                 new ComputationParametersDefinition(
                         ComputationType.SENSITIVITY_ANALYSIS,
+                        RemoteServiceName.SENSITIVITY_ANALYSIS_SERVER,
                         StudyEntity::getSensitivityAnalysisParametersUuid,
                         UserProfileInfos::getSensitivityAnalysisParameterId,
                         sensitivityAnalysisService,
@@ -119,6 +134,7 @@ public class ComputationParametersService {
                         sensitivityAnalysisService::getParameters),
                 new ComputationParametersDefinition(
                         ComputationType.DYNAMIC_SECURITY_ANALYSIS,
+                        RemoteServiceName.DYNAMIC_SECURITY_ANALYSIS_SERVER,
                         StudyEntity::getDynamicSecurityAnalysisParametersUuid,
                         UserProfileInfos::getDynamicSecurityAnalysisParameterId,
                         dynamicSecurityAnalysisRestService,
@@ -126,6 +142,7 @@ public class ComputationParametersService {
                         null),
                 new ComputationParametersDefinition(
                         ComputationType.DYNAMIC_MARGIN_CALCULATION,
+                        RemoteServiceName.DYNAMIC_MARGIN_CALCULATION_SERVER,
                         StudyEntity::getDynamicMarginCalculationParametersUuid,
                         UserProfileInfos::getDynamicMarginCalculationParameterId,
                         dynamicMarginCalculationRestService,
@@ -133,6 +150,7 @@ public class ComputationParametersService {
                         null),
                 new ComputationParametersDefinition(
                         ComputationType.STATE_ESTIMATION,
+                        RemoteServiceName.STATE_ESTIMATION_SERVER,
                         StudyEntity::getStateEstimationParametersUuid,
                         userProfileInfos -> null,
                         stateEstimationService,
@@ -140,6 +158,7 @@ public class ComputationParametersService {
                         null),
                 new ComputationParametersDefinition(
                         ComputationType.PCC_MIN,
+                        RemoteServiceName.PCC_MIN_SERVER,
                         StudyEntity::getPccMinParametersUuid,
                         UserProfileInfos::getPccMinParameterId,
                         pccMinService,
@@ -241,13 +260,19 @@ public class ComputationParametersService {
 
     public Map<ComputationType, String> exportParameters(StudyEntity studyEntity) throws JsonProcessingException {
         Map<ComputationType, String> parametersByType = new EnumMap<>(ComputationType.class);
+        Set<String> downServices = remoteServicesInspector.getOptionalServices().stream()
+                .filter(serviceStatus -> serviceStatus.status() == ServiceStatus.DOWN)
+                .map(ServiceStatusInfos::name)
+                .collect(Collectors.toSet());
         for (ComputationParametersDefinition definition : computationParametersDefinitions) {
-            UUID parametersUuid = definition.studyParameterGetter().apply(studyEntity);
-            if (parametersUuid == null || definition.parametersFetcher() == null) {
+            if (definition.parametersFetcher() == null || downServices.contains(definition.serviceName().serviceName())) {
                 continue;
             }
-            Object parameters = definition.parametersFetcher().apply(parametersUuid);
-            parametersByType.put(definition.type(), parameters instanceof String parametersJson ? parametersJson : objectMapper.writeValueAsString(parameters));
+            UUID parametersUuid = definition.studyParameterGetter().apply(studyEntity);
+            if (parametersUuid != null) {
+                Object parameters = definition.parametersFetcher().apply(parametersUuid);
+                parametersByType.put(definition.type(), parameters instanceof String parametersJson ? parametersJson : objectMapper.writeValueAsString(parameters));
+            }
         }
         return parametersByType;
     }

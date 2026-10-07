@@ -20,14 +20,14 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.dto.studyexport.parameters.ExportedParametersReferences.nullSafe;
-import static org.gridsuite.study.server.dto.studyexport.parameters.ExportedParametersReferences.toUuidSet;
+import static org.gridsuite.study.server.dto.studyexport.parameters.ExportedParameters.nullSafe;
+import static org.gridsuite.study.server.dto.studyexport.parameters.ExportedParameters.toUuidSet;
 
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record ShortCircuitExportedParameters(Map<String, Map<String, String>> specificParametersPerProvider) implements ExportedParametersReferences {
+public record ShortCircuitExportedParameters(Map<String, Map<String, String>> specificParametersPerProvider) implements ExportedParameters {
 
     public static final String POWER_ELECTRONICS_CLUSTERS = "powerElectronicsClusters";
     public static final String NODE_CLUSTER_FILTER_IDS = "nodeClusterFilterIds";
