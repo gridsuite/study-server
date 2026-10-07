@@ -118,8 +118,9 @@ class TreeExportTest extends StudyTestBase {
         String expectedCaseEntry = "cases/" + rootNetworkCaseUuid + "/" + rootNetworkCaseName;
         assertEquals(List.of(expectedCaseEntry), zipEntryNames.stream().filter(name -> name.startsWith("cases/")).toList());
         assertTrue(zipEntryNames.containsAll(List.of("computationParameters/filters.json", "computationParameters/contingencyList.json",
-                "networkModifications/" + exportInfos.nodeTree().children().getFirst().modificationGroupUuid() + ".json",
-                "networkModifications/filters.json", "networkModifications/loadFlowParameters.json")));
+                "networkModifications/" + exportInfos.nodeTree().children().getFirst().modificationGroupUuid() + ".json")));
+        assertFalse(zipEntryNames.contains("networkModifications/filters.json"));
+        assertFalse(zipEntryNames.contains("networkModifications/loadFlowParameters.json"));
         assertFalse(zipEntryNames.contains("networkModifications/contingencyList.json"));
         // Verify the case content download call
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
@@ -197,6 +198,58 @@ class TreeExportTest extends StudyTestBase {
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/filters/metadata", false, Map.of("ids", WireMock.matching(".*")), 1);
         WireMockUtilsCriteria.verifyPostRequest(wireMockServer, "/v1/contingency-lists", Map.of(), 1);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/elements/names", false, Map.of("ids", WireMock.matching(".*"), "strictMode", WireMock.equalTo("false")), 1);
+    }
+
+    @Test
+    void testExportStudyWithModificationsReferences() throws Exception {
+        UUID studyUuid = createStudyWithStubs("testUser", CASE_UUID);
+        ReflectionTestUtils.setField(caseService, "caseServerBaseUri", wireMockServer.baseUrl());
+        filterService.setBaseUri(wireMockServer.baseUrl());
+        UUID filterA = UUID.randomUUID();
+        UUID filterB = UUID.randomUUID();
+        UUID filterC = UUID.randomUUID();
+        UUID loadFlowParameters = UUID.randomUUID();
+        wireMockStubs.directoryServer.stubCheckPermission(List.of(studyUuid), null, "testUser", PermissionType.READ, false, HttpStatus.OK.value());
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + CASE_UUID))
+                .willReturn(WireMock.aResponse().withStatus(200).withHeader("Content-Type", "application/octet-stream").withBody("dummy case content".getBytes())));
+        computationServerStubs.stubGetParametersAny("{}");
+        stubJsonGet(GROUP_MODIFICATIONS_URL, "[{\"filters\":[{\"id\":\"" + filterA + "\"}],\"loadFlowParametersId\":\"" + loadFlowParameters + "\"},"
+                + "{\"modificationsInfos\":[{\"variations\":[{\"filters\":[{\"id\":\"" + filterB + "\"}]}]}]}]");
+        stubJsonGet("/v1/filters/referenced-filter-uuids", "[\"" + filterC + "\"]");
+        String filterAJson = "{\"id\":\"" + filterA + "\",\"type\":\"EXPERT\"}";
+        String filterBJson = "{\"id\":\"" + filterB + "\",\"type\":\"IDENTIFIER_LIST\"}";
+        String filterCJson = "{\"id\":\"" + filterC + "\",\"type\":\"IDENTIFIER_LIST\"}";
+        stubJsonGet("/v1/filters/metadata", "[" + filterAJson + "," + filterBJson + "," + filterCJson + "]");
+        Map<UUID, String> names = Map.of(filterA, "nameA", filterB, "nameB", filterC, "nameC", loadFlowParameters, "nameLF");
+        wireMockStubs.directoryServer.stubGetElementNames(objectMapper.writeValueAsString(names));
+
+        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName").header(HEADER_USER_ID, "testUser"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Map<String, String> zipContents = new HashMap<>();
+        try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(result.getResponse().getContentAsByteArray()))) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                zipContents.put(entry.getName(), new String(zis.readAllBytes()));
+            }
+        }
+        Set<JsonNode> expectedFilters = Set.of(
+                objectMapper.readTree("{\"uuid\":\"" + filterA + "\",\"name\":\"nameA\",\"content\":" + filterAJson + "}"),
+                objectMapper.readTree("{\"uuid\":\"" + filterB + "\",\"name\":\"nameB\",\"content\":" + filterBJson + "}"),
+                objectMapper.readTree("{\"uuid\":\"" + filterC + "\",\"name\":\"nameC\",\"content\":" + filterCJson + "}"));
+        assertEquals(expectedFilters, readJson(zipContents.get("networkModifications/filters.json")));
+        assertEquals(Set.of(objectMapper.readTree("{\"uuid\":\"" + loadFlowParameters + "\",\"name\":\"nameLF\",\"content\":{}}")),
+                readJson(zipContents.get("networkModifications/loadFlowParameters.json")));
+        assertFalse(zipContents.containsKey("networkModifications/contingencyList.json"));
+
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
+        wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
+        computationServerStubs.verifyParametersGetAny(7);
+        verifyGetGroupModifications();
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/filters/referenced-filter-uuids", false, Map.of("ids", WireMock.matching(".*")), 1);
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/filters/metadata", false, Map.of("ids", WireMock.matching(".*")), 1);
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/elements/names", false, Map.of("ids", WireMock.matching(".*"), "strictMode", WireMock.equalTo("false")), 2);
     }
 
     private void stubJsonGet(String urlRegex, String body) {

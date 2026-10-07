@@ -183,9 +183,11 @@ public class StudyExportService {
 
     private void exportModifications(NodeTreeExportInfos nodeTree, Path tempDir, String userId) throws IOException {
         Path modificationsDir = Files.createDirectories(tempDir.resolve(MODIFICATIONS_FOLDER));
+        List<UUID> groupUuids = new ArrayList<>();
+        collectModificationGroupUuids(nodeTree, groupUuids);
         Set<UUID> filterUuids = new HashSet<>();
         Set<UUID> loadFlowParametersUuids = new HashSet<>();
-        for (UUID groupUuid : getModificationGroupUuids(nodeTree).toList()) {
+        for (UUID groupUuid : groupUuids) {
             String modifications = networkModificationService.getModifications(groupUuid, false, false, userId);
             Files.writeString(modificationsDir.resolve(groupUuid + JSON), modifications);
             for (ExportedModificationsInfos references : objectMapper.readValue(modifications, ExportedModificationsInfos[].class)) {
@@ -193,27 +195,34 @@ public class StudyExportService {
                 loadFlowParametersUuids.addAll(references.getLoadFlowParametersUuids());
             }
         }
-        Map<UUID, String> loadFlowParametersNames = directoryService.getElementNames(loadFlowParametersUuids);
-        List<ExportedElementInfos> loadFlowParameters = new ArrayList<>();
-        for (UUID loadFlowParametersUuid : loadFlowParametersUuids) {
-            loadFlowParameters.add(new ExportedElementInfos(loadFlowParametersUuid, loadFlowParametersNames.get(loadFlowParametersUuid),
-                    objectMapper.readTree(loadFlowRestService.getParameters(loadFlowParametersUuid))));
-        }
-        List<ExportedElementInfos> filters = new ArrayList<>();
+
         if (!filterUuids.isEmpty()) {
             filterUuids.addAll(filterService.getReferencedFilterUuids(filterUuids));
-            filters = toExportedElements(filterService.getFilters(filterUuids), directoryService.getElementNames(filterUuids));
+            List<ExportedElementInfos> filters = toExportedElements(filterService.getFilters(filterUuids), directoryService.getElementNames(filterUuids));
+            objectMapper.writeValue(modificationsDir.resolve(FILTERS_JSON).toFile(), filters);
+
         }
-        objectMapper.writeValue(modificationsDir.resolve(LOAD_FLOW_PARAMETERS_JSON).toFile(), loadFlowParameters);
-        objectMapper.writeValue(modificationsDir.resolve(FILTERS_JSON).toFile(), filters);
+
+        if (!loadFlowParametersUuids.isEmpty()) {
+            Map<UUID, String> names = directoryService.getElementNames(loadFlowParametersUuids);
+            List<ExportedElementInfos> loadFlowParameters = new ArrayList<>();
+            for (UUID loadFlowParametersUuid : loadFlowParametersUuids) {
+                loadFlowParameters.add(new ExportedElementInfos(loadFlowParametersUuid, names.get(loadFlowParametersUuid),
+                        objectMapper.readTree(loadFlowRestService.getParameters(loadFlowParametersUuid))));
+            }
+            objectMapper.writeValue(modificationsDir.resolve(LOAD_FLOW_PARAMETERS_JSON).toFile(), loadFlowParameters);
+        }
     }
 
-    private static Stream<UUID> getModificationGroupUuids(NodeTreeExportInfos node) {
-        if (node == null) {
-            return Stream.empty();
+    private static void collectModificationGroupUuids(NodeTreeExportInfos nodeTree, List<UUID> groupUuids) {
+        if (nodeTree != null && nodeTree.modificationGroupUuid() != null) {
+            groupUuids.add(nodeTree.modificationGroupUuid());
         }
-        return Stream.concat(Stream.ofNullable(node.modificationGroupUuid()),
-                ExportedParameters.nullSafe(node.children()).flatMap(StudyExportService::getModificationGroupUuids));
+        if (nodeTree != null && nodeTree.children() != null) {
+            for (NodeTreeExportInfos child : nodeTree.children()) {
+                collectModificationGroupUuids(child, groupUuids);
+            }
+        }
     }
 
     private Path createTempWorkDir(UUID studyUuid) {
