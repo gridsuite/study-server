@@ -147,12 +147,28 @@ public class LoadflowServerStubs {
         );
     }
 
+    public void stubGetLoadflowParametersWithDifferences(String parametersUuid, String referenceParametersUuid, String parameters, boolean isNotFound) {
+        MappingBuilder request = WireMock.get(
+                WireMock.urlPathEqualTo("/v1/parameters/" + parametersUuid))
+            .withQueryParam("withDifferences", WireMock.equalTo("true"));
+
+        if (referenceParametersUuid != null) {
+            request.withQueryParam("referenceUuid", WireMock.equalTo(referenceParametersUuid));
+        }
+        wireMock.stubFor(request.willReturn(isNotFound ? WireMock.notFound() : WireMock.ok().withBody(parameters).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+    }
+
     public void verifyGetLoadflowParameters(String parametersUuid) {
         verifyGetLoadflowParameters(parametersUuid, 1);
     }
 
     public void verifyGetLoadflowParameters(String parametersUuid, int nbRequests) {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/parameters/" + parametersUuid, Map.of(), nbRequests);
+    }
+
+    public void verifyGetLoadflowParametersWithDifferences(String parametersUuid, String referenceParametersUuid, int nbRequests) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/parameters/" + parametersUuid + "?withDifferences=true"
+            + (referenceParametersUuid != null ? "&referenceUuid=" + referenceParametersUuid : ""), Map.of(), nbRequests);
     }
 
     public void stubPutLoadflowParameters(String parametersUuid, String parameters) {

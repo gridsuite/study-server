@@ -6,8 +6,6 @@
  */
 package org.gridsuite.study.server.service.loadflow;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.loadflow.json.LoadFlowParametersJsonModule;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
@@ -53,12 +51,10 @@ class LoadFlowServiceTest {
     @Mock
     private UserAdminService userAdminService;
 
-    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new LoadFlowParametersJsonModule());
-
     @BeforeEach
     void setUp() {
         loadFlowService = new LoadFlowService(studyRepository, loadFlowRestService, notificationService, computationParametersService,
-            rootNetworkNodeInfoService, networkModificationTreeService, rootNetworkService, userAdminService, objectMapper);
+            rootNetworkNodeInfoService, networkModificationTreeService, rootNetworkService, userAdminService);
     }
 
     @Test

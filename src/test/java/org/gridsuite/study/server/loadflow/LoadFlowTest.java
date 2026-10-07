@@ -14,7 +14,6 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import com.powsybl.commons.parameters.ParameterType;
 import com.powsybl.contingency.violations.LimitViolationType;
 import com.powsybl.iidm.network.TwoSides;
 import com.powsybl.loadflow.LoadFlowParameters;
@@ -159,6 +158,8 @@ class LoadFlowTest {
     private static final String LOADFLOW_STOPPED_DESTINATION = "loadflow.stopped";
     private static final String LOADFLOW_FAILED_DESTINATION = "loadflow.run.dlx";
     private static final String LOADFLOW_MODIFICATIONS = "loadflow modifications mock";
+
+    private record ParameterDifference(Object value, Object defaultValue) { }
 
     @Autowired
     private MockMvc mockMvc;
@@ -786,36 +787,35 @@ class LoadFlowTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
 
+        LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+        Map<String, Object> loadFlowParametersInfos = Map.of(
+            "provider", PROVIDER,
+            "commonParameters", loadFlowParameters,
+            "specificParametersPerProvider", Map.of());
+        String loadFlowParametersJson = objectMapper.writeValueAsString(loadFlowParametersInfos);
+
         wireMockStubs.userAdminServer.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
-        wireMockStubs.loadflowServer.stubGetLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING, LOADFLOW_DEFAULT_PARAMETERS_JSON, false);
-        wireMockStubs.loadflowServer.stubGetDefaultValues(LOADFLOW_DEFAULT_PARAMETERS_JSON);
-        wireMockStubs.loadflowServer.stubGetSpecificParameters(PROVIDER, "{}");
+        wireMockStubs.loadflowServer.stubGetLoadflowParametersWithDifferences(LOADFLOW_PARAMETERS_UUID_STRING, null, loadFlowParametersJson, false);
 
         //get initial loadFlow parameters
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
                 .header("userId", NO_PROFILE_USER_ID)).andExpectAll(
                 status().isOk()).andReturn();
         wireMockStubs.userAdminServer.verifyGetUserProfile(NO_PROFILE_USER_ID);
-        wireMockStubs.loadflowServer.verifyGetLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING);
-        wireMockStubs.loadflowServer.verifyGetDefaultValues();
-        wireMockStubs.loadflowServer.verifyGetSpecificParameters(PROVIDER);
+        wireMockStubs.loadflowServer.verifyGetLoadflowParametersWithDifferences(LOADFLOW_PARAMETERS_UUID_STRING, null, 1);
 
         JSONAssert.assertEquals(LOADFLOW_DEFAULT_PARAMETERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
 
         updateParametersAndDoChecks(studyNameUserIdUuid, LOADFLOW_DEFAULT_PARAMETERS_JSON, LOADFLOW_PARAMETERS_UUID_STRING, "userId", HttpStatus.OK, null, false, null, false);
 
         wireMockStubs.userAdminServer.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
-        wireMockStubs.loadflowServer.stubGetLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING, LOADFLOW_DEFAULT_PARAMETERS_JSON, false);
-        wireMockStubs.loadflowServer.stubGetDefaultValues(LOADFLOW_DEFAULT_PARAMETERS_JSON);
-        wireMockStubs.loadflowServer.stubGetSpecificParameters(PROVIDER, "{}");
+        wireMockStubs.loadflowServer.stubGetLoadflowParametersWithDifferences(LOADFLOW_PARAMETERS_UUID_STRING, null, loadFlowParametersJson, false);
 
         //checking update is registered
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
             .header("userId", NO_PROFILE_USER_ID)).andExpectAll(status().isOk()).andReturn();
         wireMockStubs.userAdminServer.verifyGetUserProfile(NO_PROFILE_USER_ID);
-        wireMockStubs.loadflowServer.verifyGetLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING);
-        wireMockStubs.loadflowServer.verifyGetDefaultValues();
-        wireMockStubs.loadflowServer.verifyGetSpecificParameters(PROVIDER);
+        wireMockStubs.loadflowServer.verifyGetLoadflowParametersWithDifferences(LOADFLOW_PARAMETERS_UUID_STRING, null, 1);
 
         JSONAssert.assertEquals(LOADFLOW_DEFAULT_PARAMETERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
 
@@ -826,17 +826,13 @@ class LoadFlowTest {
         UUID study2loadFlowParametersUuid = studyRepository.findById(studyNameUserIdUuid).orElseThrow().getLoadFlowParametersUuid();
 
         wireMockStubs.userAdminServer.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
-        wireMockStubs.loadflowServer.stubGetLoadflowParameters(study2loadFlowParametersUuid.toString(), LOADFLOW_DEFAULT_PARAMETERS_JSON, false);
-        wireMockStubs.loadflowServer.stubGetDefaultValues(LOADFLOW_DEFAULT_PARAMETERS_JSON);
-        wireMockStubs.loadflowServer.stubGetSpecificParameters(PROVIDER, "{}");
+        wireMockStubs.loadflowServer.stubGetLoadflowParametersWithDifferences(study2loadFlowParametersUuid.toString(), null, loadFlowParametersJson, false);
 
         //get initial loadFlow parameters
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
             .header("userId", NO_PROFILE_USER_ID)).andExpectAll(status().isOk()).andReturn();
         wireMockStubs.userAdminServer.verifyGetUserProfile(NO_PROFILE_USER_ID);
-        wireMockStubs.loadflowServer.verifyGetLoadflowParameters(study2loadFlowParametersUuid.toString());
-        wireMockStubs.loadflowServer.verifyGetDefaultValues();
-        wireMockStubs.loadflowServer.verifyGetSpecificParameters(PROVIDER);
+        wireMockStubs.loadflowServer.verifyGetLoadflowParametersWithDifferences(study2loadFlowParametersUuid.toString(), null, 1);
 
         JSONAssert.assertEquals(LOADFLOW_DEFAULT_PARAMETERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
     }
@@ -844,62 +840,41 @@ class LoadFlowTest {
     @Test
     void testLoadFlowParametersWithDifferencesFromDefaultValues() throws Exception {
         LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-        loadFlowParameters.setBalanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_GENERATION_P);
-        loadFlowParameters.setDcPowerFactor(0.5);
-
-        Map<String, Object> loadFlowParametersInfos = Map.of(
+        Map<String, Object> loadFlowParametersInfosWithDifferences = Map.of(
             "provider", PROVIDER,
             "commonParameters", loadFlowParameters,
-            "specificParametersPerProvider", Map.of(PROVIDER, Map.of("specificParam1", "value1", "specificParam2", "value2")));
-        String loadFlowParametersWithValuesDifferentFromDefaultJson = objectMapper.writeValueAsString(loadFlowParametersInfos);
-
-        Map<String, List<com.powsybl.commons.parameters.Parameter>> specificParametersDefault = Map.of(PROVIDER,
-            List.of(new com.powsybl.commons.parameters.Parameter("specificParam1", ParameterType.STRING, "", "defaultValue1"),
-                new com.powsybl.commons.parameters.Parameter("specificParam2", ParameterType.STRING, "", "defaultValue2")));
-        String specificParametersDefaultJson = objectMapper.writeValueAsString(specificParametersDefault);
+            "specificParametersPerProvider", Map.of(PROVIDER, Map.of("specificParam1", "value1", "specificParam2", "value2")),
+            "parametersDifferences", Map.of("specificParam1", new ParameterDifference(true, false), "specificParam2", new ParameterDifference(3, 2)));
+        String loadFlowParametersWithValuesDifferentFromDefaultJson = objectMapper.writeValueAsString(loadFlowParametersInfosWithDifferences);
 
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
 
         wireMockStubs.userAdminServer.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
-        wireMockStubs.loadflowServer.stubGetLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING, loadFlowParametersWithValuesDifferentFromDefaultJson, false);
-        wireMockStubs.loadflowServer.stubGetDefaultValues(LOADFLOW_DEFAULT_PARAMETERS_JSON);
-        wireMockStubs.loadflowServer.stubGetSpecificParameters(PROVIDER, specificParametersDefaultJson);
+        wireMockStubs.loadflowServer.stubGetLoadflowParametersWithDifferences(LOADFLOW_PARAMETERS_UUID_STRING, null, loadFlowParametersWithValuesDifferentFromDefaultJson, false);
 
         // get loadFlow parameters
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
             .header("userId", NO_PROFILE_USER_ID)).andExpectAll(status().isOk()).andReturn();
         wireMockStubs.userAdminServer.verifyGetUserProfile(NO_PROFILE_USER_ID);
-        wireMockStubs.loadflowServer.verifyGetLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING);
-        wireMockStubs.loadflowServer.verifyGetDefaultValues();
-        wireMockStubs.loadflowServer.verifyGetSpecificParameters(PROVIDER);
+        wireMockStubs.loadflowServer.verifyGetLoadflowParametersWithDifferences(LOADFLOW_PARAMETERS_UUID_STRING, null, 1);
 
         String actualResult = mvcResult.getResponse().getContentAsString();
         assertTrue(actualResult.contains("parametersDifferences"));
-        assertTrue(actualResult.contains("\"balanceType\":{\"value\":\"PROPORTIONAL_TO_GENERATION_P\",\"defaultValue\":\"PROPORTIONAL_TO_GENERATION_P_MAX\"}"));
-        assertTrue(actualResult.contains("\"dcPowerFactor\":{\"value\":0.5,\"defaultValue\":1.0}"));
-        assertTrue(actualResult.contains("\"specificParam1\":{\"value\":\"value1\",\"defaultValue\":\"defaultValue1\"}"));
-        assertTrue(actualResult.contains("\"specificParam2\":{\"value\":\"value2\",\"defaultValue\":\"defaultValue2\"}"));
+        assertTrue(actualResult.contains("\"specificParam1\":{\"value\":true,\"defaultValue\":false}"));
+        assertTrue(actualResult.contains("\"specificParam2\":{\"value\":3,\"defaultValue\":2}"));
     }
 
     @Test
     void testLoadFlowParametersWithDifferencesFromProfileValues() throws Exception {
         LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-        loadFlowParameters.setBalanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_GENERATION_P);
-        loadFlowParameters.setDcPowerFactor(0.5);
-
-        Map<String, Object> loadFlowParametersInfos = Map.of(
+        Map<String, Object> loadFlowParametersInfosWithDifferences = Map.of(
             "provider", PROVIDER,
             "commonParameters", loadFlowParameters,
-            "specificParametersPerProvider", Map.of(PROVIDER, Map.of("specificParam1", true, "specificParam2", 3, "specificParam3", 1.0)));
-        String loadFlowParametersWithValuesDifferentFromDefaultJson = objectMapper.writeValueAsString(loadFlowParametersInfos);
-
-        Map<String, List<com.powsybl.commons.parameters.Parameter>> specificParametersDefault = Map.of(PROVIDER,
-            List.of(new com.powsybl.commons.parameters.Parameter("specificParam1", ParameterType.BOOLEAN, "", false),
-                new com.powsybl.commons.parameters.Parameter("specificParam2", ParameterType.INTEGER, "", 2),
-                new com.powsybl.commons.parameters.Parameter("specificParam3", ParameterType.DOUBLE, "", 2.0)));
-        String specificParametersDefaultJson = objectMapper.writeValueAsString(specificParametersDefault);
+            "specificParametersPerProvider", Map.of(PROVIDER, Map.of("specificParam1", true, "specificParam2", 3)),
+            "parametersDifferences", Map.of("specificParam1", new ParameterDifference(true, false), "specificParam2", new ParameterDifference(3, 2)));
+        String loadFlowParametersWithValuesDifferentFromDefaultJson = objectMapper.writeValueAsString(loadFlowParametersInfosWithDifferences);
 
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
@@ -924,20 +899,17 @@ class LoadFlowTest {
             "workspaceId":null
         }""".formatted(LOADFLOW_PARAMETERS_UUID_STRING);
         wireMockStubs.userAdminServer.stubGetUserProfile(NO_PROFILE_USER_ID, userProfileWithLoadFlowParametersJson);
-        wireMockStubs.loadflowServer.stubGetLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING, loadFlowParametersWithValuesDifferentFromDefaultJson, false);
-        wireMockStubs.loadflowServer.stubGetSpecificParameters(PROVIDER, specificParametersDefaultJson);
+        wireMockStubs.loadflowServer.stubGetLoadflowParametersWithDifferences(LOADFLOW_PARAMETERS_UUID_STRING, LOADFLOW_PARAMETERS_UUID_STRING, loadFlowParametersWithValuesDifferentFromDefaultJson, false);
 
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
             .header("userId", NO_PROFILE_USER_ID)).andExpectAll(status().isOk()).andReturn();
         wireMockStubs.userAdminServer.verifyGetUserProfile(NO_PROFILE_USER_ID);
-        wireMockStubs.loadflowServer.verifyGetLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING, 2);
-        wireMockStubs.loadflowServer.verifyGetSpecificParameters(PROVIDER);
+        wireMockStubs.loadflowServer.verifyGetLoadflowParametersWithDifferences(LOADFLOW_PARAMETERS_UUID_STRING, LOADFLOW_PARAMETERS_UUID_STRING, 1);
 
         String actualResult = mvcResult.getResponse().getContentAsString();
         assertTrue(actualResult.contains("parametersDifferences"));
         assertTrue(actualResult.contains("\"specificParam1\":{\"value\":true,\"defaultValue\":false}"));
         assertTrue(actualResult.contains("\"specificParam2\":{\"value\":3,\"defaultValue\":2}"));
-        assertTrue(actualResult.contains("\"specificParam3\":{\"value\":1.0,\"defaultValue\":2.0}"));
     }
 
     @Test
