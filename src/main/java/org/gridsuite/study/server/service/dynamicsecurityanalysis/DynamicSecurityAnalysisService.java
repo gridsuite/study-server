@@ -90,8 +90,7 @@ public class DynamicSecurityAnalysisService extends AbstractComputationService {
                 StudyEntity::setDynamicSecurityAnalysisParametersUuid,
                 UserProfileInfos::getDynamicSecurityAnalysisParameterId,
                 dynamicSecurityAnalysisRestService,
-                dynamicSecurityAnalysisRestService::createParameters,
-                dynamicSecurityAnalysisRestService::updateParameters,
+                dynamicSecurityAnalysisRestService::resetParameters,
                 DYNAMIC_SECURITY_ANALYSIS,
                 List.of(rootNetworkNodeInfoService::invalidateDynamicSecurityAnalysisStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS
