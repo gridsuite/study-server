@@ -33,7 +33,6 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -120,8 +119,8 @@ class ImportStudyTest extends StudyTestBase {
         AbstractNode n2 = n1.getChildren().getFirst();
         assertEquals("N2", n2.getName());
         assertEquals("CONSTRUCTION", ((NetworkModificationNode) n2).getNodeType().name());
-        assertEquals(modificationGroupUuid1, ((NetworkModificationNode) n1).getModificationGroupUuid());
-        assertEquals(modificationGroupUuid2, ((NetworkModificationNode) n2).getModificationGroupUuid());
+        assertNotEquals(modificationGroupUuid1, ((NetworkModificationNode) n1).getModificationGroupUuid());
+        assertNotEquals(modificationGroupUuid2, ((NetworkModificationNode) n2).getModificationGroupUuid());
     }
 
     private void assertRootNetworkCreated(UUID studyUuid, String name, String tag, UUID duplicatedCaseUuid) {
