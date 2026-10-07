@@ -2877,7 +2877,7 @@ public class StudyService {
 
     private void createNodeRecursively(StudyEntity studyEntity, UUID parentNodeUuid, NodeTreeExportInfos exportNode, String userId) {
         NetworkModificationNodeType nodeType = NetworkModificationNodeType.valueOf(exportNode.nodeType());
-        UUID newGroupUuid = exportNode.modificationGroupUuid();
+        UUID newGroupUuid = exportNode.modificationGroupUuid() != null ? UUID.randomUUID() : null;
         NetworkModificationNode newNode = networkModificationTreeService.createNode(
                 studyEntity,
                 parentNodeUuid,

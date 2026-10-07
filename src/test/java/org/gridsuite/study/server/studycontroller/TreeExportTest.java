@@ -54,7 +54,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 class TreeExportTest extends StudyTestBase {
 
-    private static final String GROUP_MODIFICATIONS_URL = "/v1/groups/[^/]+/network-modifications";
+    private static final String GROUP_MODIFICATIONS_URL = "/v1/containers/[^/]+/network-modifications";
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -119,7 +119,8 @@ class TreeExportTest extends StudyTestBase {
         assertEquals(List.of(expectedCaseEntry), zipEntryNames.stream().filter(name -> name.startsWith("cases/")).toList());
         assertTrue(zipEntryNames.containsAll(List.of("computationParameters/filters.json", "computationParameters/contingencyList.json",
                 "networkModifications/" + exportInfos.nodeTree().children().getFirst().modificationGroupUuid() + ".json",
-                "networkModifications/filters.json", "networkModifications/contingencyList.json")));
+                "networkModifications/filters.json", "networkModifications/loadFlowParameters.json")));
+        assertFalse(zipEntryNames.contains("networkModifications/contingencyList.json"));
         // Verify the case content download call
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
@@ -157,6 +158,7 @@ class TreeExportTest extends StudyTestBase {
         stubJsonGet("/v1/contingency-lists/filter-uuids", "[\"" + filterB + "\"]");
         stubJsonGet("/v1/filters/referenced-filter-uuids", "[\"" + filterC + "\"]");
         stubJsonGet("/v1/filters/metadata", "[" + filterAJson + "," + filterBJson + "," + filterCJson + "]");
+        stubJsonGet(GROUP_MODIFICATIONS_URL, "[]");
         String identifierListJson = "{\"id\":\"" + identifierList + "\",\"type\":\"IDENTIFIERS\",\"identifiersListByNetwork\":[]}";
         String filterBasedListJson = "{\"id\":\"" + filterBasedList + "\",\"type\":\"FILTERS\",\"filters\":[{\"id\":\"" + filterB + "\"}],"
                 + "\"selectedEquipmentTypesByFilter\":[{\"filterId\":\"" + filterB + "\",\"equipmentTypes\":[\"LINE\"]}]}";
@@ -189,6 +191,7 @@ class TreeExportTest extends StudyTestBase {
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
         computationServerStubs.verifyParametersGetAny(6);
+        verifyGetGroupModifications();
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/contingency-lists/filter-uuids", false, Map.of("ids", WireMock.matching(".*")), 1);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/filters/referenced-filter-uuids", false, Map.of("ids", WireMock.matching(".*")), 1);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/filters/metadata", false, Map.of("ids", WireMock.matching(".*")), 1);
@@ -199,6 +202,11 @@ class TreeExportTest extends StudyTestBase {
     private void stubJsonGet(String urlRegex, String body) {
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching(urlRegex))
                 .willReturn(WireMock.ok().withHeader("Content-Type", "application/json").withBody(body)));
+    }
+
+    private void verifyGetGroupModifications() {
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, GROUP_MODIFICATIONS_URL, true,
+                Map.of("onlyStashed", WireMock.equalTo("false"), "onlyMetadata", WireMock.equalTo("false")), 1);
     }
 
     private Set<JsonNode> readJson(String json) throws IOException {
