@@ -24,6 +24,7 @@ import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModi
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
@@ -57,7 +58,7 @@ public class NetworkModificationTreeService {
 
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
-    private final NetworkModificationService networkModificationService;
+    private final NetworkModificationRestService networkModificationService;
     private final NotificationService notificationService;
 
     private final NetworkModificationTreeService self;
@@ -75,7 +76,7 @@ public class NetworkModificationTreeService {
                                           RootNodeInfoRepository rootNodeInfoRepository,
                                           NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
                                           NotificationService notificationService,
-                                          NetworkModificationService networkModificationService,
+                                          NetworkModificationRestService networkModificationService,
                                           @Lazy NetworkModificationTreeService networkModificationTreeService,
                                           RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                           RootNetworkService rootNetworkService,

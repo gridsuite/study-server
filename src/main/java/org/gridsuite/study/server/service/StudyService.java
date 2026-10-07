@@ -50,6 +50,7 @@ import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
@@ -107,7 +108,7 @@ public class StudyService {
     private final StudyRepository studyRepository;
     private final StudyCreationRequestRepository studyCreationRequestRepository;
     private final NetworkService networkStoreService;
-    private final NetworkModificationService networkModificationService;
+    private final NetworkModificationRestService networkModificationRestService;
     private final ReportService reportService;
     private final UserAdminService userAdminService;
     private final StudyInfosService studyInfosService;
@@ -169,7 +170,7 @@ public class StudyService {
         StudyRepository studyRepository,
         StudyCreationRequestRepository studyCreationRequestRepository,
         NetworkService networkStoreService,
-        NetworkModificationService networkModificationService,
+        NetworkModificationRestService networkModificationRestService,
         ReportService reportService,
         UserAdminService userAdminService,
         StudyInfosService studyInfosService,
@@ -203,7 +204,7 @@ public class StudyService {
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
-        this.networkModificationService = networkModificationService;
+        this.networkModificationRestService = networkModificationRestService;
         this.reportService = reportService;
         this.userAdminService = userAdminService;
         this.studyInfosService = studyInfosService;
@@ -328,7 +329,7 @@ public class StudyService {
 
         rootNetworkService.deleteRootNetworks(studyEntity, rootNetworksUuids.stream());
 
-        networkModificationService.deleteRootNetworkTags(getStudyModificationGroupUuids(studyUuid), deletedTags);
+        networkModificationRestService.deleteRootNetworkTags(getStudyModificationGroupUuids(studyUuid), deletedTags);
 
         notificationService.emitRootNetworksUpdated(studyUuid);
         notificationService.emitElementUpdated(studyUuid, userId);
@@ -406,7 +407,7 @@ public class StudyService {
         if (previousTag == null || previousTag.equals(newTag)) {
             return;
         }
-        networkModificationService.renameRootNetworkTag(getStudyModificationGroupUuids(studyUuid), previousTag, newTag);
+        networkModificationRestService.renameRootNetworkTag(getStudyModificationGroupUuids(studyUuid), previousTag, newTag);
     }
 
     /**
@@ -414,12 +415,12 @@ public class StudyService {
      * referencing them: only a user allowed to write on all of them may do it.
      */
     private void assertCanRenameRootNetworkTag(UUID studyUuid, String userId) {
-        networkModificationService.assertReferencedModificationsAreWritable(getStudyModificationGroupUuids(studyUuid), userId);
+        networkModificationRestService.assertReferencedModificationsAreWritable(getStudyModificationGroupUuids(studyUuid), userId);
     }
 
     public boolean hasSharedModifications(UUID studyUuid) {
         List<UUID> groupUuids = getStudyModificationGroupUuids(studyUuid);
-        return !groupUuids.isEmpty() && networkModificationService.hasModificationReferences(groupUuids);
+        return !groupUuids.isEmpty() && networkModificationRestService.hasModificationReferences(groupUuids);
     }
 
     private List<UUID> getStudyModificationGroupUuids(UUID studyUuid) {
@@ -578,7 +579,7 @@ public class StudyService {
 
     public List<ModificationsSearchResultByNode> searchModifications(@NonNull UUID rootNetworkUuid, @NonNull String userInput) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-        Map<UUID, Object> modificationsByGroup = networkModificationService.searchModifications(networkUuid, userInput);
+        Map<UUID, Object> modificationsByGroup = networkModificationRestService.searchModifications(networkUuid, userInput);
         return networkModificationTreeService.getNetworkModificationsByNodeInfos(modificationsByGroup);
     }
 
@@ -589,7 +590,7 @@ public class StudyService {
         }
         UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
 
-        return networkModificationService.getModificationsToExport(groupId);
+        return networkModificationRestService.getModificationsToExport(groupId);
     }
 
     private Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID studyUuid) {
@@ -657,10 +658,10 @@ public class StudyService {
 
     private void deleteModificationsFromGroup(Pair<UUID, UUID> groupUuidNodeUuid, String userId) {
         // fetch the references data in order to remove those references from directory-server
-        List<ModificationReference> referencesToBeDeleted = networkModificationService.getModificationReferences(groupUuidNodeUuid.getFirst());
+        List<ModificationReference> referencesToBeDeleted = networkModificationRestService.getModificationReferences(groupUuidNodeUuid.getFirst());
         removeReferences(referencesToBeDeleted, userId);
 
-        networkModificationService.deleteModifications(groupUuidNodeUuid.getFirst());
+        networkModificationRestService.deleteModifications(groupUuidNodeUuid.getFirst());
     }
 
     @Transactional
@@ -1261,7 +1262,8 @@ public class StudyService {
                 .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), nodeUuid, rootNetworkEntity.getNetworkUuid()))
                 .toList();
 
-            NetworkModificationsResult networkModificationResults = networkModificationService.createModification(groupUuid, Pair.of(createModificationAttributes, modificationApplicationContexts));
+            NetworkModificationsResult networkModificationResults =
+                networkModificationRestService.createModification(groupUuid, Pair.of(createModificationAttributes, modificationApplicationContexts));
 
             if (networkModificationResults != null && networkModificationResults.modificationResults() != null) {
                 int index = 0;
@@ -1283,7 +1285,7 @@ public class StudyService {
     public void updateNetworkModification(UUID studyUuid, String updateModificationAttributes, UUID nodeUuid, UUID modificationUuid, String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         try {
-            networkModificationService.updateModification(updateModificationAttributes, modificationUuid, userId);
+            networkModificationRestService.updateModification(updateModificationAttributes, modificationUuid, userId);
             invalidateNodeTree(studyUuid, nodeUuid);
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
@@ -1413,7 +1415,7 @@ public class StudyService {
     }
 
     public void stopBuild(@NonNull UUID nodeUuid, UUID rootNetworkUuid) {
-        networkModificationService.stopBuild(nodeUuid, rootNetworkUuid);
+        networkModificationRestService.stopBuild(nodeUuid, rootNetworkUuid);
     }
 
     private void assertDuplicateStudyNode(UUID sourceStudyUuid, UUID targetStudyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode) {
@@ -1589,8 +1591,8 @@ public class StudyService {
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
 
-            List<ModificationReference> referencesToBeDeleted = networkModificationService.getModificationReferences(modificationsUuids);
-            networkModificationService.deleteModifications(groupId, modificationsUuids);
+            List<ModificationReference> referencesToBeDeleted = networkModificationRestService.getModificationReferences(modificationsUuids);
+            networkModificationRestService.deleteModifications(groupId, modificationsUuids);
             // if there are unstashed references modifications in the deleted netmods, those references have to be removed from directory server
             removeReferences(referencesToBeDeleted, userId);
         } finally {
@@ -1613,7 +1615,7 @@ public class StudyService {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.stashModifications(groupId, modificationsUuids, userId);
+            networkModificationRestService.stashModifications(groupId, modificationsUuids, userId);
             invalidateNodeTree(studyUuid, nodeUuid);
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
@@ -1629,7 +1631,7 @@ public class StudyService {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.updateModificationsMetadata(groupId, modificationsUuids, metadata, userId);
+            networkModificationRestService.updateModificationsMetadata(groupId, modificationsUuids, metadata, userId);
             if (metadata.getActivated() != null || metadata.getName() != null) {
                 invalidateNodeTree(studyUuid, nodeUuid);
             }
@@ -1644,7 +1646,7 @@ public class StudyService {
      * on the shared element may change them.
      */
     private void assertCanUpdateSharedModifications(List<UUID> modificationsUuids, String userId) {
-        List<UUID> sharedModificationsUuids = networkModificationService.getModificationReferences(modificationsUuids).stream()
+        List<UUID> sharedModificationsUuids = networkModificationRestService.getModificationReferences(modificationsUuids).stream()
             .map(ModificationReference::referencedId)
             .distinct()
             .toList();
@@ -1656,7 +1658,7 @@ public class StudyService {
     @Transactional
     public void updateNetworkModificationsApplicabilityInRootNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Set<UUID> modificationsUuids, String userId, boolean applicable) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
-        networkModificationService.verifyModifications(networkModificationTreeService.getModificationGroupUuid(nodeUuid), modificationsUuids);
+        networkModificationRestService.verifyModifications(networkModificationTreeService.getModificationGroupUuid(nodeUuid), modificationsUuids);
         try {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
@@ -1664,7 +1666,7 @@ public class StudyService {
             // the applicability of a reference modification is held by its parent (the shared modification itself),
             // so changing it requires the right to write on it
             assertCanUpdateSharedModifications(new ArrayList<>(modificationsUuids), userId);
-            networkModificationService.updateRootNetworkApplicability(new ArrayList<>(modificationsUuids),
+            networkModificationRestService.updateRootNetworkApplicability(new ArrayList<>(modificationsUuids),
                     rootNetworkService.getRootNetworkTag(rootNetworkUuid), applicable);
             invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid);
         } finally {
@@ -1681,7 +1683,7 @@ public class StudyService {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.restoreModifications(groupId, modificationsUuids, studyUuid, nodeUuid, userId);
+            networkModificationRestService.restoreModifications(groupId, modificationsUuids, studyUuid, nodeUuid, userId);
             invalidateNodeTree(studyUuid, nodeUuid);
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
@@ -1862,7 +1864,7 @@ public class StudyService {
                     .toList();
 
             // Send all modifications operations in bulk
-            NetworkModificationsResult result = networkModificationService.moveModifications(
+            NetworkModificationsResult result = networkModificationRestService.moveModifications(
                     networkModificationTreeService.getModificationGroupUuid(originNodeUuid),
                     networkModificationTreeService.getModificationGroupUuid(targetNodeUuid),
                     modificationInfos, applicationContexts, isTargetInDifferentNodeTree);
@@ -1873,7 +1875,7 @@ public class StudyService {
             // Update ModificationReference data
             // TODO this logic ought to be moved in network modification server
             List<UUID> allModificationUuids = modificationInfos.stream().map(ModificationMoveInfos::modificationUuid).toList();
-            List<ModificationReference> allReferencesToMove = networkModificationService.getModificationReferences(allModificationUuids);
+            List<ModificationReference> allReferencesToMove = networkModificationRestService.getModificationReferences(allModificationUuids);
             Map<UUID, List<ModificationReference>> referencesByModification = allReferencesToMove.stream()
                     .collect(Collectors.groupingBy(ModificationReference::modificationUuid));
             for (ModificationMoveInfos move : modificationInfos) {
@@ -1939,8 +1941,8 @@ public class StudyService {
             String userId) {
         duplicateModificationsOrInsertComposites(targetStudyUuid, targetNodeUuid,
                 (groupUuid, modificationApplicationContexts) -> {
-                    NetworkModificationsResult result = networkModificationService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts));
-                    directoryService.createElementsReferences(networkModificationService.getChildrenModificationsReferences(result.modificationUuids()), targetStudyUuid, targetNodeUuid, userId);
+                    NetworkModificationsResult result = networkModificationRestService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts));
+                    directoryService.createElementsReferences(networkModificationRestService.getChildrenModificationsReferences(result.modificationUuids()), targetStudyUuid, targetNodeUuid, userId);
                     return result;
                 },
                 userId);
@@ -1956,7 +1958,7 @@ public class StudyService {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
         try {
             checkStudyContainsNode(targetStudyUuid, targetNodeUuid);
-            newCompositeUuid = networkModificationService.assembleModificationsIntoComposite(modificationsUuids, targetNodeUuid, userId);
+            newCompositeUuid = networkModificationRestService.assembleModificationsIntoComposite(modificationsUuids, targetNodeUuid, userId);
         } finally {
             notificationService.emitModificationsUpdated(targetStudyUuid, targetNodeUuid, childrenUuids);
         }
@@ -1987,7 +1989,7 @@ public class StudyService {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         try {
             // the applied modifications are left unchanged : the node does not need to be rebuilt
-            ModificationReference newReference = networkModificationService.extractCompositeModificationToShare(groupUuid, modificationUuid, name);
+            ModificationReference newReference = networkModificationRestService.extractCompositeModificationToShare(groupUuid, modificationUuid, name);
             // the composite modification keeps its uuid when extracted, so it is shared under that same uuid
             directoryService.createElement(parentDirectoryUuid, description, modificationUuid, name, DirectoryService.MODIFICATION, userId);
             // extraction replaced the local composite by a new reference modification, in the node group or in a parent
@@ -2010,7 +2012,7 @@ public class StudyService {
                 targetStudyUuid,
                 targetNodeUuid,
                 (groupUuid, modificationApplicationContexts) -> {
-                    NetworkModificationsResult result = networkModificationService.insertCompositeModifications(groupUuid, action, Pair.of(compositesInfos, modificationApplicationContexts));
+                    NetworkModificationsResult result = networkModificationRestService.insertCompositeModifications(groupUuid, action, Pair.of(compositesInfos, modificationApplicationContexts));
                     if (action == StudyConstants.CompositeModificationsActionType.INSERT) {
                         createCompositesReferences(compositesInfos, result.modificationUuids(), targetStudyUuid, targetNodeUuid, userId);
                     }
@@ -2408,7 +2410,7 @@ public class StudyService {
             throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, String.format("Missing results for rootNetwork %s on node %s", rootNetworkUuid, nodeUuid));
         }
         UUID voltageInitModificationsGroupUuid = voltageInitRestService.getModificationsGroupUuid(nodeUuid, resultUuid);
-        return networkModificationService.getModifications(voltageInitModificationsGroupUuid, false, false, null);
+        return networkModificationRestService.getModifications(voltageInitModificationsGroupUuid, false, false, null);
     }
 
     @Transactional
@@ -2440,14 +2442,14 @@ public class StudyService {
                 }
             });
             // duplicate the modification created by voltageInit server into the current node
-            NetworkModificationsResult networkModificationResults = networkModificationService.duplicateModificationsFromGroup(networkModificationTreeService.getModificationGroupUuid(nodeUuid),
+            NetworkModificationsResult networkModificationResults = networkModificationRestService.duplicateModificationsFromGroup(networkModificationTreeService.getModificationGroupUuid(nodeUuid),
                     voltageInitModificationsGroupUuid, Pair.of(List.of(), modificationApplicationContexts));
 
             // We expect a single voltageInit modification in the result list
             if (networkModificationResults != null && networkModificationResults.modificationUuids().size() == 1) {
                 List<UUID> createdModificationUuids = List.of(networkModificationResults.modificationUuids().getFirst());
                 rootNetworkTagsToDeactivate.forEach(rootNetworkTag ->
-                    networkModificationService.updateRootNetworkApplicability(createdModificationUuids, rootNetworkTag, false));
+                    networkModificationRestService.updateRootNetworkApplicability(createdModificationUuids, rootNetworkTag, false));
                 // The modification was applied only on rootNetworkUuid, so the single result must be attributed to it
                 networkModificationResults.modificationResults().getFirst()
                     .ifPresent(result -> emitNetworkModificationImpacts(studyUuid, nodeUuid, rootNetworkUuid, result));

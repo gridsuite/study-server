@@ -13,6 +13,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,7 +53,7 @@ class ConsumerServiceSharedElementUpdateTest {
     @MockitoBean
     private NetworkModificationTreeService networkModificationTreeService;
     @MockitoBean
-    private NetworkModificationService networkModificationService;
+    private NetworkModificationRestService networkModificationService;
     @MockitoBean
     private StudyConfigService studyConfigService;
     @MockitoBean
