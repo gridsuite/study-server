@@ -88,8 +88,7 @@ public class DynamicMarginCalculationService extends AbstractComputationService 
                 StudyEntity::setDynamicMarginCalculationParametersUuid,
                 UserProfileInfos::getDynamicMarginCalculationParameterId,
                 dynamicMarginCalculationRestService,
-                dynamicMarginCalculationRestService::createParameters,
-                dynamicMarginCalculationRestService::updateParameters,
+                dynamicMarginCalculationRestService::resetParameters,
                 DYNAMIC_MARGIN_CALCULATION,
                 List.of(rootNetworkNodeInfoService::invalidateDynamicMarginCalculationStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS

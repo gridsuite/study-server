@@ -258,6 +258,23 @@ class DynamicMarginCalculationRestServiceTest extends AbstractWireMockRestClient
     }
 
     @Test
+    void testResetParameters() {
+        String url = PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID + DELIMITER + "reset";
+
+        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.ok()));
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicMarginCalculationRestService.resetParameters(PARAMETERS_UUID));
+
+        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.notFound()));
+
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicMarginCalculationRestService.resetParameters(PARAMETERS_UUID)
+        );
+    }
+
+    @Test
     void testDeleteParameters() {
         // configure mock server response
         String url = PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID;

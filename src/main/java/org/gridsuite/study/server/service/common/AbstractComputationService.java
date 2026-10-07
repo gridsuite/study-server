@@ -64,13 +64,12 @@ public abstract class AbstractComputationService {
         return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Study not found"));
     }
 
-    protected <T> boolean resetComputationParameters(UUID studyUuid, String userId,
+    protected boolean resetComputationParameters(UUID studyUuid, String userId,
                                                    Function<StudyEntity, UUID> studyParameterGetter,
                                                    BiConsumer<StudyEntity, UUID> studyParameterSetter,
                                                    Function<UserProfileInfos, UUID> profileParameterGetter,
                                                    ComputationParameters computationParameters,
-                                                   Function<T, UUID> createParameters,
-                                                   BiConsumer<UUID, T> updateParameters,
+                                                   Consumer<UUID> resetParameters,
                                                    ComputationType computationType,
                                                    List<Consumer<UUID>> statusInvalidations,
                                                    String... statusUpdateTypes) {
@@ -82,8 +81,7 @@ public abstract class AbstractComputationService {
                 studyParameterSetter,
                 profileParameterGetter,
                 computationParameters,
-                createParameters,
-                updateParameters,
+                resetParameters,
                 computationType.getLabel()
         );
         emitComputationParametersChanged(studyUuid, userId, computationType, statusInvalidations, statusUpdateTypes);
