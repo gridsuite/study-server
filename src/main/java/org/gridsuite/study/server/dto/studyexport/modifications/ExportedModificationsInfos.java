@@ -7,21 +7,21 @@
 package org.gridsuite.study.server.dto.studyexport.modifications;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import org.gridsuite.study.server.dto.studyexport.parameters.ExportedParametersReferences;
+import org.gridsuite.study.server.dto.studyexport.ExportedParameters;
 
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.dto.studyexport.parameters.ExportedParametersReferences.nullSafe;
-import static org.gridsuite.study.server.dto.studyexport.parameters.ExportedParametersReferences.toUuidSet;
+import static org.gridsuite.study.server.dto.studyexport.ExportedParameters.nullSafe;
+import static org.gridsuite.study.server.dto.studyexport.ExportedParameters.toUuidSet;
 
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record ExportedModificationReferences(
+public record ExportedModificationsInfos(
         List<FilterInfos> filters,
         List<FiltersHolder> variations,
         List<FiltersHolder> assignmentInfosList,
@@ -30,8 +30,8 @@ public record ExportedModificationReferences(
         List<FilterInfos> generatorsWithFixedSupply,
         List<GeneratorsFrequencyReserve> generatorsFrequencyReserve,
         UUID loadFlowParametersId,
-        List<ExportedModificationReferences> modificationsInfos
-) implements ExportedParametersReferences {
+        List<ExportedModificationsInfos> modificationsInfos
+) implements ExportedParameters {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record FilterInfos(UUID id) { }
@@ -42,7 +42,7 @@ public record ExportedModificationReferences(
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record GeneratorsFrequencyReserve(List<FilterInfos> generatorsFilters) { }
 
-    private Stream<ExportedModificationReferences> subModifications() {
+    private Stream<ExportedModificationsInfos> subModifications() {
         return nullSafe(modificationsInfos);
     }
 
@@ -50,7 +50,7 @@ public record ExportedModificationReferences(
     public Set<UUID> getFilterUuids() {
         Stream<FilterInfos> ownFilters = Stream.of(
                 nullSafe(filters),
-                Stream.of(variations, assignmentInfosList, formulaInfosList).flatMap(ExportedParametersReferences::nullSafe).flatMap(holder -> nullSafe(holder.filters())),
+                Stream.of(variations, assignmentInfosList, formulaInfosList).flatMap(ExportedParameters::nullSafe).flatMap(holder -> nullSafe(holder.filters())),
                 nullSafe(generatorsWithoutOutage),
                 nullSafe(generatorsWithFixedSupply),
                 nullSafe(generatorsFrequencyReserve).flatMap(reserve -> nullSafe(reserve.generatorsFilters()))

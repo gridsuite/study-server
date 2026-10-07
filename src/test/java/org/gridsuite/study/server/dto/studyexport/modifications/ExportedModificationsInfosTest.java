@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
  */
-class ExportedModificationReferencesTest {
+class ExportedModificationsInfosTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -48,12 +48,12 @@ class ExportedModificationReferencesTest {
                 + "{\"type\":\"BY_FILTER_DELETION\",\"filters\":[{\"id\":\"" + ID_1 + "\"}]},"
                 + "{\"type\":\"BALANCES_ADJUSTMENT_MODIFICATION\",\"loadFlowParametersId\":\"" + LF_2 + "\"}]},"
                 + "{\"type\":\"GENERATOR_MODIFICATION\",\"equipmentId\":\"GEN\"}]";
-        ExportedModificationReferences[] modifications = objectMapper.readValue(json, ExportedModificationReferences[].class);
+        ExportedModificationsInfos[] modifications = objectMapper.readValue(json, ExportedModificationsInfos[].class);
         assertEquals(Set.of(ID_1, ID_2, ID_3, ID_4, ID_5, ID_6, ID_7),
                 Arrays.stream(modifications).flatMap(m -> m.getFilterUuids().stream()).collect(Collectors.toSet()));
         assertEquals(Set.of(LF_1, LF_2),
                 Arrays.stream(modifications).flatMap(m -> m.getLoadFlowParametersUuids().stream()).collect(Collectors.toSet()));
-        assertEquals(Set.of(), objectMapper.readValue("{}", ExportedModificationReferences.class).getFilterUuids());
-        assertEquals(Set.of(), objectMapper.readValue("{}", ExportedModificationReferences.class).getContingencyListUuids());
+        assertEquals(Set.of(), objectMapper.readValue("{}", ExportedModificationsInfos.class).getFilterUuids());
+        assertEquals(Set.of(), objectMapper.readValue("{}", ExportedModificationsInfos.class).getContingencyListUuids());
     }
 }

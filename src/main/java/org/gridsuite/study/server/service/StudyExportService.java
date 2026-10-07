@@ -11,10 +11,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
-import org.gridsuite.study.server.dto.studyexport.NodeTreeExportInfos;
-import org.gridsuite.study.server.dto.studyexport.RootNetworkExportInfos;
-import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
-import org.gridsuite.study.server.dto.studyexport.modifications.ExportedModificationReferences;
+import org.gridsuite.study.server.dto.studyexport.*;
+import org.gridsuite.study.server.dto.studyexport.modifications.ExportedModificationsInfos;
 import org.gridsuite.study.server.dto.studyexport.parameters.*;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
@@ -93,7 +91,7 @@ public class StudyExportService {
         Path tempDir = createTempWorkDir(studyUuid);
         Path zipFile = null;
         try {
-            zipFile = compressStudyToZip(studyUuid, tempDir);
+            zipFile = compressStudyToZip(studyUuid, tempDir, userId);
             InputStream stream = Files.newInputStream(zipFile, StandardOpenOption.DELETE_ON_CLOSE);
             zipFile = null;
             return new InputStreamResource(stream);
@@ -118,7 +116,7 @@ public class StudyExportService {
     /**
      * Build tree.json and the case files under tempDir, then compress them into a temp zip file
      */
-    private Path compressStudyToZip(UUID studyUuid, Path tempDir) throws IOException {
+    private Path compressStudyToZip(UUID studyUuid, Path tempDir, String userId) throws IOException {
         TreeExportInfos treeExportInfos = studyService.buildTreeExport(studyUuid);
         Path studyJsonPath = tempDir.resolve(TREE_JSON_FILE_NAME);
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(studyJsonPath.toFile(), treeExportInfos);
@@ -129,7 +127,7 @@ public class StudyExportService {
             exportCaseFile(caseUuid, caseName, casesDir);
         }
         exportParameters(studyUuid, tempDir);
-        exportModifications(treeExportInfos.nodeTree(), tempDir);
+        exportModifications(treeExportInfos.nodeTree(), tempDir, userId);
         Path zipFile = createTempExportFile(studyUuid);
         try (OutputStream fos = Files.newOutputStream(zipFile);
              ZipOutputStream zipOut = new ZipOutputStream(fos)) {
@@ -183,14 +181,14 @@ public class StudyExportService {
         return referencesClass == null ? new ExportedParameters() { } : objectMapper.readValue(parametersJson, referencesClass);
     }
 
-    private void exportModifications(NodeTreeExportInfos nodeTree, Path tempDir) throws IOException {
+    private void exportModifications(NodeTreeExportInfos nodeTree, Path tempDir, String userId) throws IOException {
         Path modificationsDir = Files.createDirectories(tempDir.resolve(MODIFICATIONS_FOLDER));
         Set<UUID> filterUuids = new HashSet<>();
         Set<UUID> loadFlowParametersUuids = new HashSet<>();
         for (UUID groupUuid : getModificationGroupUuids(nodeTree).toList()) {
-            String modifications = networkModificationService.getModifications(groupUuid, false, false);
+            String modifications = networkModificationService.getModifications(groupUuid, false, false, userId);
             Files.writeString(modificationsDir.resolve(groupUuid + JSON), modifications);
-            for (ExportedModificationReferences references : objectMapper.readValue(modifications, ExportedModificationReferences[].class)) {
+            for (ExportedModificationsInfos references : objectMapper.readValue(modifications, ExportedModificationsInfos[].class)) {
                 filterUuids.addAll(references.getFilterUuids());
                 loadFlowParametersUuids.addAll(references.getLoadFlowParametersUuids());
             }
@@ -215,7 +213,7 @@ public class StudyExportService {
             return Stream.empty();
         }
         return Stream.concat(Stream.ofNullable(node.modificationGroupUuid()),
-                ExportedParametersReferences.nullSafe(node.children()).flatMap(StudyExportService::getModificationGroupUuids));
+                ExportedParameters.nullSafe(node.children()).flatMap(StudyExportService::getModificationGroupUuids));
     }
 
     private Path createTempWorkDir(UUID studyUuid) {
