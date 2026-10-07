@@ -6,24 +6,27 @@
  */
 package org.gridsuite.study.server;
 
+import org.gridsuite.study.server.controller.StudyController;
 import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.RebuildNodeService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.mockito.Mockito.*;
@@ -31,8 +34,11 @@ import static org.mockito.Mockito.*;
 @SpringBootTest
 @DisableElasticsearch
 class RebuildNodeServiceTest {
-    @MockitoSpyBean
-    private RebuildNodeService rebuildNodeService;
+    @Autowired
+    private StudyController studyController;
+
+    @MockitoBean
+    private NetworkModificationService networkModificationService;
 
     @MockitoBean
     private NetworkModificationTreeService networkModificationTreeService;
@@ -41,9 +47,9 @@ class RebuildNodeServiceTest {
     private StudyService studyService;
 
     @MockitoBean
-    private NetworkModificationRestService networkModificationService;
+    private NetworkModificationRestService networkModificationRestService;
 
-    @MockitoBean
+    @MockitoSpyBean
     private NodeActivityRunnerService nodeActivityService;
 
     UUID studyUuid = UUID.randomUUID();
@@ -56,91 +62,79 @@ class RebuildNodeServiceTest {
 
     @BeforeEach
     void setUp() {
-        doReturn(List.of(node1Uuid, node2Uuid)).when(networkModificationTreeService).getHighestNodeUuids(node1Uuid, node2Uuid);
-        doReturn(List.of(node1Uuid)).when(networkModificationTreeService).getHighestNodeUuids(node1Uuid, node1Uuid);
         doReturn(false).when(networkModificationTreeService).isRootOrConstructionNode(any());
-        doReturn(Map.of()).when(networkModificationService).findParentComposites(any());
+        doReturn(Map.of()).when(networkModificationRestService).findParentComposites(any());
         TestUtils.bypassNodeActivities(nodeActivityService);
     }
 
     @Test
     void testRebuildSingleNode() {
+        doReturn(NodeBuildStatus.from(BuildStatus.NOT_BUILT)).when(networkModificationService).getNodeBuildStatus(node1Uuid, rootNetworkUuid);
+
         doReturn(
-            Map.of(rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILT))
-        ).when(studyService).getNodeBuildStatusByRootNetwork(studyUuid, node1Uuid);
+            Map.of(node1Uuid, Set.of(rootNetworkUuid))
+        ).when(networkModificationService).getSecurityNodesToRebuild(studyUuid, node1Uuid, node1Uuid);
 
         UUID modificationUuid = UUID.randomUUID();
         ModificationMoveInfos modificationMoveInfos = new ModificationMoveInfos(modificationUuid, null, null, null);
-        rebuildNodeService.moveNetworkModifications(studyUuid, node1Uuid, node1Uuid, List.of(modificationMoveInfos), userId);
+        studyController.moveModifications(studyUuid, node1Uuid, node1Uuid, List.of(modificationMoveInfos), userId);
 
-        verify(studyService, times(1)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
+        verify(networkModificationService, times(1)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
     }
 
     @Test
     void testRebuildMultipleNodes() {
-        doReturn(
-            Map.of(rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILT))
-        ).when(studyService).getNodeBuildStatusByRootNetwork(studyUuid, node1Uuid);
-        doReturn(
-            Map.of(rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILT))
-        ).when(studyService).getNodeBuildStatusByRootNetwork(studyUuid, node2Uuid);
+        doReturn(NodeBuildStatus.from(BuildStatus.NOT_BUILT)).when(networkModificationService).getNodeBuildStatus(node1Uuid, rootNetworkUuid);
+        doReturn(NodeBuildStatus.from(BuildStatus.NOT_BUILT)).when(networkModificationService).getNodeBuildStatus(node2Uuid, rootNetworkUuid);
 
-        rebuildNodeService.moveNetworkModifications(studyUuid, node1Uuid, node2Uuid, List.of(), userId);
+        doReturn(
+            Map.of(node1Uuid, Set.of(rootNetworkUuid), node2Uuid, Set.of(rootNetworkUuid))
+        ).when(networkModificationService).getSecurityNodesToRebuild(studyUuid, node1Uuid, node2Uuid);
 
-        verify(studyService, times(1)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
-        verify(studyService, times(1)).buildNode(studyUuid, node2Uuid, rootNetworkUuid, userId);
+        studyController.moveModifications(studyUuid, node1Uuid, node2Uuid, List.of(), userId);
+
+        verify(networkModificationService, times(1)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
+        verify(networkModificationService, times(1)).buildNode(studyUuid, node2Uuid, rootNetworkUuid, userId);
     }
 
     @Test
     void testRebuildMultipleRootNetworks() {
+        doReturn(NodeBuildStatus.from(BuildStatus.NOT_BUILT)).when(networkModificationService).getNodeBuildStatus(node1Uuid, rootNetworkUuid);
+        doReturn(NodeBuildStatus.from(BuildStatus.NOT_BUILT)).when(networkModificationService).getNodeBuildStatus(node1Uuid, rootNetwork2Uuid);
+
         doReturn(
-            Map.of(
-                rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILT),
-                rootNetwork2Uuid, NodeBuildStatus.from(BuildStatus.BUILT)
-            )
-        ).when(studyService).getNodeBuildStatusByRootNetwork(studyUuid, node1Uuid);
+            Map.of(node1Uuid, Set.of(rootNetworkUuid, rootNetwork2Uuid))
+        ).when(networkModificationService).getSecurityNodesToRebuild(studyUuid, node1Uuid, node2Uuid);
 
-        rebuildNodeService.moveNetworkModifications(studyUuid, node1Uuid, node2Uuid, List.of(), userId);
+        studyController.moveModifications(studyUuid, node1Uuid, node2Uuid, List.of(), userId);
 
-        verify(studyService, times(1)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
-        verify(studyService, times(1)).buildNode(studyUuid, node1Uuid, rootNetwork2Uuid, userId);
+        verify(networkModificationService, times(1)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
+        verify(networkModificationService, times(1)).buildNode(studyUuid, node1Uuid, rootNetwork2Uuid, userId);
     }
 
     @Test
     void testRebuildMultipleRootNetworksAndNodes() {
-        doReturn(
-            Map.of(
-                rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILT),
-                rootNetwork2Uuid, NodeBuildStatus.from(BuildStatus.NOT_BUILT)
-            )
-        ).when(studyService).getNodeBuildStatusByRootNetwork(studyUuid, node1Uuid);
+        doReturn(NodeBuildStatus.from(BuildStatus.NOT_BUILT)).when(networkModificationService).getNodeBuildStatus(node1Uuid, rootNetworkUuid);
+        doReturn(NodeBuildStatus.from(BuildStatus.NOT_BUILT)).when(networkModificationService).getNodeBuildStatus(node2Uuid, rootNetwork2Uuid);
 
         doReturn(
-            Map.of(
-                rootNetworkUuid, NodeBuildStatus.from(BuildStatus.NOT_BUILT),
-                rootNetwork2Uuid, NodeBuildStatus.from(BuildStatus.BUILT)
-            )
-        ).when(studyService).getNodeBuildStatusByRootNetwork(studyUuid, node2Uuid);
+            Map.of(node1Uuid, Set.of(rootNetworkUuid), node2Uuid, Set.of(rootNetwork2Uuid))
+        ).when(networkModificationService).getSecurityNodesToRebuild(studyUuid, node1Uuid, node2Uuid);
 
-        rebuildNodeService.moveNetworkModifications(studyUuid, node1Uuid, node2Uuid, List.of(), userId);
+        studyController.moveModifications(studyUuid, node1Uuid, node2Uuid, List.of(), userId);
 
-        verify(studyService, times(1)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
-        verify(studyService, times(1)).buildNode(studyUuid, node2Uuid, rootNetwork2Uuid, userId);
+        verify(networkModificationService, times(1)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
+        verify(networkModificationService, times(1)).buildNode(studyUuid, node2Uuid, rootNetwork2Uuid, userId);
     }
 
     @Test
     void testRebuildConstructionNode() {
-        doReturn(
-            Map.of(rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILT)),
-            Map.of(rootNetworkUuid, NodeBuildStatus.from(BuildStatus.NOT_BUILT))
-        ).when(studyService).getNodeBuildStatusByRootNetwork(studyUuid, node1Uuid);
-
-        doReturn(true).when(networkModificationTreeService).isRootOrConstructionNode(any());
+        doReturn(Map.of()).when(networkModificationService).getSecurityNodesToRebuild(studyUuid, node1Uuid, node1Uuid);
 
         UUID modificationUuid = UUID.randomUUID();
         ModificationMoveInfos modificationMoveInfos = new ModificationMoveInfos(modificationUuid, null, null, null);
-        rebuildNodeService.moveNetworkModifications(studyUuid, node1Uuid, modificationUuid, List.of(modificationMoveInfos), userId);
+        studyController.moveModifications(studyUuid, node1Uuid, modificationUuid, List.of(modificationMoveInfos), userId);
 
-        verify(studyService, times(0)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
+        verify(networkModificationService, times(0)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
     }
 }

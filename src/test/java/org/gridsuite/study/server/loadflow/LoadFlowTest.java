@@ -35,6 +35,7 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -185,8 +186,10 @@ class LoadFlowTest {
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @MockitoSpyBean
     private StudyService studyService;
+    @MockitoSpyBean
+    private NetworkModificationService networkModificationService;
     @MockitoBean
-    private NetworkModificationRestService networkModificationService;
+    private NetworkModificationRestService networkModificationRestService;
     @MockitoBean
     private NetworkService networkService;
     @Autowired
@@ -215,7 +218,7 @@ class LoadFlowTest {
         reportService.setReportServerBaseUri(wireMockServer.baseUrl());
         userAdminService.setUserAdminServerBaseUri(wireMockServer.baseUrl());
         loadFlowRestService.setBaseUri(wireMockServer.baseUrl());
-        networkModificationService.setNetworkModificationServerBaseUri(wireMockServer.baseUrl());
+        networkModificationRestService.setNetworkModificationServerBaseUri(wireMockServer.baseUrl());
 
         synchronizeStudyServerExecutionService(studyServerExecutionService);
 
@@ -266,7 +269,7 @@ class LoadFlowTest {
         UUID nodeUuid = modificationNode.getId();
 
         doReturn(List.of()).when(studyService).getFirstLevelChildrenToBuild(studyUuid, nodeUuid, rootNetworkUuid, "userId");
-        doNothing().when(studyService).buildNodes(eq(studyUuid), anyList(), eq(rootNetworkUuid), eq("userId"));
+        doNothing().when(networkModificationService).buildNodes(eq(studyUuid), anyList(), eq(rootNetworkUuid), eq("userId"));
 
         // consume loadflow result
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid));
@@ -286,7 +289,7 @@ class LoadFlowTest {
             // if running successful loadflow on security node -> first children are built
             wireMockStubs.loadflowServer.verifyGetLoadflowStatus(UUID.fromString(LOADFLOW_RESULT_UUID));
             verify(studyService, times(1)).getFirstLevelChildrenToBuild(studyUuid, nodeUuid, rootNetworkUuid, "userId");
-            verify(studyService, times(1)).buildNodes(eq(studyUuid), anyList(), eq(rootNetworkUuid), eq("userId"));
+            verify(networkModificationService, times(1)).buildNodes(eq(studyUuid), anyList(), eq(rootNetworkUuid), eq("userId"));
         }
     }
 

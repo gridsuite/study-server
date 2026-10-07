@@ -31,6 +31,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -82,6 +83,7 @@ public class ConsumerService {
     private final NodeActivityRunnerService nodeActivityRunnerService;
     private final NodeActivityService nodeActivityService;
     private final WorkspaceService workspaceService;
+    private final NetworkModificationService networkModificationService;
 
     @Value("${study.enable-operation-quotas}")
     private boolean shouldCheckOperationQuotas;
@@ -101,7 +103,8 @@ public class ConsumerService {
                            LoadFlowService loadFlowService,
                            NodeActivityRunnerService nodeActivityRunnerService,
                            NodeActivityService nodeActivityService,
-                           WorkspaceService workspaceService) {
+                           WorkspaceService workspaceService,
+                           NetworkModificationService networkModificationService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -118,6 +121,7 @@ public class ConsumerService {
         this.nodeActivityService = nodeActivityService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
         this.workspaceService = workspaceService;
+        this.networkModificationService = networkModificationService;
     }
 
     @Bean
@@ -529,7 +533,7 @@ public class ConsumerService {
             if (loadFlowStatus == LoadFlowStatus.CONVERGED) {
                 List<UUID> childrenToBuild = studyService.getFirstLevelChildrenToBuild(studyUuid, nodeUuid, rootNetworkUuid, userId);
                 nodeActivityRunnerService.runWith(BUILD, studyUuid, rootNetworkUuid, childrenToBuild,
-                    () -> studyService.buildNodes(studyUuid, childrenToBuild, rootNetworkUuid, userId));
+                    () -> networkModificationService.buildNodes(studyUuid, childrenToBuild, rootNetworkUuid, userId));
             }
         }
     }
