@@ -785,12 +785,7 @@ class LoadFlowTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
 
-        LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-        Map<String, Object> loadFlowParametersInfos = Map.of(
-            "provider", PROVIDER,
-            "commonParameters", loadFlowParameters,
-            "specificParametersPerProvider", Map.of());
-        String loadFlowParametersJson = objectMapper.writeValueAsString(loadFlowParametersInfos);
+        String loadFlowParametersJson = LOADFLOW_DEFAULT_PARAMETERS_JSON;
 
         wireMockStubs.userAdminServer.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
         wireMockStubs.loadflowServer.stubGetLoadflowParametersWithDifferences(LOADFLOW_PARAMETERS_UUID_STRING, null, loadFlowParametersJson, false);
