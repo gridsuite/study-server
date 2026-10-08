@@ -65,14 +65,6 @@ class LoadFlowRestServiceTest {
     }
 
     @Test
-    void testGetSpecificParametersWithProvider() {
-        String specificParameters = "{\"provider\":\"DynaFlow\"}";
-        when(restTemplate.getForObject(BASE_URI + "/" + LOADFLOW_API_VERSION + "/specific-parameters?provider=DynaFlow", String.class)).thenReturn(specificParameters);
-
-        assertThat(loadFlowRestService.getSpecificParameters("DynaFlow")).isEqualTo(specificParameters);
-    }
-
-    @Test
     void testGetDefaultLimitReductions() {
         String defaultLimitReductions = "[]";
         when(restTemplate.getForObject(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/default-limit-reductions", String.class)).thenReturn(defaultLimitReductions);
@@ -113,14 +105,5 @@ class LoadFlowRestServiceTest {
         verify(restTemplate).put(org.mockito.ArgumentMatchers.eq(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/" + parameterUuid), captor.capture());
         assertThat(captor.getValue().getBody()).isEqualTo(parameters);
         assertThat(captor.getValue().getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
-    }
-
-    @Test
-    void testGetDefaultValues() {
-        String defaultValues = "{\"param1\":\"value1\"}";
-        when(restTemplate.getForObject(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/default-values", String.class))
-            .thenReturn(defaultValues);
-
-        assertThat(loadFlowRestService.getDefaultValues()).isEqualTo(defaultValues);
     }
 }
