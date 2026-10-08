@@ -19,7 +19,6 @@ import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.http.*;
-import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -164,7 +163,7 @@ public class StateEstimationRestService extends AbstractComputationRestService i
         return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public void updateStateEstimationParameters(UUID parametersUuid, @Nullable String parameters) {
+    public void updateStateEstimationParameters(UUID parametersUuid, String parameters) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/parameters/{uuid}");
         String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
 
@@ -173,6 +172,15 @@ public class StateEstimationRestService extends AbstractComputationRestService i
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
         restTemplate.put(baseUri + path, httpEntity);
+    }
+
+    public void resetStateEstimationParameters(UUID parametersUuid) {
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + PARAMETERS_URI + "/reset")
+                .buildAndExpand(parametersUuid)
+                .toUriString();
+
+        restTemplate.put(baseUri + path, null);
     }
 
     public String getStateEstimationParameters(UUID parametersUuid) {

@@ -112,7 +112,19 @@ public class StateEstimationService extends AbstractComputationService {
     /** no state estimation parameters in user profile: always reset to default parameters */
     @Transactional
     public void resetStateEstimationParametersValues(UUID studyUuid, String userId) {
-        setStateEstimationParametersValues(studyUuid, null, userId);
+        StudyEntity studyEntity = getStudy(studyUuid);
+        computationParametersService.resetParameters(
+                studyEntity,
+                StudyEntity::getStateEstimationParametersUuid,
+                stateEstimationRestService::resetStateEstimationParameters
+        );
+        emitComputationParametersChanged(
+                studyUuid,
+                userId,
+                STATE_ESTIMATION,
+                List.of(this::invalidateStateEstimationStatusOnAllNodes),
+                NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS
+        );
     }
 
     private void invalidateStateEstimationStatusOnAllNodes(UUID studyUuid) {
