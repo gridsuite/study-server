@@ -770,12 +770,12 @@ class SensitivityAnalysisTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         userAdminServerStubs.stubGetUserProfile(NO_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
-        computationServerStubs.stubParameterPut(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING, SENSITIVITY_ANALYSIS_PROFILE_PARAMETERS_JSON);
+        computationServerStubs.stubParametersReset(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING);
 
         resetParametersAndDoChecks(studyNameUserIdUuid, NO_PROFILE_USER_ID, HttpStatus.OK);
 
         userAdminServerStubs.verifyGetUserProfile(NO_PROFILE_USER_ID);
-        computationServerStubs.verifyParameterPut(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING);
+        computationServerStubs.verifyParametersReset(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING);
     }
 
     @Test
@@ -783,12 +783,12 @@ class SensitivityAnalysisTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         userAdminServerStubs.stubGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
-        computationServerStubs.stubParameterPut(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING, SENSITIVITY_ANALYSIS_PROFILE_PARAMETERS_JSON);
+        computationServerStubs.stubParametersReset(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING);
 
         resetParametersAndDoChecks(studyNameUserIdUuid, NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
         userAdminServerStubs.verifyGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID);
-        computationServerStubs.verifyParameterPut(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING);
+        computationServerStubs.verifyParametersReset(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING);
     }
 
     @Test
@@ -797,12 +797,12 @@ class SensitivityAnalysisTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
 
         userAdminServerStubs.stubGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON);
-        computationServerStubs.stubParameterPut(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING, SENSITIVITY_ANALYSIS_PROFILE_PARAMETERS_JSON);
+        computationServerStubs.stubParametersReset(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING);
         computationServerStubs.stubParametersDuplicateFromNotFound(PROFILE_SENSITIVITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
         resetParametersAndDoChecks(studyNameUserIdUuid, INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
 
         userAdminServerStubs.verifyGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID);
-        computationServerStubs.verifyParameterPut(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING);
+        computationServerStubs.verifyParametersReset(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING);
         computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SENSITIVITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
     }
 
@@ -885,6 +885,23 @@ class SensitivityAnalysisTest {
         // --- Verify requests ---
         userAdminServerStubs.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
         computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
+    }
+
+    @Test
+    void testResetSensitivityAnalysisParametersUserHasNoParamsInProfileAndNoExistingSensitivityAnalysisParams() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null);
+        UUID studyUuid = studyEntity.getId();
+
+        userAdminServerStubs.stubGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
+
+        // nothing to reset : no parameters on the study and none in the user profile
+        mockMvc.perform(
+                post("/v1/studies/{studyUuid}/sensitivity-analysis/parameters/reset", studyUuid)
+                    .header(HEADER_USER_ID, NO_PARAMS_IN_PROFILE_USER_ID))
+            .andExpect(status().isNotFound());
+
+        userAdminServerStubs.verifyGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID);
+        assertNull(studyRepository.findById(studyUuid).orElseThrow().getSensitivityAnalysisParametersUuid());
     }
 
     @AfterEach
