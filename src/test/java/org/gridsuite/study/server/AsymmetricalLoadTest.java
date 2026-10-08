@@ -296,6 +296,17 @@ class AsymmetricalLoadTest {
     }
 
     @Test
+    void consumeAsymmetricalLoadRunning() throws Exception {
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node1", ASYMMETRICAL_LOAD_PARAMETERS_UUID);
+        Message<String> runningMessage = MessageBuilder.withPayload("")
+                .setHeader(HEADER_RECEIVER, objectMapper.writeValueAsString(new NodeReceiver(ids.nodeId, ids.rootNetworkUuid)))
+                .build();
+        consumerService.consumeAsymmetricalLoadRunning().accept(runningMessage);
+        Message<byte[]> test = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
+        assertEquals(UPDATE_TYPE_ASYMMETRICAL_LOAD_STATUS, test.getHeaders().get(HEADER_UPDATE_TYPE));
+    }
+
+    @Test
     void testRunAndCheckStatus() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node1", ASYMMETRICAL_LOAD_PARAMETERS_UUID);
 
