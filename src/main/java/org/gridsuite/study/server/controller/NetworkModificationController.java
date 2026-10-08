@@ -69,6 +69,13 @@ public class NetworkModificationController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping(value = "/network-modifications/{uuid}/unshare")
+    public ResponseEntity<Void> unshareModificationReference(@PathVariable UUID uuid,
+                                                          @RequestHeader(HEADER_USER_ID) String userId) {
+        networkModificationService.unshareModificationReference(uuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
     @PutMapping(value = "/network-modifications")
     public ResponseEntity<Void> updateNetworkModificationsMetadata(@RequestParam("uuids") List<UUID> networkModificationUuids, @RequestBody String metadata,
                                                                    @RequestHeader(HEADER_USER_ID) String userId) {
