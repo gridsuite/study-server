@@ -213,6 +213,8 @@ class TreeExportTest extends StudyTestBase {
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + CASE_UUID))
                 .willReturn(WireMock.aResponse().withStatus(200).withHeader("Content-Type", "application/octet-stream").withBody("dummy case content".getBytes())));
         computationServerStubs.stubGetParametersAny("{}");
+        String loadFlowParametersJson = "{\"uuid\":\"" + loadFlowParameters + "\"}";
+        stubJsonGet("/v1/parameters/" + loadFlowParameters, loadFlowParametersJson);
         stubJsonGet(GROUP_MODIFICATIONS_URL, "[{\"filters\":[{\"id\":\"" + filterA + "\"}],\"loadFlowParametersId\":\"" + loadFlowParameters + "\"},"
                 + "{\"modificationsInfos\":[{\"variations\":[{\"filters\":[{\"id\":\"" + filterB + "\"}]}]}]}]");
         stubJsonGet("/v1/filters/referenced-filter-uuids", "[\"" + filterC + "\"]");
@@ -239,7 +241,7 @@ class TreeExportTest extends StudyTestBase {
                 objectMapper.readTree("{\"uuid\":\"" + filterB + "\",\"name\":\"nameB\",\"content\":" + filterBJson + "}"),
                 objectMapper.readTree("{\"uuid\":\"" + filterC + "\",\"name\":\"nameC\",\"content\":" + filterCJson + "}"));
         assertEquals(expectedFilters, readJson(zipContents.get("networkModifications/filters.json")));
-        assertEquals(Set.of(objectMapper.readTree("{\"uuid\":\"" + loadFlowParameters + "\",\"name\":\"nameLF\",\"content\":{}}")),
+        assertEquals(Set.of(objectMapper.readTree("{\"uuid\":\"" + loadFlowParameters + "\",\"name\":\"nameLF\",\"content\":" + loadFlowParametersJson + "}")),
                 readJson(zipContents.get("networkModifications/loadFlowParameters.json")));
         assertFalse(zipContents.containsKey("networkModifications/contingencyList.json"));
 

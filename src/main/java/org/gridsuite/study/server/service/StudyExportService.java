@@ -8,7 +8,6 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.dto.studyexport.*;
@@ -17,6 +16,8 @@ import org.gridsuite.study.server.dto.studyexport.parameters.*;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -41,15 +42,17 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.EXPORT_STU
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
  */
-@Slf4j
 @Service
 public class StudyExportService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(StudyExportService.class);
+
     public static final String TREE_JSON_FILE_NAME = "tree.json";
     public static final String CASES_FOLDER = "cases";
     public static final String PARAMETERS_FOLDER = "computationParameters";
     public static final String CONTINGENCY_LIST_JSON = "contingencyList.json";
     public static final String FILTERS_JSON = "filters.json";
     public static final String ID = "id";
+    public static final String UUID_FIELD = "uuid";
     public static final String JSON = ".json";
     public static final String MODIFICATIONS_FOLDER = "networkModifications";
     public static final String LOAD_FLOW_PARAMETERS_JSON = "loadFlowParameters.json";
@@ -101,13 +104,13 @@ public class StudyExportService {
             try {
                 deleteDirectory(tempDir);
             } catch (IOException e) {
-                log.warn("Failed to clean up temp export directory {} for study {}", tempDir, studyUuid, e);
+                LOGGER.warn("Failed to clean up temp export directory {} for study {}", tempDir, studyUuid, e);
             }
             if (zipFile != null) {
                 try {
                     Files.deleteIfExists(zipFile);
                 } catch (IOException e) {
-                    log.warn("Failed to delete temp zip file {} for study {}", zipFile, studyUuid, e);
+                    LOGGER.warn("Failed to delete temp zip file {} for study {}", zipFile, studyUuid, e);
                 }
             }
         }
@@ -160,9 +163,13 @@ public class StudyExportService {
     }
 
     private List<ExportedElementInfos> toExportedElements(String content, Map<UUID, String> names) throws IOException {
+        return toExportedElements(content, names, ID);
+    }
+
+    private List<ExportedElementInfos> toExportedElements(String content, Map<UUID, String> names, String idField) throws IOException {
         List<ExportedElementInfos> elements = new ArrayList<>();
         for (JsonNode jsonNodeContent : objectMapper.readTree(content)) {
-            UUID uuid = UUID.fromString(jsonNodeContent.get(ID).asText());
+            UUID uuid = UUID.fromString(jsonNodeContent.get(idField).asText());
             elements.add(new ExportedElementInfos(uuid, names.get(uuid), jsonNodeContent));
         }
         return elements;
@@ -182,46 +189,46 @@ public class StudyExportService {
     }
 
     private void exportModifications(NodeTreeExportInfos nodeTree, Path tempDir, String userId) throws IOException {
-        Path modificationsDir = Files.createDirectories(tempDir.resolve(MODIFICATIONS_FOLDER));
-        List<UUID> groupUuids = new ArrayList<>();
-        collectModificationGroupUuids(nodeTree, groupUuids);
-        Set<UUID> filterUuids = new HashSet<>();
-        Set<UUID> loadFlowParametersUuids = new HashSet<>();
-        for (UUID groupUuid : groupUuids) {
-            String modifications = networkModificationService.getModifications(groupUuid, false, false, userId);
-            Files.writeString(modificationsDir.resolve(groupUuid + JSON), modifications);
-            for (ExportedModificationsInfos references : objectMapper.readValue(modifications, ExportedModificationsInfos[].class)) {
-                filterUuids.addAll(references.getFilterUuids());
-                loadFlowParametersUuids.addAll(references.getLoadFlowParametersUuids());
+        if (nodeTree != null) {
+            Path modificationsDir = Files.createDirectories(tempDir.resolve(MODIFICATIONS_FOLDER));
+            if (nodeTree.modificationGroupUuid() != null) {
+                collectModificationsByGroupUuid(modificationsDir, nodeTree.modificationGroupUuid(), userId);
+
+            }
+            if (nodeTree.children() != null) {
+                for (NodeTreeExportInfos child : nodeTree.children()) {
+                    collectModificationsByGroupUuid(modificationsDir, child.modificationGroupUuid(), userId);
+                }
             }
         }
+    }
 
+    private void collectModificationsByGroupUuid(Path modificationsDir, UUID groupUuid, String userId) throws IOException {
+        String modifications = networkModificationService.getModifications(groupUuid, false, false, userId);
+        Files.writeString(modificationsDir.resolve(groupUuid + JSON), modifications);
+        Set<UUID> filterUuids = new HashSet<>();
+        Set<UUID> loadFlowParametersUuids = new HashSet<>();
+        for (ExportedModificationsInfos references : objectMapper.readValue(modifications, ExportedModificationsInfos[].class)) {
+            filterUuids.addAll(references.getFilterUuids());
+            loadFlowParametersUuids.addAll(references.getLoadFlowParametersUuids());
+        }
+        collectFiltersByByGroupUuid(modificationsDir, filterUuids);
+        collectLoadFlowParametersUuidsByByGroupUuid(modificationsDir, loadFlowParametersUuids);
+    }
+
+    private void collectFiltersByByGroupUuid(Path modificationsDir, Set<UUID> filterUuids) throws IOException {
         if (!filterUuids.isEmpty()) {
             filterUuids.addAll(filterService.getReferencedFilterUuids(filterUuids));
             List<ExportedElementInfos> filters = toExportedElements(filterService.getFilters(filterUuids), directoryService.getElementNames(filterUuids));
             objectMapper.writeValue(modificationsDir.resolve(FILTERS_JSON).toFile(), filters);
-
-        }
-
-        if (!loadFlowParametersUuids.isEmpty()) {
-            Map<UUID, String> names = directoryService.getElementNames(loadFlowParametersUuids);
-            List<ExportedElementInfos> loadFlowParameters = new ArrayList<>();
-            for (UUID loadFlowParametersUuid : loadFlowParametersUuids) {
-                loadFlowParameters.add(new ExportedElementInfos(loadFlowParametersUuid, names.get(loadFlowParametersUuid),
-                        objectMapper.readTree(loadFlowRestService.getParameters(loadFlowParametersUuid))));
-            }
-            objectMapper.writeValue(modificationsDir.resolve(LOAD_FLOW_PARAMETERS_JSON).toFile(), loadFlowParameters);
         }
     }
 
-    private static void collectModificationGroupUuids(NodeTreeExportInfos nodeTree, List<UUID> groupUuids) {
-        if (nodeTree != null && nodeTree.modificationGroupUuid() != null) {
-            groupUuids.add(nodeTree.modificationGroupUuid());
-        }
-        if (nodeTree != null && nodeTree.children() != null) {
-            for (NodeTreeExportInfos child : nodeTree.children()) {
-                collectModificationGroupUuids(child, groupUuids);
-            }
+    private void collectLoadFlowParametersUuidsByByGroupUuid(Path modificationsDir, Set<UUID> loadFlowParametersUuids) throws IOException {
+        if (!loadFlowParametersUuids.isEmpty()) {
+            String parameters = loadFlowParametersUuids.stream().map(loadFlowRestService::getParameters).collect(Collectors.joining(",", "[", "]"));
+            List<ExportedElementInfos> loadFlowParameters = toExportedElements(parameters, directoryService.getElementNames(loadFlowParametersUuids), UUID_FIELD);
+            objectMapper.writeValue(modificationsDir.resolve(LOAD_FLOW_PARAMETERS_JSON).toFile(), loadFlowParameters);
         }
     }
 
