@@ -69,6 +69,6 @@ class ShortCircuitRestServiceTest {
 
         shortCircuitRestService.resetParameters(parametersUuid);
 
-        verify(restTemplate).put(URI.create(BASE_URI + "/" + SHORT_CIRCUIT_API_VERSION + "/parameters/" + parametersUuid), null);
+        verify(restTemplate).put(URI.create(BASE_URI + "/" + SHORT_CIRCUIT_API_VERSION + "/parameters/" + parametersUuid + "/reset"), null);
     }
 }

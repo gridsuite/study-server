@@ -289,7 +289,7 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
 
     public void resetParameters(final UUID parametersUuid) {
         restTemplate.put(getBaseUriForParameters()
-                .pathSegment("{parametersUuid}")
+                .pathSegment("{parametersUuid}", "reset")
                 .buildAndExpand(parametersUuid)
                 .toUri(), null);
     }

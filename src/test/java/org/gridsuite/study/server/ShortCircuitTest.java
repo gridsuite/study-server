@@ -706,12 +706,11 @@ class ShortCircuitTest implements WithAssertions {
         consumeShortCircuitAnalysisResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid, SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, false);
 
         // update parameters invalidate the status
-        computationServerStubs.stubGetParametersDefault(objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING));
-        computationServerStubs.stubPostParametersDefault(objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID));
+        computationServerStubs.stubParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
         userAdminServerStubs.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
         computationServerStubs.stubInvalidateStatus();
         resetParametersAndDoChecks(studyNameUserIdUuid, NO_PROFILE_USER_ID, HttpStatus.OK);
-        computationServerStubs.verifyParametersDefault(1);
+        computationServerStubs.verifyParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
         userAdminServerStubs.verifyGetUserProfile(NO_PROFILE_USER_ID);
         computationServerStubs.verifyInvalidateStatus(Map.of("resultUuid", new RegexPattern(".*")));
     }
@@ -749,12 +748,11 @@ class ShortCircuitTest implements WithAssertions {
         consumeShortCircuitAnalysisOneBusResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid, SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, false);
 
         // update parameters invalidate the status
-        computationServerStubs.stubGetParametersDefault(objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING));
-        computationServerStubs.stubPostParametersDefault(objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID));
+        computationServerStubs.stubParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
         userAdminServerStubs.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
         computationServerStubs.stubInvalidateStatus();
         resetParametersAndDoChecks(studyNameUserIdUuid, NO_PROFILE_USER_ID, HttpStatus.OK);
-        computationServerStubs.verifyParametersDefault(1);
+        computationServerStubs.verifyParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
         userAdminServerStubs.verifyGetUserProfile(NO_PROFILE_USER_ID);
         computationServerStubs.verifyInvalidateStatus(Map.of("resultUuid", new RegexPattern(".*")));
     }
@@ -788,10 +786,10 @@ class ShortCircuitTest implements WithAssertions {
         UUID studyNameUserIdUuid = studyEntity.getId();
 
         userAdminServerStubs.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
-        computationServerStubs.stubParameterPut(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING, objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID));
+        computationServerStubs.stubParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
         resetParametersAndDoChecks(studyNameUserIdUuid, NO_PROFILE_USER_ID, HttpStatus.OK);
         userAdminServerStubs.verifyGetUserProfile(NO_PROFILE_USER_ID);
-        computationServerStubs.verifyParameterPut(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
+        computationServerStubs.verifyParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
     }
 
     @Test
@@ -800,10 +798,10 @@ class ShortCircuitTest implements WithAssertions {
         UUID studyNameUserIdUuid = studyEntity.getId();
 
         userAdminServerStubs.stubGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
-        computationServerStubs.stubParameterPut(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING, objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID));
+        computationServerStubs.stubParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
         resetParametersAndDoChecks(studyNameUserIdUuid, NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
         userAdminServerStubs.verifyGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID);
-        computationServerStubs.verifyParameterPut(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
+        computationServerStubs.verifyParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
     }
 
     @Test
@@ -812,11 +810,11 @@ class ShortCircuitTest implements WithAssertions {
         UUID studyNameUserIdUuid = studyEntity.getId();
 
         userAdminServerStubs.stubGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON);
-        computationServerStubs.stubParameterPut(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING, objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID));
+        computationServerStubs.stubParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
         computationServerStubs.stubParametersDuplicateFromNotFound(PROFILE_SHORT_CIRCUIT_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
         resetParametersAndDoChecks(studyNameUserIdUuid, INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
         userAdminServerStubs.verifyGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID);
-        computationServerStubs.verifyParameterPut(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
+        computationServerStubs.verifyParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
         computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SHORT_CIRCUIT_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
     }
 
