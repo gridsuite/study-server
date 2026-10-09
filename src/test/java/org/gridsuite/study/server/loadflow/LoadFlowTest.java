@@ -73,12 +73,8 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
-import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
-import static org.gridsuite.study.server.notification.NotificationService.NODE_BUILD_STATUS_UPDATED;
-import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_ALL_COMPUTATION_STATUS;
-import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
-import static org.gridsuite.study.server.utils.TestUtils.USER_DEFAULT_PROFILE_JSON;
-import static org.gridsuite.study.server.utils.TestUtils.synchronizeStudyServerExecutionService;
+import static org.gridsuite.study.server.notification.NotificationService.*;
+import static org.gridsuite.study.server.utils.TestUtils.*;
 import static org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria.removeRequestMatching;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -577,7 +573,9 @@ class LoadFlowTest {
         checkUpdateStatusMessageReceived(studyUuid, updateTypeToCheck, null);
     }
 
-    /** A loadflow on a security node invalidates its children as well, which adds a status update. */
+    /**
+     * A loadflow on a security node invalidates its children as well, which adds a status update.
+     */
     private void checkLoadFlowStatusesThen(UUID studyUuid, String expectedUpdateType) {
         int statuses = 0;
         String updateType;
@@ -1064,5 +1062,21 @@ class LoadFlowTest {
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
         }
+    }
+
+    @Test
+    void consumeLoadFlowRunning() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationConstructionNode(studyNameUserIdUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "node 1");
+
+        Message<String> runningMessage = MessageBuilder.withPayload("")
+                .setHeader(HEADER_RECEIVER, objectMapper.writeValueAsString(new NodeReceiver(modificationNode1.getId(), rootNodeUuid)))
+                .build();
+        consumerService.consumeLoadFlowRunning().accept(runningMessage);
+        Message<byte[]> test = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
+        assertEquals(UPDATE_TYPE_LOADFLOW_STATUS, test.getHeaders().get(HEADER_UPDATE_TYPE));
     }
 }

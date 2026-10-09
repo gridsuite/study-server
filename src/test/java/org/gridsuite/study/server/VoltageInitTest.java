@@ -365,7 +365,7 @@ class VoltageInitTest {
                                     IdentifiableType.GENERATOR, "genId", Set.of("s1"));
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE),
                             objectMapper.writeValueAsString(new NetworkModificationsResult(List.of(VOLTAGE_INIT_MODIFICATION_UUID), List.of(networkModificationResult))));
-                } else if (path.matches("/v1/groups/" + MODIFICATIONS_GROUP_UUID + "/network-modifications\\?errorOnGroupNotFound=false&onlyStashed=false&onlyMetadata=.*")) {
+                } else if (path.matches("/v1/containers/" + MODIFICATIONS_GROUP_UUID + "/network-modifications\\?onlyStashed=false&onlyMetadata=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(VOLTAGE_INIT_PREVIEW_MODIFICATION_LIST));
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/stop.*")
                         || path.matches("/v1/results/" + VOLTAGE_INIT_OTHER_NODE_RESULT_UUID + "/stop.*")) {
@@ -829,7 +829,7 @@ class VoltageInitTest {
 
         // clone and insert again voltage-init modification to modificationNode3Uuid, with LF result -> node is invalidated
         when(loadFlowRestService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
-        when(networkModificationService.duplicateModificationsFromGroup(any(), any(), any())).thenReturn(null);
+        when(networkModificationService.duplicateModificationsFromGroup(any(), any(), any(), any())).thenReturn(null);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyNameUserIdUuid, firstRootNetworkUuid,
                 modificationNode3Uuid)
             .header("userId", "userId")).andExpect(status().isOk());
@@ -895,7 +895,7 @@ class VoltageInitTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyUuid, rootNetworkUuid, nodeUuuid)
             .header("userId", "userId")).andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(2, server).stream().allMatch(r ->
-            r.matches("/v1/groups/" + MODIFICATIONS_GROUP_UUID + "/network-modifications\\?errorOnGroupNotFound=false&onlyStashed=false&onlyMetadata=false") ||
+            r.matches("/v1/containers/" + MODIFICATIONS_GROUP_UUID + "/network-modifications\\?onlyStashed=false&onlyMetadata=false") ||
                 r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid")
         ));
     }

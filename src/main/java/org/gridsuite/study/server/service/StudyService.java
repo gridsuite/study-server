@@ -742,7 +742,7 @@ public class StudyService {
 
         StudyEntity newStudyEntity = duplicateStudyEntity(sourceStudy, studyInfos.getId());
         rootNetworkService.duplicateStudyRootNetworks(newStudyEntity, sourceStudy);
-        networkModificationTreeService.duplicateStudyNodes(newStudyEntity, sourceStudy);
+        networkModificationTreeService.duplicateStudyNodes(newStudyEntity, sourceStudy, userId);
         duplicateStudyNodeAliases(newStudyEntity, sourceStudy);
 
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(newStudyEntity);
@@ -1432,7 +1432,7 @@ public class StudyService {
     public void duplicateStudyNode(UUID sourceStudyUuid, UUID targetStudyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
         assertDuplicateStudyNode(sourceStudyUuid, targetStudyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode);
 
-        UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
+        UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode, userId);
         boolean invalidateBuild = networkModificationTreeService.hasModifications(nodeToCopyUuid, false);
         if (invalidateBuild) {
             invalidateNodeTree(targetStudyUuid, duplicatedNodeUuid, InvalidateNodeTreeParameters.ONLY_CHILDREN_BUILD_STATUS);
@@ -1475,7 +1475,7 @@ public class StudyService {
         assertDuplicateStudySubtree(sourceStudyUuid, targetStudyUuid, parentNodeToCopyUuid, referenceNodeUuid);
         AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(sourceStudyUuid, parentNodeToCopyUuid, null);
         StudyEntity studyEntity = getStudy(targetStudyUuid);
-        UUID duplicatedNodeUuid = networkModificationTreeService.cloneStudyTree(studySubTree, referenceNodeUuid, studyEntity);
+        UUID duplicatedNodeUuid = networkModificationTreeService.cloneStudyTree(studySubTree, referenceNodeUuid, studyEntity, userId);
         notificationService.emitSubtreeInserted(targetStudyUuid, duplicatedNodeUuid, referenceNodeUuid);
         notificationService.emitElementUpdated(targetStudyUuid, userId);
     }
@@ -1613,7 +1613,7 @@ public class StudyService {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.stashModifications(groupId, modificationsUuids);
+            networkModificationService.stashModifications(groupId, modificationsUuids, userId);
             invalidateNodeTree(studyUuid, nodeUuid);
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
@@ -1681,7 +1681,7 @@ public class StudyService {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.restoreModifications(groupId, modificationsUuids);
+            networkModificationService.restoreModifications(groupId, modificationsUuids, studyUuid, nodeUuid, userId);
             invalidateNodeTree(studyUuid, nodeUuid);
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
@@ -1771,7 +1771,7 @@ public class StudyService {
             );
         }
 
-        networkModificationTreeService.doStashNode(nodeId, stashChildren);
+        networkModificationTreeService.doStashNode(nodeId, stashChildren, userId);
 
         if (startTime.get() != null) {
             LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId, studyUuid,
@@ -1787,7 +1787,7 @@ public class StudyService {
 
     public void restoreNodes(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId, String userId) {
         networkModificationTreeService.assertIsRootOrConstructionNode(anchorNodeId);
-        networkModificationTreeService.restoreNode(studyId, nodeIds, anchorNodeId);
+        networkModificationTreeService.restoreNode(studyId, nodeIds, anchorNodeId, userId);
         notificationService.emitElementUpdated(studyId, userId);
     }
 
@@ -1865,7 +1865,7 @@ public class StudyService {
             NetworkModificationsResult result = networkModificationService.moveModifications(
                     networkModificationTreeService.getModificationGroupUuid(originNodeUuid),
                     networkModificationTreeService.getModificationGroupUuid(targetNodeUuid),
-                    modificationInfos, applicationContexts, isTargetInDifferentNodeTree);
+                    modificationInfos, applicationContexts, isTargetInDifferentNodeTree, userId);
             if (result != null && isTargetInDifferentNodeTree) {
                 emitNetworkModificationImpactsForAllRootNetworks(result.modificationResults(), studyEntity, targetNodeUuid);
             }
@@ -1913,8 +1913,10 @@ public class StudyService {
 
     private void updateElementsReferences(List<ModificationReference> modificationReferences, UUID rootContainerId, UUID containerId,
                                           ReferenceAttributes.ReferenceType targetReferenceType, String userId) {
-        modificationReferences.forEach(ref -> directoryService.updateElementReference(ref.referencedId(),
-                ReferenceAttributes.createReferenceAttributes(ref.modificationUuid(), rootContainerId, containerId, targetReferenceType), userId));
+        modificationReferences.forEach(ref -> directoryService.updateElementReference(
+                ref.referencedId(),
+                ReferenceAttributes.createReferenceAttributes(ref.modificationUuid(), rootContainerId, containerId, targetReferenceType), userId)
+        );
     }
 
     private void emitNetworkModificationImpactsForAllRootNetworks(List<Optional<NetworkModificationResult>> modificationResults, StudyEntity studyEntity, UUID impactedNode) {
@@ -1937,24 +1939,11 @@ public class StudyService {
             String userId) {
         duplicateModificationsOrInsertComposites(targetStudyUuid, targetNodeUuid,
                 (groupUuid, modificationApplicationContexts) -> {
-                    NetworkModificationsResult result = networkModificationService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts));
-                    createElementsReferences(networkModificationService.getChildrenModificationsReferences(result.modificationUuids()), targetStudyUuid, targetNodeUuid, userId);
+                    NetworkModificationsResult result = networkModificationService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts), userId);
+                    directoryService.createElementsReferences(networkModificationService.getChildrenModificationsReferences(result.modificationUuids()), targetStudyUuid, targetNodeUuid, userId);
                     return result;
                 },
                 userId);
-    }
-
-    private void createElementsReferences(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, String userId) {
-        references.forEach(ref -> {
-            boolean insideComposite = ref.containerId() != null;
-            ReferenceAttributes referenceAttributes = ReferenceAttributes.createReferenceAttributes(
-                    ref.modificationUuid(),
-                    insideComposite ? nodeUuid : studyUuid,
-                    insideComposite ? ref.containerId() : nodeUuid,
-                    insideComposite ? ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION
-                            : ReferenceAttributes.ReferenceType.STUDY_NODE);
-            directoryService.createElementReference(ref.referencedId(), referenceAttributes, userId);
-        });
     }
 
     @Transactional
@@ -1967,7 +1956,7 @@ public class StudyService {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
         try {
             checkStudyContainsNode(targetStudyUuid, targetNodeUuid);
-            newCompositeUuid = networkModificationService.assembleModificationsIntoComposite(modificationsUuids);
+            newCompositeUuid = networkModificationService.assembleModificationsIntoComposite(modificationsUuids, targetNodeUuid, userId);
         } finally {
             notificationService.emitModificationsUpdated(targetStudyUuid, targetNodeUuid, childrenUuids);
         }
@@ -2003,7 +1992,7 @@ public class StudyService {
             directoryService.createElement(parentDirectoryUuid, description, modificationUuid, name, DirectoryService.MODIFICATION, userId);
             // extraction replaced the local composite by a new reference modification, in the node group or in a parent
             // composite: register it on the shared element
-            createElementsReferences(List.of(newReference), studyUuid, nodeUuid, userId);
+            directoryService.createElementsReferences(List.of(newReference), studyUuid, nodeUuid, userId);
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
         }
@@ -2419,7 +2408,7 @@ public class StudyService {
             throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, String.format("Missing results for rootNetwork %s on node %s", rootNetworkUuid, nodeUuid));
         }
         UUID voltageInitModificationsGroupUuid = voltageInitRestService.getModificationsGroupUuid(nodeUuid, resultUuid);
-        return networkModificationService.getModifications(voltageInitModificationsGroupUuid, false, false);
+        return networkModificationService.getModifications(voltageInitModificationsGroupUuid, false, false, null);
     }
 
     @Transactional
@@ -2452,7 +2441,7 @@ public class StudyService {
             });
             // duplicate the modification created by voltageInit server into the current node
             NetworkModificationsResult networkModificationResults = networkModificationService.duplicateModificationsFromGroup(networkModificationTreeService.getModificationGroupUuid(nodeUuid),
-                    voltageInitModificationsGroupUuid, Pair.of(List.of(), modificationApplicationContexts));
+                    voltageInitModificationsGroupUuid, Pair.of(List.of(), modificationApplicationContexts), userId);
 
             // We expect a single voltageInit modification in the result list
             if (networkModificationResults != null && networkModificationResults.modificationUuids().size() == 1) {
@@ -2492,18 +2481,19 @@ public class StudyService {
     }
 
     @Transactional
-    public String getNetworkElementsInfosByGlobalFilter(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, EquipmentType equipmentType, String infoType, GlobalFilter filter) {
-        // Get the list of equipment ids that match the filter
-        List<String> equipmentIds = self.evaluateGlobalFilter(nodeUuid, rootNetworkUuid, List.of(equipmentType), filter);
-
+    public String getNetworkElementsInfosFromFilters(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, EquipmentType equipmentType, String infoType, List<UUID> filterUuids) {
         // Get the requested info for the filtered equipment ids
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, true);
         StudyEntity studyEntity = getStudy(studyUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid);
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
+        // Get the list of equipment ids that match the filter
+        List<String> equipmentIds = filterService.evaluateFiltersToNetworkElementIds(networkUuid, filterUuids, variantId);
         LoadFlowParameters loadFlowParameters = loadFlowService.getCommonParameters(studyEntity);
 
         return networkMapService.getElementsInfosByIds(
-            rootNetworkService.getNetworkUuid(rootNetworkUuid),
-            networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid),
+            networkUuid,
+            variantId,
             String.valueOf(equipmentType),
             infoType,
             getOptionalParameters(String.valueOf(equipmentType), studyEntity, loadFlowParameters),

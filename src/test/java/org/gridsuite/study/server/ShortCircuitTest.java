@@ -55,10 +55,12 @@ import java.util.*;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.matching;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.gridsuite.study.server.StudyConstants.HEADER_BUS_ID;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_DEBUG;
-import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
+import static org.gridsuite.study.server.notification.NotificationService.*;
+import static org.gridsuite.study.server.utils.TestUtils.STUDY_UPDATE_DESTINATION;
 import static org.gridsuite.study.server.utils.TestUtils.USER_DEFAULT_PROFILE_JSON;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -925,5 +927,32 @@ class ShortCircuitTest implements WithAssertions {
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
         }
+    }
+
+    @Test
+    void consumeShortCircuitRunning() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, null);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
+
+        Message<String> runningMessage = MessageBuilder.withPayload("")
+                .setHeader(HEADER_RECEIVER, objectMapper.writeValueAsString(new NodeReceiver(modificationNode1Uuid, firstRootNetworkUuid)))
+                .build();
+        consumerService.consumeShortCircuitAnalysisRunning().accept(runningMessage);
+        Message<byte[]> test = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
+        assertEquals(UPDATE_TYPE_SHORT_CIRCUIT_STATUS, test.getHeaders().get(HEADER_UPDATE_TYPE));
+
+        // One bus
+        runningMessage = MessageBuilder.withPayload("")
+                .setHeader(HEADER_RECEIVER, objectMapper.writeValueAsString(new NodeReceiver(modificationNode1Uuid, firstRootNetworkUuid)))
+                .setHeader(HEADER_BUS_ID, "busId")
+                .build();
+        consumerService.consumeShortCircuitAnalysisRunning().accept(runningMessage);
+        test = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
+        assertEquals(UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS, test.getHeaders().get(HEADER_UPDATE_TYPE));
     }
 }

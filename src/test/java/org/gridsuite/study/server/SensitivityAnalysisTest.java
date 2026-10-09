@@ -913,4 +913,21 @@ class SensitivityAnalysisTest {
         TestUtils.assertWiremockServerRequestsEmptyThenShutdown(wireMockServer);
         TestUtils.assertQueuesEmptyThenClear(destinations, output);
     }
+
+    @Test
+    void consumeSensitivityAnalysisRunning() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
+
+        Message<String> runningMessage = MessageBuilder.withPayload("")
+                .setHeader(HEADER_RECEIVER, objectMapper.writeValueAsString(new NodeReceiver(modificationNode1Uuid, firstRootNetworkUuid)))
+                .build();
+        consumerService.consumeSensitivityAnalysisRunning().accept(runningMessage);
+        Message<byte[]> test = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
+        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, test.getHeaders().get(HEADER_UPDATE_TYPE));
+    }
 }
