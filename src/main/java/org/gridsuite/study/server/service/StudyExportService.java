@@ -191,14 +191,17 @@ public class StudyExportService {
     private void exportModifications(NodeTreeExportInfos nodeTree, Path tempDir, String userId) throws IOException {
         if (nodeTree != null) {
             Path modificationsDir = Files.createDirectories(tempDir.resolve(MODIFICATIONS_FOLDER));
-            if (nodeTree.modificationGroupUuid() != null) {
-                collectModificationsByGroupUuid(modificationsDir, nodeTree.modificationGroupUuid(), userId);
+            exportNodeModifications(nodeTree, modificationsDir, userId);
+        }
+    }
 
-            }
-            if (nodeTree.children() != null) {
-                for (NodeTreeExportInfos child : nodeTree.children()) {
-                    collectModificationsByGroupUuid(modificationsDir, child.modificationGroupUuid(), userId);
-                }
+    private void exportNodeModifications(NodeTreeExportInfos node, Path modificationsDir, String userId) throws IOException {
+        if (node.modificationGroupUuid() != null) {
+            collectModificationsByGroupUuid(modificationsDir, node.modificationGroupUuid(), userId);
+        }
+        if (node.children() != null) {
+            for (NodeTreeExportInfos child : node.children()) {
+                exportNodeModifications(child, modificationsDir, userId);
             }
         }
     }
