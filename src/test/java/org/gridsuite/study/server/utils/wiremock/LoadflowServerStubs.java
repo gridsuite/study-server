@@ -171,6 +171,16 @@ public class LoadflowServerStubs {
         }
     }
 
+    public void stubResetLoadflowParameters(String parametersUuid) {
+        wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/parameters/" + parametersUuid + "/reset"))
+                .willReturn(WireMock.ok())
+        );
+    }
+
+    public void verifyResetLoadflowParameters(String parametersUuid) {
+        WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/parameters/" + parametersUuid + "/reset", Map.of(), null);
+    }
+
     public void stubCreateLoadflowParameters(String parametersUuid) {
         wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/v1/parameters"))
                 .willReturn(WireMock.ok().withBody(parametersUuid)

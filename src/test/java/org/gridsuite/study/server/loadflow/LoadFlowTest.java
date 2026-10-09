@@ -648,18 +648,22 @@ class LoadFlowTest {
 
     private void updateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String loadflowParametersUuid, String userId, HttpStatusCode status, String returnedUserProfileJson,
             boolean shouldDuplicate, String duplicateFromUuid, boolean duplicateIsNotFound) throws Exception {
-        wireMockStubs.loadflowServer.stubPutLoadflowParameters(loadflowParametersUuid, parameters);
         UUID duplicatedLoadflowParametersUuid = UUID.randomUUID();
         if (parameters == null || parameters.isEmpty()) {
+            wireMockStubs.loadflowServer.stubResetLoadflowParameters(loadflowParametersUuid);
             wireMockStubs.userAdminServer.stubGetUserProfile(userId, returnedUserProfileJson);
+        } else {
+            wireMockStubs.loadflowServer.stubPutLoadflowParameters(loadflowParametersUuid, parameters);
         }
         if (shouldDuplicate) {
             wireMockStubs.loadflowServer.stubDuplicateLoadflowParameters(duplicateFromUuid, objectMapper.writeValueAsString(duplicatedLoadflowParametersUuid), duplicateIsNotFound);
         }
         setOrResetParameters(studyNameUserIdUuid, parameters, userId, status);
-        wireMockStubs.loadflowServer.verifyPutLoadflowParameters(loadflowParametersUuid, parameters);
         if (parameters == null || parameters.isEmpty()) {
+            wireMockStubs.loadflowServer.verifyResetLoadflowParameters(loadflowParametersUuid);
             wireMockStubs.userAdminServer.verifyGetUserProfile(userId);
+        } else {
+            wireMockStubs.loadflowServer.verifyPutLoadflowParameters(loadflowParametersUuid, parameters);
         }
         if (shouldDuplicate) {
             wireMockStubs.loadflowServer.verifyDuplicateLoadflowParameters(duplicateFromUuid);
@@ -889,7 +893,7 @@ class LoadFlowTest {
          */
 
         wireMockStubs.userAdminServer.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
-        wireMockStubs.loadflowServer.stubPutLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING, null);
+        wireMockStubs.loadflowServer.stubResetLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING);
         wireMockStubs.loadflowServer.stubPutInvalidateStatus();
         wireMockStubs.loadflowServer.stubDeleteLoadflowResults(LOADFLOW_OTHER_NODE_RESULT_UUID);
         wireMockStubs.reportServer.stubDeleteReport();
@@ -898,7 +902,7 @@ class LoadFlowTest {
         loadFlowService.resetLoadFlowParameters(studyUuid, NO_PROFILE_USER_ID);
 
         wireMockStubs.userAdminServer.verifyGetUserProfile(NO_PROFILE_USER_ID);
-        wireMockStubs.loadflowServer.verifyPutLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING, null);
+        wireMockStubs.loadflowServer.verifyResetLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING);
         wireMockStubs.loadflowServer.verifyPutInvalidateStatus();
         wireMockStubs.loadflowServer.verifyDeleteLoadflowResults();
         wireMockStubs.reportServer.verifyDeleteReport();
