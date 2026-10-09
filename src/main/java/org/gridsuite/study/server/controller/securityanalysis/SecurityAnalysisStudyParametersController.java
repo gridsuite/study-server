@@ -47,7 +47,7 @@ public class SecurityAnalysisStudyParametersController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters are set")})
     public ResponseEntity<Void> setSecurityAnalysisParametersValues(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String securityAnalysisParametersValues,
+            @RequestBody String securityAnalysisParametersValues,
             @RequestHeader(HEADER_USER_ID) String userId) {
         securityAnalysisService.setSecurityAnalysisParametersValues(studyUuid, securityAnalysisParametersValues, userId);
         return ResponseEntity.ok().build();

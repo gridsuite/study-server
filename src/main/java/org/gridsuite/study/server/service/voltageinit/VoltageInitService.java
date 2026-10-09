@@ -185,7 +185,7 @@ public class VoltageInitService extends AbstractComputationService {
         if (existingVoltageInitParametersUuid == null) {
             studyEntity.setVoltageInitParametersUuid(voltageInitRestService.createVoltageInitParameters(null));
         } else {
-            voltageInitRestService.updateVoltageInitParameters(existingVoltageInitParametersUuid, null);
+            voltageInitRestService.resetVoltageInitParameters(existingVoltageInitParametersUuid);
         }
         return userProfileIssue;
     }
