@@ -1865,7 +1865,7 @@ public class StudyService {
             NetworkModificationsResult result = networkModificationService.moveModifications(
                     networkModificationTreeService.getModificationGroupUuid(originNodeUuid),
                     networkModificationTreeService.getModificationGroupUuid(targetNodeUuid),
-                    modificationInfos, applicationContexts, isTargetInDifferentNodeTree);
+                    modificationInfos, applicationContexts, isTargetInDifferentNodeTree, userId);
             if (result != null && isTargetInDifferentNodeTree) {
                 emitNetworkModificationImpactsForAllRootNetworks(result.modificationResults(), studyEntity, targetNodeUuid);
             }
@@ -1939,7 +1939,7 @@ public class StudyService {
             String userId) {
         duplicateModificationsOrInsertComposites(targetStudyUuid, targetNodeUuid,
                 (groupUuid, modificationApplicationContexts) -> {
-                    NetworkModificationsResult result = networkModificationService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts));
+                    NetworkModificationsResult result = networkModificationService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts), userId);
                     directoryService.createElementsReferences(networkModificationService.getChildrenModificationsReferences(result.modificationUuids()), targetStudyUuid, targetNodeUuid, userId);
                     return result;
                 },
@@ -2442,7 +2442,7 @@ public class StudyService {
             });
             // duplicate the modification created by voltageInit server into the current node
             NetworkModificationsResult networkModificationResults = networkModificationService.duplicateModificationsFromGroup(networkModificationTreeService.getModificationGroupUuid(nodeUuid),
-                    voltageInitModificationsGroupUuid, Pair.of(List.of(), modificationApplicationContexts));
+                    voltageInitModificationsGroupUuid, Pair.of(List.of(), modificationApplicationContexts), userId);
 
             // We expect a single voltageInit modification in the result list
             if (networkModificationResults != null && networkModificationResults.modificationUuids().size() == 1) {
