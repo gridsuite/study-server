@@ -20,7 +20,6 @@ import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
-import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -96,17 +95,35 @@ public class ShortCircuitService extends AbstractComputationService {
     }
 
     @Transactional
-    public boolean setShortCircuitParameters(UUID studyUuid, @Nullable String shortCircuitParametersInfos, String userId) {
-        return setComputationParameters(
+    public void setShortCircuitParameters(UUID studyUuid, String shortCircuitParametersInfos, String userId) {
+        setComputationParameters(
                 studyUuid,
                 shortCircuitParametersInfos,
                 userId,
                 StudyEntity::getShortCircuitParametersUuid,
                 StudyEntity::setShortCircuitParametersUuid,
-                UserProfileInfos::getShortcircuitParameterId,
-                shortCircuitRestService,
                 shortCircuitRestService::createParameters,
                 shortCircuitRestService::updateParameters,
+                SHORT_CIRCUIT,
+                List.of(this::invalidateShortCircuitStatusOnAllNodes,
+                        rootNetworkNodeInfoService::invalidatePccMinStatusOnAllNodes,
+                        asymmetricalLoadService::invalidateAsymmetricalLoadStatusOnAllNodes),
+                NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS,
+                NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS,
+                NotificationService.UPDATE_TYPE_PCC_MIN_STATUS
+        );
+    }
+
+    @Transactional
+    public boolean resetShortCircuitParameters(UUID studyUuid, String userId) {
+        return resetComputationParameters(
+                studyUuid,
+                userId,
+                StudyEntity::getShortCircuitParametersUuid,
+                StudyEntity::setShortCircuitParametersUuid,
+                UserProfileInfos::getShortcircuitParameterId,
+                shortCircuitRestService,
+                shortCircuitRestService::resetParameters,
                 SHORT_CIRCUIT,
                 List.of(this::invalidateShortCircuitStatusOnAllNodes,
                         rootNetworkNodeInfoService::invalidatePccMinStatusOnAllNodes,

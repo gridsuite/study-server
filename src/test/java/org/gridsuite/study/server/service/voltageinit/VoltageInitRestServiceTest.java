@@ -24,6 +24,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.VOLTAGE_INIT_API_VERSION;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -61,5 +62,14 @@ class VoltageInitRestServiceTest {
         when(restTemplate.getForObject(BASE_URI + "/" + VOLTAGE_INIT_API_VERSION + "/parameters/" + parameterUuid, VoltageInitParametersInfos.class)).thenReturn(parameters);
 
         assertThat(voltageInitRestService.getParameters(parameterUuid)).isEqualTo(parameters);
+    }
+
+    @Test
+    void testResetParameters() {
+        UUID parametersUuid = UUID.randomUUID();
+
+        voltageInitRestService.resetVoltageInitParameters(parametersUuid);
+
+        verify(restTemplate).exchange(BASE_URI + "/" + VOLTAGE_INIT_API_VERSION + "/parameters/" + parametersUuid + "/reset", HttpMethod.PUT, null, UUID.class);
     }
 }

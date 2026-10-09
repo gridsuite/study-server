@@ -43,14 +43,23 @@ public class StateEstimationStudyParametersController {
     }
 
     @PostMapping(value = "/parameters")
-    @Operation(summary = "set state estimation parameters on study, reset to default ones if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation parameters are set"),
-        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    @Operation(summary = "set state estimation parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation parameters are set")})
     public ResponseEntity<Void> setStateEstimationParametersValues(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String stateEstimationParametersValues,
+            @RequestBody String stateEstimationParametersValues,
             @RequestHeader(HEADER_USER_ID) String userId) {
         stateEstimationService.setStateEstimationParametersValues(studyUuid, stateEstimationParametersValues, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/parameters/reset")
+    @Operation(summary = "reset state estimation parameters on study to default ones")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation parameters are reset")})
+    public ResponseEntity<Void> resetStateEstimationParametersValues(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        stateEstimationService.resetStateEstimationParametersValues(studyUuid, userId);
         return ResponseEntity.ok().build();
     }
 }

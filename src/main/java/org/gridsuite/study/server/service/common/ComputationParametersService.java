@@ -13,6 +13,7 @@ import org.gridsuite.study.server.dto.ServiceStatusInfos;
 import org.gridsuite.study.server.dto.ServiceStatusInfos.ServiceStatus;
 import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.dto.computation.ComputationParameterUUIDs;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.RemoteServiceName;
@@ -36,8 +37,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
 /**
  * @author Abdelsalem HEDHILI <abdelsalem.hedhili at rte-france.com>
@@ -200,25 +204,23 @@ public class ComputationParametersService {
         );
     }
 
-    public <T> boolean createOrUpdateParameters(
+    public boolean resetParameters(
             StudyEntity studyEntity,
-            T parameters,
             String userId,
             Function<StudyEntity, UUID> studyParameterGetter,
             BiConsumer<StudyEntity, UUID> studyParameterSetter,
             Function<UserProfileInfos, UUID> profileParameterGetter,
             ComputationParameters computationParameters,
-            Function<T, UUID> createParameters,
-            BiConsumer<UUID, T> updateParameters,
+            Consumer<UUID> resetParameters,
             String computationType
     ) {
         boolean userProfileIssue = false;
         UUID existingParametersUuid = studyParameterGetter.apply(studyEntity);
 
-        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
+        UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
         UUID profileParameterId = userProfileInfos == null ? null : profileParameterGetter.apply(userProfileInfos);
 
-        if (parameters == null && profileParameterId != null) {
+        if (profileParameterId != null) {
             try {
                 UUID parametersFromProfileUuid = computationParameters.duplicateParameters(profileParameterId);
                 studyParameterSetter.accept(studyEntity, parametersFromProfileUuid);
@@ -237,7 +239,7 @@ public class ComputationParametersService {
             }
         }
 
-        createOrUpdateParameters(studyEntity, parameters, studyParameterGetter, studyParameterSetter, createParameters, updateParameters);
+        resetParameters(studyEntity, studyParameterGetter, resetParameters);
         return userProfileIssue;
     }
 
@@ -255,6 +257,19 @@ public class ComputationParametersService {
             studyParameterSetter.accept(studyEntity, newParametersUuid);
         } else {
             updateParameters.accept(existingParametersUuid, parameters);
+        }
+    }
+
+    public void resetParameters(
+            StudyEntity studyEntity,
+            Function<StudyEntity, UUID> studyParameterGetter,
+            Consumer<UUID> resetParameters
+    ) {
+        UUID existingParametersUuid = studyParameterGetter.apply(studyEntity);
+        if (existingParametersUuid == null) {
+            throw new StudyException(NOT_FOUND, "Parameter not found");
+        } else {
+            resetParameters.accept(existingParametersUuid);
         }
     }
 

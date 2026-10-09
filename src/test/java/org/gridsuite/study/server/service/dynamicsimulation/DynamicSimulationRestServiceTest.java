@@ -230,6 +230,26 @@ class DynamicSimulationRestServiceTest extends AbstractWireMockRestClientTest {
     }
 
     @Test
+    void testResetParameters() {
+        String url = PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID + DELIMITER + "reset";
+
+        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url)).willReturn(WireMock.ok()));
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicSimulationRestService.resetParameters(PARAMETERS_UUID));
+
+        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url)).willReturn(WireMock.notFound()));
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSimulationRestService.resetParameters(PARAMETERS_UUID)
+        );
+
+        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url)).willReturn(WireMock.serverError()));
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSimulationRestService.resetParameters(PARAMETERS_UUID)
+        );
+    }
+
+    @Test
     void testDuplicateParameters() throws Exception {
         UUID newParameterUuid = UUID.randomUUID();
 

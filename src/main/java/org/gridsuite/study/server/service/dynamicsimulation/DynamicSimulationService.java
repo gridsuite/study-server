@@ -62,17 +62,33 @@ public class DynamicSimulationService extends AbstractComputationService {
     }
 
     @Transactional
-    public boolean setDynamicSimulationParameters(UUID studyUuid, String dsParameter, String userId) {
-        return setComputationParameters(
+    public void setDynamicSimulationParameters(UUID studyUuid, String dsParameter, String userId) {
+        setComputationParameters(
                 studyUuid,
                 dsParameter,
                 userId,
                 StudyEntity::getDynamicSimulationParametersUuid,
                 StudyEntity::setDynamicSimulationParametersUuid,
-                UserProfileInfos::getDynamicSimulationParameterId,
-                dynamicSimulationRestService,
                 dynamicSimulationRestService::createParameters,
                 dynamicSimulationRestService::updateParameters,
+                DYNAMIC_SIMULATION,
+                List.of(rootNetworkNodeInfoService::invalidateDynamicSimulationStatusOnAllNodes,
+                        rootNetworkNodeInfoService::invalidateDynamicSecurityAnalysisStatusOnAllNodes),
+                NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS,
+                NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS
+        );
+    }
+
+    @Transactional
+    public boolean resetDynamicSimulationParameters(UUID studyUuid, String userId) {
+        return resetComputationParameters(
+                studyUuid,
+                userId,
+                StudyEntity::getDynamicSimulationParametersUuid,
+                StudyEntity::setDynamicSimulationParametersUuid,
+                UserProfileInfos::getDynamicSimulationParameterId,
+                dynamicSimulationRestService,
+                dynamicSimulationRestService::resetParameters,
                 DYNAMIC_SIMULATION,
                 List.of(rootNetworkNodeInfoService::invalidateDynamicSimulationStatusOnAllNodes,
                         rootNetworkNodeInfoService::invalidateDynamicSecurityAnalysisStatusOnAllNodes),

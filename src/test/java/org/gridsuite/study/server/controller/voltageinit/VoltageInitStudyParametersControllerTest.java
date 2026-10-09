@@ -49,8 +49,6 @@ class VoltageInitStudyParametersControllerTest {
     void testSetVoltageInitParameters() throws Exception {
         UUID studyUuid = UUID.randomUUID();
         StudyVoltageInitParameters parameters = StudyVoltageInitParameters.builder().applyModifications(true).build();
-        when(voltageInitService.setVoltageInitParameters(studyUuid, parameters, USER_ID)).thenReturn(false);
-
         mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
                 .header(HEADER_USER_ID, USER_ID)
                 .content(PARAMETERS)
@@ -62,16 +60,29 @@ class VoltageInitStudyParametersControllerTest {
     }
 
     @Test
-    void testSetVoltageInitParametersReturnsNoContent() throws Exception {
+    void testResetVoltageInitParameters() throws Exception {
         UUID studyUuid = UUID.randomUUID();
-        when(voltageInitService.setVoltageInitParameters(studyUuid, null, USER_ID)).thenReturn(true);
+        when(voltageInitService.resetVoltageInitParameters(studyUuid, USER_ID)).thenReturn(false);
 
-        mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
+        mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid)
+                .header(HEADER_USER_ID, USER_ID))
+            .andExpect(status().isOk())
+            .andExpect(content().string(""));
+
+        verify(voltageInitService).resetVoltageInitParameters(studyUuid, USER_ID);
+    }
+
+    @Test
+    void testResetVoltageInitParametersReturnsNoContent() throws Exception {
+        UUID studyUuid = UUID.randomUUID();
+        when(voltageInitService.resetVoltageInitParameters(studyUuid, USER_ID)).thenReturn(true);
+
+        mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid)
                 .header(HEADER_USER_ID, USER_ID))
             .andExpect(status().isNoContent())
             .andExpect(content().string(""));
 
-        verify(voltageInitService).setVoltageInitParameters(studyUuid, null, USER_ID);
+        verify(voltageInitService).resetVoltageInitParameters(studyUuid, USER_ID);
     }
 
     @Test

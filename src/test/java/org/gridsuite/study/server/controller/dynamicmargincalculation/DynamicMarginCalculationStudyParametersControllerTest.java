@@ -58,8 +58,6 @@ class DynamicMarginCalculationStudyParametersControllerTest {
     @Test
     void testSetDynamicMarginCalculationParameters() throws Exception {
         UUID studyUuid = UUID.randomUUID();
-        when(dynamicMarginCalculationService.setDynamicMarginCalculationParameters(studyUuid, PARAMETERS, USER_ID)).thenReturn(false);
-
         mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
                 .header(HEADER_USER_ID, USER_ID)
                 .content(PARAMETERS)
@@ -71,16 +69,29 @@ class DynamicMarginCalculationStudyParametersControllerTest {
     }
 
     @Test
-    void testSetDynamicMarginCalculationParametersReturnsNoContent() throws Exception {
+    void testResetDynamicMarginCalculationParameters() throws Exception {
         UUID studyUuid = UUID.randomUUID();
-        when(dynamicMarginCalculationService.setDynamicMarginCalculationParameters(studyUuid, null, USER_ID)).thenReturn(true);
+        when(dynamicMarginCalculationService.resetDynamicMarginCalculationParameters(studyUuid, USER_ID)).thenReturn(false);
 
-        mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
+        mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid)
+                .header(HEADER_USER_ID, USER_ID))
+            .andExpect(status().isOk())
+            .andExpect(content().string(""));
+
+        verify(dynamicMarginCalculationService).resetDynamicMarginCalculationParameters(studyUuid, USER_ID);
+    }
+
+    @Test
+    void testResetDynamicMarginCalculationParametersReturnsNoContent() throws Exception {
+        UUID studyUuid = UUID.randomUUID();
+        when(dynamicMarginCalculationService.resetDynamicMarginCalculationParameters(studyUuid, USER_ID)).thenReturn(true);
+
+        mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid)
                 .header(HEADER_USER_ID, USER_ID))
             .andExpect(status().isNoContent())
             .andExpect(content().string(""));
 
-        verify(dynamicMarginCalculationService).setDynamicMarginCalculationParameters(studyUuid, null, USER_ID);
+        verify(dynamicMarginCalculationService).resetDynamicMarginCalculationParameters(studyUuid, USER_ID);
     }
 
     @Test

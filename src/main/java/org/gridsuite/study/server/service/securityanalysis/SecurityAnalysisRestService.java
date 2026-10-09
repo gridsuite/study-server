@@ -214,7 +214,7 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
         }
     }
 
-    public void updateSecurityAnalysisParameters(UUID parametersUuid, @Nullable String parameters) {
+    public void updateSecurityAnalysisParameters(UUID parametersUuid, String parameters) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{uuid}");
         String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
 
@@ -223,6 +223,12 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
         restTemplate.put(baseUri + path, httpEntity);
+    }
+
+    public void resetSecurityAnalysisParameters(UUID parametersUuid) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{uuid}/reset");
+        String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
+        restTemplate.put(baseUri + path, null);
     }
 
     @Override

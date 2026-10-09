@@ -43,13 +43,24 @@ public class SecurityAnalysisStudyParametersController {
     }
 
     @PostMapping(value = "/parameters")
-    @Operation(summary = "set security analysis parameters on study, reset to default ones if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters are set"),
-        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    @Operation(summary = "set security analysis parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters are set")})
     public ResponseEntity<Void> setSecurityAnalysisParametersValues(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String securityAnalysisParametersValues,
+            @RequestBody String securityAnalysisParametersValues,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        return securityAnalysisService.setSecurityAnalysisParametersValues(studyUuid, securityAnalysisParametersValues, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
+        securityAnalysisService.setSecurityAnalysisParametersValues(studyUuid, securityAnalysisParametersValues, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/parameters/reset")
+    @Operation(summary = "reset to default ones if empty body")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The security analysis parameters are reset"),
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    public ResponseEntity<Void> resetSecurityAnalysisParametersValues(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        return securityAnalysisService.resetSecurityAnalysisParametersValues(studyUuid, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 }

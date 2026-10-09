@@ -23,6 +23,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.STATE_ESTIMATION_API_VERSION;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -51,5 +52,14 @@ class StateEstimationRestServiceTest {
         when(restTemplate.exchange(url, HttpMethod.GET, null, Resource.class)).thenReturn(response);
 
         assertThat(stateEstimationRestService.downloadDebugFile(resultUuid)).isEqualTo(response);
+    }
+
+    @Test
+    void testResetParameters() {
+        UUID parametersUuid = UUID.randomUUID();
+
+        stateEstimationRestService.resetStateEstimationParameters(parametersUuid);
+
+        verify(restTemplate).put(BASE_URI + "/" + STATE_ESTIMATION_API_VERSION + "/parameters/" + parametersUuid + "/reset", (Object) null);
     }
 }

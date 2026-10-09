@@ -284,7 +284,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
         return restTemplate.postForObject(baseUri + path, null, UUID.class);
     }
 
-    public void updateSensitivityAnalysisParameters(UUID parametersUuid, @Nullable String parameters) {
+    public void updateSensitivityAnalysisParameters(UUID parametersUuid, String parameters) {
         var path = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(parametersUuid)
@@ -296,6 +296,15 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
         restTemplate.put(baseUri + path, httpEntity);
+    }
+
+    public void resetSensitivityAnalysisParameters(UUID parametersUuid) {
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI + "/reset")
+                .buildAndExpand(parametersUuid)
+                .toUriString();
+
+        restTemplate.put(baseUri + path, null);
     }
 
     @Override
