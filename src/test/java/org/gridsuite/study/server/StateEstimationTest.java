@@ -61,8 +61,7 @@ import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.dto.ComputationType.STATE_ESTIMATION;
-import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
-import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
+import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -504,5 +503,16 @@ class StateEstimationTest {
         assertEquals(LOGICAL_CONTROLS_RESULT_JSON, mvcResult.getResponse().getContentAsString());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches(
                 "/v1/networks/" + NETWORK_UUID_STRING + "/logical-controls\\?variantId=" + VARIANT_ID)));
+    }
+
+    @Test
+    void consumeStateEstimationRunning() throws Exception {
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node1", null);
+        Message<String> runningMessage = MessageBuilder.withPayload("")
+                .setHeader(HEADER_RECEIVER, objectMapper.writeValueAsString(new NodeReceiver(ids.nodeId, ids.rootNetworkUuid)))
+                .build();
+        consumerService.consumeStateEstimationRunning().accept(runningMessage);
+        Message<byte[]> test = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
+        assertEquals(UPDATE_TYPE_STATE_ESTIMATION_STATUS, test.getHeaders().get(HEADER_UPDATE_TYPE));
     }
 }

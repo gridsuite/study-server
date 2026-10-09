@@ -190,30 +190,33 @@ public class StudyExportService {
 
     private void exportModifications(NodeTreeExportInfos nodeTree, Path tempDir, String userId) throws IOException {
         if (nodeTree != null) {
+            Set<UUID> filterUuids = new HashSet<>();
+            Set<UUID> loadFlowParametersUuids = new HashSet<>();
             Path modificationsDir = Files.createDirectories(tempDir.resolve(MODIFICATIONS_FOLDER));
-            if (nodeTree.modificationGroupUuid() != null) {
-                collectModificationsByGroupUuid(modificationsDir, nodeTree.modificationGroupUuid(), userId);
+            exportNodeModifications(nodeTree, modificationsDir, filterUuids, loadFlowParametersUuids, userId);
+            collectFiltersByByGroupUuid(modificationsDir, filterUuids);
+            collectLoadFlowParametersUuidsByByGroupUuid(modificationsDir, loadFlowParametersUuids);
+        }
+    }
 
-            }
-            if (nodeTree.children() != null) {
-                for (NodeTreeExportInfos child : nodeTree.children()) {
-                    collectModificationsByGroupUuid(modificationsDir, child.modificationGroupUuid(), userId);
-                }
+    private void exportNodeModifications(NodeTreeExportInfos node, Path modificationsDir, Set<UUID> filterUuids, Set<UUID> loadFlowParametersUuids, String userId) throws IOException {
+        if (node.modificationGroupUuid() != null) {
+            collectModificationsByGroupUuid(modificationsDir, node.modificationGroupUuid(), filterUuids, loadFlowParametersUuids, userId);
+        }
+        if (node.children() != null) {
+            for (NodeTreeExportInfos child : node.children()) {
+                exportNodeModifications(child, modificationsDir, filterUuids, loadFlowParametersUuids, userId);
             }
         }
     }
 
-    private void collectModificationsByGroupUuid(Path modificationsDir, UUID groupUuid, String userId) throws IOException {
+    private void collectModificationsByGroupUuid(Path modificationsDir, UUID groupUuid, Set<UUID> filterUuids, Set<UUID> loadFlowParametersUuids, String userId) throws IOException {
         String modifications = networkModificationService.getModifications(groupUuid, false, false, userId);
         Files.writeString(modificationsDir.resolve(groupUuid + JSON), modifications);
-        Set<UUID> filterUuids = new HashSet<>();
-        Set<UUID> loadFlowParametersUuids = new HashSet<>();
         for (ExportedModificationsInfos references : objectMapper.readValue(modifications, ExportedModificationsInfos[].class)) {
             filterUuids.addAll(references.getFilterUuids());
             loadFlowParametersUuids.addAll(references.getLoadFlowParametersUuids());
         }
-        collectFiltersByByGroupUuid(modificationsDir, filterUuids);
-        collectLoadFlowParametersUuidsByByGroupUuid(modificationsDir, loadFlowParametersUuids);
     }
 
     private void collectFiltersByByGroupUuid(Path modificationsDir, Set<UUID> filterUuids) throws IOException {

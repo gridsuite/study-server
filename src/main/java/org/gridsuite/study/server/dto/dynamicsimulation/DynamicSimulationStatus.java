@@ -12,6 +12,7 @@ package org.gridsuite.study.server.dto.dynamicsimulation;
  */
 public enum DynamicSimulationStatus {
     NOT_DONE,
+    PRELOADING,
     RUNNING,
     CONVERGED,
     DIVERGED
