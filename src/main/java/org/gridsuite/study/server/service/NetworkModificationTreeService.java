@@ -254,8 +254,9 @@ public class NetworkModificationTreeService {
                 insertMode
         );
 
-        // Then we create the modification group: its references are registered on reception of the network-modification-server notification
+        // Then we create the modification group, and recreate its references once the node is committed
         networkModificationService.duplicateModificationsGroup(modificationGroupUuid, newGroupUuid, userId);
+        networkModificationService.recreateReferences(newGroupUuid, userId);
 
         return node.getId();
     }
@@ -568,6 +569,7 @@ public class NetworkModificationTreeService {
             nextParentId = duplicateNode(newStudyEntity, nodeParentId, model, InsertMode.CHILD).getId();
 
             networkModificationService.duplicateModificationsGroup(modificationGroupToDuplicateId, newModificationGroupId, userId);
+            networkModificationService.recreateReferences(newModificationGroupId, userId);
         } else {
             // when cloning studyTree, we don't clone root node
             // if cloning the whole study, the root node is previously created

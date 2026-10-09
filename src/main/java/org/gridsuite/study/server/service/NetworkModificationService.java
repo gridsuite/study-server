@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
+import org.gridsuite.study.server.utils.annotations.PostCompletion;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.util.Pair;
@@ -641,6 +642,22 @@ public class NetworkModificationService {
                 HttpMethod.DELETE,
                 httpEntity,
                 new ParameterizedTypeReference<Map<UUID, UUID>>() { });
+    }
+
+    /**
+     * Asks network-modification-server to notify back the recreation of the references of the group, so that they are created in directory-server.
+     * Called after the commit only, so that the node holding the group is resolvable when the notification is consumed.
+     */
+    @PostCompletion
+    public void recreateReferences(UUID groupUuid, String userId) {
+        Objects.requireNonNull(groupUuid);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + "/references")
+                .buildAndExpand(groupUuid)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.POST, new HttpEntity<>(headers), Void.class);
     }
 
     public void verifyModifications(UUID groupUuid, Set<UUID> modificationUuids) {

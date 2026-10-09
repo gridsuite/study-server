@@ -129,6 +129,34 @@ class ConsumerServiceCompositeReferenceTest {
         verifyNoInteractions(directoryService);
     }
 
+    @Test
+    void testRecreateReferences() {
+        when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid))
+                .thenReturn(Optional.of(new NodeInfos(nodeUuid, "node", studyUuid)));
+
+        consumerService.consumeCompositeReferenceRecreation().accept(compositeReferenceRecreationMessage());
+
+        verify(directoryService).createElementsReferences(references, studyUuid, nodeUuid, USER_ID);
+        verifyNoMoreInteractions(directoryService);
+    }
+
+    @Test
+    void testRecreateReferencesWithUnknownGroup() {
+        when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid)).thenReturn(Optional.empty());
+
+        Message<List<ModificationReference>> message = compositeReferenceRecreationMessage();
+        Consumer<Message<List<ModificationReference>>> consumeRecreation = consumerService.consumeCompositeReferenceRecreation();
+        assertThrows(IllegalStateException.class, () -> consumeRecreation.accept(message));
+        verifyNoInteractions(directoryService);
+    }
+
+    private Message<List<ModificationReference>> compositeReferenceRecreationMessage() {
+        return MessageBuilder.withPayload(references)
+                .setHeader(ConsumerService.HEADER_GROUP_UUID, groupUuid.toString())
+                .setHeader("userId", USER_ID)
+                .build();
+    }
+
     private Message<List<ModificationReference>> compositeReferenceMessage(ReferenceAction action) {
         // headers are received as strings from the broker
         return MessageBuilder.withPayload(references)
