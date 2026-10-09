@@ -106,10 +106,19 @@ public class LoadFlowService extends AbstractComputationService {
     }
 
     @Transactional
-    public String getLoadFlowParametersValues(UUID studyUuid) {
+    public String getLoadFlowParametersValues(UUID studyUuid, String userId) {
+        // get study loadflow parameters uuid
         StudyEntity studyEntity = getStudy(studyUuid);
-        UUID loadFlowParamsUuid = loadflowRestService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
-        return loadflowRestService.getParameters(loadFlowParamsUuid);
+        UUID studyLoadFlowParamsUuid = loadflowRestService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
+
+        // get reference loadflow parameters uuid from user profile, if defined
+        UUID referenceLoadflowParametersUuid = null;
+        UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
+        if (userProfileInfos != null && userProfileInfos.getLoadFlowParameterId() != null) {
+            referenceLoadflowParametersUuid = userProfileInfos.getLoadFlowParameterId();
+        }
+
+        return loadflowRestService.getParameters(studyLoadFlowParamsUuid, true, referenceLoadflowParametersUuid);
     }
 
     @Transactional
