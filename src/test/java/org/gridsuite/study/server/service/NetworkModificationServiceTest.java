@@ -241,6 +241,21 @@ class NetworkModificationServiceTest {
     }
 
     @Test
+    void testDuplicateModificationsGroupAssociatesTheRootNetworkTags() {
+        UUID sourceGroupUuid = UUID.randomUUID();
+        UUID groupUuid = UUID.randomUUID();
+        UUID nodeUuid = UUID.randomUUID();
+        UUID studyUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/" + sourceGroupUuid + "/duplicate"
+                + "?groupUuid=" + groupUuid + "&nodeContainerUuid=" + nodeUuid + "&studyRootContainerUuid=" + studyUuid
+                + "&rootNetworkTags=PH1&rootNetworkTags=PH2";
+
+        networkModificationService.duplicateModificationsGroup(sourceGroupUuid, groupUuid, nodeUuid, studyUuid, List.of("PH1", "PH2"), "userId");
+
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.POST), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+    }
+
+    @Test
     void testAssertReferencedModificationsAreWritable() {
         UUID groupUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/references/authorized?uuids=" + groupUuid;

@@ -589,13 +589,14 @@ public class NetworkModificationService {
         ).getBody();
     }
 
-    public void duplicateModificationsGroup(UUID sourceGroupUuid, UUID groupUuid, UUID newNodeUuid, UUID studyUuid, String userId) {
+    public void duplicateModificationsGroup(UUID sourceGroupUuid, UUID groupUuid, UUID newNodeUuid, UUID studyUuid, List<String> rootNetworkTags, String userId) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(sourceGroupUuid);
         var path = UriComponentsBuilder.fromPath("groups/{uuid}/duplicate")
                 .queryParam(QUERY_PARAM_GROUP_UUID, groupUuid)
                 .queryParam(QUERY_PARAM_NODE_CONTAINER_UUID, newNodeUuid)
                 .queryParam(QUERY_PARAM_STUDY_ROOT_CONTAINER_UUID, studyUuid)
+                .queryParam(QUERY_PARAM_ROOT_NETWORK_TAGS, rootNetworkTags)
                 .buildAndExpand(sourceGroupUuid)
                 .toUriString();
 
