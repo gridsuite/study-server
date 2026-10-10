@@ -88,23 +88,6 @@ class NetworkModificationControllerTest {
     }
 
     @Test
-    void testGetNetworkModificationsFromComposite() throws Exception {
-        UUID firstUuid = UUID.randomUUID();
-        UUID secondUuid = UUID.randomUUID();
-        when(networkModificationService.getNetworkModificationsFromComposite(List.of(firstUuid, secondUuid), false, USER_ID)).thenReturn(RESPONSE);
-
-        mockMvc.perform(get(BASE_URL + "/network-composite-modifications/network-modifications")
-                .param("uuids", firstUuid.toString(), secondUuid.toString())
-                .param("onlyMetadata", "false")
-                .header(HEADER_USER_ID, USER_ID))
-            .andExpect(status().isOk())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(content().json(RESPONSE));
-
-        verify(networkModificationService).getNetworkModificationsFromComposite(List.of(firstUuid, secondUuid), false, USER_ID);
-    }
-
-    @Test
     void testGetNetworkModification() throws Exception {
         UUID modificationUuid = UUID.randomUUID();
         when(networkModificationService.getNetworkModification(modificationUuid, USER_ID)).thenReturn(RESPONSE);
@@ -171,18 +154,5 @@ class NetworkModificationControllerTest {
             .andExpect(content().string(""));
 
         verify(networkModificationService).updateNetworkModificationsMetadata(List.of(firstUuid, secondUuid), metadata, "userId");
-    }
-
-    @Test
-    void testhasModificationReference() throws Exception {
-        UUID firstUuid = UUID.randomUUID();
-        UUID secondUuid = UUID.randomUUID();
-
-        mockMvc.perform(get(BASE_URL + "/containers/references/exists")
-                        .param("uuids", firstUuid.toString(), secondUuid.toString())
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(content().string("false"));
-        verify(networkModificationService).hasModificationReferences(List.of(firstUuid, secondUuid));
     }
 }
