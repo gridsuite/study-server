@@ -1120,6 +1120,7 @@ class StudyTest extends StudyTestBase {
             .willSetStateTo("indexed")
             .willReturn(WireMock.ok())).getId();
         UUID stubUuid = wireMockStubs.stubDuplicateModificationGroup();
+        UUID stubRecreateReferencesUuid = wireMockStubs.stubRecreateElementReferences();
         UUID stubDuplicateCaseId = wireMockStubs.caseServer.stubDuplicateCaseWithBody(CASE_UUID_STRING, mapper.writeValueAsString(CLONED_CASE_UUID));
         UUID stubReportsDuplicateId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/reports/.*/duplicate"))
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -1170,6 +1171,7 @@ class StudyTest extends StudyTestBase {
 
         //Check requests to duplicate modification groups has been emitted (3 nodes)
         wireMockStubs.verifyDuplicateModificationGroup(stubUuid, 3);
+        wireMockStubs.verifyRecreateElementReferences(stubRecreateReferencesUuid, 3);
 
         if (sourceStudy.getSecurityAnalysisParametersUuid() == null) {
             // if we don't have a securityAnalysisParametersUuid we don't call the security-analysis-server to duplicate them

@@ -17,7 +17,7 @@ spring:
       consumePccMinResult;consumePccMinRunning;consumePccMinStopped;consumePccMinFailed;\
       consumeAsymmetricalLoadResult;consumeAsymmetricalLoadRunning;consumeAsymmetricalLoadStopped;consumeAsymmetricalLoadFailed;\
       consumeNetworkExportFinished;\
-      consumeSharedElementUpdate"
+      consumeSharedElementUpdate;consumeCompositeReference;consumeCompositeReferenceRecreation"
     stream:
       bindings:
         publishStudyUpdate-out-0:
@@ -27,6 +27,15 @@ spring:
         consumeSharedElementUpdate-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}element.shared.update
           group: studySharedElementUpdateGroup
+        consumeCompositeReference-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}reference.composite
+          group: studyCompositeReferenceGroup
+          consumer:
+            # a reference created in a node's group can be notified before the node itself is committed
+            max-attempts: 5
+        consumeCompositeReferenceRecreation-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}reference.composite.recreation
+          group: studyCompositeReferenceRecreationGroup
         publishQuotaUpdate-out-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}quota.update
         consumeSaResult-in-0:
