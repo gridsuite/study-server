@@ -6,6 +6,8 @@
  */
 package org.gridsuite.study.server.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.NetworkModificationService;
 import org.springframework.http.MediaType;
@@ -70,6 +72,8 @@ public class NetworkModificationController {
     }
 
     @PutMapping(value = "/network-modifications/{uuid}/unshare")
+    @Operation(summary = "Unshare a reference modification and copy the referenced composite in its place")
+    @ApiResponse(responseCode = "200", description = "The reference modification has been replaced by a copy of its referenced composite")
     public ResponseEntity<Void> unshareModificationReference(@PathVariable UUID uuid,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
         networkModificationService.unshareModificationReference(uuid, userId);
