@@ -16,9 +16,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.UUID;
 
@@ -33,15 +32,15 @@ class VoltageInitRestServiceTest {
 
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
-    @Mock
-    private RestTemplate restTemplate;
+    @Mock(answer = org.mockito.Answers.RETURNS_DEEP_STUBS)
+    private RestClient restClient;
 
     private VoltageInitRestService voltageInitRestService;
 
     @BeforeEach
     void setUp() {
         when(remoteServicesProperties.getServiceUri("voltage-init-server")).thenReturn(BASE_URI);
-        voltageInitRestService = new VoltageInitRestService(remoteServicesProperties, restTemplate, new ObjectMapper());
+        voltageInitRestService = new VoltageInitRestService(remoteServicesProperties, restClient, new ObjectMapper());
     }
 
     @Test
@@ -49,7 +48,11 @@ class VoltageInitRestServiceTest {
         UUID resultUuid = UUID.randomUUID();
         ResponseEntity<Resource> response = ResponseEntity.ok(new ByteArrayResource("debug".getBytes()));
         String url = BASE_URI + "/" + VOLTAGE_INIT_API_VERSION + "/results/" + resultUuid + "/download-debug-file";
-        when(restTemplate.exchange(url, HttpMethod.GET, null, Resource.class)).thenReturn(response);
+        when(restClient
+            .get()
+            .uri(url)
+            .retrieve()
+            .toEntity(Resource.class)).thenReturn(response);
 
         assertThat(voltageInitRestService.downloadDebugFile(resultUuid)).isEqualTo(response);
     }
@@ -58,7 +61,11 @@ class VoltageInitRestServiceTest {
     void testGetParameters() {
         UUID parameterUuid = UUID.randomUUID();
         VoltageInitParametersInfos parameters = new VoltageInitParametersInfos();
-        when(restTemplate.getForObject(BASE_URI + "/" + VOLTAGE_INIT_API_VERSION + "/parameters/" + parameterUuid, VoltageInitParametersInfos.class)).thenReturn(parameters);
+        when(restClient
+            .get()
+            .uri(BASE_URI + "/" + VOLTAGE_INIT_API_VERSION + "/parameters/" + parameterUuid)
+            .retrieve()
+            .body(VoltageInitParametersInfos.class)).thenReturn(parameters);
 
         assertThat(voltageInitRestService.getParameters(parameterUuid)).isEqualTo(parameters);
     }

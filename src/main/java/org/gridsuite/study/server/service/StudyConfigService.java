@@ -16,7 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
@@ -56,41 +56,43 @@ public class StudyConfigService {
     private static final String COMPUTATION_SUB_TYPE = "computationSubType";
     private static final String COMPUTATION_RESULT_FILTERS_ID = "computationResultFiltersId";
 
-    private final RestTemplate restTemplate;
+    private final RestClient restClient;
 
     @Setter
     private String studyConfigServerBaseUri;
 
     @Autowired
-    public StudyConfigService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
+    public StudyConfigService(RemoteServicesProperties remoteServicesProperties, RestClient restClient) {
         this.studyConfigServerBaseUri = remoteServicesProperties.getServiceUri("study-config-server");
-        this.restTemplate = restTemplate;
+        this.restClient = restClient;
     }
 
     public void updateNetworkVisualizationParameters(UUID parametersUuid, String parameters) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + NETWORK_VISU_PARAMETERS_WITH_ID_URI);
         String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
-        restTemplate.put(studyConfigServerBaseUri + path, httpEntity);
+        var requestSpec = restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (parameters != null) {
+            requestSpec.body(parameters);
+        }
+        requestSpec.retrieve().toBodilessEntity();
     }
 
     public UUID duplicateNetworkVisualizationParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
         var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + NETWORK_VISU_PARAMETERS_URI + "/{uuid}/duplicate")
                 .buildAndExpand(sourceParametersUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
-        return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restClient.post().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .retrieve().body(UUID.class);
     }
 
     public String getNetworkVisualizationParameters(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + NETWORK_VISU_PARAMETERS_WITH_ID_URI)
                 .buildAndExpand(parametersUuid).toUriString();
-        return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
+        return restClient.get().uri(studyConfigServerBaseUri + path)
+            .retrieve().body(String.class);
     }
 
     public UUID getNetworkVisualizationParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
@@ -105,7 +107,8 @@ public class StudyConfigService {
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + NETWORK_VISU_PARAMETERS_WITH_ID_URI)
             .buildAndExpand(uuid)
             .toUriString();
-        restTemplate.delete(studyConfigServerBaseUri + path);
+        restClient.delete().uri(studyConfigServerBaseUri + path)
+            .retrieve().toBodilessEntity();
     }
 
     public UUID createDefaultNetworkVisualizationParameters() {
@@ -113,7 +116,8 @@ public class StudyConfigService {
                 .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + NETWORK_VISU_PARAMETERS_URI + DEFAULT_URI)
                 .buildAndExpand()
                 .toUriString();
-        return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+        return restClient.post().uri(studyConfigServerBaseUri + path)
+            .retrieve().body(UUID.class);
     }
 
     public UUID createNetworkVisualizationParameters(String parameters) {
@@ -121,10 +125,12 @@ public class StudyConfigService {
                 .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + NETWORK_VISU_PARAMETERS_URI)
                 .buildAndExpand()
                 .toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
-        return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        var requestSpec = restClient.post().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (parameters != null) {
+            requestSpec.body(parameters);
+        }
+        return requestSpec.retrieve().body(UUID.class);
     }
 
     // Spreadsheet Config Collection
@@ -132,17 +138,17 @@ public class StudyConfigService {
         Objects.requireNonNull(sourceUuid);
         var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_URI + DELIMITER + sourceUuid + "/duplicate")
                 .buildAndExpand().toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
-        return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restClient.post().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .retrieve().body(UUID.class);
     }
 
     public String getSpreadsheetConfigCollection(UUID uuid) {
         Objects.requireNonNull(uuid);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI)
                 .buildAndExpand(uuid).toUriString();
-        return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
+        return restClient.get().uri(studyConfigServerBaseUri + path)
+            .retrieve().body(String.class);
     }
 
     public UUID getSpreadsheetConfigCollectionUuidOrElseCreateDefaults(StudyEntity studyEntity) {
@@ -157,7 +163,8 @@ public class StudyConfigService {
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI)
             .buildAndExpand(uuid)
             .toUriString();
-        restTemplate.delete(studyConfigServerBaseUri + path);
+        restClient.delete().uri(studyConfigServerBaseUri + path)
+            .retrieve().toBodilessEntity();
     }
 
     public UUID createDefaultSpreadsheetConfigCollection() {
@@ -165,7 +172,8 @@ public class StudyConfigService {
                 .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_URI + DEFAULT_URI)
                 .buildAndExpand()
                 .toUriString();
-        return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+        return restClient.post().uri(studyConfigServerBaseUri + path)
+            .retrieve().body(UUID.class);
     }
 
     public UUID createSpreadsheetConfigCollection(String configCollection) {
@@ -173,145 +181,170 @@ public class StudyConfigService {
                 .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_URI)
                 .buildAndExpand()
                 .toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(configCollection, headers);
-        return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        var requestSpec = restClient.post().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (configCollection != null) {
+            requestSpec.body(configCollection);
+        }
+        return requestSpec.retrieve().body(UUID.class);
     }
 
     public void updateSpreadsheetConfigCollection(UUID collectionUuid, String configCollection) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI);
         String path = uriBuilder.buildAndExpand(collectionUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(configCollection, headers);
-        restTemplate.put(studyConfigServerBaseUri + path, httpEntity);
+        var requestSpec = restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (configCollection != null) {
+            requestSpec.body(configCollection);
+        }
+        requestSpec.retrieve().toBodilessEntity();
     }
 
     public void appendSpreadsheetConfigCollection(UUID targetCollectionUuid, UUID sourceCollectionUuid) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI + "/append");
         String path = uriBuilder.queryParam("sourceCollection", sourceCollectionUuid).buildAndExpand(targetCollectionUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(headers);
-        restTemplate.put(studyConfigServerBaseUri + path, httpEntity);
+        restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .retrieve().toBodilessEntity();
     }
 
     public UUID addSpreadsheetConfigToCollection(UUID collectionUuid, String configurationDto) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI + SPREADSHEET_CONFIG_URI);
         String path = uriBuilder.buildAndExpand(collectionUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(configurationDto, headers);
-        return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        var requestSpec = restClient.post().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (configurationDto != null) {
+            requestSpec.body(configurationDto);
+        }
+        return requestSpec.retrieve().body(UUID.class);
     }
 
     public void removeSpreadsheetConfigFromCollection(UUID collectionUuid, UUID configUuid) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI + SPREADSHEET_CONFIG_URI + "/{configId}");
         String path = uriBuilder.buildAndExpand(collectionUuid, configUuid).toUriString();
-        restTemplate.delete(studyConfigServerBaseUri + path);
+        restClient.delete().uri(studyConfigServerBaseUri + path)
+            .retrieve().toBodilessEntity();
     }
 
     public void reorderSpreadsheetConfigs(UUID collectionUuid, List<UUID> newOrder) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI + "/reorder");
         String path = uriBuilder.buildAndExpand(collectionUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(newOrder, headers);
-        restTemplate.put(studyConfigServerBaseUri + path, httpEntity);
+        var requestSpec = restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (newOrder != null) {
+            requestSpec.body(newOrder);
+        }
+        requestSpec.retrieve().toBodilessEntity();
     }
 
     public void reorderColumns(UUID configUuid, List<UUID> columnOrder) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns/reorder");
         String path = uriBuilder.buildAndExpand(configUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(columnOrder, headers);
-        restTemplate.put(studyConfigServerBaseUri + path, httpEntity);
+        var requestSpec = restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (columnOrder != null) {
+            requestSpec.body(columnOrder);
+        }
+        requestSpec.retrieve().toBodilessEntity();
     }
 
     public void updateColumnsStates(UUID configUuid, String columnStateUpdates) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns/states");
         String path = uriBuilder.buildAndExpand(configUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(columnStateUpdates, headers);
-        restTemplate.put(studyConfigServerBaseUri + path, httpEntity);
+        var requestSpec = restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (columnStateUpdates != null) {
+            requestSpec.body(columnStateUpdates);
+        }
+        requestSpec.retrieve().toBodilessEntity();
     }
 
     public UUID createColumn(UUID configUuid, String columnInfos) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns");
         String path = uriBuilder.buildAndExpand(configUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(columnInfos, headers);
-        return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        var requestSpec = restClient.post().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (columnInfos != null) {
+            requestSpec.body(columnInfos);
+        }
+        return requestSpec.retrieve().body(UUID.class);
     }
 
     public void updateColumn(UUID configUuid, UUID columnUuid, String columnInfos) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns/{colId}");
         String path = uriBuilder.buildAndExpand(configUuid, columnUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(columnInfos, headers);
-        restTemplate.put(studyConfigServerBaseUri + path, httpEntity);
+        var requestSpec = restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (columnInfos != null) {
+            requestSpec.body(columnInfos);
+        }
+        requestSpec.retrieve().toBodilessEntity();
     }
 
     public void deleteColumn(UUID configUuid, UUID columnUuid) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns/{colId}");
         String path = uriBuilder.buildAndExpand(configUuid, columnUuid).toUriString();
-        restTemplate.delete(studyConfigServerBaseUri + path);
+        restClient.delete().uri(studyConfigServerBaseUri + path)
+            .retrieve().toBodilessEntity();
     }
 
     public void duplicateColumn(UUID configUuid, UUID columnUuid) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns/{colId}/duplicate");
         String path = uriBuilder.buildAndExpand(configUuid, columnUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(null, headers);
-        restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, Void.class);
+        restClient.post().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .retrieve().toBodilessEntity();
     }
 
     public void renameSpreadsheetConfig(UUID configUuid, String newName) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + NAME_URI);
         String path = uriBuilder.buildAndExpand(configUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(newName, headers);
-        restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PUT, httpEntity, String.class);
+        var requestSpec = restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (newName != null) {
+            requestSpec.body(newName);
+        }
+        requestSpec.retrieve().toEntity(String.class);
     }
 
     public void updateSpreadsheetConfigSort(UUID configUuid, String sortConfig) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/sort");
         String path = uriBuilder.buildAndExpand(configUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(sortConfig, headers);
-        restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PUT, httpEntity, String.class);
+        var requestSpec = restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (sortConfig != null) {
+            requestSpec.body(sortConfig);
+        }
+        requestSpec.retrieve().toEntity(String.class);
     }
 
     public void updateSpreadsheetConfig(UUID configUuid, String spreadsheetConfigInfos) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI);
         String path = uriBuilder.buildAndExpand(configUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(spreadsheetConfigInfos, headers);
-        restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PUT, httpEntity, Void.class);
+        var requestSpec = restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (spreadsheetConfigInfos != null) {
+            requestSpec.body(spreadsheetConfigInfos);
+        }
+        requestSpec.retrieve().toBodilessEntity();
     }
 
     public void setGlobalFilters(UUID configUuid, String globalFilters) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/global-filters");
         String path = uriBuilder.buildAndExpand(configUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(globalFilters, headers);
-        restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, Void.class);
+        var requestSpec = restClient.post().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (globalFilters != null) {
+            requestSpec.body(globalFilters);
+        }
+        requestSpec.retrieve().toBodilessEntity();
     }
 
     public void resetFilters(UUID configUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/reset-filters")
                 .buildAndExpand(configUuid).toUriString();
-        restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PUT, null, UUID.class);
+        restClient.put().uri(studyConfigServerBaseUri + path)
+            .retrieve().toEntity(UUID.class);
     }
 
     // Workspaces Config
@@ -322,7 +355,8 @@ public class StudyConfigService {
             builder.queryParam("createFrom", workspaceIds.toArray());
         }
         String path = builder.toUriString();
-        return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+        return restClient.post().uri(studyConfigServerBaseUri + path)
+            .retrieve().body(UUID.class);
     }
 
     public void deleteWorkspacesConfig(UUID uuid) {
@@ -330,14 +364,16 @@ public class StudyConfigService {
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_WITH_ID_URI)
             .buildAndExpand(uuid)
             .toUriString();
-        restTemplate.delete(studyConfigServerBaseUri + path);
+        restClient.delete().uri(studyConfigServerBaseUri + path)
+            .retrieve().toBodilessEntity();
     }
 
     public UUID duplicateWorkspacesConfig(UUID sourceUuid) {
         Objects.requireNonNull(sourceUuid);
         var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_URI + DELIMITER + sourceUuid + "/duplicate")
                 .toUriString();
-        return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+        return restClient.post().uri(studyConfigServerBaseUri + path)
+            .retrieve().body(UUID.class);
     }
 
     // Workspace methods
@@ -345,7 +381,8 @@ public class StudyConfigService {
         Objects.requireNonNull(configId);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_WITH_ID_URI + WORKSPACES_URI)
                 .buildAndExpand(configId).toUriString();
-        return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
+        return restClient.get().uri(studyConfigServerBaseUri + path)
+            .retrieve().body(String.class);
     }
 
     public String getWorkspace(UUID configId, UUID workspaceId) {
@@ -353,7 +390,8 @@ public class StudyConfigService {
         Objects.requireNonNull(workspaceId);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_WITH_ID_URI + WORKSPACE_WITH_ID_URI)
                 .buildAndExpand(configId, workspaceId).toUriString();
-        return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
+        return restClient.get().uri(studyConfigServerBaseUri + path)
+            .retrieve().body(String.class);
     }
 
     public void renameWorkspace(UUID configId, UUID workspaceId, String name) {
@@ -361,10 +399,12 @@ public class StudyConfigService {
         Objects.requireNonNull(workspaceId);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_WITH_ID_URI + WORKSPACE_WITH_ID_URI + NAME_URI)
                 .buildAndExpand(configId, workspaceId).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(name, headers);
-        restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PUT, httpEntity, Void.class);
+        var requestSpec = restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (name != null) {
+            requestSpec.body(name);
+        }
+        requestSpec.retrieve().toBodilessEntity();
     }
 
     public String getWorkspacePanels(UUID configId, UUID workspaceId, List<String> panelIds) {
@@ -375,7 +415,8 @@ public class StudyConfigService {
             builder.queryParam("panelIds", panelIds.toArray());
         }
         String path = builder.buildAndExpand(configId, workspaceId).toUriString();
-        return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
+        return restClient.get().uri(studyConfigServerBaseUri + path)
+            .retrieve().body(String.class);
     }
 
     public String createOrUpdateWorkspacePanels(UUID configId, UUID workspaceId, String panelsDto) {
@@ -383,10 +424,12 @@ public class StudyConfigService {
         Objects.requireNonNull(workspaceId);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_WITH_ID_URI + WORKSPACE_WITH_ID_URI + WORKSPACE_PANELS_URI)
                 .buildAndExpand(configId, workspaceId).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(panelsDto, headers);
-        return restTemplate.postForObject(studyConfigServerBaseUri + path, httpEntity, String.class);
+        var requestSpec = restClient.post().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (panelsDto != null) {
+            requestSpec.body(panelsDto);
+        }
+        return requestSpec.retrieve().body(String.class);
     }
 
     public List<UUID> deleteWorkspacePanels(UUID configId, UUID workspaceId, String panelIds) {
@@ -394,15 +437,13 @@ public class StudyConfigService {
         Objects.requireNonNull(workspaceId);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_WITH_ID_URI + WORKSPACE_WITH_ID_URI + WORKSPACE_PANELS_URI)
                 .buildAndExpand(configId, workspaceId).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(panelIds, headers);
-        ResponseEntity<List<UUID>> response = restTemplate.exchange(
-            studyConfigServerBaseUri + path,
-            HttpMethod.DELETE,
-            httpEntity,
-            new ParameterizedTypeReference<>() { }
-        );
+        var requestSpec = restClient.method(HttpMethod.DELETE)
+            .uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (panelIds != null) {
+            requestSpec.body(panelIds);
+        }
+        ResponseEntity<List<UUID>> response = requestSpec.retrieve().toEntity(new ParameterizedTypeReference<>() { });
         return response.getBody() != null ? response.getBody() : List.of();
     }
 
@@ -413,10 +454,12 @@ public class StudyConfigService {
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_WITH_ID_URI + WORKSPACE_WITH_ID_URI + WORKSPACE_PANELS_URI
                 + "/{panelId}/current-nad-config")
                 .buildAndExpand(configId, workspaceId, panelId).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(nadConfigData, headers);
-        return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        var requestSpec = restClient.post().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (nadConfigData != null) {
+            requestSpec.body(nadConfigData);
+        }
+        return requestSpec.retrieve().body(UUID.class);
     }
 
     public String getComputationResultGlobalFilters(UUID computationResultFiltersId, String computationType) {
@@ -424,7 +467,8 @@ public class StudyConfigService {
         Map<String, Object> uriVariables = Map.of(COMPUTATION_RESULT_FILTERS_ID, computationResultFiltersId, COMPUTATION_TYPE, computationType);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI +
                 "/{computationResultFiltersId}/{computationType}").buildAndExpand(uriVariables).toUriString();
-        return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
+        return restClient.get().uri(studyConfigServerBaseUri + path)
+            .retrieve().body(String.class);
     }
 
     public String getComputationResultColumnFilters(UUID computationResultFiltersId, String computationType, String computationSubType) {
@@ -432,33 +476,39 @@ public class StudyConfigService {
         Map<String, Object> uriVariables = Map.of(COMPUTATION_RESULT_FILTERS_ID, computationResultFiltersId, COMPUTATION_TYPE, computationType, COMPUTATION_SUB_TYPE, computationSubType);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI +
                 "/{computationResultFiltersId}/{computationType}/{computationSubType}").buildAndExpand(uriVariables).toUriString();
-        return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
+        return restClient.get().uri(studyConfigServerBaseUri + path)
+            .retrieve().body(String.class);
     }
 
     public void setGlobalFiltersForComputationResult(UUID computationResultFiltersUuid, String computationType, String globalFilters) {
         Map<String, Object> uriVariables = Map.of(COMPUTATION_RESULT_FILTERS_ID, computationResultFiltersUuid, COMPUTATION_TYPE, computationType);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI +
                 "/{computationResultFiltersId}/{computationType}/global-filters").buildAndExpand(uriVariables).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(globalFilters, headers);
-        restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, Void.class);
+        var requestSpec = restClient.post().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (globalFilters != null) {
+            requestSpec.body(globalFilters);
+        }
+        requestSpec.retrieve().toBodilessEntity();
     }
 
     public void updateColumns(UUID computationResultFiltersId, String computationType, String computationSubType, String columnInfos) {
         Map<String, Object> uriVariables = Map.of(COMPUTATION_RESULT_FILTERS_ID, computationResultFiltersId, COMPUTATION_TYPE, computationType, COMPUTATION_SUB_TYPE, computationSubType);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI +
                 "/{computationResultFiltersId}/{computationType}/{computationSubType}/columns").buildAndExpand(uriVariables).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(columnInfos, headers);
-        restTemplate.put(studyConfigServerBaseUri + path, httpEntity);
+        var requestSpec = restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (columnInfos != null) {
+            requestSpec.body(columnInfos);
+        }
+        requestSpec.retrieve().toBodilessEntity();
     }
 
     public UUID createComputationResultsFiltersId() {
         var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI + DEFAULT_URI)
                 .buildAndExpand().toUriString();
-        return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+        return restClient.post().uri(studyConfigServerBaseUri + path)
+            .retrieve().body(UUID.class);
     }
 
     public UUID createDefaultNetworkVisualizationParameters(String userId, UserProfileInfos userProfileInfos) {

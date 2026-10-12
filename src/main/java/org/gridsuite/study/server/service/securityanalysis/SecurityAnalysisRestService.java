@@ -24,7 +24,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
@@ -50,8 +50,8 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
 
     @Autowired
     public SecurityAnalysisRestService(RemoteServicesProperties remoteServicesProperties,
-                                       ObjectMapper objectMapper, RestTemplate restTemplate) {
-        super(remoteServicesProperties.getServiceUri("security-analysis-server"), restTemplate);
+                                       ObjectMapper objectMapper, RestClient restClient) {
+        super(remoteServicesProperties.getServiceUri("security-analysis-server"), restClient);
         this.objectMapper = objectMapper;
     }
 
@@ -67,7 +67,8 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
         addFiltersAndSortToQueryParams(pathBuilder, networkUuid, variantId, filters, globalFilters, pageable.getSort());
         String path = pathBuilder.buildAndExpand(resultUuid).toUriString();
 
-        return restTemplate.getForObject(baseUri + path, String.class);
+        return restClient.get().uri(baseUri + path)
+            .retrieve().body(String.class);
     }
 
     public ResponseEntity<byte[]> getSecurityAnalysisResultCsv(UUID resultUuid, UUID networkUuid, String variantId,
@@ -82,10 +83,12 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
         addFiltersAndSortToQueryParams(pathBuilder, networkUuid, variantId, filters, globalFilters, sort);
         String path = pathBuilder.buildAndExpand(resultUuid).toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> entity = new HttpEntity<>(csvTranslations, headers);
-        return restTemplate.exchange(baseUri + path, HttpMethod.POST, entity, byte[].class);
+        var requestSpec = restClient.post().uri(baseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (csvTranslations != null) {
+            requestSpec.body(csvTranslations);
+        }
+        return requestSpec.retrieve().toEntity(byte[].class);
     }
 
     private String getPagedPathFromResultType(SecurityAnalysisResultType resultType) {
@@ -139,14 +142,10 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
         }
         var path = uriComponentsBuilder.queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(networkUuid).toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
-
-        return restTemplate
-                .exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restClient.post().uri(baseUri + path)
+            .headers(headers -> headers.set(HEADER_USER_ID, userId))
+            .contentType(MediaType.APPLICATION_JSON)
+            .retrieve().body(UUID.class);
     }
 
     public void stopSecurityAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
@@ -170,11 +169,10 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
                 .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/stop")
                 .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        restTemplate.exchange(baseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
+        restClient.put().uri(baseUri + path)
+            .headers(headers -> headers.set(HEADER_USER_ID, userId))
+            .contentType(MediaType.APPLICATION_JSON)
+            .retrieve().toBodilessEntity();
     }
 
     public SecurityAnalysisStatus getSecurityAnalysisStatus(UUID resultUuid) {
@@ -187,11 +185,12 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
             .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/status")
             .buildAndExpand(resultUuid).toUriString();
 
-        return restTemplate.getForObject(baseUri + path, SecurityAnalysisStatus.class);
+        return restClient.get().uri(baseUri + path)
+            .retrieve().body(SecurityAnalysisStatus.class);
     }
 
     public void deleteSecurityAnalysisResults(List<UUID> resultsUuids) {
-        deleteCalculationResults(resultsUuids, DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results", restTemplate, baseUri);
+        deleteCalculationResults(resultsUuids, DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results", restClient, baseUri);
     }
 
     public void deleteAllSecurityAnalysisResults() {
@@ -201,7 +200,8 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
     public Integer getSecurityAnalysisResultsCount() {
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/supervision/results-count").toUriString();
-        return restTemplate.getForObject(baseUri + path, Integer.class);
+        return restClient.get().uri(baseUri + path)
+            .retrieve().body(Integer.class);
     }
 
     public void invalidateSaStatus(List<UUID> uuids) {
@@ -210,7 +210,9 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
                     .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/invalidate-status")
                     .queryParam(RESULT_UUID, uuids).build().toUriString();
 
-            restTemplate.put(baseUri + path, Void.class);
+            restClient.put().uri(baseUri + path)
+                .body(Void.class)
+                .retrieve().toBodilessEntity();
         }
     }
 
@@ -218,11 +220,12 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{uuid}");
         String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
-
-        restTemplate.put(baseUri + path, httpEntity);
+        var requestSpec = restClient.put().uri(baseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (parameters != null) {
+            requestSpec.body(parameters);
+        }
+        requestSpec.retrieve().toBodilessEntity();
     }
 
     @Override
@@ -232,10 +235,9 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
         var path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + DELIMITER + "{uuid}" + DELIMITER + "duplicate")
                 .buildAndExpand(sourceParametersUuid).toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        return restTemplate.exchange(baseUri + path, HttpMethod.POST, new HttpEntity<>(null, headers), UUID.class).getBody();
+        return restClient.post().uri(baseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .retrieve().body(UUID.class);
     }
 
     public String getSecurityAnalysisParameters(UUID parametersUuid) {
@@ -244,7 +246,8 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
         String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(parametersUuid).toUriString();
 
-        return restTemplate.getForObject(baseUri + path, String.class);
+        return restClient.get().uri(baseUri + path)
+            .retrieve().body(String.class);
     }
 
     public UUID getSecurityAnalysisParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
@@ -262,7 +265,8 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
                 .buildAndExpand(uuid)
                 .toUriString();
 
-        restTemplate.delete(baseUri + path);
+        restClient.delete().uri(baseUri + path)
+            .retrieve().toBodilessEntity();
     }
 
     @Override
@@ -273,7 +277,8 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
                 .buildAndExpand()
                 .toUriString();
 
-        return restTemplate.exchange(baseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+        return restClient.post().uri(baseUri + path)
+            .retrieve().body(UUID.class);
     }
 
     public UUID createSecurityAnalysisParameters(String parameters) {
@@ -282,35 +287,42 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
                 .buildAndExpand()
                 .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
-
-        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        var requestSpec = restClient.post().uri(baseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (parameters != null) {
+            requestSpec.body(parameters);
+        }
+        return requestSpec.retrieve().body(UUID.class);
     }
 
     @Override
     public List<String> getEnumValues(String enumName, UUID resultUuid) {
-        return getEnumValues(enumName, resultUuid, SECURITY_ANALYSIS_API_VERSION, restTemplate);
+        return getEnumValues(enumName, resultUuid, SECURITY_ANALYSIS_API_VERSION, restClient);
     }
 
     public String getProviders() {
-        return restTemplate.getForObject(getBaseUri() + DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/providers", String.class);
+        return restClient.get().uri(getBaseUri() + DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/providers")
+            .retrieve().body(String.class);
     }
 
     public String getDefaultLimitReductions() {
-        return restTemplate.getForObject(getBaseUri() + DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/default-limit-reductions", String.class);
+        return restClient.get().uri(getBaseUri() + DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/default-limit-reductions")
+            .retrieve().body(String.class);
     }
 
     public String getParameters(UUID parameterUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
-        return restTemplate.getForObject(getBaseUri() + path, String.class);
+        return restClient.get().uri(getBaseUri() + path)
+            .retrieve().body(String.class);
     }
 
     public void updateParameters(UUID parameterUuid, @Nullable String parameters) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        restTemplate.put(getBaseUri() + path, new HttpEntity<>(parameters, headers));
+        var requestSpec = restClient.put().uri(getBaseUri() + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (parameters != null) {
+            requestSpec.body(parameters);
+        }
+        requestSpec.retrieve().toBodilessEntity();
     }
 }

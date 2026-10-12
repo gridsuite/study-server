@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.UUID;
 
@@ -40,7 +40,7 @@ class DynamicMappingServiceTest extends AbstractWireMockRestClientTest {
     private DynamicMappingService dynamicMappingService;
 
     @Autowired
-    private RestTemplate restTemplate;
+    private RestClient restClient;
 
     @Autowired
     private RemoteServicesProperties remoteServicesProperties;
@@ -49,7 +49,7 @@ class DynamicMappingServiceTest extends AbstractWireMockRestClientTest {
     void setUp() {
         // config client
         remoteServicesProperties.setServiceUri("dynamic-mapping-server", initMockWebServer());
-        dynamicMappingService = new DynamicMappingService(remoteServicesProperties, restTemplate);
+        dynamicMappingService = new DynamicMappingService(remoteServicesProperties, restClient);
     }
 
     @Test

@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
@@ -25,22 +25,26 @@ class NetworkMapServiceTest {
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
 
-    @Mock
-    private RestTemplate restTemplate;
+    @Mock(answer = org.mockito.Answers.RETURNS_DEEP_STUBS)
+    private RestClient restClient;
 
     private NetworkMapService networkMapService;
 
     @BeforeEach
     void setup() {
         when(remoteServicesProperties.getServiceUri("network-map-server")).thenReturn(NETWORK_MAP_SERVER_URI);
-        networkMapService = new NetworkMapService(remoteServicesProperties, restTemplate);
+        networkMapService = new NetworkMapService(remoteServicesProperties, restClient);
     }
 
     @Test
     void testGetElementSchema() {
         String response = "{\"type\":\"object\"}";
         String expectedUrl = NETWORK_MAP_SERVER_URI + "/v1/schemas/LINE/TAB";
-        when(restTemplate.getForObject(expectedUrl, String.class)).thenReturn(response);
+        when(restClient
+            .get()
+            .uri(expectedUrl)
+            .retrieve()
+            .body(String.class)).thenReturn(response);
 
         assertThat(networkMapService.getElementSchema("LINE", "TAB")).isEqualTo(response);
     }

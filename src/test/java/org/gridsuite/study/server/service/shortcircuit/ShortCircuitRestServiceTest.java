@@ -15,9 +15,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.UUID;
 
@@ -32,15 +31,15 @@ class ShortCircuitRestServiceTest {
 
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
-    @Mock
-    private RestTemplate restTemplate;
+    @Mock(answer = org.mockito.Answers.RETURNS_DEEP_STUBS)
+    private RestClient restClient;
 
     private ShortCircuitRestService shortCircuitRestService;
 
     @BeforeEach
     void setUp() {
         when(remoteServicesProperties.getServiceUri("shortcircuit-server")).thenReturn(BASE_URI);
-        shortCircuitRestService = new ShortCircuitRestService(remoteServicesProperties, restTemplate, new ObjectMapper());
+        shortCircuitRestService = new ShortCircuitRestService(remoteServicesProperties, restClient, new ObjectMapper());
     }
 
     @Test
@@ -48,7 +47,11 @@ class ShortCircuitRestServiceTest {
         UUID resultUuid = UUID.randomUUID();
         ResponseEntity<Resource> response = ResponseEntity.ok(new ByteArrayResource("debug".getBytes()));
         String url = BASE_URI + "/" + SHORT_CIRCUIT_API_VERSION + "/results/" + resultUuid + "/download-debug-file";
-        when(restTemplate.exchange(url, HttpMethod.GET, null, Resource.class)).thenReturn(response);
+        when(restClient
+            .get()
+            .uri(url)
+            .retrieve()
+            .toEntity(Resource.class)).thenReturn(response);
 
         assertThat(shortCircuitRestService.downloadDebugFile(resultUuid)).isEqualTo(response);
     }
@@ -56,7 +59,11 @@ class ShortCircuitRestServiceTest {
     @Test
     void testGetSpecificParameters() {
         String specificParameters = "{\"provider\":\"short-circuit\"}";
-        when(restTemplate.getForObject(BASE_URI + "/" + SHORT_CIRCUIT_API_VERSION + "/parameters/specific-parameters", String.class)).thenReturn(specificParameters);
+        when(restClient
+            .get()
+            .uri(BASE_URI + "/" + SHORT_CIRCUIT_API_VERSION + "/parameters/specific-parameters")
+            .retrieve()
+            .body(String.class)).thenReturn(specificParameters);
 
         assertThat(shortCircuitRestService.getSpecificParameters()).isEqualTo(specificParameters);
     }

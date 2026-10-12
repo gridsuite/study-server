@@ -18,7 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -46,16 +46,16 @@ public class FilterService {
     public static final String FILTERS_END_POINT_EXPORT = "/filters/export";
     private static final String EMPTY_JSON_ARRAY = "[]";
 
-    private final RestTemplate restTemplate;
+    private final RestClient restClient;
 
     @Getter // getter to facilitate to mock
     @Setter
     private String baseUri;
 
     @Autowired
-    public FilterService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
+    public FilterService(RemoteServicesProperties remoteServicesProperties, RestClient restClient) {
         this.baseUri = remoteServicesProperties.getServiceUri("filter-server");
-        this.restTemplate = restTemplate;
+        this.restClient = restClient;
     }
 
     public String evaluateFilter(UUID networkUuid, String variantId, String filter) {
@@ -69,11 +69,12 @@ public class FilterService {
         }
         var uriComponent = uriComponentsBuilder.build();
 
-        var headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> request = new HttpEntity<>(filter, headers);
-
-        return restTemplate.postForObject(uriComponent.toUriString(), request, String.class);
+        var requestSpec = restClient.post().uri(uriComponent.toUriString())
+            .contentType(MediaType.APPLICATION_JSON);
+        if (filter != null) {
+            requestSpec.body(filter);
+        }
+        return requestSpec.retrieve().body(String.class);
     }
 
     public List<String> evaluateGlobalFilter(@NonNull final UUID networkUuid, @NonNull final String variantId,
@@ -84,14 +85,10 @@ public class FilterService {
                 .queryParam(QUERY_PARAM_VARIANT_ID, variantId)
                 .queryParam(QUERY_PARAM_EQUIPMENT_TYPES, equipmentTypes)
                 .build();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        return restTemplate.exchange(
-            uriComponent.toUri(),
-            HttpMethod.POST,
-            new HttpEntity<>(filter, headers),
-            new ParameterizedTypeReference<List<String>>() { }
-        ).getBody();
+        return restClient.post().uri(uriComponent.toUri())
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(filter)
+            .retrieve().body(new ParameterizedTypeReference<List<String>>() { });
     }
 
     public String exportFilter(UUID networkUuid, UUID filterUuid) {
@@ -103,7 +100,8 @@ public class FilterService {
         uriComponentsBuilder.queryParam(NETWORK_UUID, networkUuid);
         var uriComponent = uriComponentsBuilder.buildAndExpand(filterUuid);
 
-        return restTemplate.getForObject(uriComponent.toUriString(), String.class);
+        return restClient.get().uri(uriComponent.toUriString())
+            .retrieve().body(String.class);
     }
 
     public String exportFilters(UUID networkUuid, List<UUID> filtersUuid, String variantId) {
@@ -119,7 +117,8 @@ public class FilterService {
         uriComponentsBuilder.queryParam(IDS, filtersUuid);
         var uriComponent = uriComponentsBuilder.buildAndExpand();
 
-        return restTemplate.getForObject(uriComponent.toUriString(), String.class);
+        return restClient.get().uri(uriComponent.toUriString())
+            .retrieve().body(String.class);
     }
 
     public List<String> evaluateFiltersToNetworkElementIds(UUID networkUuid, List<UUID> filtersUuid, String variantId) {
@@ -135,14 +134,9 @@ public class FilterService {
         uriComponentsBuilder.queryParam(IDS, filtersUuid);
         var uriComponent = uriComponentsBuilder.buildAndExpand();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        return restTemplate.exchange(
-                uriComponent.toUri(),
-                HttpMethod.GET,
-                new HttpEntity<>(headers),
-                new ParameterizedTypeReference<List<String>>() { }
-        ).getBody();
+        return restClient.get().uri(uriComponent.toUri())
+            .headers(headers -> headers.setContentType(MediaType.APPLICATION_JSON))
+            .retrieve().body(new ParameterizedTypeReference<List<String>>() { });
     }
 
     public String evaluateFilters(UUID networkUuid, String filters) {
@@ -154,18 +148,18 @@ public class FilterService {
         uriComponentsBuilder.queryParam(NETWORK_UUID, networkUuid);
         var uriComponent = uriComponentsBuilder.buildAndExpand();
 
-        var headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> request = new HttpEntity<>(filters, headers);
-
-        return restTemplate.postForObject(uriComponent.toUriString(), request, String.class);
+        return restClient.post().uri(uriComponent.toUriString())
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(filters)
+            .retrieve().body(String.class);
     }
 
     public List<UUID> getReferencedFilterUuids(Collection<UUID> filterUuids) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_API_VERSION + "/filters/referenced-filter-uuids")
                 .queryParam(IDS, filterUuids)
                 .toUriString();
-        return restTemplate.exchange(getBaseUri() + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<UUID>>() { }).getBody();
+        return restClient.get().uri(getBaseUri() + path)
+            .retrieve().body(new ParameterizedTypeReference<List<UUID>>() { });
     }
 
     public String getFilters(Collection<UUID> filterUuids) {
@@ -175,6 +169,7 @@ public class FilterService {
         String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_API_VERSION + "/filters/metadata")
                 .queryParam(IDS, filterUuids)
                 .toUriString();
-        return restTemplate.getForObject(getBaseUri() + path, String.class);
+        return restClient.get().uri(getBaseUri() + path)
+            .retrieve().body(String.class);
     }
 }

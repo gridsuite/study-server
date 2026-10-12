@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.UUID;
 
@@ -28,22 +28,26 @@ class PccMinRestServiceTest {
 
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
-    @Mock
-    private RestTemplate restTemplate;
+    @Mock(answer = org.mockito.Answers.RETURNS_DEEP_STUBS)
+    private RestClient restClient;
 
     private PccMinRestService pccMinRestService;
 
     @BeforeEach
     void setUp() {
         when(remoteServicesProperties.getServiceUri("pcc-min-server")).thenReturn(BASE_URI);
-        pccMinRestService = new PccMinRestService(remoteServicesProperties, new ObjectMapper(), restTemplate);
+        pccMinRestService = new PccMinRestService(remoteServicesProperties, new ObjectMapper(), restClient);
     }
 
     @Test
     void testGetParameters() {
         UUID parameterUuid = UUID.randomUUID();
         String parameters = "{\"provider\":\"pcc-min\"}";
-        when(restTemplate.getForObject(BASE_URI + "/" + PCC_MIN_API_VERSION + "/parameters/" + parameterUuid, String.class)).thenReturn(parameters);
+        when(restClient
+            .get()
+            .uri(BASE_URI + "/" + PCC_MIN_API_VERSION + "/parameters/" + parameterUuid)
+            .retrieve()
+            .body(String.class)).thenReturn(parameters);
 
         assertThat(pccMinRestService.getParameters(parameterUuid)).isEqualTo(parameters);
     }

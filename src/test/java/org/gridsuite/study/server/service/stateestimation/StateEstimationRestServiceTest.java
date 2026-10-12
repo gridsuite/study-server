@@ -15,9 +15,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.UUID;
 
@@ -32,15 +31,15 @@ class StateEstimationRestServiceTest {
 
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
-    @Mock
-    private RestTemplate restTemplate;
+    @Mock(answer = org.mockito.Answers.RETURNS_DEEP_STUBS)
+    private RestClient restClient;
 
     private StateEstimationRestService stateEstimationRestService;
 
     @BeforeEach
     void setUp() {
         when(remoteServicesProperties.getServiceUri("state-estimation-server")).thenReturn(BASE_URI);
-        stateEstimationRestService = new StateEstimationRestService(remoteServicesProperties, new ObjectMapper(), restTemplate);
+        stateEstimationRestService = new StateEstimationRestService(remoteServicesProperties, new ObjectMapper(), restClient);
     }
 
     @Test
@@ -48,7 +47,11 @@ class StateEstimationRestServiceTest {
         UUID resultUuid = UUID.randomUUID();
         ResponseEntity<Resource> response = ResponseEntity.ok(new ByteArrayResource("debug".getBytes()));
         String url = BASE_URI + "/" + STATE_ESTIMATION_API_VERSION + "/results/" + resultUuid + "/download-debug-file";
-        when(restTemplate.exchange(url, HttpMethod.GET, null, Resource.class)).thenReturn(response);
+        when(restClient
+            .get()
+            .uri(url)
+            .retrieve()
+            .toEntity(Resource.class)).thenReturn(response);
 
         assertThat(stateEstimationRestService.downloadDebugFile(resultUuid)).isEqualTo(response);
     }

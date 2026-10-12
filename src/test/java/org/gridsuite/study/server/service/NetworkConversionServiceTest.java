@@ -11,9 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.UUID;
 
@@ -25,16 +23,20 @@ class NetworkConversionServiceTest {
 
     private static final String NETWORK_CONVERSION_SERVER_URI = "http://network-conversion-server";
 
-    @Mock
-    private RestTemplate restTemplate;
+    @Mock(answer = org.mockito.Answers.RETURNS_DEEP_STUBS)
+    private RestClient restClient;
 
     @Test
     void testGetCaseImportParameters() {
         UUID caseUuid = UUID.randomUUID();
         String response = "{\"format\":\"UCTE\"}";
-        NetworkConversionService networkConversionService = new NetworkConversionService(NETWORK_CONVERSION_SERVER_URI, new ObjectMapper(), restTemplate);
+        NetworkConversionService networkConversionService = new NetworkConversionService(NETWORK_CONVERSION_SERVER_URI, new ObjectMapper(), restClient);
         String expectedUrl = NETWORK_CONVERSION_SERVER_URI + "/v1/cases/" + caseUuid + "/import-parameters";
-        when(restTemplate.exchange(expectedUrl, HttpMethod.GET, null, String.class)).thenReturn(ResponseEntity.ok(response));
+        when(restClient
+            .get()
+            .uri(expectedUrl)
+            .retrieve()
+            .body(String.class)).thenReturn(response);
 
         assertThat(networkConversionService.getCaseImportParameters(caseUuid)).isEqualTo(response);
     }

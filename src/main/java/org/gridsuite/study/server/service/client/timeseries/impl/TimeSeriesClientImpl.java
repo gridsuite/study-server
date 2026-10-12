@@ -11,11 +11,11 @@ import com.powsybl.timeseries.TimeSeries;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
-import org.gridsuite.study.server.service.client.AbstractRestClient;
+import org.gridsuite.study.server.service.client.AbstractRestClientService;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Collections;
@@ -29,11 +29,11 @@ import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPoi
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
 @Service
-public class TimeSeriesClientImpl extends AbstractRestClient implements TimeSeriesClient {
+public class TimeSeriesClientImpl extends AbstractRestClientService implements TimeSeriesClient {
 
     public TimeSeriesClientImpl(RemoteServicesProperties remoteServicesProperties,
-                                RestTemplate restTemplate) {
-        super(remoteServicesProperties.getServiceUri("timeseries-server"), restTemplate);
+                                RestClient restClient) {
+        super(remoteServicesProperties.getServiceUri("timeseries-server"), restClient);
     }
 
     @Override
@@ -49,7 +49,8 @@ public class TimeSeriesClientImpl extends AbstractRestClient implements TimeSeri
                 .buildAndExpand(groupUuid);
 
         // call time-series Rest API
-        var timeSeriesJson = getRestTemplate().getForObject(uriComponents.toUriString(), String.class);
+        var timeSeriesJson = getRestClient().get().uri(uriComponents.toUriString())
+            .retrieve().body(String.class);
         if (!StringUtils.isBlank(timeSeriesJson)) {
             // convert json to TimeSeries
             return TimeSeries.parseJson(timeSeriesJson);
@@ -68,6 +69,7 @@ public class TimeSeriesClientImpl extends AbstractRestClient implements TimeSeri
                 .buildAndExpand(groupUuid);
 
         // call time-series Rest API
-        return getRestTemplate().getForObject(uriComponents.toUriString(), TimeSeriesGroupRest.class);
+        return getRestClient().get().uri(uriComponents.toUriString())
+            .retrieve().body(TimeSeriesGroupRest.class);
     }
 }

@@ -12,7 +12,7 @@ import org.apache.logging.log4j.util.Strings;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import static org.gridsuite.study.server.service.client.RestClient.DELIMITER;
+import static org.gridsuite.study.server.service.client.RestClientService.DELIMITER;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>

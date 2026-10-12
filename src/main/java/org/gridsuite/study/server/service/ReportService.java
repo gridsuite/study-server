@@ -19,12 +19,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URLEncoder;
@@ -48,7 +46,7 @@ public class ReportService {
 
     private String reportServerBaseUri;
 
-    private final RestTemplate restTemplate;
+    private final RestClient restClient;
 
     private final ObjectMapper objectMapper;
 
@@ -56,9 +54,9 @@ public class ReportService {
 
     @Autowired
     public ReportService(RemoteServicesProperties remoteServicesProperties,
-                         RestTemplate restTemplate, ObjectMapper objectMapper) {
+                         RestClient restClient, ObjectMapper objectMapper) {
         this.reportServerBaseUri = remoteServicesProperties.getServiceUri("report-server");
-        this.restTemplate = restTemplate;
+        this.restClient = restClient;
         this.objectMapper = objectMapper;
     }
 
@@ -75,10 +73,9 @@ public class ReportService {
                 .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName)
                 .queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
         var path = uriBuilder.buildAndExpand(id).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<Report>() {
-        }).getBody();
+        return restClient.get().uri(this.getReportsServerURI() + path)
+            .headers(headers -> headers.setContentType(MediaType.APPLICATION_JSON))
+            .retrieve().body(new ParameterizedTypeReference<Report>() { });
     }
 
     public void deleteReports(@NonNull List<UUID> reportsUuids) {
@@ -86,12 +83,13 @@ public class ReportService {
             return;
         }
         var path = UriComponentsBuilder.fromPath("reports").toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(reportsUuids, headers);
 
         try {
-            restTemplate.exchange(this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + path, HttpMethod.DELETE, httpEntity, Void.class);
+            restClient.method(HttpMethod.DELETE)
+                .uri(this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + path)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(reportsUuids)
+                .retrieve().toBodilessEntity();
         } catch (Exception e) {
             LOGGER.error("Error while deleting reports : {}", e.getMessage());
         }
@@ -124,18 +122,17 @@ public class ReportService {
             ? uriBuilder.buildAndExpand(reportIds.get(0)).toUriString()
             : uriBuilder.buildAndExpand().toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<ReportPage>() { }).getBody();
+        return restClient.get().uri(this.getReportsServerURI() + path)
+            .headers(headers -> headers.setContentType(MediaType.APPLICATION_JSON))
+            .retrieve().body(new ParameterizedTypeReference<ReportPage>() { });
     }
 
     public UUID duplicateReport(@NonNull UUID id) {
         var path = UriComponentsBuilder.fromPath("{id}/duplicate").buildAndExpand(id).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
         try {
-            return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.POST, new HttpEntity<>(headers), UUID.class).getBody();
+            return restClient.post().uri(this.getReportsServerURI() + path)
+                .contentType(MediaType.APPLICATION_JSON)
+                .retrieve().body(UUID.class);
         } catch (Exception e) {
             LOGGER.error("Error while duplicating report : {}", e.getMessage());
             return UUID.randomUUID();
@@ -144,10 +141,9 @@ public class ReportService {
 
     public Set<String> getReportAggregatedSeverities(@NonNull UUID id) {
         var path = UriComponentsBuilder.fromPath("{id}/aggregated-severities").buildAndExpand(id).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<Set<String>>() {
-        }).getBody();
+        return restClient.get().uri(this.getReportsServerURI() + path)
+            .headers(headers -> headers.setContentType(MediaType.APPLICATION_JSON))
+            .retrieve().body(new ParameterizedTypeReference<Set<String>>() { });
     }
 
     public String getSearchTermMatchesInFilteredLogs(
@@ -185,23 +181,24 @@ public class ReportService {
             ? uriBuilder.buildAndExpand(reportIds.get(0)).toUriString()
             : uriBuilder.buildAndExpand().toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
+        return restClient.get().uri(this.getReportsServerURI() + path)
+            .headers(headers -> headers.setContentType(MediaType.APPLICATION_JSON))
+            .retrieve().body(String.class);
     }
 
     public void sendReport(UUID reportUuid, ReportNode reportNode) {
         var path = UriComponentsBuilder.fromPath("{reportUuid}")
             .buildAndExpand(reportUuid)
             .toUriString();
-        var headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
         String serializedNode;
         try {
             serializedNode = objectMapper.writeValueAsString(reportNode);
         } catch (JsonProcessingException error) {
             throw new IllegalStateException("Impossible to serialize report node", error);
         }
-        restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.PUT, new HttpEntity<>(serializedNode, headers), ReportNode.class);
+        restClient.put().uri(this.getReportsServerURI() + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(serializedNode)
+            .retrieve().toEntity(ReportNode.class);
     }
 }

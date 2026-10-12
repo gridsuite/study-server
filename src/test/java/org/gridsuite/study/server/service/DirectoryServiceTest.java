@@ -7,23 +7,25 @@
 package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.*;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
 
 import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 @ExtendWith(MockitoExtension.class)
 class DirectoryServiceTest {
@@ -34,15 +36,21 @@ class DirectoryServiceTest {
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
 
-    @Mock
-    private RestTemplate restTemplate;
+    private MockRestServiceServer server;
 
     private DirectoryService directoryService;
 
     @BeforeEach
     void setup() {
         when(remoteServicesProperties.getServiceUri("directory-server")).thenReturn(DIRECTORY_SERVER_URI);
-        directoryService = new DirectoryService(remoteServicesProperties, restTemplate);
+        RestClient.Builder builder = RestClient.builder();
+        server = MockRestServiceServer.bindTo(builder).build();
+        directoryService = new DirectoryService(remoteServicesProperties, builder.build());
+    }
+
+    @AfterEach
+    void verifyRequests() {
+        server.verify();
     }
 
     @Test
@@ -50,35 +58,33 @@ class DirectoryServiceTest {
         UUID elementUuid = UUID.randomUUID();
         String response = "[{\"name\":\"element\"}]";
         String expectedUrl = DIRECTORY_SERVER_URI + "/v1/elements?ids=" + elementUuid + "&elementTypes=STUDY&strictMode=false";
-        ArgumentCaptor<HttpEntity<Void>> entityCaptor = ArgumentCaptor.forClass(HttpEntity.class);
-        when(restTemplate.exchange(eq(expectedUrl), eq(HttpMethod.GET), entityCaptor.capture(), eq(String.class)))
-            .thenReturn(ResponseEntity.ok(response));
+        server.expect(requestTo(expectedUrl))
+            .andExpect(method(HttpMethod.GET))
+            .andExpect(header(HEADER_USER_ID, USER_ID))
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andRespond(withSuccess(response, MediaType.APPLICATION_JSON));
 
         assertThat(directoryService.getElements(List.of(elementUuid), List.of("STUDY"), false, USER_ID)).isEqualTo(response);
-
-        HttpHeaders headers = entityCaptor.getValue().getHeaders();
-        assertThat(headers.getFirst(HEADER_USER_ID)).isEqualTo(USER_ID);
-        assertThat(headers.getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
     }
 
     @Test
     void testElementExists() {
         UUID directoryUuid = UUID.randomUUID();
         String expectedUrl = DIRECTORY_SERVER_URI + "/v1/directories/" + directoryUuid + "/elements/elementName/types/STUDY";
-        when(restTemplate.exchange(eq(expectedUrl), eq(HttpMethod.HEAD), org.mockito.ArgumentMatchers.<HttpEntity<Void>>any(), eq(Void.class)))
-            .thenReturn(ResponseEntity.ok().build());
+        server.expect(requestTo(expectedUrl))
+            .andExpect(method(HttpMethod.HEAD))
+            .andRespond(withSuccess());
 
         assertThat(directoryService.elementExists(directoryUuid, "elementName", "STUDY")).isTrue();
-
-        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.HEAD), org.mockito.ArgumentMatchers.<HttpEntity<Void>>any(), eq(Void.class));
     }
 
     @Test
     void testElementDoesNotExist() {
         UUID directoryUuid = UUID.randomUUID();
         String expectedUrl = DIRECTORY_SERVER_URI + "/v1/directories/" + directoryUuid + "/elements/elementName/types/STUDY";
-        when(restTemplate.exchange(eq(expectedUrl), eq(HttpMethod.HEAD), org.mockito.ArgumentMatchers.<HttpEntity<Void>>any(), eq(Void.class)))
-            .thenReturn(ResponseEntity.noContent().build());
+        server.expect(requestTo(expectedUrl))
+            .andExpect(method(HttpMethod.HEAD))
+            .andRespond(withNoContent());
 
         assertThat(directoryService.elementExists(directoryUuid, "elementName", "STUDY")).isFalse();
     }
