@@ -19,6 +19,8 @@ import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.util.Pair;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -89,6 +91,22 @@ public class NetworkModificationService {
                 .toUriString();
     }
 
+    private static HttpEntity<Void> userIdEntity(String userId) {
+        return userIdEntity(userId, null);
+    }
+
+    private static <T> HttpEntity<T> userIdEntity(String userId, T body) {
+        if (userId == null) {
+            return null;
+        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        if (body != null) {
+            headers.setContentType(MediaType.APPLICATION_JSON);
+        }
+        return new HttpEntity<>(body, headers);
+    }
+
     public String getLineTypesCatalog() {
         return restClient.get().uri(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + "/catalog/line_types")
             .retrieve().body(String.class);
@@ -115,10 +133,11 @@ public class NetworkModificationService {
             .queryParam(UUIDS, compositeModificationUuids)
             .queryParam("onlyMetadata", onlyMetadata)
             .build().toUriString();
+        HttpEntity<Void> entity = userIdEntity(userId);
         return restClient.get().uri(getNetworkModificationServerURI(false) + path)
             .headers(headers -> {
-                if (userId != null) {
-                    headers.set(HEADER_USER_ID, userId);
+                if (entity != null) {
+                    headers.addAll(entity.getHeaders());
                 }
             })
             .retrieve().body(String.class);
@@ -126,10 +145,11 @@ public class NetworkModificationService {
 
     public String getNetworkModification(UUID networkModificationUuid, String userId) {
         String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + "/{uuid}").buildAndExpand(networkModificationUuid).toUriString();
+        HttpEntity<Void> entity = userIdEntity(userId);
         return restClient.get().uri(getNetworkModificationServerURI(false) + path)
             .headers(headers -> {
-                if (userId != null) {
-                    headers.set(HEADER_USER_ID, userId);
+                if (entity != null) {
+                    headers.addAll(entity.getHeaders());
                 }
             })
             .retrieve().body(String.class);
@@ -176,10 +196,11 @@ public class NetworkModificationService {
             .buildAndExpand(groupUUid)
             .toUriString();
 
+        HttpEntity<Void> entity = userIdEntity(userId);
         return restClient.get().uri(getNetworkModificationServerURI(false) + path)
             .headers(headers -> {
-                if (userId != null) {
-                    headers.set(HEADER_USER_ID, userId);
+                if (entity != null) {
+                    headers.addAll(entity.getHeaders());
                 }
             })
             .retrieve().body(String.class);
@@ -269,11 +290,13 @@ public class NetworkModificationService {
                 .buildAndExpand()
                 .toUriString();
 
+        HttpEntity<String> entity = userIdEntity(userId, createEquipmentAttributes);
         var requestSpec = restClient.put().uri(path);
-        if (userId != null) {
-            requestSpec.header(HEADER_USER_ID, userId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(createEquipmentAttributes);
+        if (entity != null) {
+            requestSpec.headers(headers -> headers.addAll(entity.getHeaders()));
+            if (entity.hasBody()) {
+                requestSpec.body(entity.getBody());
+            }
         }
         requestSpec.retrieve().toBodilessEntity();
     }
@@ -305,11 +328,12 @@ public class NetworkModificationService {
             .buildAndExpand()
             .toUriString();
 
+        HttpEntity<NetworkModificationMetadata> entity = userIdEntity(userId, metadata);
         var requestSpec = restClient.put().uri(path);
-        if (userId != null) {
-            requestSpec.header(HEADER_USER_ID, userId);
-            if (metadata != null) {
-                requestSpec.contentType(MediaType.APPLICATION_JSON).body(metadata);
+        if (entity != null) {
+            requestSpec.headers(headers -> headers.addAll(entity.getHeaders()));
+            if (entity.hasBody()) {
+                requestSpec.body(entity.getBody());
             }
         }
         requestSpec.retrieve().toBodilessEntity();
@@ -700,10 +724,11 @@ public class NetworkModificationService {
                 .queryParam(UUIDS, containerUuids)
                 .build().toUriString();
 
+        HttpEntity<Void> entity = userIdEntity(userId);
         restClient.get().uri(getNetworkModificationServerURI(false) + path)
             .headers(headers -> {
-                if (userId != null) {
-                    headers.set(HEADER_USER_ID, userId);
+                if (entity != null) {
+                    headers.addAll(entity.getHeaders());
                 }
             })
             .retrieve().toBodilessEntity();
