@@ -193,6 +193,15 @@ class SpreadsheetConfigCollectionTest {
     }
 
     @Test
+    void testRequiredPayloadsCannotBeNull(final MockWebServer server) {
+        assertThrows(NullPointerException.class, () -> studyConfigService.createSpreadsheetConfigCollection(null));
+        assertThrows(NullPointerException.class, () -> studyConfigService.updateSpreadsheetConfigCollection(SPREADSHEET_CONFIG_COLLECTION_UUID, null));
+        assertThrows(NullPointerException.class, () -> studyConfigService.addSpreadsheetConfigToCollection(SPREADSHEET_CONFIG_COLLECTION_UUID, null));
+        assertThrows(NullPointerException.class, () -> studyConfigService.reorderSpreadsheetConfigs(SPREADSHEET_CONFIG_COLLECTION_UUID, null));
+        assertEquals(0, server.getRequestCount());
+    }
+
+    @Test
     void testUpdateSpreadsheetConfigCollection(final MockWebServer server) throws Exception {
         // Create a study with an existing spreadsheet config collection
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, SPREADSHEET_CONFIG_COLLECTION_UUID);

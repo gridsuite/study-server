@@ -276,6 +276,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
     }
 
     public ResponseEntity<byte[]> exportAsymmetricalLoadResultsAsCsv(UUID resultUuid, String csvHeaders, UUID networkUuid, String variantId, Sort sort, String filters, String globalFilters) {
+        Objects.requireNonNull(csvHeaders);
         if (resultUuid == null) {
             throw new StudyException(NOT_FOUND, "Result of asymmetrical load was not found");
         }
@@ -298,11 +299,9 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
         }
         URI uri = uriBuilder.build().encode().toUri();
 
-        var requestSpec = restClient.post().uri(uri)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (csvHeaders != null) {
-            requestSpec.body(csvHeaders);
-        }
-        return requestSpec.retrieve().toEntity(byte[].class);
+        return restClient.post().uri(uri)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(csvHeaders)
+            .retrieve().toEntity(byte[].class);
     }
 }

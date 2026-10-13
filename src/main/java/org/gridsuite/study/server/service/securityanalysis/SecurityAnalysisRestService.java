@@ -74,6 +74,7 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
     public ResponseEntity<byte[]> getSecurityAnalysisResultCsv(UUID resultUuid, UUID networkUuid, String variantId,
                                                                SecurityAnalysisResultType resultType, String globalFilters,
                                                                String filters, Sort sort, String csvTranslations) {
+        Objects.requireNonNull(csvTranslations);
         if (resultUuid == null) {
             throw new StudyException(NOT_FOUND, "Result for security analysis not found");
         }
@@ -83,12 +84,10 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
         addFiltersAndSortToQueryParams(pathBuilder, networkUuid, variantId, filters, globalFilters, sort);
         String path = pathBuilder.buildAndExpand(resultUuid).toUriString();
 
-        var requestSpec = restClient.post().uri(baseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (csvTranslations != null) {
-            requestSpec.body(csvTranslations);
-        }
-        return requestSpec.retrieve().toEntity(byte[].class);
+        return restClient.post().uri(baseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(csvTranslations)
+            .retrieve().toEntity(byte[].class);
     }
 
     private String getPagedPathFromResultType(SecurityAnalysisResultType resultType) {

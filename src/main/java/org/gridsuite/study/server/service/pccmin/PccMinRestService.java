@@ -262,6 +262,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
     }
 
     public ResponseEntity<byte[]> exportPccMinResultsAsCsv(UUID resultUuid, String csvHeaders, UUID networkUuid, String variantId, Sort sort, String filters, String globalFilters) {
+        Objects.requireNonNull(csvHeaders);
         if (resultUuid == null) {
             throw new StudyException(NOT_FOUND, "Result of pcc min was not found");
         }
@@ -284,12 +285,10 @@ public class PccMinRestService extends AbstractComputationRestService implements
         }
         URI uri = uriBuilder.build().encode().toUri();
 
-        var requestSpec = restClient.post().uri(uri)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (csvHeaders != null) {
-            requestSpec.body(csvHeaders);
-        }
-        return requestSpec.retrieve().toEntity(byte[].class);
+        return restClient.post().uri(uri)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(csvHeaders)
+            .retrieve().toEntity(byte[].class);
     }
 
     public String getParameters(UUID parameterUuid) {

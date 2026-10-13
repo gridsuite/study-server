@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.DYNAMIC_MAPPING_API_VERSION;
@@ -44,16 +45,15 @@ public class DynamicMappingService {
     }
 
     public String getNetworkMatches(UUID networkUuid, String ruleToMatch) {
+        Objects.requireNonNull(ruleToMatch);
         String networkBasePath = buildEndPointUrl(dynamicMappingServerBaseUri, API_VERSION, DYNAMIC_MAPPING_END_POINT_NETWORK);
         String url = UriComponentsBuilder.fromUriString(networkBasePath + NETWORK_MATCHES_URI)
                 .buildAndExpand(networkUuid)
                 .toUriString();
 
-        var requestSpec = restClient.post().uri(url)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (ruleToMatch != null) {
-            requestSpec.body(ruleToMatch);
-        }
-        return requestSpec.retrieve().body(String.class);
+        return restClient.post().uri(url)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(ruleToMatch)
+            .retrieve().body(String.class);
     }
 }

@@ -24,6 +24,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -61,6 +62,7 @@ public class SingleLineDiagramService {
     }
 
     public byte[] generateVoltageLevelSvg(UUID networkUuid, String variantId, String voltageLevelId, Map<String, Object> sldRequestInfos) {
+        Objects.requireNonNull(sldRequestInfos);
         var uriComponentsBuilder = UriComponentsBuilder
             .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg/{networkUuid}/{voltageLevelId}");
         if (!StringUtils.isBlank(variantId)) {
@@ -71,28 +73,26 @@ public class SingleLineDiagramService {
             .buildAndExpand(networkUuid, voltageLevelId)
             .toUriString();
 
-        var requestSpec = restClient.post().uri(singleLineDiagramServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (sldRequestInfos != null) {
-            requestSpec.body(sldRequestInfos);
-        }
-        return requestSpec.retrieve().body(byte[].class);
+        return restClient.post().uri(singleLineDiagramServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(sldRequestInfos)
+            .retrieve().body(byte[].class);
     }
 
     public String generateVoltageLevelSvgAndMetadata(UUID networkUuid, String variantId, String voltageLevelId, Map<String, Object> sldRequestInfos) {
+        Objects.requireNonNull(sldRequestInfos);
 
         URI uri = buildUriFromPath(SINGLE_LINE_DIAGRAM_API_VERSION
                 + "/svg-and-metadata/{networkUuid}/{voltageLevelId}", variantId, networkUuid, voltageLevelId);
 
-        var requestSpec = restClient.post().uri(uri)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (sldRequestInfos != null) {
-            requestSpec.body(sldRequestInfos);
-        }
-        return requestSpec.retrieve().body(String.class);
+        return restClient.post().uri(uri)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(sldRequestInfos)
+            .retrieve().body(String.class);
     }
 
     public byte[] generateSubstationSvg(UUID networkUuid, String variantId, String substationId, Map<String, Object> sldRequestInfos) {
+        Objects.requireNonNull(sldRequestInfos);
         var uriComponentsBuilder = UriComponentsBuilder
             .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg/{networkUuid}/{substationId}");
         if (!StringUtils.isBlank(variantId)) {
@@ -100,29 +100,27 @@ public class SingleLineDiagramService {
         }
         var path = uriComponentsBuilder.buildAndExpand(networkUuid, substationId).toUriString();
 
-        var requestSpec = restClient.post().uri(singleLineDiagramServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (sldRequestInfos != null) {
-            requestSpec.body(sldRequestInfos);
-        }
-        return requestSpec.retrieve().body(byte[].class);
+        return restClient.post().uri(singleLineDiagramServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(sldRequestInfos)
+            .retrieve().body(byte[].class);
     }
 
     public String generateSubstationSvgAndMetadata(UUID networkUuid, String variantId, String substationId, Map<String, Object> sldRequestInfos) {
+        Objects.requireNonNull(sldRequestInfos);
 
         URI uri = buildUriFromPath(SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg-and-metadata/{networkUuid}/{substationId}",
                 variantId,
                 networkUuid, substationId);
 
-        var requestSpec = restClient.post().uri(uri)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (sldRequestInfos != null) {
-            requestSpec.body(sldRequestInfos);
-        }
-        return requestSpec.retrieve().body(String.class);
+        return restClient.post().uri(uri)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(sldRequestInfos)
+            .retrieve().body(String.class);
     }
 
     public String generateNetworkAreaDiagram(UUID networkUuid, String variantId, Map<String, Object> nadRequestInfos) {
+        Objects.requireNonNull(nadRequestInfos);
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
             "/network-area-diagram/{networkUuid}");
         if (!StringUtils.isBlank(variantId)) {
@@ -132,27 +130,24 @@ public class SingleLineDiagramService {
             .buildAndExpand(networkUuid)
             .toUriString();
 
-        var requestSpec = restClient.post().uri(singleLineDiagramServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (nadRequestInfos != null) {
-            requestSpec.body(nadRequestInfos);
-        }
-        return requestSpec.retrieve().body(String.class);
+        return restClient.post().uri(singleLineDiagramServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(nadRequestInfos)
+            .retrieve().body(String.class);
     }
 
     public void deleteDiagramConfigs(List<UUID> configUuids) {
+        Objects.requireNonNull(configUuids);
         var path = UriComponentsBuilder
             .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/configs")
             .buildAndExpand()
             .toUriString();
 
-        var requestSpec = restClient.method(HttpMethod.DELETE)
+        restClient.method(HttpMethod.DELETE)
             .uri(singleLineDiagramServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (configUuids != null) {
-            requestSpec.body(configUuids);
-        }
-        requestSpec.retrieve().toBodilessEntity();
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(configUuids)
+            .retrieve().toBodilessEntity();
     }
 
 }

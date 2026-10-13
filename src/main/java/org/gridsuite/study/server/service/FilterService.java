@@ -59,6 +59,7 @@ public class FilterService {
     }
 
     public String evaluateFilter(UUID networkUuid, String variantId, String filter) {
+        Objects.requireNonNull(filter);
         Objects.requireNonNull(networkUuid);
         String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTER_END_POINT_EVALUATE;
 
@@ -69,12 +70,10 @@ public class FilterService {
         }
         var uriComponent = uriComponentsBuilder.build();
 
-        var requestSpec = restClient.post().uri(uriComponent.toUriString())
-            .contentType(MediaType.APPLICATION_JSON);
-        if (filter != null) {
-            requestSpec.body(filter);
-        }
-        return requestSpec.retrieve().body(String.class);
+        return restClient.post().uri(uriComponent.toUriString())
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(filter)
+            .retrieve().body(String.class);
     }
 
     public List<String> evaluateGlobalFilter(@NonNull final UUID networkUuid, @NonNull final String variantId,

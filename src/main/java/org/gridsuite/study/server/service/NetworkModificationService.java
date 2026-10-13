@@ -518,15 +518,14 @@ public class NetworkModificationService {
     public NetworkModificationsResult insertCompositeModifications(UUID groupUuid,
                                                                    CompositeModificationsActionType action,
                                                                    Pair<List<CompositeInfos>, List<ModificationApplicationContext>> modificationContextInfos) {
+        Objects.requireNonNull(modificationContextInfos);
         var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + GROUP_PATH)
                 .queryParam(QUERY_PARAM_ACTION, action.name());
 
-        var requestSpec = restClient.put().uri(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString())
-            .contentType(MediaType.APPLICATION_JSON);
-        if (modificationContextInfos != null) {
-            requestSpec.body(modificationContextInfos);
-        }
-        return requestSpec.retrieve().body(NetworkModificationsResult.class);
+        return restClient.put().uri(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString())
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(modificationContextInfos)
+            .retrieve().body(NetworkModificationsResult.class);
     }
 
     /**
@@ -562,18 +561,17 @@ public class NetworkModificationService {
     private NetworkModificationsResult duplicateModifications(UUID targetGroupUuid, UUID sourceGroupUuid,
                                                               Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos,
                                                               String userId) {
+        Objects.requireNonNull(modificationContextInfos);
         var path = UriComponentsBuilder.fromPath("groups/{groupUuid}/network-modifications/copy");
         if (sourceGroupUuid != null) {
             path.queryParam("sourceContainerUuid", sourceGroupUuid);
         }
 
-        var requestSpec = restClient.put().uri(getNetworkModificationServerURI(false) + path.buildAndExpand(targetGroupUuid).toUriString())
+        return restClient.put().uri(getNetworkModificationServerURI(false) + path.buildAndExpand(targetGroupUuid).toUriString())
             .contentType(MediaType.APPLICATION_JSON)
-            .headers(headers -> headers.set(HEADER_USER_ID, userId));
-        if (modificationContextInfos != null) {
-            requestSpec.body(modificationContextInfos);
-        }
-        return requestSpec.retrieve().body(NetworkModificationsResult.class);
+            .headers(headers -> headers.set(HEADER_USER_ID, userId))
+            .body(modificationContextInfos)
+            .retrieve().body(NetworkModificationsResult.class);
     }
 
     public void duplicateModificationsGroup(UUID sourceGroupUuid, UUID groupUuid, UUID newNodeUuid, UUID studyUuid, String userId) {

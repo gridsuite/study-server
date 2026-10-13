@@ -177,27 +177,25 @@ public class StudyConfigService {
     }
 
     public UUID createSpreadsheetConfigCollection(String configCollection) {
+        Objects.requireNonNull(configCollection);
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_URI)
                 .buildAndExpand()
                 .toUriString();
-        var requestSpec = restClient.post().uri(studyConfigServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (configCollection != null) {
-            requestSpec.body(configCollection);
-        }
-        return requestSpec.retrieve().body(UUID.class);
+        return restClient.post().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(configCollection)
+            .retrieve().body(UUID.class);
     }
 
     public void updateSpreadsheetConfigCollection(UUID collectionUuid, String configCollection) {
+        Objects.requireNonNull(configCollection);
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI);
         String path = uriBuilder.buildAndExpand(collectionUuid).toUriString();
-        var requestSpec = restClient.put().uri(studyConfigServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (configCollection != null) {
-            requestSpec.body(configCollection);
-        }
-        requestSpec.retrieve().toBodilessEntity();
+        restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(configCollection)
+            .retrieve().toBodilessEntity();
     }
 
     public void appendSpreadsheetConfigCollection(UUID targetCollectionUuid, UUID sourceCollectionUuid) {
@@ -209,14 +207,13 @@ public class StudyConfigService {
     }
 
     public UUID addSpreadsheetConfigToCollection(UUID collectionUuid, String configurationDto) {
+        Objects.requireNonNull(configurationDto);
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI + SPREADSHEET_CONFIG_URI);
         String path = uriBuilder.buildAndExpand(collectionUuid).toUriString();
-        var requestSpec = restClient.post().uri(studyConfigServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (configurationDto != null) {
-            requestSpec.body(configurationDto);
-        }
-        return requestSpec.retrieve().body(UUID.class);
+        return restClient.post().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(configurationDto)
+            .retrieve().body(UUID.class);
     }
 
     public void removeSpreadsheetConfigFromCollection(UUID collectionUuid, UUID configUuid) {
@@ -227,58 +224,53 @@ public class StudyConfigService {
     }
 
     public void reorderSpreadsheetConfigs(UUID collectionUuid, List<UUID> newOrder) {
+        Objects.requireNonNull(newOrder);
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI + "/reorder");
         String path = uriBuilder.buildAndExpand(collectionUuid).toUriString();
-        var requestSpec = restClient.put().uri(studyConfigServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (newOrder != null) {
-            requestSpec.body(newOrder);
-        }
-        requestSpec.retrieve().toBodilessEntity();
+        restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(newOrder)
+            .retrieve().toBodilessEntity();
     }
 
     public void reorderColumns(UUID configUuid, List<UUID> columnOrder) {
+        Objects.requireNonNull(columnOrder);
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns/reorder");
         String path = uriBuilder.buildAndExpand(configUuid).toUriString();
-        var requestSpec = restClient.put().uri(studyConfigServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (columnOrder != null) {
-            requestSpec.body(columnOrder);
-        }
-        requestSpec.retrieve().toBodilessEntity();
+        restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(columnOrder)
+            .retrieve().toBodilessEntity();
     }
 
     public void updateColumnsStates(UUID configUuid, String columnStateUpdates) {
+        Objects.requireNonNull(columnStateUpdates);
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns/states");
         String path = uriBuilder.buildAndExpand(configUuid).toUriString();
-        var requestSpec = restClient.put().uri(studyConfigServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (columnStateUpdates != null) {
-            requestSpec.body(columnStateUpdates);
-        }
-        requestSpec.retrieve().toBodilessEntity();
+        restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(columnStateUpdates)
+            .retrieve().toBodilessEntity();
     }
 
     public UUID createColumn(UUID configUuid, String columnInfos) {
+        Objects.requireNonNull(columnInfos);
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns");
         String path = uriBuilder.buildAndExpand(configUuid).toUriString();
-        var requestSpec = restClient.post().uri(studyConfigServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (columnInfos != null) {
-            requestSpec.body(columnInfos);
-        }
-        return requestSpec.retrieve().body(UUID.class);
+        return restClient.post().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(columnInfos)
+            .retrieve().body(UUID.class);
     }
 
     public void updateColumn(UUID configUuid, UUID columnUuid, String columnInfos) {
+        Objects.requireNonNull(columnInfos);
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns/{colId}");
         String path = uriBuilder.buildAndExpand(configUuid, columnUuid).toUriString();
-        var requestSpec = restClient.put().uri(studyConfigServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (columnInfos != null) {
-            requestSpec.body(columnInfos);
-        }
-        requestSpec.retrieve().toBodilessEntity();
+        restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(columnInfos)
+            .retrieve().toBodilessEntity();
     }
 
     public void deleteColumn(UUID configUuid, UUID columnUuid) {
@@ -297,47 +289,43 @@ public class StudyConfigService {
     }
 
     public void renameSpreadsheetConfig(UUID configUuid, String newName) {
+        Objects.requireNonNull(newName);
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + NAME_URI);
         String path = uriBuilder.buildAndExpand(configUuid).toUriString();
-        var requestSpec = restClient.put().uri(studyConfigServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (newName != null) {
-            requestSpec.body(newName);
-        }
-        requestSpec.retrieve().toEntity(String.class);
+        restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(newName)
+            .retrieve().toEntity(String.class);
     }
 
     public void updateSpreadsheetConfigSort(UUID configUuid, String sortConfig) {
+        Objects.requireNonNull(sortConfig);
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/sort");
         String path = uriBuilder.buildAndExpand(configUuid).toUriString();
-        var requestSpec = restClient.put().uri(studyConfigServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (sortConfig != null) {
-            requestSpec.body(sortConfig);
-        }
-        requestSpec.retrieve().toEntity(String.class);
+        restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(sortConfig)
+            .retrieve().toEntity(String.class);
     }
 
     public void updateSpreadsheetConfig(UUID configUuid, String spreadsheetConfigInfos) {
+        Objects.requireNonNull(spreadsheetConfigInfos);
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI);
         String path = uriBuilder.buildAndExpand(configUuid).toUriString();
-        var requestSpec = restClient.put().uri(studyConfigServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (spreadsheetConfigInfos != null) {
-            requestSpec.body(spreadsheetConfigInfos);
-        }
-        requestSpec.retrieve().toBodilessEntity();
+        restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(spreadsheetConfigInfos)
+            .retrieve().toBodilessEntity();
     }
 
     public void setGlobalFilters(UUID configUuid, String globalFilters) {
+        Objects.requireNonNull(globalFilters);
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/global-filters");
         String path = uriBuilder.buildAndExpand(configUuid).toUriString();
-        var requestSpec = restClient.post().uri(studyConfigServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (globalFilters != null) {
-            requestSpec.body(globalFilters);
-        }
-        requestSpec.retrieve().toBodilessEntity();
+        restClient.post().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(globalFilters)
+            .retrieve().toBodilessEntity();
     }
 
     public void resetFilters(UUID configUuid) {
@@ -395,16 +383,15 @@ public class StudyConfigService {
     }
 
     public void renameWorkspace(UUID configId, UUID workspaceId, String name) {
+        Objects.requireNonNull(name);
         Objects.requireNonNull(configId);
         Objects.requireNonNull(workspaceId);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_WITH_ID_URI + WORKSPACE_WITH_ID_URI + NAME_URI)
                 .buildAndExpand(configId, workspaceId).toUriString();
-        var requestSpec = restClient.put().uri(studyConfigServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (name != null) {
-            requestSpec.body(name);
-        }
-        requestSpec.retrieve().toBodilessEntity();
+        restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(name)
+            .retrieve().toBodilessEntity();
     }
 
     public String getWorkspacePanels(UUID configId, UUID workspaceId, List<String> panelIds) {
@@ -420,16 +407,15 @@ public class StudyConfigService {
     }
 
     public String createOrUpdateWorkspacePanels(UUID configId, UUID workspaceId, String panelsDto) {
+        Objects.requireNonNull(panelsDto);
         Objects.requireNonNull(configId);
         Objects.requireNonNull(workspaceId);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_WITH_ID_URI + WORKSPACE_WITH_ID_URI + WORKSPACE_PANELS_URI)
                 .buildAndExpand(configId, workspaceId).toUriString();
-        var requestSpec = restClient.post().uri(studyConfigServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (panelsDto != null) {
-            requestSpec.body(panelsDto);
-        }
-        return requestSpec.retrieve().body(String.class);
+        return restClient.post().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(panelsDto)
+            .retrieve().body(String.class);
     }
 
     public List<UUID> deleteWorkspacePanels(UUID configId, UUID workspaceId, String panelIds) {
@@ -448,18 +434,17 @@ public class StudyConfigService {
     }
 
     public UUID saveWorkspacePanelNadConfig(UUID configId, UUID workspaceId, UUID panelId, Map<String, Object> nadConfigData) {
+        Objects.requireNonNull(nadConfigData);
         Objects.requireNonNull(configId);
         Objects.requireNonNull(workspaceId);
         Objects.requireNonNull(panelId);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_WITH_ID_URI + WORKSPACE_WITH_ID_URI + WORKSPACE_PANELS_URI
                 + "/{panelId}/current-nad-config")
                 .buildAndExpand(configId, workspaceId, panelId).toUriString();
-        var requestSpec = restClient.post().uri(studyConfigServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (nadConfigData != null) {
-            requestSpec.body(nadConfigData);
-        }
-        return requestSpec.retrieve().body(UUID.class);
+        return restClient.post().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(nadConfigData)
+            .retrieve().body(UUID.class);
     }
 
     public String getComputationResultGlobalFilters(UUID computationResultFiltersId, String computationType) {
@@ -481,27 +466,25 @@ public class StudyConfigService {
     }
 
     public void setGlobalFiltersForComputationResult(UUID computationResultFiltersUuid, String computationType, String globalFilters) {
+        Objects.requireNonNull(globalFilters);
         Map<String, Object> uriVariables = Map.of(COMPUTATION_RESULT_FILTERS_ID, computationResultFiltersUuid, COMPUTATION_TYPE, computationType);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI +
                 "/{computationResultFiltersId}/{computationType}/global-filters").buildAndExpand(uriVariables).toUriString();
-        var requestSpec = restClient.post().uri(studyConfigServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (globalFilters != null) {
-            requestSpec.body(globalFilters);
-        }
-        requestSpec.retrieve().toBodilessEntity();
+        restClient.post().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(globalFilters)
+            .retrieve().toBodilessEntity();
     }
 
     public void updateColumns(UUID computationResultFiltersId, String computationType, String computationSubType, String columnInfos) {
+        Objects.requireNonNull(columnInfos);
         Map<String, Object> uriVariables = Map.of(COMPUTATION_RESULT_FILTERS_ID, computationResultFiltersId, COMPUTATION_TYPE, computationType, COMPUTATION_SUB_TYPE, computationSubType);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI +
                 "/{computationResultFiltersId}/{computationType}/{computationSubType}/columns").buildAndExpand(uriVariables).toUriString();
-        var requestSpec = restClient.put().uri(studyConfigServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (columnInfos != null) {
-            requestSpec.body(columnInfos);
-        }
-        requestSpec.retrieve().toBodilessEntity();
+        restClient.put().uri(studyConfigServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(columnInfos)
+            .retrieve().toBodilessEntity();
     }
 
     public UUID createComputationResultsFiltersId() {

@@ -127,6 +127,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
     public ResponseEntity<byte[]> exportSensitivityResultsAsCsv(UUID resultUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos,
                                                                 UUID networkUuid, String variantId, String selector, String filters,
                                                                 String globalFilters) {
+        Objects.requireNonNull(sensitivityAnalysisCsvFileInfos);
         if (resultUuid == null) {
             throw new StudyException(NOT_FOUND, "Result of sensitivity analysis was not found");
         }
@@ -147,12 +148,10 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
 
         URI uri = uriBuilder.build().encode().toUri();
 
-        var requestSpec = restClient.post().uri(uri)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (sensitivityAnalysisCsvFileInfos != null) {
-            requestSpec.body(sensitivityAnalysisCsvFileInfos);
-        }
-        return requestSpec.retrieve().toEntity(byte[].class);
+        return restClient.post().uri(uri)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(sensitivityAnalysisCsvFileInfos)
+            .retrieve().toEntity(byte[].class);
     }
 
     public String getSensitivityResultsFilterOptions(UUID resultUuid, String selector) {
@@ -320,6 +319,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
     }
 
     public String getSensitivityAnalysisFactorCount(UUID networkUuid, String variantId, String sensitivityAnalysisParameters) {
+        Objects.requireNonNull(sensitivityAnalysisParameters);
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/factor-count");
         if (!StringUtils.isBlank(variantId)) {
@@ -328,12 +328,10 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
 
         var path = uriComponentsBuilder.buildAndExpand(networkUuid).toUriString();
 
-        var requestSpec = restClient.post().uri(baseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (sensitivityAnalysisParameters != null) {
-            requestSpec.body(sensitivityAnalysisParameters);
-        }
-        return requestSpec.retrieve().body(String.class);
+        return restClient.post().uri(baseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(sensitivityAnalysisParameters)
+            .retrieve().body(String.class);
     }
 
     @Override

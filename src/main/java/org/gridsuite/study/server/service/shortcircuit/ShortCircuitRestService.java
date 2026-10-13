@@ -138,12 +138,11 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
     }
 
     public ResponseEntity<byte[]> getShortCircuitAnalysisCsvResultResource(URI resourcePath, String headersCsv) {
-        var requestSpec = restClient.post().uri(resourcePath)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (headersCsv != null) {
-            requestSpec.body(headersCsv);
-        }
-        return requestSpec.retrieve().toEntity(byte[].class);
+        Objects.requireNonNull(headersCsv);
+        return restClient.post().uri(resourcePath)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(headersCsv)
+            .retrieve().toEntity(byte[].class);
     }
 
     public ResponseEntity<byte[]> getShortCircuitAnalysisCsvResult(UUID resultUuid, UUID networkUuid, String variantId, String filters, String globalFilters, Sort sort, String headersCsv) {
