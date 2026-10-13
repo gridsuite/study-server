@@ -82,9 +82,9 @@ class LoadFlowServiceTest {
 
     @Test
     void testGetLoadFlowParameters() {
-        when(loadFlowRestService.getParameters(PARAMETERS_UUID)).thenReturn(PARAMETERS);
+        when(loadFlowRestService.getParameters(PARAMETERS_UUID, true, null)).thenReturn(PARAMETERS);
 
-        assertThat(loadFlowService.getCommonParameters(PARAMETERS_UUID)).isEqualTo(PARAMETERS);
+        assertThat(loadFlowService.getParameters(PARAMETERS_UUID, "userId")).isEqualTo(PARAMETERS);
     }
 
     @Test
