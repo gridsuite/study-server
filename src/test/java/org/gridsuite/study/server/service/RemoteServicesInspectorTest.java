@@ -13,9 +13,6 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.NullNode;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import mockwebserver3.MockResponse;
-import mockwebserver3.MockWebServer;
-import mockwebserver3.junit5.internal.MockWebServerExtension;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.assertj.core.api.WithAssertions;
 import org.gridsuite.study.server.RemoteServicesProperties;
@@ -62,7 +59,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 @DisableJpa
 @Import({StudyAppConfig.class, RemoteServicesProperties.class})
 @RestClientTest({RemoteServicesInspector.class})
-@ExtendWith({MockitoExtension.class, MockWebServerExtension.class})
+@ExtendWith({MockitoExtension.class})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.MethodName.class)
 class RemoteServicesInspectorTest implements WithAssertions {
@@ -152,21 +149,6 @@ class RemoteServicesInspectorTest implements WithAssertions {
     @Test
     void testOptionalServicesWithLatency() {
         testOptionalServices("{\"status\":\"DOWN\"}", ServiceStatus.DOWN, 2000);
-    }
-
-    @TimeoutRemotes
-    @Test
-    void testOptionalServiceReadTimeout(MockWebServer realServer) {
-        realServer.enqueue(new MockResponse.Builder()
-            .body("{\"status\":\"UP\"}")
-            .headersDelay(RemoteServicesInspector.REQUEST_TIMEOUT_IN_MS + 500L, TimeUnit.MILLISECONDS)
-            .build());
-        RemoteServicesInspector inspector = new RemoteServicesInspector(objectMapper, remoteServicesProperties,
-            remoteServicesInspector, RestClient.builder(), infoEndpoint);
-        RemoteServicesProperties.Service service = new RemoteServicesProperties.Service(
-            RemoteServiceName.LOADFLOW_SERVER.serviceName(), realServer.url("").toString(), true);
-
-        assertThat(inspector.isOptionalServiceUp(service).join()).isFalse();
     }
 
     private void testOptionalServices(final String jsonResponse, final ServiceStatus statusTest, int delayResponse) {

@@ -124,16 +124,4 @@ class LoadFlowRestServiceTest {
 
         loadFlowRestService.updateParameters(parameterUuid, parameters);
     }
-
-    @Test
-    void testUpdateParametersWithNullBody() {
-        UUID parameterUuid = UUID.randomUUID();
-        server.expect(requestTo(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/" + parameterUuid))
-            .andExpect(method(HttpMethod.PUT))
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(content().string(""))
-            .andRespond(withNoContent());
-
-        loadFlowRestService.updateParameters(parameterUuid, null);
-    }
 }

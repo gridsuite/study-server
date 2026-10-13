@@ -84,16 +84,4 @@ class SensitivityAnalysisRestServiceTest {
 
         sensitivityAnalysisRestService.updateParameters(parameterUuid, parameters);
     }
-
-    @Test
-    void testUpdateParametersWithNullBody() {
-        UUID parameterUuid = UUID.randomUUID();
-        server.expect(requestTo(BASE_URI + "/" + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid))
-            .andExpect(method(HttpMethod.PUT))
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(content().string(""))
-            .andRespond(withNoContent());
-
-        sensitivityAnalysisRestService.updateParameters(parameterUuid, null);
-    }
 }

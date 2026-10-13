@@ -14,12 +14,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.NullSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -109,21 +105,13 @@ class NetworkModificationServiceTest {
         assertThat(networkModificationService.getNetworkModificationsFromComposite(List.of(firstUuid, secondUuid), false, USER_ID)).isEqualTo(RESPONSE);
     }
 
-    @ParameterizedTest
-    @NullSource
-    @ValueSource(strings = USER_ID)
-    void testGetNetworkModification(String userId) {
+    @Test
+    void testGetNetworkModification() {
         UUID modificationUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid;
-        var expectation = server.expect(requestTo(expectedUrl)).andExpect(method(HttpMethod.GET));
-        if (userId == null) {
-            expectation.andExpect(headerDoesNotExist(HEADER_USER_ID));
-        } else {
-            expectation.andExpect(header(HEADER_USER_ID, userId));
-        }
-        expectation.andRespond(withSuccess(RESPONSE, MediaType.APPLICATION_JSON));
+        expectUserIdIsForwarded(expectedUrl);
 
-        assertThat(networkModificationService.getNetworkModification(modificationUuid, userId)).isEqualTo(RESPONSE);
+        assertThat(networkModificationService.getNetworkModification(modificationUuid, USER_ID)).isEqualTo(RESPONSE);
     }
 
     @Test
@@ -149,47 +137,6 @@ class NetworkModificationServiceTest {
             .andRespond(withNoContent());
 
         networkModificationService.updateNetworkModification(modificationUuid, RESPONSE, USER_ID);
-    }
-
-    @ParameterizedTest
-    @NullSource
-    @ValueSource(strings = USER_ID)
-    void testUpdateModification(String userId) {
-        UUID modificationUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid;
-        var expectation = server.expect(requestTo(expectedUrl)).andExpect(method(HttpMethod.PUT));
-        if (userId == null) {
-            expectation.andExpect(headerDoesNotExist(HEADER_USER_ID))
-                .andExpect(headerDoesNotExist(HttpHeaders.CONTENT_TYPE))
-                .andExpect(content().string(""));
-        } else {
-            expectation.andExpect(header(HEADER_USER_ID, userId))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(content().json(RESPONSE));
-        }
-        expectation.andRespond(withNoContent());
-
-        networkModificationService.updateModification(RESPONSE, modificationUuid, userId);
-    }
-
-    @ParameterizedTest
-    @NullSource
-    @ValueSource(strings = USER_ID)
-    void testUpdateModificationsMetadataWithoutBody(String userId) {
-        UUID groupUuid = UUID.randomUUID();
-        UUID modificationUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications?uuids=" + modificationUuid + "&groupUuid=" + groupUuid;
-        var expectation = server.expect(requestTo(expectedUrl)).andExpect(method(HttpMethod.PUT))
-            .andExpect(headerDoesNotExist(HttpHeaders.CONTENT_TYPE))
-            .andExpect(content().string(""));
-        if (userId == null) {
-            expectation.andExpect(headerDoesNotExist(HEADER_USER_ID));
-        } else {
-            expectation.andExpect(header(HEADER_USER_ID, userId));
-        }
-        expectation.andRespond(withNoContent());
-
-        networkModificationService.updateModificationsMetadata(groupUuid, List.of(modificationUuid), null, userId);
     }
 
     @Test

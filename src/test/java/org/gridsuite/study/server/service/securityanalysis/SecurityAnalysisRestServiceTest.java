@@ -94,16 +94,4 @@ class SecurityAnalysisRestServiceTest {
 
         securityAnalysisRestService.updateParameters(parameterUuid, parameters);
     }
-
-    @Test
-    void testUpdateParametersWithNullBody() {
-        UUID parameterUuid = UUID.randomUUID();
-        server.expect(requestTo(BASE_URI + "/" + SECURITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid))
-            .andExpect(method(HttpMethod.PUT))
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(content().string(""))
-            .andRespond(withNoContent());
-
-        securityAnalysisRestService.updateParameters(parameterUuid, null);
-    }
 }

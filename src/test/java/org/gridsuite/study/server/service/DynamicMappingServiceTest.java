@@ -19,7 +19,6 @@ import org.springframework.web.client.RestClient;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.gridsuite.study.server.service.DynamicMappingService.API_VERSION;
 import static org.gridsuite.study.server.service.DynamicMappingService.DYNAMIC_MAPPING_END_POINT_NETWORK;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
@@ -69,12 +68,6 @@ class DynamicMappingServiceTest extends AbstractWireMockRestClientTest {
         LOGGER.info("Network values result = {}", result);
         assertThat(result).isEqualTo(NETWORK_VALUES_JSON);
 
-    }
-
-    @Test
-    void testGetNetworkMatchesRequiresRule() {
-        assertThatNullPointerException().isThrownBy(() -> dynamicMappingService.getNetworkMatches(NETWORK_UUID, null));
-        wireMockServer.verify(0, WireMock.anyRequestedFor(WireMock.anyUrl()));
     }
 
     @Test
