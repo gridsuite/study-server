@@ -212,7 +212,6 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
                 .queryParam(RESULT_UUID, uuids).build().toUriString();
 
             restClient.put().uri(baseUri + path)
-                .body(Void.class)
                 .retrieve().toBodilessEntity();
         }
     }

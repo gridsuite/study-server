@@ -236,7 +236,6 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
                     .queryParam(RESULT_UUID, uuids).build().toUriString();
 
             restClient.put().uri(baseUri + path)
-                .body(Void.class)
                 .retrieve().toBodilessEntity();
         }
     }
@@ -246,7 +245,6 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
             .buildAndExpand(resultUuid).toUriString();
 
         restClient.put().uri(baseUri + path)
-            .body(Void.class)
             .retrieve().toBodilessEntity();
     }
 

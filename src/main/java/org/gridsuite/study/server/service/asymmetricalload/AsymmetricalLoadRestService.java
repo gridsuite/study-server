@@ -112,7 +112,6 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
             .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
 
         restClient.put().uri(baseUri + path)
-            .body(Void.class)
             .retrieve().toBodilessEntity();
     }
 
@@ -156,7 +155,6 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
                 .queryParam(RESULT_UUID, uuids).build().toUriString();
 
             restClient.put().uri(baseUri + path)
-                .body(Void.class)
                 .retrieve().toBodilessEntity();
         }
     }

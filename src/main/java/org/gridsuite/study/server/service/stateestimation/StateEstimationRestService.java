@@ -106,7 +106,6 @@ public class StateEstimationRestService extends AbstractComputationRestService i
                 .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
 
         restClient.put().uri(baseUri + path)
-            .body(Void.class)
             .retrieve().toBodilessEntity();
     }
 
@@ -224,7 +223,6 @@ public class StateEstimationRestService extends AbstractComputationRestService i
                 .queryParam(RESULT_UUID, uuids).build().toUriString();
 
             restClient.put().uri(baseUri + path)
-                .body(Void.class)
                 .retrieve().toBodilessEntity();
         }
     }
