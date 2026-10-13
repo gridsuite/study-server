@@ -22,7 +22,7 @@ import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.core.io.Resource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.UncheckedIOException;
@@ -53,8 +53,8 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
 
     private final ObjectMapper objectMapper;
 
-    public DynamicSecurityAnalysisRestService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate, ObjectMapper objectMapper) {
-        super(remoteServicesProperties.getServiceUri("dynamic-security-analysis-server"), restTemplate);
+    public DynamicSecurityAnalysisRestService(RemoteServicesProperties remoteServicesProperties, RestClient restClient, ObjectMapper objectMapper) {
+        super(remoteServicesProperties.getServiceUri("dynamic-security-analysis-server"), restClient);
         this.objectMapper = objectMapper;
     }
 
@@ -63,7 +63,8 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
 
         String url = getParametersWithUuidUrl(parametersUuid);
 
-        return getRestTemplate().getForObject(url, String.class);
+        return getRestClient().get().uri(url)
+            .retrieve().body(String.class);
     }
 
     private String getParametersWithUuidUrl(UUID parametersUuid) {
@@ -76,7 +77,8 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
 
     public String getProviders() {
         String url = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, "providers");
-        return getRestTemplate().getForObject(url, String.class);
+        return getRestClient().get().uri(url)
+            .retrieve().body(String.class);
     }
 
     public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
@@ -84,7 +86,8 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
         String url = UriComponentsBuilder.fromUriString(resultBaseUrl + "/{resultUuid}/download-debug-file")
                 .buildAndExpand(resultUuid)
                 .toUriString();
-        return getRestTemplate().exchange(url, HttpMethod.GET, null, Resource.class);
+        return getRestClient().get().uri(url)
+            .retrieve().toEntity(Resource.class);
     }
 
     public UUID createParameters(String parameters) {
@@ -96,12 +99,10 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
                 .buildAndExpand()
                 .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
-
-        return getRestTemplate().postForObject(url, httpEntity, UUID.class);
+        return getRestClient().post().uri(url)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(parameters)
+            .retrieve().body(UUID.class);
     }
 
     public UUID createDefaultParameters() {
@@ -111,7 +112,8 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
                 .buildAndExpand()
                 .toUriString();
 
-        return getRestTemplate().postForObject(url, null, UUID.class);
+        return getRestClient().post().uri(url)
+            .retrieve().body(UUID.class);
     }
 
     public void updateParameters(UUID parametersUuid, String parametersInfos) {
@@ -120,12 +122,10 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
 
         String url = getParametersWithUuidUrl(parametersUuid);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<String> httpEntity = new HttpEntity<>(parametersInfos, headers);
-
-        getRestTemplate().put(url, httpEntity);
+        getRestClient().put().uri(url)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(parametersInfos)
+            .retrieve().toBodilessEntity();
     }
 
     public UUID duplicateParameters(UUID sourceParameterId) {
@@ -137,7 +137,8 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
                 .buildAndExpand(sourceParameterId)
                 .toUriString();
 
-        return getRestTemplate().postForObject(url, null, UUID.class);
+        return getRestClient().post().uri(url)
+            .retrieve().body(UUID.class);
     }
 
     public void deleteParameters(UUID parametersUuid) {
@@ -146,7 +147,8 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
         String url = getParametersWithUuidUrl(parametersUuid);
 
         // call dynamic-security-analysis REST API
-        getRestTemplate().delete(url);
+        getRestClient().delete().uri(url)
+            .retrieve().toBodilessEntity();
     }
 
     public UUID runDynamicSecurityAnalysis(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid,
@@ -189,14 +191,12 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
                 .buildAndExpand(networkUuid)
                 .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
         // call dynamic-security-analysis REST API
-        HttpEntity<?> httpEntity = new HttpEntity<>(null, headers);
 
-        return getRestTemplate().postForObject(url, httpEntity, UUID.class);
+        return getRestClient().post().uri(url)
+            .headers(headers -> headers.set(HEADER_USER_ID, userId))
+            .contentType(MediaType.APPLICATION_JSON)
+            .retrieve().body(UUID.class);
     }
 
     public DynamicSecurityAnalysisStatus getStatus(UUID resultUuid) {
@@ -212,7 +212,8 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
                 .toUriString();
 
         // call dynamic-security-analysis REST API
-        return getRestTemplate().getForObject(url, DynamicSecurityAnalysisStatus.class);
+        return getRestClient().get().uri(url)
+            .retrieve().body(DynamicSecurityAnalysisStatus.class);
     }
 
     public void invalidateStatus(List<UUID> resultUuids) {
@@ -226,7 +227,8 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
                 .queryParam("resultUuid", resultUuids)
                 .build()
                 .toUriString();
-        getRestTemplate().put(url, null);
+        getRestClient().put().uri(url)
+            .retrieve().toBodilessEntity();
     }
 
     public void deleteResults(List<UUID> resultUuids) {
@@ -237,7 +239,8 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(resultBaseUrl).queryParam(QUERY_PARAM_RESULTS_UUIDS, resultUuids);
         String path = uriComponentsBuilder.build().toUriString();
         // call dynamic-security-analysis REST API
-        getRestTemplate().delete(path);
+        getRestClient().delete().uri(path)
+            .retrieve().toBodilessEntity();
     }
 
     public void deleteAllResults() {
@@ -250,7 +253,8 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
                 .toUriString();
 
         // call dynamic-security-analysis REST API
-        return getRestTemplate().getForObject(url, Integer.class);
+        return getRestClient().get().uri(url)
+            .retrieve().body(Integer.class);
     }
 
     public UUID getDynamicSecurityAnalysisParametersUuidOrElseCreateDefault(StudyEntity studyEntity) {
@@ -269,7 +273,8 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
                 .buildAndExpand(parametersUuid)
                 .toUriString();
 
-        return getRestTemplate().getForObject(url, String.class);
+        return getRestClient().get().uri(url)
+            .retrieve().body(String.class);
     }
 
     @Override

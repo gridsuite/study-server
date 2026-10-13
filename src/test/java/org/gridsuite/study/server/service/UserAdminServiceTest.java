@@ -6,24 +6,25 @@
  */
 package org.gridsuite.study.server.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
+import org.gridsuite.study.server.RestClientConfig;
 import org.gridsuite.study.server.dto.QuotaState;
 import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.QuotaConsumptionRepository;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.convention.TestBean;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
 
 import java.util.Map;
 import java.util.UUID;
@@ -31,13 +32,8 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.ArgumentMatchers.matches;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 /**
  * @author Ghiles Abdellah {@literal <ghiles.abdellah at rte-france.com>}
@@ -51,6 +47,7 @@ import static org.mockito.Mockito.when;
 @ContextConfigurationWithTestChannel
 class UserAdminServiceTest {
     private static final String USER_ID = "userId";
+    private static final String BASE_URI = "http://user-admin-server";
 
     @Autowired
     private UserAdminService userAdminService;
@@ -58,54 +55,63 @@ class UserAdminServiceTest {
     @Autowired
     private QuotaConsumptionRepository quotaConsumptionRepository;
 
-    @MockitoBean
-    private RestTemplate restTemplate;
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @TestBean(name = "studyRestClient", methodName = "createRestClient")
+    private RestClient restClient;
+
+    private static MockRestServiceServer server;
+
+    static RestClient createRestClient() {
+        RestClient.Builder builder = RestClient.builder();
+        server = MockRestServiceServer.bindTo(builder).build();
+        return new RestClientConfig().studyRestClient(builder);
+    }
+
+    @BeforeEach
+    void configureRestClient() {
+        server.reset();
+        userAdminService.setUserAdminServerBaseUri(BASE_URI);
+    }
 
     @AfterEach
     void cleanDB() {
         quotaConsumptionRepository.deleteAll();
+        server.verify();
     }
 
     @Test
-    void testGetUserQuotaState() {
+    void testGetUserQuotaState() throws Exception {
         Map<QuotaType, QuotaState> expectedState = Map.of(
                 QuotaType.LOAD_FLOW, new QuotaState(1, 5),
                 QuotaType.BUILD, new QuotaState(0, 10));
-        when(restTemplate.exchange(
-                anyString(),
-                eq(HttpMethod.GET),
-                isNull(),
-                Mockito.<ParameterizedTypeReference<Map<QuotaType, QuotaState>>>any()))
-                .thenReturn(ResponseEntity.ok(expectedState));
+        server.expect(requestTo(BASE_URI + "/v1/users/" + USER_ID + "/quota/state"))
+            .andExpect(method(HttpMethod.GET))
+            .andRespond(withSuccess(objectMapper.writeValueAsString(expectedState), MediaType.APPLICATION_JSON));
 
         Map<QuotaType, QuotaState> result = userAdminService.getUserQuotaState(USER_ID);
 
         assertEquals(expectedState, result);
-        verify(restTemplate, times(1)).exchange(
-                matches(".*/users/" + USER_ID + "/quota/state$"),
-                eq(HttpMethod.GET),
-                isNull(),
-                Mockito.<ParameterizedTypeReference<Map<QuotaType, QuotaState>>>any());
     }
 
     @Test
     void testConsumeQuotaReturnsQuotaId() {
         UUID quotaId = UUID.randomUUID();
-        when(restTemplate.postForObject(anyString(), isNull(), eq(UUID.class))).thenReturn(quotaId);
+        server.expect(requestTo(BASE_URI + "/v1/users/" + USER_ID + "/quota/SHORT_CIRCUIT/consume"))
+            .andExpect(method(HttpMethod.POST))
+            .andRespond(withSuccess("\"" + quotaId + "\"", MediaType.APPLICATION_JSON));
 
         UUID result = userAdminService.consumeQuota(USER_ID, QuotaType.SHORT_CIRCUIT);
 
         assertEquals(quotaId, result);
-        verify(restTemplate, times(1)).postForObject(
-                matches(".*/users/" + USER_ID + "/quota/SHORT_CIRCUIT/consume$"),
-                isNull(),
-                eq(UUID.class));
     }
 
     @Test
     void testConsumeQuotaThrowsStudyExceptionWhenQuotaExhausted() {
-        when(restTemplate.postForObject(anyString(), isNull(), eq(UUID.class)))
-                .thenThrow(HttpClientErrorException.create(HttpStatus.TOO_MANY_REQUESTS, "Bad Request", null, null, null));
+        server.expect(requestTo(BASE_URI + "/v1/users/" + USER_ID + "/quota/SHORT_CIRCUIT/consume"))
+            .andExpect(method(HttpMethod.POST))
+            .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
 
         assertThrows(StudyException.class, () -> userAdminService.consumeQuota(USER_ID, QuotaType.SHORT_CIRCUIT));
     }
@@ -113,65 +119,55 @@ class UserAdminServiceTest {
     @Test
     void testReleaseQuotaIdCallsReleaseEndpoint() {
         UUID quotaId = UUID.randomUUID();
+        expectReleaseQuota(quotaId);
 
         userAdminService.releaseQuotaId(USER_ID, quotaId);
-
-        verify(restTemplate, times(1)).postForEntity(
-                matches(".*/users/" + USER_ID + "/quota/" + quotaId + "/release$"),
-                isNull(),
-                eq(Void.class));
     }
 
     @Test
     void testRegisterThenReleaseQuotaUsesLocalMapping() {
         UUID resultUuid = UUID.randomUUID();
         UUID quotaId = UUID.randomUUID();
+        expectReleaseQuota(quotaId);
 
         userAdminService.registerQuotaConsumption(resultUuid, quotaId);
         assertTrue(quotaConsumptionRepository.findById(resultUuid).isPresent());
 
         userAdminService.releaseQuota(USER_ID, resultUuid);
 
-        verify(restTemplate, times(1)).postForEntity(
-                matches(".*/users/" + USER_ID + "/quota/" + quotaId + "/release$"),
-                isNull(),
-                eq(Void.class));
         assertTrue(quotaConsumptionRepository.findById(resultUuid).isEmpty());
     }
 
     @Test
     void testReleaseQuotaIsNoOpWhenNoMappingRegistered() {
         userAdminService.releaseQuota(USER_ID, UUID.randomUUID());
-
-        verify(restTemplate, times(0)).postForEntity(anyString(), isNull(), eq(Void.class));
     }
 
     @Test
     void testRegisterThenReleaseFailedQuotaIdUsesLocalMapping() {
         UUID resultUuid = UUID.randomUUID();
         UUID quotaId = UUID.randomUUID();
+        expectReleaseQuota(quotaId);
 
         userAdminService.registerQuotaConsumption(resultUuid, quotaId);
         assertTrue(quotaConsumptionRepository.findByQuotaId(quotaId).isPresent());
 
         userAdminService.releaseFailedQuotaId(USER_ID, quotaId);
 
-        verify(restTemplate, times(1)).postForEntity(
-                matches(".*/users/" + USER_ID + "/quota/" + quotaId + "/release$"),
-                isNull(),
-                eq(Void.class));
         assertTrue(quotaConsumptionRepository.findByQuotaId(quotaId).isEmpty());
     }
 
     @Test
     void testReleaseFailedQuotaIdCallsReleaseEndpointWhenNoMappingRegistered() {
         UUID quotaId = UUID.randomUUID();
+        expectReleaseQuota(quotaId);
 
         userAdminService.releaseFailedQuotaId(USER_ID, quotaId);
+    }
 
-        verify(restTemplate, times(1)).postForEntity(
-                matches(".*/users/" + USER_ID + "/quota/" + quotaId + "/release$"),
-                isNull(),
-                eq(Void.class));
+    private void expectReleaseQuota(UUID quotaId) {
+        server.expect(requestTo(BASE_URI + "/v1/users/" + USER_ID + "/quota/" + quotaId + "/release"))
+            .andExpect(method(HttpMethod.POST))
+            .andRespond(withNoContent());
     }
 }

@@ -16,9 +16,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ContingencyCount;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Collection;
@@ -31,7 +30,7 @@ import static org.gridsuite.study.server.StudyConstants.*;
 @Service
 public class ActionsService {
 
-    private final RestTemplate restTemplate;
+    private final RestClient restClient;
 
     private static final String NETWORK_UUID = "networkUuid";
     private static final String CONTINGENCY_LIST_IDS = "ids";
@@ -42,9 +41,9 @@ public class ActionsService {
     @Setter
     private String actionsServerBaseUri;
 
-    public ActionsService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
+    public ActionsService(RemoteServicesProperties remoteServicesProperties, RestClient restClient) {
         this.actionsServerBaseUri = remoteServicesProperties.getServiceUri("actions-server");
-        this.restTemplate = restTemplate;
+        this.restClient = restClient;
     }
 
     public ContingencyCount getContingencyCount(UUID networkUuid, String variantId, List<UUID> contingencyListIds) {
@@ -55,25 +54,24 @@ public class ActionsService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        return restTemplate.exchange(
-                actionsServerBaseUri + uriComponentsBuilder.toUriString(),
-                HttpMethod.GET,
-                null,
-                ContingencyCount.class
-        ).getBody();
+        return restClient.get().uri(actionsServerBaseUri + uriComponentsBuilder.toUriString())
+            .retrieve().body(ContingencyCount.class);
     }
 
     public List<UUID> getReferencedFilterUuids(Collection<UUID> contingencyListUuids) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/filter-uuids")
                 .queryParam(CONTINGENCY_LIST_IDS, contingencyListUuids)
                 .toUriString();
-        return restTemplate.exchange(actionsServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<UUID>>() { }).getBody();
+        return restClient.get().uri(actionsServerBaseUri + path)
+            .retrieve().body(new ParameterizedTypeReference<List<UUID>>() { });
     }
 
     public String getContingencyLists(Collection<UUID> ids) {
         if (ids.isEmpty()) {
             return EMPTY_JSON_ARRAY;
         }
-        return restTemplate.postForObject(actionsServerBaseUri + DELIMITER + ACTIONS_API_VERSION + "/contingency-lists", ids, String.class);
+        return restClient.post().uri(actionsServerBaseUri + DELIMITER + ACTIONS_API_VERSION + "/contingency-lists")
+            .body(ids)
+            .retrieve().body(String.class);
     }
 }

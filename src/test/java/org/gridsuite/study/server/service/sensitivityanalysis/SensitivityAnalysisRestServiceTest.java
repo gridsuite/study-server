@@ -8,23 +8,24 @@ package org.gridsuite.study.server.service.sensitivityanalysis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
 
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.SENSITIVITY_ANALYSIS_API_VERSION;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 @ExtendWith(MockitoExtension.class)
 class SensitivityAnalysisRestServiceTest {
@@ -33,21 +34,29 @@ class SensitivityAnalysisRestServiceTest {
 
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
-    @Mock
-    private RestTemplate restTemplate;
+    private MockRestServiceServer server;
 
     private SensitivityAnalysisRestService sensitivityAnalysisRestService;
 
     @BeforeEach
     void setUp() {
         when(remoteServicesProperties.getServiceUri("sensitivity-analysis-server")).thenReturn(BASE_URI);
-        sensitivityAnalysisRestService = new SensitivityAnalysisRestService(remoteServicesProperties, restTemplate, new ObjectMapper());
+        RestClient.Builder builder = RestClient.builder();
+        server = MockRestServiceServer.bindTo(builder).build();
+        sensitivityAnalysisRestService = new SensitivityAnalysisRestService(remoteServicesProperties, builder.build(), new ObjectMapper());
+    }
+
+    @AfterEach
+    void verifyRequests() {
+        server.verify();
     }
 
     @Test
     void testGetProviders() {
         String providers = "[\"OpenLoadFlow\"]";
-        when(restTemplate.getForObject(BASE_URI + "/" + SENSITIVITY_ANALYSIS_API_VERSION + "/providers", String.class)).thenReturn(providers);
+        server.expect(requestTo(BASE_URI + "/" + SENSITIVITY_ANALYSIS_API_VERSION + "/providers"))
+            .andExpect(method(HttpMethod.GET))
+            .andRespond(withSuccess(providers, MediaType.APPLICATION_JSON));
 
         assertThat(sensitivityAnalysisRestService.getProviders()).isEqualTo(providers);
     }
@@ -56,7 +65,9 @@ class SensitivityAnalysisRestServiceTest {
     void testGetParameters() {
         UUID parameterUuid = UUID.randomUUID();
         String parameters = "{\"provider\":\"OpenLoadFlow\"}";
-        when(restTemplate.getForObject(BASE_URI + "/" + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid, String.class)).thenReturn(parameters);
+        server.expect(requestTo(BASE_URI + "/" + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid))
+            .andExpect(method(HttpMethod.GET))
+            .andRespond(withSuccess(parameters, MediaType.APPLICATION_JSON));
 
         assertThat(sensitivityAnalysisRestService.getParameters(parameterUuid)).isEqualTo(parameters);
     }
@@ -65,12 +76,12 @@ class SensitivityAnalysisRestServiceTest {
     void testUpdateParameters() {
         UUID parameterUuid = UUID.randomUUID();
         String parameters = "{\"provider\":\"OpenLoadFlow\"}";
-        ArgumentCaptor<HttpEntity<String>> captor = ArgumentCaptor.forClass(HttpEntity.class);
+        server.expect(requestTo(BASE_URI + "/" + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid))
+            .andExpect(method(HttpMethod.PUT))
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(content().json(parameters))
+            .andRespond(withNoContent());
 
         sensitivityAnalysisRestService.updateParameters(parameterUuid, parameters);
-
-        verify(restTemplate).put(eq(BASE_URI + "/" + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid), captor.capture());
-        assertThat(captor.getValue().getBody()).isEqualTo(parameters);
-        assertThat(captor.getValue().getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
     }
 }

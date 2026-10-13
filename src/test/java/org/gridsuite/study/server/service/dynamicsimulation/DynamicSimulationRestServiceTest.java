@@ -23,7 +23,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.List;
 import java.util.UUID;
@@ -32,7 +32,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
-import static org.gridsuite.study.server.service.client.RestClient.DELIMITER;
+import static org.gridsuite.study.server.service.client.RestClientService.DELIMITER;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 import static org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService.*;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -61,7 +61,7 @@ class DynamicSimulationRestServiceTest extends AbstractWireMockRestClientTest {
     private DynamicSimulationRestService dynamicSimulationRestService;
 
     @Autowired
-    private RestTemplate restTemplate;
+    private RestClient restClient;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -76,7 +76,7 @@ class DynamicSimulationRestServiceTest extends AbstractWireMockRestClientTest {
     void setup() {
         // config client
         remoteServicesProperties.setServiceUri("dynamic-simulation-server", initMockWebServer());
-        dynamicSimulationRestService = new DynamicSimulationRestService(remoteServicesProperties, restTemplate, objectMapper, timeSeriesClient);
+        dynamicSimulationRestService = new DynamicSimulationRestService(remoteServicesProperties, restClient, objectMapper, timeSeriesClient);
     }
 
     @Test

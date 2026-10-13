@@ -34,7 +34,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.info.InfoEndpoint;
 import org.springframework.boot.test.autoconfigure.web.client.RestClientTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.web.client.RestTemplateCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
@@ -42,7 +41,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.client.ResponseActions;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.net.SocketException;
 import java.util.*;
@@ -82,17 +81,23 @@ class RemoteServicesInspectorTest implements WithAssertions {
 
     @TestConfiguration
     public static class TestConfig {
-        static final List<RestTemplate> REST_TEMPLATES = Collections.synchronizedList(new ArrayList<>(1));
+        static MockRestServiceServer server;
 
         @Bean
-        public RestTemplateCustomizer testRestTemplateCustomizer() {
-            return REST_TEMPLATES::add;
+        public RestClient.Builder testRestClientBuilder() {
+            RestClient.Builder builder = Mockito.spy(RestClient.builder());
+            Mockito.doAnswer(invocation -> {
+                // Bind after the inspector has configured its timeout request factory.
+                server = MockRestServiceServer.bindTo(builder).ignoreExpectOrder(true).build();
+                return invocation.callRealMethod();
+            }).when(builder).build();
+            return builder;
         }
     }
 
     @BeforeAll
     void setup() {
-        server = MockRestServiceServer.bindTo(TestConfig.REST_TEMPLATES.get(0)).ignoreExpectOrder(true).build();
+        server = TestConfig.server;
         remoteServicesProperties.setServices(Arrays.stream(RemoteServiceName.values())
                 .map(RemoteServiceName::serviceName)
                 .map(name -> new RemoteServicesProperties.Service(name, "http://" + name + "/", false))

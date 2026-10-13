@@ -39,13 +39,15 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
-import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
+import org.springframework.test.context.bean.override.convention.TestBean;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -53,14 +55,19 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_WORKFLOW_INFOS;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_WORKFLOW_TYPE;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.utils.TestUtils.ELEMENT_UPDATE_DESTINATION;
 import static org.gridsuite.study.server.utils.TestUtils.checkUpdateStatusMessagesReceived;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.matchesPattern;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -83,7 +90,18 @@ class NetworkModificationUnitTest {
     @MockitoBean
     private NetworkService networkService;
     @MockitoBean
-    private RestTemplate restTemplate;
+    private ReportService reportService;
+    @TestBean(name = "studyRestClient", methodName = "createRestClient")
+    private RestClient restClient;
+
+    private static MockRestServiceServer server;
+
+    static RestClient createRestClient() {
+        RestClient.Builder builder = RestClient.builder();
+        server = MockRestServiceServer.bindTo(builder).build();
+        return new RestClientConfig().studyRestClient(builder);
+    }
+
     @MockitoSpyBean
     private RootNetworkService rootNetworkService;
     @MockitoSpyBean
@@ -133,6 +151,7 @@ class NetworkModificationUnitTest {
 
     @BeforeEach
     void setup() {
+        server.reset();
         cleanDB();
 
         doAnswer(invocation -> List.of()).when(networkModificationTreeService).getHighestNodeUuids(any(), any());
@@ -212,38 +231,35 @@ class NetworkModificationUnitTest {
     }
 
     @Test
-    void updateDescription() {
+    void updateDescription() throws JsonProcessingException {
         setupWithOneRootNetwork();
         UUID modificationUuid = UUID.randomUUID();
         List<UUID> childrenNodes = List.of(node2Uuid, node4Uuid, node3Uuid);
 
         NetworkModificationMetadata metadata = new NetworkModificationMetadata(null, "new description", null, null);
+        NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
+        server.expect(requestTo(matchesPattern(".*network-modifications\\?uuids=" + modificationUuid +
+                "&groupUuid=" + node1Infos.getModificationGroupUuid())))
+            .andExpect(method(HttpMethod.PUT))
+            .andExpect(header(HEADER_USER_ID, USER_ID_HEADER))
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(content().json(objectMapper.writeValueAsString(metadata)))
+            .andRespond(withNoContent());
         studyController.updateNetworkModificationsMetadata(studyUuid, node1Uuid, List.of(modificationUuid), metadata, USER_ID_HEADER);
 
         checkModificationUpdatedMessageReceived(studyUuid, node1Uuid, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
 
-        NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
-        Mockito.verify(restTemplate, Mockito.times(1)).exchange(
-                matches(".*network-modifications\\?uuids=" + modificationUuid +
-                        "&groupUuid=" + node1Infos.getModificationGroupUuid().toString()),
-                eq(HttpMethod.PUT),
-                argThat(n -> {
-                    assertNotNull(n.getBody());
-                    return n.getBody().equals(metadata);
-                }),
-                eq(Void.class)
-        );
     }
 
     @Test
-    void activateNetworkModificationTest() {
+    void activateNetworkModificationTest() throws JsonProcessingException {
         setupWithOneRootNetwork();
         List<UUID> modificationToDeactivateUuids = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
         updateNetworkModificationActivationStatus(modificationToDeactivateUuids, node1Uuid, List.of(node2Uuid, node4Uuid, node3Uuid), List.of(node1Uuid, node2Uuid, node4Uuid), false);
     }
 
     @Test
-    void deactivateNetworkModificationTest() {
+    void deactivateNetworkModificationTest() throws JsonProcessingException {
         setupWithOneRootNetwork();
         List<UUID> modificationToDeactivateUuids = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
         updateNetworkModificationActivationStatus(modificationToDeactivateUuids, node1Uuid, List.of(node2Uuid, node4Uuid, node3Uuid), List.of(node1Uuid, node2Uuid, node4Uuid), true);
@@ -263,13 +279,17 @@ class NetworkModificationUnitTest {
             .build();
 
         Mockito.doReturn(networkUuid).when(rootNetworkService).getNetworkUuid(rootNetworkUuid);
+        server.expect(requestTo(matchesPattern(".*/networks/" + networkUuid + "/build\\?.*")))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(content().json(objectMapper.writeValueAsString(buildInfos)))
+            .andExpect(request -> {
+                String query = request.getURI().getQuery();
+                assertTrue(query.contains(QUERY_PARAM_WORKFLOW_TYPE + "=" + rerunLoadFlowInfos.getType().name()));
+                assertTrue(query.contains(QUERY_PARAM_WORKFLOW_INFOS + "=" + URLEncoder.encode(objectMapper.writeValueAsString(rerunLoadFlowInfos), StandardCharsets.UTF_8)));
+            })
+            .andRespond(withNoContent());
         networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos, rerunLoadFlowInfos);
-
-        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
-        Mockito.verify(restTemplate, Mockito.times(1)).exchange(urlCaptor.capture(), eq(HttpMethod.POST), any(HttpEntity.class), eq(Void.class));
-
-        assertTrue(urlCaptor.getValue().contains(QUERY_PARAM_WORKFLOW_TYPE + "=" + rerunLoadFlowInfos.getType().name()));
-        assertTrue(urlCaptor.getValue().contains(QUERY_PARAM_WORKFLOW_INFOS + "=" + URLEncoder.encode(objectMapper.writeValueAsString(rerunLoadFlowInfos), StandardCharsets.UTF_8)));
     }
 
     @Test
@@ -291,24 +311,32 @@ class NetworkModificationUnitTest {
         checkElementUpdatedMessageSent(studyUuid, USER_ID_HEADER);
     }
 
-    private void updateNetworkModificationActivationStatus(List<UUID> networkModificationUuids, UUID nodeWithModification, List<UUID> childrenNodes, List<UUID> nodesToUnbuild, boolean activated) {
+    private void updateNetworkModificationActivationStatus(List<UUID> networkModificationUuids, UUID nodeWithModification, List<UUID> childrenNodes,
+                                                          List<UUID> nodesToUnbuild, boolean activated) throws JsonProcessingException {
         NetworkModificationMetadata metadata = new NetworkModificationMetadata(activated, null, null, null);
+        NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
+        server.expect(requestTo(matchesPattern(".*network-modifications\\?" + networkModificationUuids.stream().map(uuid -> "uuids=" + uuid + "&").collect(Collectors.joining()) +
+                "groupUuid=" + node1Infos.getModificationGroupUuid())))
+            .andExpect(method(HttpMethod.PUT))
+            .andExpect(header(HEADER_USER_ID, USER_ID_HEADER))
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(content().json(objectMapper.writeValueAsString(metadata)))
+            .andRespond(withNoContent());
+        String[] groupUuids = networkModificationNodeInfoRepository.findAll().stream()
+            .map(info -> info.getModificationGroupUuid().toString())
+            .toArray(String[]::new);
+        server.expect(requestTo(matchesPattern(".*/network-modifications/index\\?.*")))
+            .andExpect(method(HttpMethod.DELETE))
+            .andExpect(queryParam("networkUuid", NETWORK_UUID.toString()))
+            .andExpect(queryParamList("groupUuids", containsInAnyOrder(groupUuids)))
+            .andExpect(content().string(""))
+            .andRespond(withNoContent());
         studyController.updateNetworkModificationsMetadata(studyUuid, node1Uuid, networkModificationUuids, metadata, USER_ID_HEADER);
 
         checkUpdateBuildStateMessageReceived(studyUuid, nodesToUnbuild);
         checkUpdateStatusMessagesReceived(studyUuid, nodeWithModification, output);
         checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
 
-        NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
-        Mockito.verify(restTemplate, Mockito.times(1)).exchange(
-                matches(".*network-modifications\\?" + networkModificationUuids.stream().map(uuid -> "uuids=" + uuid.toString() + "&").collect(Collectors.joining()) +
-                        "groupUuid=" + node1Infos.getModificationGroupUuid().toString()),
-                eq(HttpMethod.PUT),
-                argThat(n -> {
-                    assertNotNull(n.getBody());
-                    return n.getBody().equals(metadata);
-                }),
-                eq(Void.class));
     }
 
     private void checkModificationUpdatedMessageReceived(UUID studyUuid, UUID nodeUuid, List<UUID> childrenNodeUuids, String notificationType) {
@@ -459,6 +487,7 @@ class NetworkModificationUnitTest {
     void tearDown() {
         List<String> destinations = List.of(STUDY_UPDATE_DESTINATION);
         try {
+            server.verify();
             destinations.forEach(destination -> assertNull(TestUtils.receiveStudyUpdate(output, destination, 100), "Should not be any messages in queue " + destination + " : "));
         } catch (NullPointerException e) {
             // Ignoring
