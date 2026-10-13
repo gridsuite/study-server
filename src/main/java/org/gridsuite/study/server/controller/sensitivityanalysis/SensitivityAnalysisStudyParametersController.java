@@ -53,8 +53,8 @@ public class SensitivityAnalysisStudyParametersController {
     }
 
     @PostMapping(value = "/parameters/reset")
-    @Operation(summary = "reset sensitivity analysis parameters on study to the user profile or default ones")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters are reset"),
+    @Operation(summary = "reset sensitivity analysis parameters to default ones")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters were reset"),
         @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
     public ResponseEntity<Void> resetSensitivityAnalysisParameters(
             @PathVariable("studyUuid") UUID studyUuid,

@@ -56,7 +56,7 @@ public class LoadFlowStudyParametersController {
     @PostMapping(value = "/parameters/reset")
     @Operation(summary = "reset to default ones if empty body")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The loadflow parameters are reset"),
+        @ApiResponse(responseCode = "200", description = "The loadflow parameters were reset"),
         @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
     public ResponseEntity<Void> resetLoadflowParameters(
             @PathVariable("studyUuid") UUID studyUuid,
