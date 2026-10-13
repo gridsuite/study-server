@@ -45,6 +45,7 @@ public class WireMockStubs {
     private static final String URI_NETWORK_MODIFICATION_GROUPS = "/v1/groups";
 
     private static final String URI_NETWORK_MODIFICATION_CONTAINERS = "/v1/containers";
+    public static final String ROOT_NETWORK_TAGS_AUTHORIZED_URL = URI_NETWORK_MODIFICATION_CONTAINERS + "/root-network-tags/authorized";
 
     public static final String FIRST_VARIANT_ID = "first_variant_id";
 
@@ -169,6 +170,12 @@ public class WireMockStubs {
         verifyPostRequest(wireMock, stubUuid, URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements-ids", false,
                 Map.of(),
                 requestBody);
+    }
+
+    public UUID stubRootNetworkTagsAllowed() {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(ROOT_NETWORK_TAGS_AUTHORIZED_URL))
+            .willReturn(WireMock.ok())
+        ).getId();
     }
 
     public UUID stubNetworkModificationCountGet(String groupUuid, Integer expectedCount) {
