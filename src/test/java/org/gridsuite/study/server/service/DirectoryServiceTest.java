@@ -7,15 +7,15 @@
 package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClient;
 
 import java.util.List;
@@ -23,9 +23,11 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 @ExtendWith(MockitoExtension.class)
 class DirectoryServiceTest {
@@ -36,21 +38,15 @@ class DirectoryServiceTest {
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
 
-    private MockRestServiceServer server;
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    private RestClient restClient;
 
     private DirectoryService directoryService;
 
     @BeforeEach
     void setup() {
         when(remoteServicesProperties.getServiceUri("directory-server")).thenReturn(DIRECTORY_SERVER_URI);
-        RestClient.Builder builder = RestClient.builder();
-        server = MockRestServiceServer.bindTo(builder).build();
-        directoryService = new DirectoryService(remoteServicesProperties, builder.build());
-    }
-
-    @AfterEach
-    void verifyRequests() {
-        server.verify();
+        directoryService = new DirectoryService(remoteServicesProperties, restClient);
     }
 
     @Test
@@ -58,22 +54,31 @@ class DirectoryServiceTest {
         UUID elementUuid = UUID.randomUUID();
         String response = "[{\"name\":\"element\"}]";
         String expectedUrl = DIRECTORY_SERVER_URI + "/v1/elements?ids=" + elementUuid + "&elementTypes=STUDY&strictMode=false";
-        server.expect(requestTo(expectedUrl))
-            .andExpect(method(HttpMethod.GET))
-            .andExpect(header(HEADER_USER_ID, USER_ID))
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andRespond(withSuccess(response, MediaType.APPLICATION_JSON));
+        var requestSpec = restClient.get().uri(expectedUrl);
+        doReturn(requestSpec).when(requestSpec).headers(any());
+        when(requestSpec.retrieve().body(String.class)).thenReturn(response);
 
         assertThat(directoryService.getElements(List.of(elementUuid), List.of("STUDY"), false, USER_ID)).isEqualTo(response);
+
+        verify(requestSpec).headers(argThat(headers -> {
+            HttpHeaders requestHeaders = new HttpHeaders();
+            headers.accept(requestHeaders);
+            return USER_ID.equals(requestHeaders.getFirst(HEADER_USER_ID));
+        }));
+        verify(requestSpec).headers(argThat(headers -> {
+            HttpHeaders requestHeaders = new HttpHeaders();
+            headers.accept(requestHeaders);
+            return MediaType.APPLICATION_JSON.equals(requestHeaders.getContentType());
+        }));
     }
 
     @Test
     void testElementExists() {
         UUID directoryUuid = UUID.randomUUID();
         String expectedUrl = DIRECTORY_SERVER_URI + "/v1/directories/" + directoryUuid + "/elements/elementName/types/STUDY";
-        server.expect(requestTo(expectedUrl))
-            .andExpect(method(HttpMethod.HEAD))
-            .andRespond(withSuccess());
+        var requestSpec = restClient.head().uri(expectedUrl);
+        doReturn(requestSpec).when(requestSpec).headers(any());
+        when(requestSpec.retrieve().toBodilessEntity()).thenReturn(ResponseEntity.ok().<Void>build());
 
         assertThat(directoryService.elementExists(directoryUuid, "elementName", "STUDY")).isTrue();
     }
@@ -82,9 +87,9 @@ class DirectoryServiceTest {
     void testElementDoesNotExist() {
         UUID directoryUuid = UUID.randomUUID();
         String expectedUrl = DIRECTORY_SERVER_URI + "/v1/directories/" + directoryUuid + "/elements/elementName/types/STUDY";
-        server.expect(requestTo(expectedUrl))
-            .andExpect(method(HttpMethod.HEAD))
-            .andRespond(withNoContent());
+        var requestSpec = restClient.head().uri(expectedUrl);
+        doReturn(requestSpec).when(requestSpec).headers(any());
+        when(requestSpec.retrieve().toBodilessEntity()).thenReturn(ResponseEntity.noContent().<Void>build());
 
         assertThat(directoryService.elementExists(directoryUuid, "elementName", "STUDY")).isFalse();
     }

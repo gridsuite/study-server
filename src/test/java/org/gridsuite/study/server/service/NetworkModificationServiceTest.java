@@ -8,17 +8,16 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.RestClientConfig;
 import org.gridsuite.study.server.dto.ModificationReference;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import java.util.List;
@@ -27,9 +26,11 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 @ExtendWith(MockitoExtension.class)
 class NetworkModificationServiceTest {
@@ -41,7 +42,8 @@ class NetworkModificationServiceTest {
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
 
-    private MockRestServiceServer server;
+    @Mock(answer = org.mockito.Answers.RETURNS_DEEP_STUBS)
+    private RestClient restClient;
 
     @Mock
     private RootNetworkService rootNetworkService;
@@ -52,23 +54,14 @@ class NetworkModificationServiceTest {
     @BeforeEach
     void setup() {
         when(remoteServicesProperties.getServiceUri("network-modification-server")).thenReturn(NETWORK_MODIFICATION_SERVER_URI);
-        RestClient.Builder builder = RestClient.builder();
-        server = MockRestServiceServer.bindTo(builder).build();
         networkModificationService = new NetworkModificationService(remoteServicesProperties,
-            new RestClientConfig().studyRestClient(builder), objectMapper, rootNetworkService);
-    }
-
-    @AfterEach
-    void verifyRequests() {
-        server.verify();
+            restClient, objectMapper, rootNetworkService);
     }
 
     @Test
     void testGetLineTypesCatalog() {
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/catalog/line_types";
-        server.expect(requestTo(expectedUrl))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(RESPONSE, MediaType.APPLICATION_JSON));
+        when(restClient.get().uri(expectedUrl).retrieve().body(String.class)).thenReturn(RESPONSE);
 
         assertThat(networkModificationService.getLineTypesCatalog()).isEqualTo(RESPONSE);
     }
@@ -77,9 +70,7 @@ class NetworkModificationServiceTest {
     void testGetLineType() {
         UUID lineTypeUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/catalog/line_types/" + lineTypeUuid;
-        server.expect(requestTo(expectedUrl))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(RESPONSE, MediaType.APPLICATION_JSON));
+        when(restClient.get().uri(expectedUrl).retrieve().body(String.class)).thenReturn(RESPONSE);
 
         assertThat(networkModificationService.getLineType(lineTypeUuid)).isEqualTo(RESPONSE);
     }
@@ -88,9 +79,7 @@ class NetworkModificationServiceTest {
     void testGetLineTypeWithLimits() {
         UUID lineTypeUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/catalog/line_types/" + lineTypeUuid + "/with-limits?area=FR&temperature=25&shapeFactor=1.0";
-        server.expect(requestTo(expectedUrl))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(RESPONSE, MediaType.APPLICATION_JSON));
+        when(restClient.get().uri(expectedUrl).retrieve().body(String.class)).thenReturn(RESPONSE);
 
         assertThat(networkModificationService.getLineTypeWithLimits(lineTypeUuid, "FR", "25", "1.0")).isEqualTo(RESPONSE);
     }
@@ -100,27 +89,31 @@ class NetworkModificationServiceTest {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/network-modifications?uuids=" + firstUuid + "&uuids=" + secondUuid + "&onlyMetadata=false";
-        expectUserIdIsForwarded(expectedUrl);
+        var requestSpec = restClient.get().uri(expectedUrl);
+        makeHeadersFluent(requestSpec);
+        when(requestSpec.retrieve().body(String.class)).thenReturn(RESPONSE);
 
         assertThat(networkModificationService.getNetworkModificationsFromComposite(List.of(firstUuid, secondUuid), false, USER_ID)).isEqualTo(RESPONSE);
+        assertHeaders(requestSpec, Map.of(HEADER_USER_ID, USER_ID));
     }
 
     @Test
     void testGetNetworkModification() {
         UUID modificationUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid;
-        expectUserIdIsForwarded(expectedUrl);
+        var requestSpec = restClient.get().uri(expectedUrl);
+        makeHeadersFluent(requestSpec);
+        when(requestSpec.retrieve().body(String.class)).thenReturn(RESPONSE);
 
         assertThat(networkModificationService.getNetworkModification(modificationUuid, USER_ID)).isEqualTo(RESPONSE);
+        assertHeaders(requestSpec, Map.of(HEADER_USER_ID, USER_ID));
     }
 
     @Test
     void testGetBusBarSectionsForNewCoupler() {
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI
             + "/v1/network-modifications/busbar-sections-for-new-coupler?voltageLevelId=VL1&busBarCount=2&sectionCount=4&switchKindList=BREAKER&switchKindList=DISCONNECTOR";
-        server.expect(requestTo(expectedUrl))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(RESPONSE, MediaType.APPLICATION_JSON));
+        when(restClient.get().uri(expectedUrl).retrieve().body(String.class)).thenReturn(RESPONSE);
 
         assertThat(networkModificationService.getBusBarSectionsForNewCoupler("VL1", 2, 4, List.of("BREAKER", "DISCONNECTOR"))).isEqualTo(RESPONSE);
     }
@@ -129,14 +122,15 @@ class NetworkModificationServiceTest {
     void testUpdateNetworkModification() {
         UUID modificationUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid;
-        server.expect(requestTo(expectedUrl))
-            .andExpect(method(HttpMethod.PUT))
-            .andExpect(header(HEADER_USER_ID, USER_ID))
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(content().json(RESPONSE))
-            .andRespond(withNoContent());
+        var requestSpec = restClient.put().uri(expectedUrl);
+        makeContentTypeFluent(requestSpec);
+        makeHeadersFluent(requestSpec);
+        makeBodyFluent(requestSpec);
 
         networkModificationService.updateNetworkModification(modificationUuid, RESPONSE, USER_ID);
+        verify(requestSpec).contentType(MediaType.APPLICATION_JSON);
+        verify(requestSpec).body(RESPONSE);
+        assertHeaders(requestSpec, Map.of(HEADER_USER_ID, USER_ID));
     }
 
     @Test
@@ -144,14 +138,15 @@ class NetworkModificationServiceTest {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications?uuids=" + firstUuid + "&uuids=" + secondUuid;
-        server.expect(requestTo(expectedUrl))
-            .andExpect(method(HttpMethod.PUT))
-            .andExpect(header(HEADER_USER_ID, USER_ID))
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(content().json(RESPONSE))
-            .andRespond(withNoContent());
+        var requestSpec = restClient.put().uri(expectedUrl);
+        makeContentTypeFluent(requestSpec);
+        makeHeadersFluent(requestSpec);
+        makeBodyFluent(requestSpec);
 
         networkModificationService.updateNetworkModificationsMetadata(List.of(firstUuid, secondUuid), RESPONSE, USER_ID);
+        verify(requestSpec).contentType(MediaType.APPLICATION_JSON);
+        verify(requestSpec).body(RESPONSE);
+        assertHeaders(requestSpec, Map.of(HEADER_USER_ID, USER_ID));
     }
 
     @Test
@@ -159,13 +154,13 @@ class NetworkModificationServiceTest {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups";
-        server.expect(requestTo(expectedUrl))
-            .andExpect(method(HttpMethod.DELETE))
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(content().json("[\"" + firstUuid + "\",\"" + secondUuid + "\"]"))
-            .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+        var requestSpec = restClient.method(HttpMethod.DELETE).uri(expectedUrl);
+        makeContentTypeFluent(requestSpec);
+        makeBodyFluent(requestSpec);
 
         networkModificationService.deleteModificationsGroups(List.of(firstUuid, secondUuid));
+        verify(requestSpec).contentType(MediaType.APPLICATION_JSON);
+        verify(requestSpec).body("[\"" + firstUuid + "\",\"" + secondUuid + "\"]");
     }
 
     @Test
@@ -173,53 +168,60 @@ class NetworkModificationServiceTest {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/stashed-modifications";
-        server.expect(requestTo(expectedUrl))
-            .andExpect(method(HttpMethod.DELETE))
-            .andExpect(header(HEADER_USER_ID, USER_ID))
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(content().json("[\"" + firstUuid + "\",\"" + secondUuid + "\"]"))
-            .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+        var requestSpec = restClient.method(HttpMethod.DELETE).uri(expectedUrl);
+        makeContentTypeFluent(requestSpec);
+        makeHeadersFluent(requestSpec);
+        makeBodyFluent(requestSpec);
 
         networkModificationService.deleteStashedModificationsFromGroups(List.of(firstUuid, secondUuid), USER_ID);
+        verify(requestSpec).contentType(MediaType.APPLICATION_JSON);
+        verify(requestSpec).body("[\"" + firstUuid + "\",\"" + secondUuid + "\"]");
+        assertHeaders(requestSpec, Map.of(HEADER_USER_ID, USER_ID));
     }
 
     @Test
-    void testGetReferences() throws Exception {
+    void testGetReferences() {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/references?uuids=" + firstUuid + "&uuids=" + secondUuid;
         List<ModificationReference> expected = List.of(new ModificationReference(firstUuid, UUID.randomUUID(), null));
-        server.expect(requestTo(expectedUrl))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(objectMapper.writeValueAsString(expected), MediaType.APPLICATION_JSON));
+        var requestSpec = restClient.get().uri(expectedUrl);
+        makeHeadersFluent(requestSpec);
+        var responseType = new ParameterizedTypeReference<List<ModificationReference>>() { };
+        when(requestSpec.retrieve().body(responseType)).thenReturn(expected);
 
         assertThat(networkModificationService.getModificationReferences(List.of(firstUuid, secondUuid))).isEqualTo(expected);
+        assertHeaders(requestSpec, Map.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE));
     }
 
     @Test
-    void testFindParentComposites() throws Exception {
+    void testFindParentComposites() {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
         UUID compositeUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-composite-modifications/parent-composites?uuids=" + firstUuid + "&uuids=" + secondUuid;
         Map<UUID, UUID> expected = Map.of(firstUuid, compositeUuid);
-        server.expect(requestTo(expectedUrl))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(objectMapper.writeValueAsString(expected), MediaType.APPLICATION_JSON));
+        var requestSpec = restClient.get().uri(expectedUrl);
+        makeHeadersFluent(requestSpec);
+        var responseType = new ParameterizedTypeReference<Map<UUID, UUID>>() { };
+        when(requestSpec.retrieve().body(responseType)).thenReturn(expected);
 
         assertThat(networkModificationService.findParentComposites(List.of(firstUuid, secondUuid))).isEqualTo(expected);
+        assertHeaders(requestSpec, Map.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE));
     }
 
     @Test
-    void testGetReferencesFromGroup() throws Exception {
+    void testGetReferencesFromGroup() {
         UUID groupUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/" + groupUuid + "/references";
         List<ModificationReference> expected = List.of(new ModificationReference(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()));
-        server.expect(requestTo(expectedUrl))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(objectMapper.writeValueAsString(expected), MediaType.APPLICATION_JSON));
+        var requestSpec = restClient.get().uri(expectedUrl);
+        makeHeadersFluent(requestSpec);
+        var responseType = new ParameterizedTypeReference<List<ModificationReference>>() { };
+        when(requestSpec.retrieve().body(responseType)).thenReturn(expected);
 
         assertThat(networkModificationService.getModificationReferences(groupUuid)).isEqualTo(expected);
+        assertHeaders(requestSpec, Map.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE));
     }
 
     @Test
@@ -228,11 +230,12 @@ class NetworkModificationServiceTest {
         UUID secondGroupUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
                 + "?groupUuids=" + firstGroupUuid + "&groupUuids=" + secondGroupUuid + "&oldTag=PH1&newTag=PH2";
-        server.expect(requestTo(expectedUrl))
-            .andExpect(method(HttpMethod.PUT))
-            .andRespond(withNoContent());
+        var requestSpec = restClient.put().uri(expectedUrl);
+        makeContentTypeFluent(requestSpec);
 
         networkModificationService.renameRootNetworkTag(List.of(firstGroupUuid, secondGroupUuid), "PH1", "PH2");
+        verify(requestSpec).contentType(MediaType.APPLICATION_JSON);
+        verify(requestSpec).retrieve();
 
         // there is nothing to rename without a group
         networkModificationService.renameRootNetworkTag(List.of(), "PH1", "PH2");
@@ -243,11 +246,11 @@ class NetworkModificationServiceTest {
         UUID groupUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
                 + "?groupUuids=" + groupUuid + "&rootNetworkTags=PH1&rootNetworkTags=PH2";
-        server.expect(requestTo(expectedUrl))
-            .andExpect(method(HttpMethod.DELETE))
-            .andRespond(withNoContent());
+        var requestSpec = restClient.method(HttpMethod.DELETE).uri(expectedUrl);
+        makeContentTypeFluent(requestSpec);
 
         networkModificationService.deleteRootNetworkTags(List.of(groupUuid), List.of("PH1", "PH2"));
+        verify(requestSpec).retrieve();
 
         // there is nothing to drop without a group or without a tag
         networkModificationService.deleteRootNetworkTags(List.of(), List.of("PH1"));
@@ -258,12 +261,12 @@ class NetworkModificationServiceTest {
     void testAssertReferencedModificationsAreWritable() {
         UUID groupUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/references/authorized?uuids=" + groupUuid;
-        server.expect(requestTo(expectedUrl))
-            .andExpect(method(HttpMethod.GET))
-            .andExpect(header(HEADER_USER_ID, USER_ID))
-            .andRespond(withNoContent());
+        var requestSpec = restClient.get().uri(expectedUrl);
+        makeHeadersFluent(requestSpec);
 
         networkModificationService.assertReferencedModificationsAreWritable(List.of(groupUuid), USER_ID);
+        assertHeaders(requestSpec, Map.of(HEADER_USER_ID, USER_ID));
+        verify(requestSpec).retrieve();
 
         // there is nothing to check without a container
         networkModificationService.assertReferencedModificationsAreWritable(List.of(), USER_ID);
@@ -273,17 +276,29 @@ class NetworkModificationServiceTest {
     void testHasModificationReferences() {
         UUID modificationUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/references/exists?uuids=" + modificationUuid;
-        server.expect(requestTo(expectedUrl))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess("true", MediaType.APPLICATION_JSON));
+        when(restClient.get().uri(expectedUrl).retrieve().body(Boolean.class)).thenReturn(true);
 
         assertThat(networkModificationService.hasModificationReferences(List.of(modificationUuid))).isTrue();
     }
 
-    private void expectUserIdIsForwarded(String expectedUrl) {
-        server.expect(requestTo(expectedUrl))
-            .andExpect(method(HttpMethod.GET))
-            .andExpect(header(HEADER_USER_ID, USER_ID))
-            .andRespond(withSuccess(RESPONSE, MediaType.APPLICATION_JSON));
+    private void assertHeaders(RestClient.RequestHeadersSpec<?> requestSpec, Map<String, String> expectedHeaders) {
+        verify(requestSpec).headers(argThat(headersConsumer -> {
+            HttpHeaders headers = new HttpHeaders();
+            headersConsumer.accept(headers);
+            return expectedHeaders.entrySet().stream()
+                .allMatch(entry -> entry.getValue().equals(headers.getFirst(entry.getKey())));
+        }));
+    }
+
+    private void makeHeadersFluent(RestClient.RequestHeadersSpec<?> requestSpec) {
+        doReturn(requestSpec).when(requestSpec).headers(any());
+    }
+
+    private void makeContentTypeFluent(RestClient.RequestBodySpec requestSpec) {
+        doReturn(requestSpec).when(requestSpec).contentType(any(MediaType.class));
+    }
+
+    private void makeBodyFluent(RestClient.RequestBodySpec requestSpec) {
+        doReturn(requestSpec).when(requestSpec).body(any(Object.class));
     }
 }

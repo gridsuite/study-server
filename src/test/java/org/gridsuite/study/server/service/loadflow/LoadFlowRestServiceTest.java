@@ -10,15 +10,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.json.LoadFlowParametersJsonModule;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import java.util.Map;
@@ -26,9 +24,9 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.LOADFLOW_API_VERSION;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 @ExtendWith(MockitoExtension.class)
 class LoadFlowRestServiceTest {
@@ -37,7 +35,9 @@ class LoadFlowRestServiceTest {
 
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
-    private MockRestServiceServer server;
+
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    private RestClient restClient;
 
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new LoadFlowParametersJsonModule());
 
@@ -46,22 +46,14 @@ class LoadFlowRestServiceTest {
     @BeforeEach
     void setUp() {
         when(remoteServicesProperties.getServiceUri("loadflow-server")).thenReturn(BASE_URI);
-        RestClient.Builder builder = RestClient.builder();
-        server = MockRestServiceServer.bindTo(builder).build();
-        loadFlowRestService = new LoadFlowRestService(remoteServicesProperties, objectMapper, builder.build());
-    }
-
-    @AfterEach
-    void verifyRequests() {
-        server.verify();
+        loadFlowRestService = new LoadFlowRestService(remoteServicesProperties, objectMapper, restClient);
     }
 
     @Test
     void testGetProviders() {
         String providers = "[\"OpenLoadFlow\"]";
-        server.expect(requestTo(BASE_URI + "/" + LOADFLOW_API_VERSION + "/providers"))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(providers, MediaType.APPLICATION_JSON));
+        when(restClient.get().uri(BASE_URI + "/" + LOADFLOW_API_VERSION + "/providers").retrieve().body(String.class))
+            .thenReturn(providers);
 
         assertThat(loadFlowRestService.getProviders()).isEqualTo(providers);
     }
@@ -69,9 +61,8 @@ class LoadFlowRestServiceTest {
     @Test
     void testGetSpecificParameters() {
         String specificParameters = "{\"provider\":\"OpenLoadFlow\"}";
-        server.expect(requestTo(BASE_URI + "/" + LOADFLOW_API_VERSION + "/specific-parameters"))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(specificParameters, MediaType.APPLICATION_JSON));
+        when(restClient.get().uri(BASE_URI + "/" + LOADFLOW_API_VERSION + "/specific-parameters").retrieve().body(String.class))
+            .thenReturn(specificParameters);
 
         assertThat(loadFlowRestService.getSpecificParameters()).isEqualTo(specificParameters);
     }
@@ -79,9 +70,8 @@ class LoadFlowRestServiceTest {
     @Test
     void testGetDefaultLimitReductions() {
         String defaultLimitReductions = "[]";
-        server.expect(requestTo(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/default-limit-reductions"))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(defaultLimitReductions, MediaType.APPLICATION_JSON));
+        when(restClient.get().uri(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/default-limit-reductions").retrieve().body(String.class))
+            .thenReturn(defaultLimitReductions);
 
         assertThat(loadFlowRestService.getDefaultLimitReductions()).isEqualTo(defaultLimitReductions);
     }
@@ -90,9 +80,8 @@ class LoadFlowRestServiceTest {
     void testGetParameters() {
         UUID parameterUuid = UUID.randomUUID();
         String parameters = "{\"provider\":\"OpenLoadFlow\"}";
-        server.expect(requestTo(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/" + parameterUuid))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(parameters, MediaType.APPLICATION_JSON));
+        when(restClient.get().uri(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/" + parameterUuid)
+            .retrieve().body(String.class)).thenReturn(parameters);
 
         assertThat(loadFlowRestService.getParameters(parameterUuid)).isEqualTo(parameters);
     }
@@ -104,9 +93,8 @@ class LoadFlowRestServiceTest {
         String parameters = objectMapper.writeValueAsString(Map.of(
                 "provider", "OpenLoadFlow",
                 "commonParameters", commonParameters));
-        server.expect(requestTo(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/" + parameterUuid))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(parameters, MediaType.APPLICATION_JSON));
+        when(restClient.get().uri(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/" + parameterUuid)
+            .retrieve().body(String.class)).thenReturn(parameters);
 
         assertThat(objectMapper.writeValueAsString(loadFlowRestService.getCommonParameters(parameterUuid)))
                 .isEqualTo(objectMapper.writeValueAsString(commonParameters));
@@ -116,12 +104,13 @@ class LoadFlowRestServiceTest {
     void testUpdateParameters() {
         UUID parameterUuid = UUID.randomUUID();
         String parameters = "{\"provider\":\"OpenLoadFlow\"}";
-        server.expect(requestTo(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/" + parameterUuid))
-            .andExpect(method(HttpMethod.PUT))
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(content().json(parameters))
-            .andRespond(withNoContent());
+        var requestSpec = restClient.put().uri(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/" + parameterUuid);
+        doReturn(requestSpec).when(requestSpec).contentType(MediaType.APPLICATION_JSON);
 
         loadFlowRestService.updateParameters(parameterUuid, parameters);
+
+        verify(requestSpec).contentType(MediaType.APPLICATION_JSON);
+        verify(requestSpec).body(parameters);
+        verify(requestSpec).retrieve();
     }
 }

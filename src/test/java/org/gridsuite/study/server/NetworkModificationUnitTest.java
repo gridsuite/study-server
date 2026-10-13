@@ -34,6 +34,7 @@ import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Answers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,9 +47,9 @@ import org.springframework.messaging.MessageHeaders;
 import org.springframework.test.context.bean.override.convention.TestBean;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
-import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -61,13 +62,9 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_WORKFLOW_TYP
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.utils.TestUtils.ELEMENT_UPDATE_DESTINATION;
 import static org.gridsuite.study.server.utils.TestUtils.checkUpdateStatusMessagesReceived;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.matchesPattern;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -75,6 +72,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
+//TODO
 class NetworkModificationUnitTest {
     @Autowired
     private NodeRepository nodeRepository;
@@ -94,12 +92,26 @@ class NetworkModificationUnitTest {
     @TestBean(name = "studyRestClient", methodName = "createRestClient")
     private RestClient restClient;
 
-    private static MockRestServiceServer server;
+    private static RestClient.RequestBodyUriSpec putRequestSpec;
+    private static RestClient.RequestBodyUriSpec postRequestSpec;
+    private static RestClient.RequestBodyUriSpec deleteRequestSpec;
 
     static RestClient createRestClient() {
-        RestClient.Builder builder = RestClient.builder();
-        server = MockRestServiceServer.bindTo(builder).build();
-        return new RestClientConfig().studyRestClient(builder);
+        RestClient restClient = Mockito.mock(RestClient.class, Answers.RETURNS_DEEP_STUBS);
+        putRequestSpec = restClient.put();
+        postRequestSpec = restClient.post();
+        deleteRequestSpec = restClient.method(HttpMethod.DELETE);
+        makeFluent(putRequestSpec);
+        makeFluent(postRequestSpec);
+        makeFluent(deleteRequestSpec);
+        return restClient;
+    }
+
+    private static void makeFluent(RestClient.RequestBodyUriSpec requestSpec) {
+        doReturn(requestSpec).when(requestSpec).uri(anyString());
+        doReturn(requestSpec).when(requestSpec).header(anyString(), anyString());
+        doReturn(requestSpec).when(requestSpec).contentType(any(MediaType.class));
+        doReturn(requestSpec).when(requestSpec).body(any(Object.class));
     }
 
     @MockitoSpyBean
@@ -151,7 +163,7 @@ class NetworkModificationUnitTest {
 
     @BeforeEach
     void setup() {
-        server.reset();
+        Mockito.clearInvocations(restClient, putRequestSpec, postRequestSpec, deleteRequestSpec);
         cleanDB();
 
         doAnswer(invocation -> List.of()).when(networkModificationTreeService).getHighestNodeUuids(any(), any());
@@ -238,14 +250,16 @@ class NetworkModificationUnitTest {
 
         NetworkModificationMetadata metadata = new NetworkModificationMetadata(null, "new description", null, null);
         NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
-        server.expect(requestTo(matchesPattern(".*network-modifications\\?uuids=" + modificationUuid +
-                "&groupUuid=" + node1Infos.getModificationGroupUuid())))
-            .andExpect(method(HttpMethod.PUT))
-            .andExpect(header(HEADER_USER_ID, USER_ID_HEADER))
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(content().json(objectMapper.writeValueAsString(metadata)))
-            .andRespond(withNoContent());
         studyController.updateNetworkModificationsMetadata(studyUuid, node1Uuid, List.of(modificationUuid), metadata, USER_ID_HEADER);
+
+        ArgumentCaptor<String> uriCaptor = ArgumentCaptor.forClass(String.class);
+        verify(putRequestSpec).uri(uriCaptor.capture());
+        assertTrue(uriCaptor.getValue().matches(".*network-modifications\\?uuids=" + modificationUuid
+            + "&groupUuid=" + node1Infos.getModificationGroupUuid()));
+        verify(putRequestSpec).header(HEADER_USER_ID, USER_ID_HEADER);
+        verify(putRequestSpec).contentType(MediaType.APPLICATION_JSON);
+        verify(putRequestSpec).body(metadata);
+        verify(putRequestSpec).retrieve();
 
         checkModificationUpdatedMessageReceived(studyUuid, node1Uuid, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
 
@@ -279,17 +293,18 @@ class NetworkModificationUnitTest {
             .build();
 
         Mockito.doReturn(networkUuid).when(rootNetworkService).getNetworkUuid(rootNetworkUuid);
-        server.expect(requestTo(matchesPattern(".*/networks/" + networkUuid + "/build\\?.*")))
-            .andExpect(method(HttpMethod.POST))
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(content().json(objectMapper.writeValueAsString(buildInfos)))
-            .andExpect(request -> {
-                String query = request.getURI().getQuery();
-                assertTrue(query.contains(QUERY_PARAM_WORKFLOW_TYPE + "=" + rerunLoadFlowInfos.getType().name()));
-                assertTrue(query.contains(QUERY_PARAM_WORKFLOW_INFOS + "=" + URLEncoder.encode(objectMapper.writeValueAsString(rerunLoadFlowInfos), StandardCharsets.UTF_8)));
-            })
-            .andRespond(withNoContent());
         networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos, rerunLoadFlowInfos);
+
+        String expectedWorkflowInfos = URLEncoder.encode(objectMapper.writeValueAsString(rerunLoadFlowInfos), StandardCharsets.UTF_8);
+        ArgumentCaptor<String> uriCaptor = ArgumentCaptor.forClass(String.class);
+        verify(postRequestSpec).uri(uriCaptor.capture());
+        assertTrue(uriCaptor.getValue().matches(".*/networks/" + networkUuid + "/build\\?.*"));
+        String query = URI.create(uriCaptor.getValue()).getRawQuery();
+        assertTrue(query.contains(QUERY_PARAM_WORKFLOW_TYPE + "=" + rerunLoadFlowInfos.getType().name()));
+        assertTrue(query.contains(QUERY_PARAM_WORKFLOW_INFOS + "=" + expectedWorkflowInfos));
+        verify(postRequestSpec).contentType(MediaType.APPLICATION_JSON);
+        verify(postRequestSpec).body(buildInfos);
+        verify(postRequestSpec).retrieve();
     }
 
     @Test
@@ -315,23 +330,33 @@ class NetworkModificationUnitTest {
                                                           List<UUID> nodesToUnbuild, boolean activated) throws JsonProcessingException {
         NetworkModificationMetadata metadata = new NetworkModificationMetadata(activated, null, null, null);
         NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
-        server.expect(requestTo(matchesPattern(".*network-modifications\\?" + networkModificationUuids.stream().map(uuid -> "uuids=" + uuid + "&").collect(Collectors.joining()) +
-                "groupUuid=" + node1Infos.getModificationGroupUuid())))
-            .andExpect(method(HttpMethod.PUT))
-            .andExpect(header(HEADER_USER_ID, USER_ID_HEADER))
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(content().json(objectMapper.writeValueAsString(metadata)))
-            .andRespond(withNoContent());
         String[] groupUuids = networkModificationNodeInfoRepository.findAll().stream()
             .map(info -> info.getModificationGroupUuid().toString())
             .toArray(String[]::new);
-        server.expect(requestTo(matchesPattern(".*/network-modifications/index\\?.*")))
-            .andExpect(method(HttpMethod.DELETE))
-            .andExpect(queryParam("networkUuid", NETWORK_UUID.toString()))
-            .andExpect(queryParamList("groupUuids", containsInAnyOrder(groupUuids)))
-            .andExpect(content().string(""))
-            .andRespond(withNoContent());
         studyController.updateNetworkModificationsMetadata(studyUuid, node1Uuid, networkModificationUuids, metadata, USER_ID_HEADER);
+
+        ArgumentCaptor<String> metadataUriCaptor = ArgumentCaptor.forClass(String.class);
+        verify(putRequestSpec).uri(metadataUriCaptor.capture());
+        String expectedUuids = networkModificationUuids.stream()
+            .map(uuid -> "uuids=" + uuid + "&")
+            .collect(Collectors.joining());
+        assertTrue(metadataUriCaptor.getValue().matches(".*network-modifications\\?" + expectedUuids
+            + "groupUuid=" + node1Infos.getModificationGroupUuid()));
+        verify(putRequestSpec).header(HEADER_USER_ID, USER_ID_HEADER);
+        verify(putRequestSpec).contentType(MediaType.APPLICATION_JSON);
+        verify(putRequestSpec).body(metadata);
+        verify(putRequestSpec).retrieve();
+
+        ArgumentCaptor<String> indexUriCaptor = ArgumentCaptor.forClass(String.class);
+        verify(deleteRequestSpec).uri(indexUriCaptor.capture());
+        URI indexUri = URI.create(indexUriCaptor.getValue());
+        assertTrue(indexUri.getPath().endsWith("/network-modifications/index"));
+        String indexQuery = indexUri.getQuery();
+        assertTrue(indexQuery.contains("networkUuid=" + NETWORK_UUID));
+        assertEquals(groupUuids.length, indexQuery.split("groupUuids=").length - 1);
+        assertTrue(Arrays.stream(groupUuids).allMatch(groupUuid -> indexQuery.contains("groupUuids=" + groupUuid)));
+        verify(deleteRequestSpec, never()).body(any(Object.class));
+        verify(deleteRequestSpec).retrieve();
 
         checkUpdateBuildStateMessageReceived(studyUuid, nodesToUnbuild);
         checkUpdateStatusMessagesReceived(studyUuid, nodeWithModification, output);
@@ -487,7 +512,6 @@ class NetworkModificationUnitTest {
     void tearDown() {
         List<String> destinations = List.of(STUDY_UPDATE_DESTINATION);
         try {
-            server.verify();
             destinations.forEach(destination -> assertNull(TestUtils.receiveStudyUpdate(output, destination, 100), "Should not be any messages in queue " + destination + " : "));
         } catch (NullPointerException e) {
             // Ignoring
