@@ -11,6 +11,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,10 +48,13 @@ class LoadFlowServiceTest {
     @Mock
     private LoadFlowService loadFlowService;
 
+    @Mock
+    private UserAdminService userAdminService;
+
     @BeforeEach
     void setUp() {
         loadFlowService = new LoadFlowService(studyRepository, loadFlowRestService, notificationService, computationParametersService,
-            rootNetworkNodeInfoService, networkModificationTreeService, rootNetworkService, null);
+            rootNetworkNodeInfoService, networkModificationTreeService, rootNetworkService, userAdminService);
     }
 
     @Test
@@ -78,9 +82,9 @@ class LoadFlowServiceTest {
 
     @Test
     void testGetLoadFlowParameters() {
-        when(loadFlowRestService.getParameters(PARAMETERS_UUID)).thenReturn(PARAMETERS);
+        when(loadFlowRestService.getParameters(PARAMETERS_UUID, true, null)).thenReturn(PARAMETERS);
 
-        assertThat(loadFlowService.getCommonParameters(PARAMETERS_UUID)).isEqualTo(PARAMETERS);
+        assertThat(loadFlowService.getParameters(PARAMETERS_UUID, "userId")).isEqualTo(PARAMETERS);
     }
 
     @Test

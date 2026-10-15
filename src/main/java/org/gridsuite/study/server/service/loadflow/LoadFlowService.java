@@ -8,7 +8,10 @@
 package org.gridsuite.study.server.service.loadflow;
 
 import com.powsybl.loadflow.LoadFlowParameters;
-import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
+import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.UserProfileInfos;
+import org.gridsuite.study.server.dto.VariantInfos;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
@@ -106,10 +109,14 @@ public class LoadFlowService extends AbstractComputationService {
     }
 
     @Transactional
-    public String getLoadFlowParametersValues(UUID studyUuid) {
+    public String getLoadFlowParametersValues(UUID studyUuid, String userId) {
+        // get study loadflow parameters uuid
         StudyEntity studyEntity = getStudy(studyUuid);
-        UUID loadFlowParamsUuid = loadflowRestService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
-        return loadflowRestService.getParameters(loadFlowParamsUuid);
+        UUID studyLoadFlowParamsUuid = loadflowRestService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
+
+        UUID referenceLoadflowParametersUuid = getReferenceLoadflowParametersUuid(userId);
+
+        return loadflowRestService.getParameters(studyLoadFlowParamsUuid, true, referenceLoadflowParametersUuid);
     }
 
     @Transactional
@@ -146,8 +153,19 @@ public class LoadFlowService extends AbstractComputationService {
         return loadflowRestService.getDefaultLimitReductions();
     }
 
-    public String getCommonParameters(UUID parameterUuid) {
-        return loadflowRestService.getParameters(parameterUuid);
+    public String getParameters(UUID parameterUuid, String userId) {
+        UUID referenceLoadflowParametersUuid = getReferenceLoadflowParametersUuid(userId);
+        return loadflowRestService.getParameters(parameterUuid, true, referenceLoadflowParametersUuid);
+    }
+
+    private UUID getReferenceLoadflowParametersUuid(String userId) {
+        // get reference loadflow parameters uuid from user profile, if defined
+        UUID referenceLoadflowParametersUuid = null;
+        UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
+        if (userProfileInfos != null && userProfileInfos.getLoadFlowParameterId() != null) {
+            referenceLoadflowParametersUuid = userProfileInfos.getLoadFlowParameterId();
+        }
+        return referenceLoadflowParametersUuid;
     }
 
     public void updateLoadFlowParameters(UUID parameterUuid, String parameters) {
