@@ -6,8 +6,6 @@
  */
 package org.gridsuite.study.server.controller;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.NetworkModificationService;
 import org.springframework.http.MediaType;
