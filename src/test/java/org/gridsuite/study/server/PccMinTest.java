@@ -366,9 +366,9 @@ class PccMinTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), UUID.randomUUID(), PCC_MIN_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         userAdminServerStubs.stubGetUserProfile(NO_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
-        computationServerStubs.stubParameterPut(wireMockServer, PCC_MIN_PARAMETERS_UUID_STRING, PCC_MIN_PROFILE_PARAMETERS_JSON);
+        computationServerStubs.stubParametersReset(PCC_MIN_PARAMETERS_UUID_STRING);
         resetParametersAndDoChecks(studyNameUserIdUuid, NO_PROFILE_USER_ID, HttpStatus.OK);
-        computationServerStubs.verifyParameterPut(wireMockServer, PCC_MIN_PARAMETERS_UUID_STRING);
+        computationServerStubs.verifyParametersReset(PCC_MIN_PARAMETERS_UUID_STRING);
     }
 
     @Test
@@ -377,11 +377,25 @@ class PccMinTest {
         UUID studyUuid = studyEntity.getId();
 
         userAdminServerStubs.stubGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
-        computationServerStubs.stubParameterPut(wireMockServer, PCC_MIN_PARAMETERS_UUID_STRING, PCC_MIN_PROFILE_PARAMETERS_JSON);
+        computationServerStubs.stubParametersReset(PCC_MIN_PARAMETERS_UUID_STRING);
         resetParametersAndDoChecks(studyUuid, NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
         userAdminServerStubs.verifyGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID);
-        computationServerStubs.verifyParameterPut(wireMockServer, PCC_MIN_PARAMETERS_UUID_STRING);
+        computationServerStubs.verifyParametersReset(PCC_MIN_PARAMETERS_UUID_STRING);
+        assertEquals(PCC_MIN_PARAMETERS_UUID, studyRepository.findById(studyUuid).orElseThrow().getPccMinParametersUuid());
+    }
+
+    @Test
+    void testResetPccMinParametersUserHasNoParamsInProfileAndNoExistingPccMinParams() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null);
+        UUID studyUuid = studyEntity.getId();
+
+        userAdminServerStubs.stubGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
+        resetParametersAndDoChecks(studyUuid, NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+
+        userAdminServerStubs.verifyGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID);
+        wireMockServer.verify(0, putRequestedFor(urlPathMatching("/v1/parameters/.*")));
+        assertNull(studyRepository.findById(studyUuid).orElseThrow().getPccMinParametersUuid());
     }
 
     @Test
@@ -390,13 +404,13 @@ class PccMinTest {
         UUID studyUuid = studyEntity.getId();
 
         userAdminServerStubs.stubGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON);
-        computationServerStubs.stubParameterPut(wireMockServer, PCC_MIN_PARAMETERS_UUID_STRING, PCC_MIN_PROFILE_PARAMETERS_JSON);
+        computationServerStubs.stubParametersReset(PCC_MIN_PARAMETERS_UUID_STRING);
         computationServerStubs.stubParametersDuplicateFromNotFound(PROFILE_PCC_MIN_INVALID_PARAMETERS_UUID_STRING);
         resetParametersAndDoChecks(studyUuid, INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
 
         // --- Verify WireMock requests ---
         userAdminServerStubs.verifyGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID);
-        computationServerStubs.verifyParameterPut(wireMockServer, PCC_MIN_PARAMETERS_UUID_STRING);
+        computationServerStubs.verifyParametersReset(PCC_MIN_PARAMETERS_UUID_STRING);
         computationServerStubs.verifyParametersDuplicateFrom(PROFILE_PCC_MIN_INVALID_PARAMETERS_UUID_STRING);
     }
 

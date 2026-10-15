@@ -139,7 +139,7 @@ public class PccMinService extends AbstractComputationService {
             }
         }
         // no params in profile, or duplication failed: fall back to default params
-        createOrUpdatePccMinParameters(studyEntity, null);
+        resetPccMinParameters(studyEntity);
         return userProfileIssue;
     }
 
@@ -151,6 +151,14 @@ public class PccMinService extends AbstractComputationService {
             studyEntity.setPccMinParametersUuid(existingPccMinParametersUuid);
         } else {
             pccMinRestService.updatePccMinParameters(existingPccMinParametersUuid, parameters);
+        }
+    }
+
+    public void resetPccMinParameters(StudyEntity studyEntity) {
+        UUID existingPccMinParametersUuid = studyEntity.getPccMinParametersUuid();
+
+        if (existingPccMinParametersUuid != null) {
+            pccMinRestService.resetPccMinParameters(existingPccMinParametersUuid);
         }
     }
 
