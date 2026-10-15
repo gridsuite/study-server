@@ -54,7 +54,7 @@ public class LoadFlowStudyParametersController {
     }
 
     @PostMapping(value = "/parameters/reset")
-    @Operation(summary = "reset to default ones if empty body")
+    @Operation(summary = "Reset loadflow parameters on study to the user profile or default ones")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The loadflow parameters were reset"),
         @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
@@ -90,9 +90,7 @@ public class LoadFlowStudyParametersController {
 
     @GetMapping(value = "/provider")
     @Operation(summary = "Get loadflow provider for a specified study")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The loadflow parameters are reset"),
-        @ApiResponse(responseCode = "200", description = "The loadflow provider is returned")})
+        @ApiResponse(responseCode = "200", description = "The loadflow provider is returned")
     public ResponseEntity<String> getLoadFlowProvider(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(loadFlowService.getLoadFlowProvider(studyUuid));
     }
