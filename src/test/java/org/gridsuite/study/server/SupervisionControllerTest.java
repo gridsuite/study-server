@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server;
 
+import co.elastic.clients.transport.rest5_client.low_level.Rest5Client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
@@ -17,7 +18,6 @@ import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.serde.XMLImporter;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
-import org.elasticsearch.client.RestClient;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
@@ -34,8 +34,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.MediaType;
@@ -44,7 +44,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -107,7 +106,7 @@ class SupervisionControllerTest {
     private StudyService studyService;
 
     @Autowired
-    private RestClient restClient;
+    private Rest5Client restClient;
 
     @Autowired
     private TestUtils studyTestUtils;

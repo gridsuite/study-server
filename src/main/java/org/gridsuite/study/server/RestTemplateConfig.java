@@ -20,7 +20,7 @@ import com.powsybl.security.json.SecurityAnalysisJsonModule;
 import com.powsybl.sensitivity.json.SensitivityJsonModule;
 import com.powsybl.shortcircuit.json.ShortCircuitAnalysisJsonModule;
 import com.powsybl.timeseries.json.TimeSeriesJsonModule;
-import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.boot.restclient.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;

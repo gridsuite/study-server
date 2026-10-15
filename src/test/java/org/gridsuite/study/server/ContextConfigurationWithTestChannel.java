@@ -7,6 +7,7 @@
 package org.gridsuite.study.server;
 
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 
 import java.lang.annotation.ElementType;
@@ -20,5 +21,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public @interface ContextConfigurationWithTestChannel {
 }

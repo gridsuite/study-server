@@ -11,6 +11,7 @@ import co.elastic.clients.elasticsearch._types.aggregations.*;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import co.elastic.clients.json.JsonData;
+import co.elastic.clients.util.NamedValue;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
@@ -138,9 +139,8 @@ public class EquipmentInfosService {
     }
 
     private CompositeAggregation buildCompositeAggregation(String field, Map<String, FieldValue> afterKey) {
-        List<Map<String, CompositeAggregationSource>> sources = List.of(
-                Map.of(field, CompositeAggregationSource.of(s -> s.terms(t -> t.field(field + ".keyword")))
-                )
+        List<NamedValue<CompositeAggregationSource>> sources = List.of(
+                NamedValue.of(field, CompositeAggregationSource.of(s -> s.terms(t -> t.field(field + ".keyword"))))
         );
 
         CompositeAggregation.Builder compositeAggregationBuilder = new CompositeAggregation.Builder()
@@ -345,10 +345,10 @@ public class EquipmentInfosService {
                 .type(ScriptSortType.Number)
                 .order(SortOrder.Asc)
                 .script(Script.of(scr -> scr
-                    .source("""
+                    .source(script -> script.scriptString("""
                         String value = doc[params.field].value;
                         return value.startsWith(params.prefix) ? 0 : 1;
-                    """)
+                    """))
                     .params("field", JsonData.of(getSelectedEquipmentField(fieldSelector)))
                     .params("prefix", JsonData.of(userInput))
                 ))

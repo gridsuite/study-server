@@ -48,7 +48,7 @@
         <checkstyle.version>13.8.0</checkstyle.version>
         <maven.jib.version>3.5.1</maven.jib.version>
         <jib.from.image>powsybl/java:4.0.0</jib.from.image>
-        <gridsuite-dependencies.version>51.1.0</gridsuite-dependencies.version>
+        <gridsuite-dependencies.version>51.2.0-SNAPSHOT</gridsuite-dependencies.version>
         <liquibase-hibernate-package>org.gridsuite.study.server</liquibase-hibernate-package>
         <mockwebserver3.version>5.0.0-alpha.14</mockwebserver3.version>
         <db-util.version>1.0.5</db-util.version>
@@ -106,6 +106,13 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>2.0.5</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
 
             <!-- project specific dependencies -->
             <dependency>
@@ -159,8 +166,8 @@
             <artifactId>gridsuite-filter</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.liquibase</groupId>
-            <artifactId>liquibase-core</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-liquibase</artifactId>
         </dependency>
         <dependency>
             <groupId>io.projectreactor</groupId>
@@ -174,6 +181,14 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-jackson2</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-restclient</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.cloud</groupId>
@@ -200,8 +215,8 @@
 
         <!-- elasticsearch -->
         <dependency>
-            <groupId>org.springframework.data</groupId>
-            <artifactId>spring-data-elasticsearch</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
         </dependency>
 
         <!-- Runtime dependencies -->
@@ -262,6 +277,26 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-restclient-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.skyscreamer</groupId>
             <artifactId>jsonassert</artifactId>
             <scope>test</scope>
@@ -278,12 +313,12 @@
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>elasticsearch</artifactId>
+            <artifactId>testcontainers-elasticsearch</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

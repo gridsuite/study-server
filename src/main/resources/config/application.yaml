@@ -1,6 +1,9 @@
 spring:
   application:
     name: study-server
+  http:
+    converters:
+      preferred-json-mapper: jackson2
   cloud:
     function:
       definition: "consumeSaResult;consumeSaRunning;consumeSaStopped;consumeSaFailed;consumeSaCancelFailed;\

@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.utils.elasticsearch;
 
-import org.elasticsearch.client.RestClient;
+import co.elastic.clients.transport.rest5_client.low_level.Rest5Client;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosRepository;
 import org.gridsuite.study.server.elasticsearch.StudyInfosRepository;
 import org.gridsuite.study.server.elasticsearch.TombstonedEquipmentInfosRepository;
@@ -26,6 +26,7 @@ import java.lang.annotation.*;
 @Inherited
 @TestPropertySource(properties = {
     DisableElasticsearch.DISABLE_PROPERTY_NAME + "=true",
+    "spring.autoconfigure.exclude=org.springframework.boot.data.elasticsearch.autoconfigure.DataElasticsearchRepositoriesAutoConfiguration",
 })
 @Import(DisableElasticsearch.MockConfig.class)
 public @interface DisableElasticsearch {
@@ -59,8 +60,8 @@ public @interface DisableElasticsearch {
         }
 
         @Bean
-        public RestClient restClient() {
-            return Mockito.mock(RestClient.class);
+        public Rest5Client restClient() {
+            return Mockito.mock(Rest5Client.class);
         }
     }
 }

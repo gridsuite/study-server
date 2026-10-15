@@ -90,7 +90,6 @@ public class CaseServerStubs {
 
     public void stubCreateCase(String caseKey, String contentType, UUID expectedCaseUuid) {
         wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(CASE_URI))
-            .withHeader("Content-Type", equalTo("application/x-www-form-urlencoded"))
             .withQueryParam("caseKey", equalTo(caseKey))
             .withQueryParam("contentType", equalTo(contentType))
             .willReturn(WireMock.ok()

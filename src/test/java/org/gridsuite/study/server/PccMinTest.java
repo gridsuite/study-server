@@ -38,8 +38,8 @@ import org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria;
 import org.json.JSONObject;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -54,6 +54,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.HttpClientErrorException;
 import java.util.*;
+
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.notification.NotificationService.*;

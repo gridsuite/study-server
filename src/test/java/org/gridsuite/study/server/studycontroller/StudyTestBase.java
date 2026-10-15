@@ -60,8 +60,8 @@ import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.MediaType;
@@ -71,7 +71,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -493,8 +492,6 @@ class StudyTestBase {
     }
 
     protected void assertStudyCreation(UUID studyUuid, String userId, String... errorMessage) {
-        Assertions.assertTrue(studyRepository.findById(studyUuid).isPresent());
-
         // assert that the broker message has been sent a study creation request message
         Message<byte[]> message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination, StudyTest.TIMEOUT);
 
@@ -512,6 +509,7 @@ class StudyTestBase {
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_FINISHED, headers.get(StudyTest.HEADER_UPDATE_TYPE));
         assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(NotificationService.HEADER_ERROR));
+        Assertions.assertTrue(studyRepository.findById(studyUuid).isPresent());
     }
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, String updateType) {

@@ -15,21 +15,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfigurationImportFilter;
 import org.springframework.boot.autoconfigure.AutoConfigurationMetadata;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration;
-import org.springframework.boot.autoconfigure.cache.CacheAutoConfiguration;
-import org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration;
-import org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchRepositoriesAutoConfiguration;
-import org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration;
-import org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchClientAutoConfiguration;
-import org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchRestClientAutoConfiguration;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
-import org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration;
-import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.cloud.stream.config.BindingServiceConfiguration;
 import org.springframework.cloud.stream.function.FunctionConfiguration;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.core.env.Environment;
-
 import java.util.HashSet;
 import java.util.Set;
 
@@ -58,22 +47,22 @@ public class ExcludeSpringBootTestComponents implements AutoConfigurationImportF
         final Set<String> autoConfigDisable = new HashSet<>();
         if (environment.getProperty(DisableJpa.DISABLE_PROPERTY_NAME, Boolean.class, Boolean.FALSE)) {
             LOGGER.debug("Disabling SQL & JPA Autoconfiguration");
-            autoConfigDisable.add(DataSourceAutoConfiguration.class.getName());
-            autoConfigDisable.add(JpaRepositoriesAutoConfiguration.class.getName());
-            autoConfigDisable.add(HibernateJpaAutoConfiguration.class.getName());
-            autoConfigDisable.add(LiquibaseAutoConfiguration.class.getName());
-            autoConfigDisable.add(CacheAutoConfiguration.class.getName());
+            autoConfigDisable.add("org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration");
+            autoConfigDisable.add("org.springframework.boot.data.jpa.autoconfigure.JpaRepositoriesAutoConfiguration");
+            autoConfigDisable.add("org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration");
+            autoConfigDisable.add("org.springframework.boot.liquibase.autoconfigure.LiquibaseAutoConfiguration");
+            autoConfigDisable.add("org.springframework.boot.cache.autoconfigure.CacheAutoConfiguration");
         }
         if (environment.getProperty(DisableElasticsearch.DISABLE_PROPERTY_NAME, Boolean.class, Boolean.FALSE)) {
             LOGGER.debug("Disabling ElasticSearch Autoconfiguration");
-            autoConfigDisable.add(ElasticsearchClientAutoConfiguration.class.getName());
-            autoConfigDisable.add(ElasticsearchDataAutoConfiguration.class.getName());
-            autoConfigDisable.add(ElasticsearchRestClientAutoConfiguration.class.getName());
-            autoConfigDisable.add(ElasticsearchRepositoriesAutoConfiguration.class.getName());
+            autoConfigDisable.add("org.springframework.boot.elasticsearch.autoconfigure.ElasticsearchClientAutoConfiguration");
+            autoConfigDisable.add("org.springframework.boot.data.elasticsearch.autoconfigure.ElasticsearchDataAutoConfiguration");
+            autoConfigDisable.add("org.springframework.boot.elasticsearch.autoconfigure.ElasticsearchRestClientAutoConfiguration");
+            autoConfigDisable.add("org.springframework.boot.data.elasticsearch.autoconfigure.ElasticsearchRepositoriesAutoConfiguration");
         }
         if (environment.getProperty(DisableCloudStream.DISABLE_PROPERTY_NAME, Boolean.class, Boolean.FALSE)) {
             LOGGER.debug("Disabling AMQP Autoconfiguration");
-            autoConfigDisable.add(RabbitAutoConfiguration.class.getName());
+            autoConfigDisable.add("org.springframework.boot.amqp.autoconfigure.RabbitAutoConfiguration");
             autoConfigDisable.add(FunctionConfiguration.class.getName());
             autoConfigDisable.add(BindingServiceConfiguration.class.getName());
         }
