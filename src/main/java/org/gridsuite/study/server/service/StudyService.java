@@ -417,7 +417,25 @@ public class StudyService {
      * write on, which they cannot associate with a new tag, must already be.
      */
     private void assertCanAddRootNetworkTag(UUID studyUuid, String newTag, String userId) {
-        networkModificationService.assertRootNetworkTagsAllowed(getStudyModificationGroupUuids(studyUuid), List.of(newTag), userId);
+        networkModificationService.assertRootNetworkTagsAllowed(getStudyModificationGroupUuids(studyUuid), List.of(), List.of(), List.of(newTag), userId);
+    }
+
+    /**
+     * Modifications written into a study must be associated with all its root network tags, including the shared
+     * modifications they point to: the ones the user cannot write on, which they cannot associate with a new tag, must
+     * already be.
+     *
+     * @param containerUuids groups or composites whose content is written into the study: only the shared modifications
+     *                       their content refers to are checked, not the containers themselves
+     * @param modificationUuids modifications written into the study: the shared modifications they and their content
+     *                          refer to are checked
+     * @param sharedUuids shared modifications the study is given a reference to: they are checked themselves, along
+     *                    with the shared modifications their content refers to
+     */
+    private void assertCanWriteModificationsInStudy(UUID studyUuid, List<UUID> containerUuids, List<UUID> modificationUuids,
+                                                    List<UUID> sharedUuids, String userId) {
+        networkModificationService.assertRootNetworkTagsAllowed(containerUuids, modificationUuids, sharedUuids,
+                rootNetworkService.getStudyRootNetworkTags(studyUuid), userId);
     }
 
     public SharedModificationsWriteAccess getSharedModificationsWriteAccess(UUID studyUuid, String userId) {
@@ -1436,6 +1454,8 @@ public class StudyService {
     @Transactional
     public void duplicateStudyNode(UUID sourceStudyUuid, UUID targetStudyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
         assertDuplicateStudyNode(sourceStudyUuid, targetStudyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode);
+        assertCanWriteModificationsInStudy(targetStudyUuid, List.of(networkModificationTreeService.getModificationGroupUuid(nodeToCopyUuid)),
+                List.of(), List.of(), userId);
 
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode, userId);
         boolean invalidateBuild = networkModificationTreeService.hasModifications(nodeToCopyUuid, false);
@@ -1448,6 +1468,8 @@ public class StudyService {
     @Transactional
     public void moveStudyNode(UUID studyUuid, UUID nodeToMoveUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
         assertMoveStudyNode(studyUuid, nodeToMoveUuid, referenceNodeUuid, insertMode);
+        assertCanWriteModificationsInStudy(studyUuid, List.of(networkModificationTreeService.getModificationGroupUuid(nodeToMoveUuid)),
+                List.of(), List.of(), userId);
 
         List<NodeEntity> oldChildren = null;
         boolean shouldUnbuildChildren = networkModificationTreeService.hasModifications(nodeToMoveUuid, false);
@@ -1478,6 +1500,8 @@ public class StudyService {
     @Transactional
     public void duplicateStudySubtree(UUID sourceStudyUuid, UUID targetStudyUuid, UUID parentNodeToCopyUuid, UUID referenceNodeUuid, String userId) {
         assertDuplicateStudySubtree(sourceStudyUuid, targetStudyUuid, parentNodeToCopyUuid, referenceNodeUuid);
+        assertCanWriteModificationsInStudy(targetStudyUuid, networkModificationTreeService.getSubtreeModificationGroupUuids(parentNodeToCopyUuid),
+                List.of(), List.of(), userId);
         AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(sourceStudyUuid, parentNodeToCopyUuid, null);
         StudyEntity studyEntity = getStudy(targetStudyUuid);
         UUID duplicatedNodeUuid = networkModificationTreeService.cloneStudyTree(studySubTree, referenceNodeUuid, studyEntity, userId);
@@ -1494,6 +1518,8 @@ public class StudyService {
     @Transactional
     public void moveStudySubtree(UUID studyUuid, UUID parentNodeToMoveUuid, UUID referenceNodeUuid, String userId) {
         assertMoveStudySubtree(studyUuid, parentNodeToMoveUuid, referenceNodeUuid);
+        assertCanWriteModificationsInStudy(studyUuid, networkModificationTreeService.getSubtreeModificationGroupUuids(parentNodeToMoveUuid),
+                List.of(), List.of(), userId);
 
         List<UUID> allChildren = networkModificationTreeService.getChildrenUuids(parentNodeToMoveUuid);
         if (allChildren.contains(referenceNodeUuid)) {
@@ -1856,6 +1882,11 @@ public class StudyService {
             boolean isTargetInDifferentNodeTree,
             String userId) {
         boolean isSameNode = originNodeUuid.equals(targetNodeUuid);
+        // a reordering, within a node, write no new modification into it
+        if (!isSameNode) {
+            assertCanWriteModificationsInStudy(studyUuid, List.of(), modificationInfos.stream().map(ModificationMoveInfos::modificationUuid).toList(),
+                    List.of(), userId);
+        }
         List<UUID> targetChildrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
         List<UUID> originChildrenUuids = isSameNode ? List.of() : networkModificationTreeService.getChildrenUuids(originNodeUuid);
 
@@ -1942,6 +1973,7 @@ public class StudyService {
             UUID targetNodeUuid,
             List<UUID> modificationsUuids,
             String userId) {
+        assertCanWriteModificationsInStudy(targetStudyUuid, List.of(), modificationsUuids, List.of(), userId);
         duplicateModificationsOrInsertComposites(targetStudyUuid, targetNodeUuid,
                 (groupUuid, modificationApplicationContexts) -> {
                     NetworkModificationsResult result = networkModificationService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts), userId);
@@ -2011,12 +2043,27 @@ public class StudyService {
         List<CompositeInfos> compositesInfos,
         String userId,
         StudyConstants.CompositeModificationsActionType action) {
+        // CHECK ON SHARED MODIFICATIONS BEFORE INSERTION
+        // Only an INSERT of a composite marked as shared puts a reference to it in the study: the study then uses the
+        // shared composite itself, which is checked, along with its content. Any other composite (COPY, SPLIT, or INSERT
+        // not marked as shared) is copied: the study only gets its content, whose references to shared modifications are
+        // checked, the composite being passed as the container of that content.
+        boolean isInsert = action == StudyConstants.CompositeModificationsActionType.INSERT;
+        List<UUID> copiedCompositeUuids = compositesInfos.stream()
+                .filter(composite -> !isInsert || !composite.isShared())
+                .map(CompositeInfos::id)
+                .toList();
+        List<UUID> sharedCompositeUuids = compositesInfos.stream()
+                .filter(composite -> isInsert && composite.isShared())
+                .map(CompositeInfos::id)
+                .toList();
+        assertCanWriteModificationsInStudy(targetStudyUuid, copiedCompositeUuids, List.of(), sharedCompositeUuids, userId);
         duplicateModificationsOrInsertComposites(
                 targetStudyUuid,
                 targetNodeUuid,
                 (groupUuid, modificationApplicationContexts) -> {
                     NetworkModificationsResult result = networkModificationService.insertCompositeModifications(groupUuid, action, Pair.of(compositesInfos, modificationApplicationContexts));
-                    if (action == StudyConstants.CompositeModificationsActionType.INSERT) {
+                    if (isInsert) {
                         createCompositesReferences(compositesInfos, result.modificationUuids(), targetStudyUuid, targetNodeUuid, userId);
                     }
                     return result;

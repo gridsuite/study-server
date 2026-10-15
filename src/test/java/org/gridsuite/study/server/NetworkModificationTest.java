@@ -111,6 +111,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -336,6 +337,7 @@ class NetworkModificationTest {
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
         directoryService.setDirectoryServerServerBaseUri(baseUrl);
         userAdminService.setUserAdminServerBaseUri(baseUrl);
+        wireMockStubs.stubRootNetworkTagsAllowed();
 
         buildOkStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_STRING + "/build"))
             .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", DEFAULT_BUILD_RESULT, "destination", "build.result"))
@@ -2353,6 +2355,36 @@ class NetworkModificationTest {
                 Map.of(QUERY_PARAM_NODE_CONTAINER_UUID, WireMock.equalTo(nodeUuid1.toString())),
                 1
         );
+    }
+
+    @Test
+    void testPasteForbiddenByASharedModificationNotAssociatedWithTheRootNetworkTags() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyUuid = studyEntity.getId();
+        UUID nodeUuid = createNetworkModificationNode(studyUuid, getRootNode(studyUuid).getId(), UUID.randomUUID(), VARIANT_ID, "New node 1", "userId").getId();
+        UUID modificationUuid = UUID.randomUUID();
+        String forbiddenBody = mapper.writeValueAsString(PowsyblWsProblemDetail.builder(HttpStatus.FORBIDDEN)
+                .server("network-modification-server")
+                .detail("forbidden")
+                .businessErrorCode("modification.rootNetworkTagsForbiddenByShared")
+                .businessErrorValues(Map.of("allowedTags", "A, B", "allowedTagsCount", 2))
+                .build());
+        UUID forbiddenStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL))
+                .atPriority(1)
+                .willReturn(WireMock.forbidden().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE).withBody(forbiddenBody)))
+                .getId();
+
+        // the error tells the user the tags they may use, and nothing is copied
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}", studyUuid, nodeUuid)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(List.of(new ModificationCopyInfos(modificationUuid, null))))
+                .header(USER_ID_HEADER, "userId"))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.businessErrorCode").value("modification.rootNetworkTagsForbiddenByShared"))
+            .andExpect(jsonPath("$.businessErrorValues.allowedTags").value("A, B"));
+
+        WireMockUtils.verifyGetRequest(wireMockServer, forbiddenStubId, WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL,
+                Map.of("modificationUuids", WireMock.equalTo(modificationUuid.toString()), "tags", WireMock.equalTo(studyEntity.getFirstRootNetwork().getTag())));
     }
 
     @Test
