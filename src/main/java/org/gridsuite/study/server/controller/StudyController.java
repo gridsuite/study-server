@@ -304,6 +304,8 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.unshareModificationReference(studyUuid, nodeUuid, modificationUuid, userId);
         return ResponseEntity.ok().build();
     }
