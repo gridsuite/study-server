@@ -296,6 +296,18 @@ public class StudyController {
                 rootNetworkService.getRootNetworkLoadStatus(rootNetworkUuid)));
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuid}/unshare")
+    @Operation(summary = "Unshare a reference modification and copy the referenced composite in its place")
+    @ApiResponse(responseCode = "200", description = "The reference modification has been replaced by a copy of its referenced composite")
+    public ResponseEntity<Void> unshareModificationReference(
+            @PathVariable("modificationUuid") UUID modificationUuid,
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.unshareModificationReference(studyUuid, nodeUuid, modificationUuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", params = {"caseUuid"})
     @Operation(summary = "recreate study network of a study from an existing case")
     @ApiResponses(value = {

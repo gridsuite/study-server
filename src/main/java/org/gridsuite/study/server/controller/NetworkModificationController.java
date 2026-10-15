@@ -71,15 +71,6 @@ public class NetworkModificationController {
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/network-modifications/{uuid}/unshare")
-    @Operation(summary = "Unshare a reference modification and copy the referenced composite in its place")
-    @ApiResponse(responseCode = "200", description = "The reference modification has been replaced by a copy of its referenced composite")
-    public ResponseEntity<Void> unshareModificationReference(@PathVariable UUID uuid,
-                                                          @RequestHeader(HEADER_USER_ID) String userId) {
-        networkModificationService.unshareModificationReference(uuid, userId);
-        return ResponseEntity.ok().build();
-    }
-
     @PutMapping(value = "/network-modifications")
     public ResponseEntity<Void> updateNetworkModificationsMetadata(@RequestParam("uuids") List<UUID> networkModificationUuids, @RequestBody String metadata,
                                                                    @RequestHeader(HEADER_USER_ID) String userId) {
