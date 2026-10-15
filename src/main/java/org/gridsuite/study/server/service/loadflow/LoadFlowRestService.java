@@ -324,7 +324,19 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
     }
 
     public String getParameters(UUID parameterUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
+        return getParameters(parameterUuid, false, null);
+    }
+
+    public String getParameters(UUID parameterUuid, boolean withDifferences, UUID referenceLoadflowParametersUuid) {
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder
+            .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters/{parameterUuid}");
+        if (withDifferences) {
+            uriComponentsBuilder.queryParam("withDifferences", true);
+            if (referenceLoadflowParametersUuid != null) {
+                uriComponentsBuilder.queryParam("referenceUuid", referenceLoadflowParametersUuid);
+            }
+        }
+        String path = uriComponentsBuilder.buildAndExpand(parameterUuid).toUriString();
         return restTemplate.getForObject(getBaseUri() + path, String.class);
     }
 
