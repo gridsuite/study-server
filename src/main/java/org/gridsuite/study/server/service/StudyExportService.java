@@ -13,6 +13,7 @@ import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.dto.studyexport.*;
 import org.gridsuite.study.server.dto.studyexport.modifications.ExportedModificationsInfos;
 import org.gridsuite.study.server.dto.studyexport.parameters.*;
+import org.gridsuite.study.server.dto.studyexport.spreadsheets.ExportedSpreadsheetConfigCollection;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
@@ -56,6 +57,8 @@ public class StudyExportService {
     public static final String JSON = ".json";
     public static final String MODIFICATIONS_FOLDER = "networkModifications";
     public static final String LOAD_FLOW_PARAMETERS_JSON = "loadFlowParameters.json";
+    public static final String SPREADSHEETS_FOLDER = "spreadsheets";
+    public static final String SPREADSHEET_CONFIG_COLLECTION_JSON = "spreadsheetConfigCollection.json";
 
     private final StudyService studyService;
     private final CaseService caseService;
@@ -131,6 +134,7 @@ public class StudyExportService {
         }
         exportParameters(studyUuid, tempDir);
         exportModifications(treeExportInfos.nodeTree(), tempDir, userId);
+        exportSpreadsheetConfigCollection(studyUuid, tempDir);
         Path zipFile = createTempExportFile(studyUuid);
         try (OutputStream fos = Files.newOutputStream(zipFile);
              ZipOutputStream zipOut = new ZipOutputStream(fos)) {
@@ -233,6 +237,14 @@ public class StudyExportService {
             List<ExportedElementInfos> loadFlowParameters = toExportedElements(parameters, directoryService.getElementNames(loadFlowParametersUuids), UUID_FIELD);
             objectMapper.writeValue(modificationsDir.resolve(LOAD_FLOW_PARAMETERS_JSON).toFile(), loadFlowParameters);
         }
+    }
+
+    private void exportSpreadsheetConfigCollection(UUID studyUuid, Path tempDir) throws IOException {
+        Path spreadsheetsDir = Files.createDirectories(tempDir.resolve(SPREADSHEETS_FOLDER));
+        String spreadsheetConfigCollection = studyService.getSpreadsheetConfigCollection(studyUuid);
+        Files.writeString(spreadsheetsDir.resolve(SPREADSHEET_CONFIG_COLLECTION_JSON), spreadsheetConfigCollection);
+        Set<UUID> filterUuids = objectMapper.readValue(spreadsheetConfigCollection, ExportedSpreadsheetConfigCollection.class).getFilterUuids();
+        collectFiltersByByGroupUuid(spreadsheetsDir, filterUuids);
     }
 
     private Path createTempWorkDir(UUID studyUuid) {

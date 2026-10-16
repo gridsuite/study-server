@@ -55,6 +55,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class TreeExportTest extends StudyTestBase {
 
     private static final String GROUP_MODIFICATIONS_URL = "/v1/containers/[^/]+/network-modifications";
+    private static final String SPREADSHEET_CONFIG_COLLECTION_URL = "/v1/spreadsheet-config-collections/[^/]+";
+    private static final String SPREADSHEET_CONFIG_COLLECTION_JSON = "{\"spreadsheetConfigs\":[{\"name\":\"Lines\",\"sheetType\":\"LINE\",\"columns\":[]}],\"nodeAliases\":[]}";
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -72,6 +74,7 @@ class TreeExportTest extends StudyTestBase {
         ReflectionTestUtils.setField(caseService, "caseServerBaseUri", wireMockServer.baseUrl());
         // Stub the read-permission check on the study
         wireMockStubs.directoryServer.stubCheckPermission(List.of(studyUuid), null, "testUser", PermissionType.READ, false, HttpStatus.OK.value());
+        stubJsonGet(SPREADSHEET_CONFIG_COLLECTION_URL, SPREADSHEET_CONFIG_COLLECTION_JSON);
         // Stub the case content download used during export
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + CASE_UUID))
                 .willReturn(WireMock.aResponse().withStatus(200)
@@ -90,6 +93,7 @@ class TreeExportTest extends StudyTestBase {
         assertNotNull(archiveContent);
         assertTrue(archiveContent.length > 0);
         TreeExportInfos exportInfos = null;
+        String spreadsheetConfigCollection = null;
         List<String> zipEntryNames = new ArrayList<>();
         try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(archiveContent))) {
             ZipEntry entry;
@@ -97,6 +101,9 @@ class TreeExportTest extends StudyTestBase {
                 zipEntryNames.add(entry.getName());
                 if ("tree.json".equals(entry.getName())) {
                     exportInfos = objectMapper.readValue(zis.readAllBytes(), TreeExportInfos.class);
+                }
+                if ("spreadsheets/spreadsheetConfigCollection.json".equals(entry.getName())) {
+                    spreadsheetConfigCollection = new String(zis.readAllBytes());
                 }
             }
         }
@@ -122,12 +129,15 @@ class TreeExportTest extends StudyTestBase {
         assertFalse(zipEntryNames.contains("networkModifications/filters.json"));
         assertFalse(zipEntryNames.contains("networkModifications/loadFlowParameters.json"));
         assertFalse(zipEntryNames.contains("networkModifications/contingencyList.json"));
+        assertEquals(SPREADSHEET_CONFIG_COLLECTION_JSON, spreadsheetConfigCollection);
+        assertFalse(zipEntryNames.contains("spreadsheets/filters.json"));
         // Verify the case content download call
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
         // Verify the computation parameters and network modifications fetches
         computationServerStubs.verifyParametersGetAny(6);
         verifyGetGroupModifications();
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, SPREADSHEET_CONFIG_COLLECTION_URL, true, Map.of(), 1);
     }
 
     @Test
@@ -143,6 +153,7 @@ class TreeExportTest extends StudyTestBase {
         UUID identifierList = UUID.randomUUID();
         UUID filterBasedList = UUID.randomUUID();
         wireMockStubs.directoryServer.stubCheckPermission(List.of(studyUuid), null, "testUser", PermissionType.READ, false, HttpStatus.OK.value());
+        stubJsonGet(SPREADSHEET_CONFIG_COLLECTION_URL, SPREADSHEET_CONFIG_COLLECTION_JSON);
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + CASE_UUID))
                 .willReturn(WireMock.aResponse().withStatus(200).withHeader("Content-Type", "application/octet-stream").withBody("dummy case content".getBytes())));
         computationServerStubs.stubGetParametersAny("{"
@@ -193,6 +204,7 @@ class TreeExportTest extends StudyTestBase {
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
         computationServerStubs.verifyParametersGetAny(6);
         verifyGetGroupModifications();
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, SPREADSHEET_CONFIG_COLLECTION_URL, true, Map.of(), 1);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/contingency-lists/filter-uuids", false, Map.of("ids", WireMock.matching(".*")), 1);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/filters/referenced-filter-uuids", false, Map.of("ids", WireMock.matching(".*")), 1);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/filters/metadata", false, Map.of("ids", WireMock.matching(".*")), 1);
@@ -210,6 +222,7 @@ class TreeExportTest extends StudyTestBase {
         UUID filterC = UUID.randomUUID();
         UUID loadFlowParameters = UUID.randomUUID();
         wireMockStubs.directoryServer.stubCheckPermission(List.of(studyUuid), null, "testUser", PermissionType.READ, false, HttpStatus.OK.value());
+        stubJsonGet(SPREADSHEET_CONFIG_COLLECTION_URL, SPREADSHEET_CONFIG_COLLECTION_JSON);
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + CASE_UUID))
                 .willReturn(WireMock.aResponse().withStatus(200).withHeader("Content-Type", "application/octet-stream").withBody("dummy case content".getBytes())));
         computationServerStubs.stubGetParametersAny("{}");
@@ -249,9 +262,66 @@ class TreeExportTest extends StudyTestBase {
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
         computationServerStubs.verifyParametersGetAny(7);
         verifyGetGroupModifications();
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, SPREADSHEET_CONFIG_COLLECTION_URL, true, Map.of(), 1);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/filters/referenced-filter-uuids", false, Map.of("ids", WireMock.matching(".*")), 1);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/filters/metadata", false, Map.of("ids", WireMock.matching(".*")), 1);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/elements/names", false, Map.of("ids", WireMock.matching(".*"), "strictMode", WireMock.equalTo("false")), 2);
+    }
+
+    @Test
+    void testExportStudyWithSpreadsheetGlobalFilters() throws Exception {
+        UUID studyUuid = createStudyWithStubs("testUser", CASE_UUID);
+        ReflectionTestUtils.setField(caseService, "caseServerBaseUri", wireMockServer.baseUrl());
+        filterService.setBaseUri(wireMockServer.baseUrl());
+        UUID filterA = UUID.randomUUID();
+        UUID filterB = UUID.randomUUID();
+        UUID deletedFilter = UUID.randomUUID();
+        // a collection with column filter, sort, node aliases, and global filters: one generic filter, one deleted generic filter and one without reference
+        String spreadsheetConfigCollection = "{\"spreadsheetConfigs\":[{\"name\":\"Lines\",\"sheetType\":\"LINE\","
+                + "\"columns\":[{\"name\":\"ID\",\"id\":\"id\",\"columnFilterInfos\":{\"filterDataType\":\"text\",\"filterType\":\"contains\",\"filterValue\":\"L1\"}}],"
+                + "\"globalFilters\":[{\"uuid\":\"" + filterA + "\",\"filterType\":\"genericFilter\",\"label\":\"nameA\",\"deleted\":false},"
+                + "{\"uuid\":\"" + deletedFilter + "\",\"filterType\":\"genericFilter\",\"label\":\"deleted\",\"deleted\":true},"
+                + "{\"filterType\":\"country\",\"label\":\"FR\",\"deleted\":false}],"
+                + "\"nodeAliases\":[\"N1\"],\"sortConfig\":{\"colId\":\"id\",\"sort\":\"asc\"}}],\"nodeAliases\":[\"N1\"]}";
+        wireMockStubs.directoryServer.stubCheckPermission(List.of(studyUuid), null, "testUser", PermissionType.READ, false, HttpStatus.OK.value());
+        stubJsonGet(SPREADSHEET_CONFIG_COLLECTION_URL, spreadsheetConfigCollection);
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + CASE_UUID))
+                .willReturn(WireMock.aResponse().withStatus(200).withHeader("Content-Type", "application/octet-stream").withBody("dummy case content".getBytes())));
+        computationServerStubs.stubGetParametersAny("{}");
+        stubJsonGet(GROUP_MODIFICATIONS_URL, "[]");
+        stubJsonGet("/v1/filters/referenced-filter-uuids", "[\"" + filterB + "\"]");
+        String filterAJson = "{\"id\":\"" + filterA + "\",\"type\":\"EXPERT\"}";
+        String filterBJson = "{\"id\":\"" + filterB + "\",\"type\":\"IDENTIFIER_LIST\"}";
+        stubJsonGet("/v1/filters/metadata", "[" + filterAJson + "," + filterBJson + "]");
+        wireMockStubs.directoryServer.stubGetElementNames(objectMapper.writeValueAsString(Map.of(filterA, "nameA", filterB, "nameB")));
+
+        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName").header(HEADER_USER_ID, "testUser"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Map<String, String> zipContents = new HashMap<>();
+        try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(result.getResponse().getContentAsByteArray()))) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                zipContents.put(entry.getName(), new String(zis.readAllBytes()));
+            }
+        }
+        // the collection is exported as is: column filters, global filters, node aliases and sort
+        assertEquals(spreadsheetConfigCollection, zipContents.get("spreadsheets/spreadsheetConfigCollection.json"));
+        // the filter referenced by a global filter and the filter it references are exported, not the deleted one
+        Set<JsonNode> expectedFilters = Set.of(
+                objectMapper.readTree("{\"uuid\":\"" + filterA + "\",\"name\":\"nameA\",\"content\":" + filterAJson + "}"),
+                objectMapper.readTree("{\"uuid\":\"" + filterB + "\",\"name\":\"nameB\",\"content\":" + filterBJson + "}"));
+        assertEquals(expectedFilters, readJson(zipContents.get("spreadsheets/filters.json")));
+
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
+        wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
+        computationServerStubs.verifyParametersGetAny(6);
+        verifyGetGroupModifications();
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, SPREADSHEET_CONFIG_COLLECTION_URL, true, Map.of(), 1);
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/filters/referenced-filter-uuids", false, Map.of("ids", WireMock.equalTo(filterA.toString())), 1);
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/filters/metadata", false, Map.of("ids", WireMock.matching(".*")), 1);
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/elements/names", false, Map.of("ids", WireMock.matching(".*"), "strictMode", WireMock.equalTo("false")), 1);
     }
 
     private void stubJsonGet(String urlRegex, String body) {
@@ -287,6 +357,7 @@ class TreeExportTest extends StudyTestBase {
         UUID studyUuid = createStudyWithStubs("testUser", CASE_UUID);
         ReflectionTestUtils.setField(caseService, "caseServerBaseUri", wireMockServer.baseUrl());
         wireMockStubs.directoryServer.stubCheckPermission(List.of(studyUuid), null, "testUser", PermissionType.READ, false, HttpStatus.OK.value());
+        stubJsonGet(SPREADSHEET_CONFIG_COLLECTION_URL, SPREADSHEET_CONFIG_COLLECTION_JSON);
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + CASE_UUID))
                 .willReturn(WireMock.aResponse().withStatus(200).withHeader("Content-Type", "application/octet-stream")
                         .withBody("dummy case content".getBytes())));
@@ -325,5 +396,6 @@ class TreeExportTest extends StudyTestBase {
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
         computationServerStubs.verifyParametersGetAny(6);
         verifyGetGroupModifications();
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, SPREADSHEET_CONFIG_COLLECTION_URL, true, Map.of(), 1);
     }
 }
