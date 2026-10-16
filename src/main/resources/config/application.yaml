@@ -3,7 +3,7 @@ spring:
     name: study-server
   cloud:
     function:
-      definition: "consumeSaResult;consumeSaRunning;consumeSaStopped;consumeSaFailed;consumeSaCancelFailed;\
+      definition: "consumeSaResult;consumeSaRunning;consumeSaStopped;consumeSaFailed;consumeSaCancelFailed;consumeSaProgress;\
       consumeDsDebug;consumeDsResult;consumeDsRunning;consumeDsStopped;consumeDsFailed;consumeDsCancelFailed;\
       consumeDsaDebug;consumeDsaResult;consumeDsaRunning;consumeDsaStopped;consumeDsaFailed;consumeDsaCancelFailed;\
       consumeDmcDebug;consumeDmcResult;consumeDmcRunning;consumeDmcStopped;consumeDmcFailed;consumeDmcCancelFailed;\
@@ -44,6 +44,9 @@ spring:
         consumeSaFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.run.dlx
           group: dlq
+        consumeSaProgress-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.progress
+          group: studySaProgressGroup
         consumeDsDebug-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.debug
           group: studyDsDebugGroup
