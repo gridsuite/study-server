@@ -12,6 +12,7 @@ package org.gridsuite.study.server.dto;
 public enum SecurityAnalysisStatus {
     NOT_DONE,
     RUNNING,
+    PRELOADING,
     CONVERGED,
     DIVERGED
 }

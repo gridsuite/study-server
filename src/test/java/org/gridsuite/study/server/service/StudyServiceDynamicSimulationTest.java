@@ -12,13 +12,12 @@ import com.powsybl.timeseries.IrregularTimeSeriesIndex;
 import com.powsybl.timeseries.TimeSeries;
 import com.powsybl.timeseries.TimeSeriesIndex;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
-import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
-import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -52,20 +51,7 @@ import static org.mockito.BDDMockito.willDoNothing;
 class StudyServiceDynamicSimulationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyServiceDynamicSimulationTest.class);
 
-    private static final String MAPPING_NAME_01 = "_01";
-    private static final String MAPPING_NAME_02 = "_02";
-
-    // all mappings
-    private static final String[] MAPPING_NAMES = {MAPPING_NAME_01, MAPPING_NAME_02};
-
-    private static final List<MappingInfos> MAPPINGS = List.of(new MappingInfos(MAPPING_NAMES[0]),
-            new MappingInfos(MAPPING_NAMES[1]));
-
     private static final String VARIANT_1_ID = "variant_1";
-
-    private static final double START_TIME = 0.0;
-
-    private static final double STOP_TIME = 500.0;
 
     private static final UUID STUDY_UUID = UUID.randomUUID();
     private static final UUID NETWORK_UUID = UUID.randomUUID();
@@ -80,10 +66,16 @@ class StudyServiceDynamicSimulationTest {
     private NotificationService notificationService;
 
     @MockitoBean
-    private DynamicSimulationService dynamicSimulationService;
+    private DynamicSimulationRestService dynamicSimulationRestService;
+
+    @MockitoBean
+    private UserAdminService userAdminService;
 
     @Autowired
     private StudyService studyService;
+
+    @Autowired
+    private DynamicSimulationService dynamicSimulationService;
 
     @Autowired
     private StudyRepository studyRepository;
@@ -115,20 +107,14 @@ class StudyServiceDynamicSimulationTest {
     @Test
     void testRunDynamicSimulation() {
         // setup DynamicSimulationService mock
-        given(dynamicSimulationService.runDynamicSimulation(any(), eq(NODE_UUID), eq(ROOTNETWORK_UUID), any(), any(), any(), any(), any(), eq(false))).willReturn(RESULT_UUID);
-        willDoNothing().given(dynamicSimulationService).deleteResults(anyList());
+        given(dynamicSimulationRestService.runDynamicSimulation(eq(NODE_UUID), eq(ROOTNETWORK_UUID), any(), any(), any(), any(), any(), any(), eq(false))).willReturn(RESULT_UUID);
+        willDoNothing().given(dynamicSimulationRestService).deleteResults(anyList());
         given(rootNetworkNodeInfoService.isLoadflowConverged(NODE_UUID, ROOTNETWORK_UUID)).willReturn(true);
-
-        // init parameters
-        DynamicSimulationParametersInfos parameters = new DynamicSimulationParametersInfos();
-        parameters.setStartTime(START_TIME);
-        parameters.setStopTime(STOP_TIME);
-        parameters.setMapping(MAPPING_NAME_01);
 
         // call method to be tested
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, UUID.randomUUID(), "caseName", "", UUID.randomUUID());
         studyRepository.save(studyEntity);
-        UUID resultUuid = studyService.runDynamicSimulation(studyEntity.getId(), NODE_UUID, ROOTNETWORK_UUID, parameters, "testUserId", false);
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(studyEntity.getId(), NODE_UUID, ROOTNETWORK_UUID, "testUserId", false, null);
 
         // check result
         assertThat(resultUuid).isEqualTo(RESULT_UUID);
@@ -144,7 +130,7 @@ class StudyServiceDynamicSimulationTest {
                 TimeSeries.createDouble("NETWORK__BUS____1_TN_Upu_value", index, 1.059970, 1.059970, 1.059970, 1.059970)
         ));
 
-        given(dynamicSimulationService.getTimeSeriesResult(RESULT_UUID, null)).willReturn(timeSeries);
+        given(dynamicSimulationRestService.getTimeSeriesResult(RESULT_UUID, null)).willReturn(timeSeries);
 
         // call method to be tested
         String timeSeriesResultJson = TimeSeries.toJson(rootNetworkNodeInfoService.getDynamicSimulationTimeSeries(NODE_UUID, ROOTNETWORK_UUID, null));
@@ -167,7 +153,7 @@ class StudyServiceDynamicSimulationTest {
                 new TimelineEventInfos(104396, "CLA_2_4", "CLA : arming by over-current constraint")
         );
 
-        given(dynamicSimulationService.getTimelineResult(RESULT_UUID)).willReturn(timelineEventInfosList);
+        given(dynamicSimulationRestService.getTimelineResult(RESULT_UUID)).willReturn(timelineEventInfosList);
 
         // call method to be tested
         List<TimelineEventInfos> timelineEventInfosListResult = rootNetworkNodeInfoService.getDynamicSimulationTimeline(NODE_UUID, ROOTNETWORK_UUID);
@@ -180,29 +166,14 @@ class StudyServiceDynamicSimulationTest {
     @Test
     void testGetDynamicSimulationStatus() {
         // setup
-        given(dynamicSimulationService.getStatus(RESULT_UUID)).willReturn(DynamicSimulationStatus.CONVERGED);
+        given(dynamicSimulationRestService.getStatus(RESULT_UUID)).willReturn(DynamicSimulationStatus.CONVERGED);
 
         // call method to be tested
-        DynamicSimulationStatus status = rootNetworkNodeInfoService.getDynamicSimulationStatus(NODE_UUID, ROOTNETWORK_UUID);
+        String status = rootNetworkNodeInfoService.getDynamicSimulationStatus(NODE_UUID, ROOTNETWORK_UUID);
 
         // --- check result --- //
         LOGGER.info("Status expected = {}", DynamicSimulationStatus.CONVERGED.name());
         LOGGER.info("Status result = {}", status);
-        assertThat(status).isEqualTo(DynamicSimulationStatus.CONVERGED);
-    }
-
-    @Test
-    void testGetDynamicSimulationMappings() throws Exception {
-        // setup
-        given(dynamicSimulationService.getMappings(STUDY_UUID)).willReturn(MAPPINGS);
-
-        // call method to be tested
-        List<MappingInfos> mappingInfos = studyService.getDynamicSimulationMappings(STUDY_UUID);
-
-        // --- check result --- //
-        // must return 2 mappings
-        LOGGER.info("Mapping infos expected in Json = {}", objectMapper.writeValueAsString(MAPPINGS));
-        LOGGER.info("Mapping infos result in Json = {}", objectMapper.writeValueAsString(mappingInfos));
-        assertThat(mappingInfos).hasSameSizeAs(MAPPINGS);
+        assertThat(status).isEqualTo(DynamicSimulationStatus.CONVERGED.name());
     }
 }

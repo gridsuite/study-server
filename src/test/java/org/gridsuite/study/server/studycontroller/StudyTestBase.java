@@ -37,8 +37,16 @@ import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.pccmin.PccMinRestService;
+import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
+import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
+import org.gridsuite.study.server.service.stateestimation.StateEstimationRestService;
+import org.gridsuite.study.server.service.voltageinit.VoltageInitRestService;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -240,28 +248,34 @@ class StudyTestBase {
     protected UserAdminService userAdminService;
 
     @Autowired
-    protected SensitivityAnalysisService sensitivityAnalysisService;
+    protected SensitivityAnalysisRestService sensitivityAnalysisService;
 
     @Autowired
-    protected SecurityAnalysisService securityAnalysisService;
+    protected SecurityAnalysisRestService securityAnalysisService;
 
     @Autowired
-    protected VoltageInitService voltageInitService;
+    protected VoltageInitRestService voltageInitService;
 
     @Autowired
-    protected LoadFlowService loadflowService;
+    protected LoadFlowRestService loadflowRestService;
 
     @Autowired
-    protected ShortCircuitService shortCircuitService;
+    protected ShortCircuitRestService shortCircuitService;
 
     @Autowired
-    protected DynamicSecurityAnalysisClient dynamicSecurityAnalysisClient;
+    protected DynamicSimulationRestService dynamicSimulationRestService;
 
     @Autowired
-    protected StateEstimationService stateEstimationService;
+    protected DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
 
     @Autowired
-    protected PccMinService pccMinService;
+    protected DynamicMarginCalculationRestService dynamicMarginCalculationRestService;
+
+    @Autowired
+    protected StateEstimationRestService stateEstimationService;
+
+    @Autowired
+    protected PccMinRestService pccMinService;
 
     @Autowired
     protected StudyConfigService studyConfigService;
@@ -328,10 +342,13 @@ class StudyTestBase {
     }
 
     private void initMockBeansNetworkNotExisting() {
-        when(networkStoreService.cloneNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID, Collections.emptyList())).thenThrow(new PowsyblException("Network " + StudyTest.NOT_EXISTING_NETWORK_UUID + " not found"));
+        when(networkStoreService.cloneNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID,
+                Collections.emptyList())).thenThrow(new PowsyblException("Network " + StudyTest.NOT_EXISTING_NETWORK_UUID + " not found"));
         when(networkStoreService.getNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID)).thenThrow(new PowsyblException("Network " + StudyTest.NOT_EXISTING_NETWORK_UUID + " not found"));
-        when(networkStoreService.getNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID, PreloadingStrategy.COLLECTION)).thenThrow(new PowsyblException("Network " + StudyTest.NOT_EXISTING_NETWORK_UUID + " not found"));
-        when(networkStoreService.getNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID, PreloadingStrategy.NONE)).thenThrow(new PowsyblException("Network " + StudyTest.NOT_EXISTING_NETWORK_UUID + " not found"));
+        when(networkStoreService.getNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID,
+                PreloadingStrategy.COLLECTION)).thenThrow(new PowsyblException("Network " + StudyTest.NOT_EXISTING_NETWORK_UUID + " not found"));
+        when(networkStoreService.getNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID,
+                PreloadingStrategy.NONE)).thenThrow(new PowsyblException("Network " + StudyTest.NOT_EXISTING_NETWORK_UUID + " not found"));
 
         doNothing().when(networkStoreService).deleteNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID);
     }
@@ -362,16 +379,18 @@ class StudyTestBase {
         String baseUrl = wireMockServer.baseUrl();
         caseService.setCaseServerBaseUri(baseUrl);
         networkConversionService.setNetworkConversionServerBaseUri(baseUrl);
-        securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
+        securityAnalysisService.setBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
         userAdminService.setUserAdminServerBaseUri(baseUrl);
-        sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
-        voltageInitService.setVoltageInitServerBaseUri(baseUrl);
-        loadflowService.setLoadFlowServerBaseUri(baseUrl);
-        shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
-        dynamicSecurityAnalysisClient.setBaseUri(baseUrl);
-        stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
-        pccMinService.setPccMinServerBaseUri(baseUrl);
+        sensitivityAnalysisService.setBaseUri(baseUrl);
+        voltageInitService.setBaseUri(baseUrl);
+        loadflowRestService.setBaseUri(baseUrl);
+        shortCircuitService.setBaseUri(baseUrl);
+        dynamicSimulationRestService.setBaseUri(baseUrl);
+        dynamicSecurityAnalysisRestService.setBaseUri(baseUrl);
+        dynamicMarginCalculationRestService.setBaseUri(baseUrl);
+        stateEstimationService.setBaseUri(baseUrl);
+        pccMinService.setBaseUri(baseUrl);
         studyConfigService.setStudyConfigServerBaseUri(baseUrl);
         singleLineDiagramService.setSingleLineDiagramServerBaseUri(baseUrl);
         directoryService.setDirectoryServerServerBaseUri(baseUrl);
@@ -393,7 +412,7 @@ class StudyTestBase {
         UUID studyUuid = createStudy(userId, caseUuid, networkInfos);
 
         createStudyStubs.verify(wireMockStubs);
-        verifyCreateParameters(1, 7, 1, 1, 1);
+        verifyCreateParameters(1, 9, 1, 1, 1);
 
         return studyUuid;
     }
@@ -444,7 +463,8 @@ class StudyTestBase {
     }
 
     protected NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
-                                                                    UUID modificationGroupUuid, String variantId, String nodeName, NetworkModificationNodeType nodeType, BuildStatus buildStatus, String userId) throws Exception {
+                                                                    UUID modificationGroupUuid, String variantId, String nodeName, NetworkModificationNodeType nodeType, BuildStatus buildStatus,
+                                                                            String userId) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
             .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
             .nodeType(nodeType)
@@ -460,42 +480,43 @@ class StudyTestBase {
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
         checkElementUpdatedMessageSent(studyUuid, userId);
-        var mess = output.receive(TIMEOUT, studyUpdateDestination);
+        var mess = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
 
-        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), rootNetworkUuid,
             RootNetworkNodeInfo.builder().variantId(variantId).nodeBuildStatus(NodeBuildStatus.from(buildStatus)).build());
 
-        return modificationNode;
+        return (NetworkModificationNode) networkModificationTreeService.getNode(modificationNode.getId(), rootNetworkUuid);
     }
 
     protected void assertStudyCreation(UUID studyUuid, String userId, String... errorMessage) {
         Assertions.assertTrue(studyRepository.findById(studyUuid).isPresent());
 
         // assert that the broker message has been sent a study creation request message
-        Message<byte[]> message = output.receive(StudyTest.TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination, StudyTest.TIMEOUT);
 
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(StudyTest.HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_STARTED, headers.get(StudyTest.HEADER_UPDATE_TYPE));
 
-        // assert that the broker message has been sent a study creation message for creation
-        message = output.receive(StudyTest.TIMEOUT, studyUpdateDestination);
+        // assert that the broker message has been sent when the study is ready
+        message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination, StudyTest.TIMEOUT);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(StudyTest.HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_FINISHED, headers.get(StudyTest.HEADER_UPDATE_TYPE));
         assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(NotificationService.HEADER_ERROR));
     }
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
         // assert that the broker message has been sent for updating model status
-        Message<byte[]> messageStatus = output.receive(StudyTest.TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStatus = TestUtils.receiveStudyUpdate(output, studyUpdateDestination, StudyTest.TIMEOUT);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
@@ -506,17 +527,7 @@ class StudyTestBase {
     }
 
     protected void checkUpdateModelsStatusMessagesReceived(UUID studyUuid, UUID nodeUuid) {
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ALL_COMPUTATION_STATUS);
     }
 
     protected void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {
@@ -525,19 +536,9 @@ class StudyTestBase {
         assertEquals(userId, message.getHeaders().get(NotificationService.HEADER_MODIFIED_BY));
     }
 
-    protected void checkEquipmentCreatingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
-        // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals("", new String(messageStudyUpdate.getPayload()));
-        MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
-        assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(nodeUuid, headersStudyUpdate.get(NotificationService.HEADER_PARENT_NODE));
-        assertEquals(NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
-    }
-
     protected void checkEquipmentUpdatingFinishedMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
@@ -581,7 +582,8 @@ class StudyTestBase {
                                              UUID stubSpreadsheetConfigDuplicateFromId,
                                              UUID stubNetworkVisualizationParamsDuplicateFromId,
                                              UUID stubWorkspacesConfigDuplicateFromId) {
-        public void verify(WireMockStubs wireMockStubs, ComputationServerStubs computationServerStubs, int parametersDuplicateFromNbRequests, int spreadsheetConfigDuplicateFromNbRequests, int networkVisualizationParamsDuplicateFromNbRequests, int workspacesConfigDuplicateFromNbRequests) {
+        public void verify(WireMockStubs wireMockStubs, ComputationServerStubs computationServerStubs, int parametersDuplicateFromNbRequests, int spreadsheetConfigDuplicateFromNbRequests,
+                int networkVisualizationParamsDuplicateFromNbRequests, int workspacesConfigDuplicateFromNbRequests) {
             if (stubParametersDuplicateFromId != null) {
                 computationServerStubs.verifyParametersDuplicateFromAny(stubParametersDuplicateFromId, parametersDuplicateFromNbRequests);
             }
@@ -627,7 +629,8 @@ class StudyTestBase {
         wireMockStubs.stubWorkspacesConfigDefault(mapper.writeValueAsString(UUID.randomUUID()));
     }
 
-    protected void verifyCreateParameters(int createParametersNbRequests, int parametersDefaultNbRequests, int spreadsheetConfigDefaultNbRequests, int networkVisualizationParamsDefaultNbRequests, int workspacesConfigDefaultNbRequests) {
+    protected void verifyCreateParameters(int createParametersNbRequests, int parametersDefaultNbRequests, int spreadsheetConfigDefaultNbRequests, int networkVisualizationParamsDefaultNbRequests,
+            int workspacesConfigDefaultNbRequests) {
         computationServerStubs.verifyParameters(createParametersNbRequests);
         computationServerStubs.verifyParametersDefault(parametersDefaultNbRequests);
         wireMockStubs.verifySpreadsheetConfigDefault(spreadsheetConfigDefaultNbRequests);

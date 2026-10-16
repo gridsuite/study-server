@@ -27,7 +27,7 @@ import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
 import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyPostRequest;
 
 /**
- * @author Kevin Le Saulnier <kevin.lesaulnier@rte-france.com>
+ * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 public class NetworkConversionServerStubs {
 
@@ -61,7 +61,8 @@ public class NetworkConversionServerStubs {
         verifyImportNetwork(stubUuid, caseUuid, variantId, null);
     }
 
-    public UUID stubImportNetworkWithPostAction(String caseUuid, Map<String, Object> importParameters, String networkUuid, String networkId, String variantId, String caseFormat, String caseName, CountDownLatch countDownLatch) {
+    public UUID stubImportNetworkWithPostAction(String caseUuid, Map<String, Object> importParameters, String networkUuid, String networkId, String variantId, String caseFormat, String caseName,
+            CountDownLatch countDownLatch) {
         MappingBuilder mappingBuilder = WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK))
             .withQueryParam("caseUuid", equalTo(caseUuid))
             .withQueryParam("receiver", WireMock.matching(".*"));
@@ -144,7 +145,7 @@ public class NetworkConversionServerStubs {
             .withQueryParam("reportUuid", WireMock.matching(".*"))
             .withQueryParam("receiver", WireMock.matching(".*"))
             .withPostServeAction(POST_ACTION_SEND_INPUT, Parameters.from(postActionParams))
-            .willReturn(WireMock.serverError());
+            .willReturn(WireMock.ok());
 
         return wireMock.stubFor(mappingBuilder).getId();
     }
@@ -161,7 +162,7 @@ public class NetworkConversionServerStubs {
     }
 
     public UUID stubNetworkExport(String networkUuid, String format, String exportUuid) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/export/" + format))
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/networks/" + networkUuid + "/export/" + format + ".*"))
             .willReturn(WireMock.ok()
                 .withHeader("Content-Type", "application/json")
                 .withBody("\"" + exportUuid + "\""))).getId();

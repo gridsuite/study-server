@@ -18,9 +18,9 @@ powsybl-ws:
 powsybl:
   services:
     network-store-server:
-      base-uri: http://localhost:8080
+      base-uri: http://localhost:8080/
     case-server:
-      base-uri: http://localhost:5000
+      base-uri: http://localhost:5000/
     network-conversion-server:
       base-uri: http://localhost:5003
     single-line-diagram-server:

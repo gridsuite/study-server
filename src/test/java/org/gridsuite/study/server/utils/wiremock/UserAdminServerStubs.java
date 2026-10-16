@@ -15,14 +15,24 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * @author Maissa Souissi <maissa.souissi@rte-france.com>
+ * @author Maissa Souissi <maissa.souissi at rte-france.com>
  */
 
 public class UserAdminServerStubs {
+    public static final String QUOTA_CONSUME_URL_PATTERN = "/v1/users/.*/quota/.*/consume";
+    public static final String QUOTA_RELEASE_URL_PATTERN = "/v1/users/.*/quota/.*/release";
+
     private final WireMockServer wireMock;
 
     public UserAdminServerStubs(WireMockServer wireMock) {
         this.wireMock = wireMock;
+        // Stub the consumeQuota and releaseQuotaId endpoints used by all computation runs
+        wireMock.stubFor(WireMock.post(WireMock.urlPathMatching(QUOTA_CONSUME_URL_PATTERN))
+            .willReturn(WireMock.ok()
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .withBody("\"" + UUID.randomUUID() + "\"")));
+        wireMock.stubFor(WireMock.post(WireMock.urlPathMatching(QUOTA_RELEASE_URL_PATTERN))
+            .willReturn(WireMock.ok()));
     }
 
     public void verifyGetUserProfile(String userId) {

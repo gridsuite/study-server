@@ -11,10 +11,11 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
 import java.util.UUID;
 
 /**
- * @author David Braquart <david.braquart@rte-france.com>
+ * @author David Braquart <david.braquart at rte-france.com>
  */
 @Getter
 @AllArgsConstructor
@@ -34,6 +35,11 @@ public class UserProfileInfos {
 
     private UUID pccMinParameterId;
 
+    private UUID asymmetricalLoadParameterId;
+
+    // note: this parameter is not managed by user-admin-server yet
+    private UUID dynamicSimulationParameterId;
+
     // note: this parameter is not managed by user-admin-server yet
     private UUID dynamicSecurityAnalysisParameterId;
 
@@ -42,11 +48,11 @@ public class UserProfileInfos {
 
     private UUID voltageInitParameterId;
 
-    Integer maxAllowedBuilds;
-
     private UUID spreadsheetConfigCollectionId;
 
     private UUID networkVisualizationParameterId;
 
     private UUID workspaceId;
+
+    private Map<QuotaType, Integer> maxComputationQuotas;
 }

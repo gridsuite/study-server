@@ -13,6 +13,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.NativeQuery;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,6 +28,8 @@ public interface NodeRepository extends JpaRepository<NodeEntity, UUID> {
 
     List<NodeEntity> findAllByStudyId(UUID id);
 
+    long countByIdNodeInAndStudyId(Collection<UUID> idNodes, UUID studyId);
+
     List<NodeEntity> findAllByStudyIdAndTypeAndStashed(UUID id, NodeType type, boolean stashed);
 
     @NativeQuery("SELECT ne.status FROM node_export ne WHERE ne.export_uuid = :exportUuid")
@@ -35,6 +38,9 @@ public interface NodeRepository extends JpaRepository<NodeEntity, UUID> {
     @Modifying
     @NativeQuery("UPDATE node_export SET status = :status WHERE export_uuid = :exportUuid")
     void updateExportNetworkStatus(UUID exportUuid, String status);
+
+    @NativeQuery("select cast(n.id_node AS VARCHAR) from NODE n where n.parent_node = :nodeUuid")
+    List<UUID> findChildrenUuids(UUID nodeUuid);
 
     @NativeQuery("WITH RECURSIVE NodeHierarchy (id_node) AS ( " +
             "  SELECT n0.id_node" +
@@ -71,10 +77,11 @@ public interface NodeRepository extends JpaRepository<NodeEntity, UUID> {
 
         "    SELECT n.id_node, n.parent_node " +
         "    FROM NODE n " +
-        "    INNER JOIN NodeHierarchy nh ON n.id_node = nh.parent_node AND n.type != 'ROOT'" +
+        "    INNER JOIN NodeHierarchy nh ON n.id_node = nh.parent_node" +
         ") " +
         "SELECT cast(nh.id_node AS VARCHAR) " +
         "FROM NodeHierarchy nh where nh.id_node != :nodeUuid ")
+    /** Every node above this one up to and including the root, which has no parent and ends the walk. */
     List<UUID> findAllAncestorsUuids(UUID nodeUuid);
 
     @NativeQuery("WITH RECURSIVE ancestors (id_node, parent_node) AS ( " +
@@ -99,4 +106,7 @@ public interface NodeRepository extends JpaRepository<NodeEntity, UUID> {
     List<NodeEntity> findAllByStudyIdAndStashedAndParentNodeIdNodeOrderByStashDateDesc(UUID id, boolean stashed, UUID parentNode);
 
     Optional<NodeEntity> findByStudyIdAndType(UUID id, NodeType type);
+
+    @NativeQuery("SELECT EXISTS ( SELECT 1 FROM NODE n WHERE n.study_id = :studyId AND n.id_node = :nodeId )")
+    boolean existsByStudyIdAndNodeId(UUID studyId, UUID nodeId);
 }

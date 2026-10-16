@@ -14,7 +14,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import static org.gridsuite.study.server.StudyConstants.*;
 
 /**
- * @author Slimane amar <slimane.amar at rte-france.com
+ * @author Slimane amar <slimane.amar at rte-france.com>
  */
 public final class StudyUtils {
 

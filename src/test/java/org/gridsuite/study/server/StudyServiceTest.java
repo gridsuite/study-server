@@ -1,61 +1,50 @@
 /**
- * Copyright (c) 2023, RTE (http://www.rte-france.com)
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 package org.gridsuite.study.server;
 
-import com.github.tomakehurst.wiremock.WireMockServer;
-import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import org.gridsuite.study.server.dto.BuildInfos;
+import org.gridsuite.study.server.dto.ComputationType;
+import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
+import org.gridsuite.study.server.dto.QuotaState;
+import org.gridsuite.study.server.dto.QuotaType;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
-import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.utils.TestUtils;
-import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
+import org.gridsuite.study.server.service.NetworkModificationService;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.util.ReflectionTestUtils;
 
-import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
-import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAX_OPERATION_TYPE_EXCEEDED;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
 class StudyServiceTest {
-    private static final Logger LOGGER = LoggerFactory.getLogger(StudyServiceTest.class);
-
-    private WireMockServer wireMockServer;
-
-    private WireMockStubs wireMockStubs;
-
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private SingleLineDiagramService singleLineDiagramService;
     @Autowired
     private NodeRepository nodeRepository;
     @Autowired
@@ -66,35 +55,15 @@ class StudyServiceTest {
     private NetworkModificationTreeService networkModificationTreeService;
     @MockitoBean
     private NetworkModificationService networkModificationService;
+    @MockitoBean
+    private NotificationService notificationService;
+    @MockitoBean
+    private RootNetworkService rootNetworkService;
 
-    @BeforeEach
-    void setup() {
-        wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
-        wireMockStubs = new WireMockStubs(wireMockServer);
-
-        // Start the server.
-        wireMockServer.start();
-
-        singleLineDiagramService.setSingleLineDiagramServerBaseUri(wireMockServer.baseUrl());
-    }
-
-    @Test
-    void testImportCsv() throws Exception {
-        String csvContent = """
-                voltageLevelId;equipmentType;xPosition;yPosition;xLabelPosition;yLabelPosition
-                VL1;4;100;200;110;210""";
-
-        MockMultipartFile file = new MockMultipartFile(
-                "file", "positions.csv", "text/csv", csvContent.getBytes(StandardCharsets.UTF_8)
-        );
-        UUID positionsFromCsvUuid = wireMockStubs.stubCreatePositionsFromCsv();
-        mockMvc.perform(MockMvcRequestBuilders.multipart("/v1/studies/network-visualizations/nad-positions-config")
-                .file(file)
-                .contentType(MediaType.MULTIPART_FORM_DATA_VALUE))
-            .andExpect(status().isOk());
-
-        // assert API calls have been made
-        wireMockStubs.verifyStubCreatePositionsFromCsv(positionsFromCsvUuid);
+    @AfterEach
+    void resetOperationQuotasFlag() {
+        // restore the test-profile default (study.enable-operation-quotas=false) so no state leaks between tests
+        ReflectionTestUtils.setField(studyService, "shouldCheckOperationQuotas", false);
     }
 
     @Test
@@ -120,22 +89,25 @@ class StudyServiceTest {
          */
 
         // quota not reached, all first level children of N1 will be built
-        doReturn(Optional.of(10)).when(userAdminService).getUserMaxAllowedBuilds(userId);
+        doNothing().when(networkModificationTreeService).buildNode(any(UUID.class), any(UUID.class), any(UUID.class), eq(userId), isNull());
+        doReturn(Map.of(QuotaType.BUILD, new QuotaState(0, 10))).when(userAdminService).getUserQuotaState(userId);
         doReturn(0L).when(networkModificationTreeService).countBuiltNodes(studyUuid, rootNetworkUuid);
 
         mockNodeBuild(node2.getIdNode(), rootNetworkUuid);
         mockNodeBuild(node3.getIdNode(), rootNetworkUuid);
 
-        studyService.buildFirstLevelChildren(studyUuid, node1.getIdNode(), rootNetworkUuid, userId);
+        studyService.buildNodes(studyUuid,
+            studyService.getFirstLevelChildrenToBuild(studyUuid, node1.getIdNode(), rootNetworkUuid, userId),
+            rootNetworkUuid, userId);
 
-        verifyNodeBuild(node2.getIdNode(), rootNetworkUuid);
-        verifyNodeBuild(node3.getIdNode(), rootNetworkUuid);
+        verify(networkModificationTreeService, times(1)).buildNode(eq(studyUuid), eq(node2.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
+        verify(networkModificationTreeService, times(1)).buildNode(eq(studyUuid), eq(node3.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
         // check n4 has actually not been built
-        verify(networkModificationService, times(0)).buildNode(eq(node4.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
+        verify(networkModificationTreeService, times(0)).buildNode(eq(studyUuid), eq(node4.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
 
         // 1 to check how many children will be built, then 1 for each built children
-        verify(userAdminService, times(3)).getUserMaxAllowedBuilds(userId);
-        verify(networkModificationTreeService, times(3)).countBuiltNodes(studyUuid, rootNetworkUuid);
+        verify(userAdminService, times(1)).getUserQuotaState(userId);
+        verify(networkModificationTreeService, times(1)).countBuiltNodes(studyUuid, rootNetworkUuid);
     }
 
     @Test
@@ -161,16 +133,18 @@ class StudyServiceTest {
          */
 
         // quota already reached, nothing will be built
-        doReturn(Optional.of(10)).when(userAdminService).getUserMaxAllowedBuilds(userId);
+        doReturn(Map.of(QuotaType.BUILD, new QuotaState(0, 10))).when(userAdminService).getUserQuotaState(userId);
         doReturn(10L).when(networkModificationTreeService).countBuiltNodes(studyUuid, rootNetworkUuid);
 
-        studyService.buildFirstLevelChildren(studyUuid, node1.getIdNode(), rootNetworkUuid, userId);
+        studyService.buildNodes(studyUuid,
+            studyService.getFirstLevelChildrenToBuild(studyUuid, node1.getIdNode(), rootNetworkUuid, userId),
+            rootNetworkUuid, userId);
 
         verify(networkModificationService, times(0)).buildNode(eq(node2.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
         verify(networkModificationService, times(0)).buildNode(eq(node3.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
         verify(networkModificationService, times(0)).buildNode(eq(node4.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
 
-        verify(userAdminService, times(1)).getUserMaxAllowedBuilds(userId);
+        verify(userAdminService, times(1)).getUserQuotaState(userId);
         verify(networkModificationTreeService, times(1)).countBuiltNodes(studyUuid, rootNetworkUuid);
     }
 
@@ -197,40 +171,111 @@ class StudyServiceTest {
          */
 
         // quota will be reached, only one child will be built
-        doReturn(Optional.of(10)).when(userAdminService).getUserMaxAllowedBuilds(userId);
+        doNothing().when(networkModificationTreeService).buildNode(any(UUID.class), any(UUID.class), any(UUID.class), eq(userId), isNull());
+        doReturn(Map.of(QuotaType.BUILD, new QuotaState(0, 10))).when(userAdminService).getUserQuotaState(userId);
         doReturn(9L).when(networkModificationTreeService).countBuiltNodes(studyUuid, rootNetworkUuid);
 
         mockNodeBuild(node2.getIdNode(), rootNetworkUuid);
 
-        studyService.buildFirstLevelChildren(studyUuid, node1.getIdNode(), rootNetworkUuid, userId);
+        studyService.buildNodes(studyUuid,
+            studyService.getFirstLevelChildrenToBuild(studyUuid, node1.getIdNode(), rootNetworkUuid, userId),
+            rootNetworkUuid, userId);
 
-        verifyNodeBuild(node2.getIdNode(), rootNetworkUuid);
-        verify(networkModificationService, times(0)).buildNode(eq(node3.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
-        verify(networkModificationService, times(0)).buildNode(eq(node4.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
+        verify(networkModificationTreeService, times(1)).buildNode(eq(studyUuid), eq(node2.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
+        verify(networkModificationTreeService, times(0)).buildNode(eq(studyUuid), eq(node3.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
+        verify(networkModificationTreeService, times(0)).buildNode(eq(studyUuid), eq(node4.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
 
         // 1 to check how many children will be built, then 1 for each built children
-        verify(userAdminService, times(2)).getUserMaxAllowedBuilds(userId);
-        verify(networkModificationTreeService, times(2)).countBuiltNodes(studyUuid, rootNetworkUuid);
+        verify(userAdminService, times(1)).getUserQuotaState(userId);
+        verify(networkModificationTreeService, times(1)).countBuiltNodes(studyUuid, rootNetworkUuid);
+    }
+
+    @Test
+    void testConsumeQuotaReturnsNullAndSkipsRemoteCallWhenQuotasCheckDisabled() {
+        String userId = "userId";
+        ReflectionTestUtils.setField(studyService, "shouldCheckOperationQuotas", false);
+
+        assertNull(studyService.consumeQuota(ComputationType.SHORT_CIRCUIT, userId));
+
+        verify(userAdminService, never()).consumeQuota(eq(userId), any());
+    }
+
+    @Test
+    void testConsumeQuotaReturnsQuotaIdWhenUnderQuota() {
+        String userId = "userId";
+        ReflectionTestUtils.setField(studyService, "shouldCheckOperationQuotas", true);
+
+        UUID quotaId = UUID.randomUUID();
+        doReturn(quotaId).when(userAdminService).consumeQuota(userId, QuotaType.SHORT_CIRCUIT);
+
+        assertEquals(quotaId, studyService.consumeQuota(ComputationType.SHORT_CIRCUIT, userId));
+    }
+
+    @Test
+    void testConsumeQuotaPropagatesStudyExceptionWhenQuotaExhausted() {
+        String userId = "userId";
+        ReflectionTestUtils.setField(studyService, "shouldCheckOperationQuotas", true);
+
+        doThrow(new StudyException(MAX_OPERATION_TYPE_EXCEEDED, "Max number of SHORT_CIRCUIT already reached"))
+                .when(userAdminService).consumeQuota(userId, QuotaType.SHORT_CIRCUIT);
+
+        StudyException exception = assertThrows(StudyException.class,
+                () -> studyService.consumeQuota(ComputationType.SHORT_CIRCUIT, userId));
+
+        assertEquals(MAX_OPERATION_TYPE_EXCEEDED, exception.getBusinessErrorCode());
+    }
+
+    @Test
+    void testReleaseQuotaOnFailureIsNoOpWhenQuotaIdIsNull() {
+        studyService.releaseQuotaOnFailure("userId", null);
+
+        verify(userAdminService, never()).releaseFailedQuotaId(anyString(), any());
+    }
+
+    @Test
+    void testReleaseQuotaOnFailureCallsRemoteRelease() {
+        UUID quotaId = UUID.randomUUID();
+        studyService.releaseQuotaOnFailure("userId", quotaId);
+
+        verify(userAdminService, times(1)).releaseFailedQuotaId("userId", quotaId);
+    }
+
+    @Test
+    void testGetOperationQuotaStatusReflectsConfiguredFlag() {
+        ReflectionTestUtils.setField(studyService, "shouldCheckOperationQuotas", true);
+        assertTrue(studyService.getOperationQuotaStatus());
+
+        ReflectionTestUtils.setField(studyService, "shouldCheckOperationQuotas", false);
+        assertFalse(studyService.getOperationQuotaStatus());
+    }
+
+    @Test
+    void testSharedModificationsUpdatedNotification() {
+        UUID studyUuid = UUID.randomUUID();
+        UUID nodeUuid = UUID.randomUUID();
+        UUID rootNetwork1Uuid = UUID.randomUUID();
+        UUID rootNetwork2Uuid = UUID.randomUUID();
+        List<UUID> networkModificationUuids = List.of(UUID.randomUUID(), UUID.randomUUID());
+
+        doReturn(studyUuid).when(networkModificationTreeService).getStudyUuidForNodeId(nodeUuid);
+        doReturn(List.of(
+            RootNetworkEntity.builder().id(rootNetwork1Uuid).build(),
+            RootNetworkEntity.builder().id(rootNetwork2Uuid).build()
+        )).when(rootNetworkService).getStudyRootNetworks(studyUuid);
+        doNothing().when(networkModificationTreeService).invalidateNodeTree(any(), any(), any(), any(), anyBoolean());
+
+        studyService.sharedModificationsUpdatedNotification(nodeUuid, networkModificationUuids);
+
+        verify(networkModificationTreeService, times(1))
+            .invalidateNodeTree(studyUuid, nodeUuid, rootNetwork1Uuid, InvalidateNodeTreeParameters.ALL, false);
+        verify(networkModificationTreeService, times(1))
+            .invalidateNodeTree(studyUuid, nodeUuid, rootNetwork2Uuid, InvalidateNodeTreeParameters.ALL, false);
+
+        verify(notificationService, times(1)).emitSharedModificationsUpdated(studyUuid, nodeUuid, networkModificationUuids);
     }
 
     private void mockNodeBuild(UUID nodeUuid, UUID rootNetworkUuid) {
-        doReturn(new BuildInfos()).when(networkModificationTreeService).getBuildInfos(nodeUuid, rootNetworkUuid);
-        doNothing().when(networkModificationTreeService).setModificationReports(eq(nodeUuid), eq(rootNetworkUuid), any());
-        doNothing().when(networkModificationTreeService).updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
         doReturn(NodeBuildStatus.from(BuildStatus.NOT_BUILT)).when(networkModificationTreeService).getNodeBuildStatus(nodeUuid, rootNetworkUuid);
     }
 
-    private void verifyNodeBuild(UUID nodeUuid, UUID rootNetworkUuid) {
-        verify(networkModificationTreeService, times(1)).updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
-        verify(networkModificationService, times(1)).buildNode(eq(nodeUuid), eq(rootNetworkUuid), any(), eq(null));
-    }
-
-    @AfterEach
-    void tearDown() {
-        try {
-            TestUtils.assertWiremockServerRequestsEmptyThenShutdown(wireMockServer);
-        } catch (UncheckedInterruptedException e) {
-            LOGGER.error("Error while attempting to get the request done : ", e);
-        }
-    }
 }

@@ -11,6 +11,8 @@ import com.github.tomakehurst.wiremock.extension.Parameters;
 import com.github.tomakehurst.wiremock.extension.PostServeAction;
 import com.github.tomakehurst.wiremock.http.QueryParameter;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.messaging.support.MessageBuilder;
 
@@ -25,6 +27,8 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
  * See 'Post-serve actions' in <a href="https://wiremock.org/docs/extending-wiremock/">https://wiremock.org/docs/extending-wiremock/</a>
  */
 public class SendInput extends PostServeAction {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(PostServeAction.class);
 
     public static final String POST_ACTION_SEND_INPUT = "send-input";
 
@@ -44,7 +48,8 @@ public class SendInput extends PostServeAction {
         Object payload = parameters.get("payload");
         String destination = parameters.get("destination").toString();
         CountDownLatch countDownLatch = (CountDownLatch) (parameters.get("latch"));
-        List<String> paramsNotToPass = List.of("countDownLatch", "destination", "payload");
+        Boolean waitForLatch = (Boolean) parameters.get("waitForLatch");
+        List<String> paramsNotToPass = List.of("latch", "waitForLatch", "destination", "payload");
 
         MessageBuilder<?> messageBuilder = MessageBuilder.withPayload(payload);
         QueryParameter receiverParam = serveEvent.getRequest().getQueryParams().get(QUERY_PARAM_RECEIVER);
@@ -63,7 +68,19 @@ public class SendInput extends PostServeAction {
         // This is not suitable for our case, i.e. java code that sends a request
         // That's why we do it in another thread
         new Thread(() -> {
+            // wait for the latch to be released before sending the message
+            if (countDownLatch != null && waitForLatch != null && waitForLatch) {
+                try {
+                    countDownLatch.await();
+                } catch (InterruptedException e) {
+                    LOGGER.error("Interrupted wait for the latch to be released before sending the message", e);
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+
             input.send(messageBuilder.build(), destination);
+
             if (countDownLatch != null) {
                 countDownLatch.countDown();
             }

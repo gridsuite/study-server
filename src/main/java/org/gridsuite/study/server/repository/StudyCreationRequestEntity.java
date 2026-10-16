@@ -6,11 +6,9 @@
  */
 package org.gridsuite.study.server.repository;
 
-import java.util.UUID;
-
-import lombok.*;
-
 import jakarta.persistence.*;
+import lombok.*;
+import java.util.UUID;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>

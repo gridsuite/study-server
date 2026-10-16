@@ -38,7 +38,11 @@ public class SpreadsheetParameters {
 
     @JsonProperty("GENERATOR")
     @JsonInclude(Include.NON_EMPTY)
-    private GeneratorSpreadsheetParameters generator;
+    private RegulatingEquipmentSpreadsheetParameters generator;
+
+    @JsonProperty("BATTERY")
+    @JsonInclude(Include.NON_EMPTY)
+    private RegulatingEquipmentSpreadsheetParameters battery;
 
     @JsonProperty("BUS")
     @JsonInclude(Include.NON_EMPTY)
@@ -61,7 +65,7 @@ public class SpreadsheetParameters {
     @Accessors(chain = true)
     @Jacksonized
     @Builder
-    public static class GeneratorSpreadsheetParameters {
+    public static class RegulatingEquipmentSpreadsheetParameters {
         @JsonInclude(Include.NON_NULL)
         private Boolean regulatingTerminal;
     }

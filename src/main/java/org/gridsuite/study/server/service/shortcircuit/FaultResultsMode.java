@@ -8,7 +8,7 @@ package org.gridsuite.study.server.service.shortcircuit;
 
 /**
  * Specify if the faults are present in the result DTO and if so what they contain
- * @author Sylvain Bouzols <sylvain.bouzols at rte-france.com
+ * @author Sylvain Bouzols <sylvain.bouzols at rte-france.com>
  */
 public enum FaultResultsMode {
     /**

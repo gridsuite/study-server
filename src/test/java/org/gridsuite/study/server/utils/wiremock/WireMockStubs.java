@@ -31,7 +31,7 @@ import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.*;
 
 /**
  * /!\ STOP ADDING new methods in this file
- *  @Deprecated Do a local method on a test or create a dedicated file (for stub and verify)
+ * @deprecated Do a local method on a test or create a dedicated file (for stub and verify)
  */
 
 @Deprecated
@@ -41,9 +41,10 @@ public class WireMockStubs {
     public static final String URI_NETWORK_DATA = "/v1/networks";
 
     private static final String URI_NETWORK_MODIFICATION = "/v1/network-modifications";
-    private static final String URI_NETWORK_AREA_DIAGRAM = "/v1/network-area-diagram/config/positions";
 
     private static final String URI_NETWORK_MODIFICATION_GROUPS = "/v1/groups";
+
+    private static final String URI_NETWORK_MODIFICATION_CONTAINERS = "/v1/containers";
 
     public static final String FIRST_VARIANT_ID = "first_variant_id";
 
@@ -171,7 +172,7 @@ public class WireMockStubs {
     }
 
     public UUID stubNetworkModificationCountGet(String groupUuid, Integer expectedCount) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + groupUuid + "/network-modifications-count"))
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_CONTAINERS + DELIMITER + groupUuid + "/network-modifications-count"))
             .withQueryParam(QUERY_PARAM_STASHED, WireMock.equalTo("false"))
             .willReturn(WireMock.ok()
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -225,11 +226,10 @@ public class WireMockStubs {
         ).getId();
     }
 
-    public UUID stubDuplicateModificationGroup(String responseBody) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_MODIFICATION_GROUPS))
-            .withQueryParam("duplicateFrom", WireMock.matching(".*"))
+    public UUID stubDuplicateModificationGroup() {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + "/.*/duplicate"))
             .withQueryParam("groupUuid", WireMock.matching(".*"))
-            .willReturn(WireMock.ok().withBody(responseBody).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
+            .willReturn(WireMock.ok())
         ).getId();
     }
 
@@ -239,6 +239,17 @@ public class WireMockStubs {
         ).getId();
     }
 
+    public UUID stubGetAllReferencesDataFromGroup() {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_CONTAINERS + DELIMITER + ".*/references"))
+                .willReturn(WireMock.ok()
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .withBody("[]"))).getId();
+    }
+
+    public void verifyGetReferencesDataFromGroup(UUID getReferencesUuid) {
+        verifyGetRequest(wireMock, getReferencesUuid, URI_NETWORK_MODIFICATION_CONTAINERS + DELIMITER + ".*/references", true, Map.of(), 1);
+    }
+
     public UUID stubNetworkModificationDeleteIndex() {
         return wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION + DELIMITER + "index.*"))
             .willReturn(WireMock.ok())
@@ -246,7 +257,7 @@ public class WireMockStubs {
     }
 
     public void verifyNetworkModificationCountsGet(UUID stubId, String groupUuid) {
-        verifyGetRequest(wireMock, stubId, URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + groupUuid + "/network-modifications-count", Map.of(QUERY_PARAM_STASHED, WireMock.equalTo("false")));
+        verifyGetRequest(wireMock, stubId, URI_NETWORK_MODIFICATION_CONTAINERS + DELIMITER + groupUuid + "/network-modifications-count", Map.of(QUERY_PARAM_STASHED, WireMock.equalTo("false")));
     }
 
     public void verifyNetworkModificationPost(String requestBody) {
@@ -266,11 +277,11 @@ public class WireMockStubs {
     }
 
     public void verifyDuplicateModificationGroup(UUID stubId, int nbRequests) {
-        verifyPostRequest(wireMock, stubId, URI_NETWORK_MODIFICATION_GROUPS, Map.of("duplicateFrom", WireMock.matching(".*"), "groupUuid", WireMock.matching(".*")), nbRequests);
+        verifyPostRequest(wireMock, stubId, URI_NETWORK_MODIFICATION_GROUPS + "/.*/duplicate", true, Map.of("groupUuid", WireMock.matching(".*")), nbRequests);
     }
 
-    public void verifyNetworkModificationDeleteGroup(UUID stubId, boolean errorOnGroupNotFound) {
-        verifyDeleteRequest(wireMock, stubId, URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + ".*", true, Map.of("errorOnGroupNotFound", WireMock.equalTo(String.valueOf(errorOnGroupNotFound))));
+    public void verifyNetworkModificationDeleteGroup(UUID stubId) {
+        verifyDeleteRequest(wireMock, stubId, URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + ".*", true, Map.of());
     }
 
     public void verifyNetworkModificationDeleteIndex(UUID stubId) {
@@ -278,7 +289,8 @@ public class WireMockStubs {
     }
 
     public void verifyNetworkModificationDeleteIndex(UUID stubId, int nbRequests) {
-        verifyDeleteRequest(wireMock, stubId, URI_NETWORK_MODIFICATION + DELIMITER + "index.*", true, Map.of("networkUuid", WireMock.matching(".*"), "groupUuids", WireMock.matching(".*")), nbRequests);
+        verifyDeleteRequest(wireMock, stubId, URI_NETWORK_MODIFICATION + DELIMITER + "index.*", true, Map.of("networkUuid", WireMock.matching(".*"), "groupUuids", WireMock.matching(".*")),
+                nbRequests);
     }
 
     public UUID stubBranchOr3WTVoltageLevelIdGet(String networkUuid, String equipmentId, String responseBody) {
@@ -440,6 +452,26 @@ public class WireMockStubs {
         ).getId();
     }
 
+    public UUID stubEvaluateFiltersToEquipmentIds(String networkUuid, List<UUID> filterUuids, String responseBody) {
+        MappingBuilder requestPatternBuilder = WireMock.get(WireMock.urlPathEqualTo("/v1/filters/evaluate/onlyIds"))
+                .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid));
+        StringValuePattern[] idMatchers = filterUuids.stream()
+                .map(filterUuid -> WireMock.equalTo(filterUuid.toString()))
+                .toArray(StringValuePattern[]::new);
+        requestPatternBuilder.withQueryParam(IDS, WireMock.havingExactly(idMatchers));
+        return wireMock.stubFor(requestPatternBuilder.willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))
+        ).getId();
+    }
+
+    public void verifyEvaluateFiltersToEquipmentIds(UUID stubUuid, List<UUID> filtersUuid, String networkUuid) {
+        StringValuePattern[] idMatchers = filtersUuid.stream()
+                                .map((UUID value) -> WireMock.equalTo(value.toString()))
+                                .toArray(StringValuePattern[]::new);
+        verifyGetRequestWithMultiValueParams(wireMock, stubUuid, "/v1/filters/evaluate/onlyIds",
+                Map.of(NETWORK_UUID, WireMock.havingExactly(WireMock.equalTo(networkUuid)),
+                        IDS, WireMock.havingExactly(idMatchers)));
+    }
+
     public UUID stubFilterEvaluateNotFoundError(String networkUuid) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/filters/evaluate"))
                 .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
@@ -526,24 +558,6 @@ public class WireMockStubs {
                         "userInput", WireMock.equalTo(userInput)));
     }
 
-    public UUID stubCreatePositionsFromCsv() {
-        MappingBuilder mappingBuilder = WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_AREA_DIAGRAM))
-                .withHeader("Content-Type", WireMock.containing("multipart/form-data"))
-                .withMultipartRequestBody(WireMock.aMultipart()
-                        .withName("file")
-                        .withHeader("Content-Disposition", WireMock.containing("filename=\"positions.csv\""))
-                )
-                .withMultipartRequestBody(WireMock.aMultipart()
-                        .withName("file_name")
-                        .withBody(WireMock.equalTo("positions.csv"))
-                );
-        return wireMock.stubFor(mappingBuilder.willReturn(WireMock.ok().withHeader("Content-Type", "application/json"))).getId();
-    }
-
-    public void verifyStubCreatePositionsFromCsv(UUID stubUuid) {
-        verifyPostRequest(wireMock, stubUuid, URI_NETWORK_AREA_DIAGRAM, true, Map.of(), null);
-    }
-
     public UUID stubPccMinRun(String networkUuid, String variantId, String resultUuid) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/networks/" + networkUuid + "/run-and-save.*"))
             .withQueryParam("variantId", WireMock.equalTo(variantId))
@@ -601,6 +615,63 @@ public class WireMockStubs {
             ));
     }
 
+    public UUID stubAsymmetricalLoadRun(String networkUuid, String variantId, String resultUuid) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/asymmetrical-load/networks/" + networkUuid + "/run-and-save.*"))
+                .withQueryParam("variantId", WireMock.equalTo(variantId))
+                .willReturn(WireMock.okJson("\"" + resultUuid + "\""))
+
+        ).getId();
+    }
+
+    public void verifyAsymmetricalLoadRun(UUID stubUuid, String networkUuid, String variantId) {
+        verifyPostRequest(wireMock, stubUuid, "/v1/asymmetrical-load/networks/" + networkUuid + "/run-and-save",
+                Map.of("variantId", WireMock.equalTo(variantId)));
+    }
+
+    public UUID stubAsymmetricalLoadFailed(String networkUuid, String variantId, String resultUuid) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/asymmetrical-load/networks/" + networkUuid + "/run-and-save.*"))
+                .withQueryParam("variantId", WireMock.equalTo(variantId))
+                .willReturn(WireMock.okJson("\"" + resultUuid + "\""))
+        ).getId();
+    }
+
+    public void verifyAsymmetricalLoadFail(UUID stubUuid, String networkUuid, String variantId) {
+        verifyPostRequest(
+                wireMock,
+                stubUuid,
+                "/v1/asymmetrical-load/networks/" + networkUuid + "/run-and-save",
+                true,
+                Map.of("variantId", WireMock.equalTo(variantId)),
+                null,
+                1
+        );
+    }
+
+    public UUID stubPagedAsymmetricalLoadResult(String resultUuid, String responseBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/asymmetrical-load/results/" + resultUuid))
+                .withQueryParam("page", WireMock.equalTo("0"))
+                .withQueryParam("size", WireMock.equalTo("20"))
+                .withQueryParam("sort", WireMock.equalTo("id,DESC"))
+                .withQueryParam("filters", WireMock.equalTo("fakeFilters"))
+                .withQueryParam("globalFilters", WireMock.equalTo("fakeGlobalFilters"))
+                .willReturn(WireMock.okJson(responseBody))
+        ).getId();
+    }
+
+    public void verifyAsymmetricalLoadPagedGet(UUID stubId, String resultUuid) {
+        verifyGetRequest(
+                wireMock,
+                stubId,
+                "/v1/asymmetrical-load/results/" + resultUuid,
+                Map.of(
+                        "page", WireMock.equalTo("0"),
+                        "size", WireMock.equalTo("20"),
+                        "sort", WireMock.equalTo("id,DESC"),
+                        "filters", WireMock.equalTo("fakeFilters"),
+                        "globalFilters", WireMock.equalTo("fakeGlobalFilters")
+                ));
+    }
+
     public UUID stubGenerateSvg(UUID networkUuid, String variantId, String voltageLevelId, String body) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/svg/" + networkUuid + "/" + voltageLevelId))
             .withQueryParam(QUERY_PARAM_VARIANT_ID, WireMock.equalTo(variantId))
@@ -640,6 +711,19 @@ public class WireMockStubs {
                 "globalFilters", WireMock.equalTo("fakeGlobalFilters")
             ),
             1
+        );
+    }
+
+    public void verifyExportAsymmetricalLoadResult(UUID stubId, UUID resultUuid) {
+        verifyPostRequest(
+                wireMock, stubId,
+                "/v1/asymmetrical-load/results/" + resultUuid + "/csv",
+                Map.of(
+                        "sort", WireMock.equalTo("id,DESC"),
+                        "filters", WireMock.equalTo("fakeFilters"),
+                        "globalFilters", WireMock.equalTo("fakeGlobalFilters")
+                ),
+                1
         );
     }
 
@@ -741,38 +825,32 @@ public class WireMockStubs {
     }
 
     public UUID stubSpreadsheetConfigDuplicateFrom(String duplicateFromUuid, String responseBody) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/spreadsheet-config-collections"))
-            .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/spreadsheet-config-collections/" + duplicateFromUuid + "/duplicate"))
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
     }
 
     public UUID stubSpreadsheetConfigDuplicateFromNotFound(String duplicateFromUuid) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/spreadsheet-config-collections"))
-            .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/spreadsheet-config-collections/" + duplicateFromUuid + "/duplicate"))
             .willReturn(WireMock.notFound())).getId();
     }
 
     public UUID stubNetworkVisualizationParamsDuplicateFrom(String duplicateFromUuid, String responseBody) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-visualizations-params"))
-            .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-visualizations-params/" + duplicateFromUuid + "/duplicate"))
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
     }
 
     public UUID stubNetworkVisualizationParamsDuplicateFromNotFound(String duplicateFromUuid) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-visualizations-params"))
-            .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-visualizations-params/" + duplicateFromUuid + "/duplicate"))
             .willReturn(WireMock.notFound())).getId();
     }
 
     public UUID stubSpreadsheetConfigDuplicateFromAny(String responseBody) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/spreadsheet-config-collections"))
-            .withQueryParam("duplicateFrom", WireMock.matching(".*"))
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/spreadsheet-config-collections/.*/duplicate"))
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
     }
 
     public UUID stubNetworkVisualizationParamsDuplicateFromAny(String responseBody) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-visualizations-params"))
-            .withQueryParam("duplicateFrom", WireMock.matching(".*"))
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/network-visualizations-params/.*/duplicate"))
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
     }
 
@@ -785,7 +863,7 @@ public class WireMockStubs {
     }
 
     public void verifySpreadsheetConfigDuplicateFrom(UUID stubId, String duplicateFromUuid, int nbRequests) {
-        verifyPostRequest(wireMock, stubId, "/v1/spreadsheet-config-collections", Map.of("duplicateFrom", WireMock.equalTo(duplicateFromUuid)), nbRequests);
+        verifyPostRequest(wireMock, stubId, "/v1/spreadsheet-config-collections/" + duplicateFromUuid + "/duplicate", Map.of(), nbRequests);
     }
 
     public void verifyNetworkVisualizationParamsDefault(int nbRequests) {
@@ -797,19 +875,19 @@ public class WireMockStubs {
     }
 
     public void verifyNetworkVisualizationParamsDuplicateFrom(UUID stubId, String duplicateFromUuid, int nbRequests) {
-        verifyPostRequest(wireMock, stubId, "/v1/network-visualizations-params", Map.of("duplicateFrom", WireMock.equalTo(duplicateFromUuid)), nbRequests);
+        verifyPostRequest(wireMock, stubId, "/v1/network-visualizations-params/" + duplicateFromUuid + "/duplicate", Map.of(), nbRequests);
     }
 
     public void verifySpreadsheetConfigDuplicateFromAny(UUID stubId, int nbRequests) {
-        verifyPostRequest(wireMock, stubId, "/v1/spreadsheet-config-collections", Map.of("duplicateFrom", WireMock.matching(".*")), nbRequests);
+        verifyPostRequest(wireMock, stubId, "/v1/spreadsheet-config-collections/.*/duplicate", true, Map.of(), nbRequests);
     }
 
     public void verifyNetworkVisualizationParamsDuplicateFromAny(UUID stubId, int nbRequests) {
-        verifyPostRequest(wireMock, stubId, "/v1/network-visualizations-params", Map.of("duplicateFrom", WireMock.matching(".*")), nbRequests);
+        verifyPostRequest(wireMock, stubId, "/v1/network-visualizations-params/.*/duplicate", true, Map.of(), nbRequests);
     }
 
     public void verifyNetworkAreaDiagramConfig(UUID stubId) {
-        verifyPostRequest(wireMock, stubId, "/v1/network-area-diagram/config", Map.of("duplicateFrom", WireMock.matching(".*")));
+        verifyPostRequest(wireMock, stubId, "/v1/network-area-diagram/config/.*/duplicate", Map.of());
     }
 
     public void verifyElementNameGet(UUID stubId, String elementUuid) {
@@ -823,21 +901,19 @@ public class WireMockStubs {
     }
 
     public void verifyWorkspacesConfigDefault(int nbRequests) {
-        RequestPatternBuilder requestPattern = WireMock.postRequestedFor(WireMock.urlPathEqualTo("/v1/workspaces-configs"))
-            .withoutQueryParam("duplicateFrom");
+        RequestPatternBuilder requestPattern = WireMock.postRequestedFor(WireMock.urlPathEqualTo("/v1/workspaces-configs"));
         wireMock.verify(nbRequests, requestPattern);
         WireMockUtilsCriteria.removeRequestMatching(wireMock, requestPattern, nbRequests);
     }
 
     public UUID stubWorkspacesConfigDuplicateFromAny(String responseBody) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/workspaces-configs"))
-            .withQueryParam("duplicateFrom", WireMock.matching(".*"))
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/workspaces-configs/.*/duplicate"))
             .atPriority(1)  // checked FIRST
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
     }
 
     public void verifyWorkspacesConfigDuplicateFromAny(UUID stubId, int nbRequests) {
-        verifyPostRequest(wireMock, stubId, "/v1/workspaces-configs", Map.of("duplicateFrom", WireMock.matching(".*")), nbRequests);
+        verifyPostRequest(wireMock, stubId, "/v1/workspaces-configs/.*/duplicate", true, Map.of(), nbRequests);
     }
 
     public UUID stubDeleteWorkspacesConfig() {

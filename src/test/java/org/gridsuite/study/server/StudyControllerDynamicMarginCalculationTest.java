@@ -20,12 +20,13 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
-import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
-import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
+import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
@@ -112,10 +113,13 @@ class StudyControllerDynamicMarginCalculationTest {
     StudyService spyStudyService;
 
     @MockitoBean
-    private LoadFlowService mockLoadFlowService;
+    private LoadFlowRestService mockLoadFlowRestService;
+
+    @MockitoBean
+    private UserAdminService userAdminService;
 
     @MockitoSpyBean
-    private DynamicMarginCalculationService spyDynamicMarginCalculationService;
+    private DynamicMarginCalculationRestService spyDynamicMarginCalculationRestService;
 
     @Autowired
     private StudyRepository studyRepository;
@@ -131,9 +135,6 @@ class StudyControllerDynamicMarginCalculationTest {
 
     @Autowired
     private TestUtils studyTestUtils;
-
-    @MockitoSpyBean
-    private StudyService studyService;
 
     @MockitoSpyBean
     private RootNetworkNodeInfoRepository spyRootNetworkNodeInfoRepository;
@@ -189,14 +190,15 @@ class StudyControllerDynamicMarginCalculationTest {
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
-                                                                  UUID modificationGroupUuid, String variantId, String nodeName, NetworkModificationNodeType nodeType, BuildStatus buildStatus) throws Exception {
+                                                                  UUID modificationGroupUuid, String variantId, String nodeName, NetworkModificationNodeType nodeType,
+                                                                          BuildStatus buildStatus) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName).nodeType(nodeType)
                 .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
                 .nodeBuildStatus(NodeBuildStatus.from(buildStatus))
                 .children(Collections.emptyList()).build();
 
-        reset(studyService);
-        doNothing().when(studyService).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
+        reset(spyStudyService);
+        doReturn(List.of()).when(spyStudyService).getRootNetworksToBuildNewNode(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
 
         studyClient.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid)
                         .content(objectMapper.writeValueAsString(modificationNode))
@@ -204,7 +206,7 @@ class StudyControllerDynamicMarginCalculationTest {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        var mess = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(mess).isNotNull();
         UUID newNodeId = UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE)));
         modificationNode.setId(newNodeId);
@@ -212,7 +214,7 @@ class StudyControllerDynamicMarginCalculationTest {
 
         rootNetworkNodeInfoService.updateRootNetworkNode(newNodeId, studyTestUtils.getOneRootNetworkUuid(studyUuid), RootNetworkNodeInfo.builder().variantId(variantId).build());
 
-        verify(studyService, times(1)).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
+        verify(spyStudyService, times(1)).getRootNetworksToBuildNewNode(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
 
         return modificationNode;
     }
@@ -227,12 +229,12 @@ class StudyControllerDynamicMarginCalculationTest {
         NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
+        when(mockLoadFlowRestService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
 
         // setup DynamicMarginCalculationService spy
         doAnswer(invocation -> RESULT_UUID)
-            .when(spyDynamicMarginCalculationService).runDynamicMarginCalculation(
-                any(), eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID),
+            .when(spyDynamicMarginCalculationRestService).runDynamicMarginCalculation(
+                eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID),
                 any(), any(), any(), any(), any(), eq(true));
 
         // --- call endpoint to be tested --- //
@@ -245,7 +247,7 @@ class StudyControllerDynamicMarginCalculationTest {
 
         // --- check async messages emitted by runDynamicMarginCalculation of StudyService --- //
         // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicMarginCalculationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicMarginCalculationStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicMarginCalculationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
@@ -265,7 +267,7 @@ class StudyControllerDynamicMarginCalculationTest {
 
         // --- check async messages emitted by consumeDsFailed of ConsumerService --- //
         // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_FAILED from channel : studyUpdateDestination
-        dynamicMarginCalculationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        dynamicMarginCalculationStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicMarginCalculationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_FAILED);
@@ -277,7 +279,7 @@ class StudyControllerDynamicMarginCalculationTest {
                 .build(), DMC_DEBUG_DESTINATION);
 
         // must have message COMPUTATION_DEBUG_FILE_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicSimulationResultMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicSimulationResultMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicSimulationResultMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.COMPUTATION_DEBUG_FILE_STATUS);
@@ -313,7 +315,7 @@ class StudyControllerDynamicMarginCalculationTest {
         // create a construction node
         NetworkModificationNode modificationNode1 = createNetworkModificationConstructionNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
-        doAnswer(invocation -> DYNAWO_PROVIDER).when(spyDynamicMarginCalculationService).getProvider(any());
+        doAnswer(invocation -> DYNAWO_PROVIDER).when(spyDynamicMarginCalculationRestService).getProvider(any());
 
         // --- call endpoint to be tested --- //
         // run on root node => forbidden
@@ -333,10 +335,10 @@ class StudyControllerDynamicMarginCalculationTest {
         NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
+        when(mockLoadFlowRestService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
 
         // setup DynamicMarginCalculationService mock
-        doAnswer(invocation -> RESULT_UUID).when(spyDynamicMarginCalculationService).runDynamicMarginCalculation(any(),
+        doAnswer(invocation -> RESULT_UUID).when(spyDynamicMarginCalculationRestService).runDynamicMarginCalculation(
             eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any(), any(), eq(false));
 
         MvcResult result;
@@ -349,7 +351,7 @@ class StudyControllerDynamicMarginCalculationTest {
 
         // --- check async messages emitted by runDynamicMarginCalculation of StudyService --- //
         // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicMarginCalculationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicMarginCalculationStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicMarginCalculationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
@@ -369,19 +371,19 @@ class StudyControllerDynamicMarginCalculationTest {
 
         // --- check async messages emitted by consumeDsResult of ConsumerService --- //
         // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS from channel : studyUpdateDestination
-        dynamicMarginCalculationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        dynamicMarginCalculationStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicMarginCalculationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
 
         // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_RESULT from channel : studyUpdateDestination
-        Message<byte[]> dynamicMarginCalculationResultMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicMarginCalculationResultMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicMarginCalculationResultMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_RESULT);
 
         //Test result count
-        doAnswer(invocation -> 1).when(spyDynamicMarginCalculationService).getResultsCount();
+        doAnswer(invocation -> 1).when(spyDynamicMarginCalculationRestService).getResultsCount();
         result = studyClient.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", ComputationType.DYNAMIC_MARGIN_CALCULATION.toString())
                         .queryParam("dryRun", "true"))
@@ -390,7 +392,7 @@ class StudyControllerDynamicMarginCalculationTest {
         assertThat(result.getResponse().getContentAsString()).isEqualTo("1");
 
         //Delete Dynamic result init results
-        doNothing().when(spyDynamicMarginCalculationService).deleteAllResults();
+        doNothing().when(spyDynamicMarginCalculationRestService).deleteAllResults();
         result = studyClient.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", ComputationType.DYNAMIC_MARGIN_CALCULATION.toString())
                         .queryParam("dryRun", "false"))
@@ -409,10 +411,10 @@ class StudyControllerDynamicMarginCalculationTest {
         NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
+        when(mockLoadFlowRestService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
 
         // setup DynamicMarginCalculationService mock
-        doAnswer(invocation -> RESULT_UUID).when(spyDynamicMarginCalculationService).runDynamicMarginCalculation(any(),
+        doAnswer(invocation -> RESULT_UUID).when(spyDynamicMarginCalculationRestService).runDynamicMarginCalculation(
             eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any(), any(), eq(false));
 
         // --- call endpoint to be tested --- //
@@ -424,7 +426,7 @@ class StudyControllerDynamicMarginCalculationTest {
 
         // --- check async messages emitted by runDynamicMarginCalculation of StudyService --- //
         // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicMarginCalculationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicMarginCalculationStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicMarginCalculationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
@@ -444,7 +446,7 @@ class StudyControllerDynamicMarginCalculationTest {
 
         // --- check async messages emitted by consumeDsStopped of ConsumerService --- //
         // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS from channel : studyUpdateDestination
-        dynamicMarginCalculationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        dynamicMarginCalculationStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicMarginCalculationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
@@ -453,7 +455,7 @@ class StudyControllerDynamicMarginCalculationTest {
     @Test
     void testGetDynamicMarginCalculationStatusResultGivenNodeNotRun() throws Exception {
         // setup DynamicMarginCalculationService mock
-        doAnswer(invocation -> null).when(spyDynamicMarginCalculationService).getStatus(RESULT_UUID);
+        doAnswer(invocation -> null).when(spyDynamicMarginCalculationRestService).getStatus(RESULT_UUID);
 
         // --- call endpoint to be tested --- //
         // get result from a node not yet run
@@ -468,7 +470,7 @@ class StudyControllerDynamicMarginCalculationTest {
         // setup DynamicMarginCalculationService mock
         Mockito.doReturn(Optional.of(RootNetworkNodeInfoEntity.builder().id(UUID.randomUUID()).dynamicMarginCalculationResultUuid(RESULT_UUID).build()))
             .when(spyRootNetworkNodeInfoRepository).findByNodeInfoIdAndRootNetworkId(NODE_UUID, ROOT_NETWORK_UUID);
-        doAnswer(invocation -> DynamicMarginCalculationStatus.FAILED).when(spyDynamicMarginCalculationService).getStatus(RESULT_UUID);
+        doAnswer(invocation -> DynamicMarginCalculationStatus.FAILED).when(spyDynamicMarginCalculationRestService).getStatus(RESULT_UUID);
 
         // --- call endpoint to be tested --- //
         // get status from a node done
@@ -485,7 +487,6 @@ class StudyControllerDynamicMarginCalculationTest {
         assertThat(statusResult).isEqualTo(statusExpected);
     }
 
-    // @Disabled("fix later")
     @Test
     void testSetAndGetDynamicMarginCalculationParameters() throws Exception {
         // create a node in the db
@@ -497,9 +498,9 @@ class StudyControllerDynamicMarginCalculationTest {
 
         // setup DynamicMarginCalculationService mock
         doAnswer(invocation -> PARAMETERS_UUID)
-                .when(spyDynamicMarginCalculationService).createParameters(any());
+                .when(spyDynamicMarginCalculationRestService).createParameters(any());
         doAnswer(invocation -> jsonParameters)
-                .when(spyDynamicMarginCalculationService).getParameters(PARAMETERS_UUID, "userId");
+                .when(spyDynamicMarginCalculationRestService).getParameters(PARAMETERS_UUID, "userId");
 
         MvcResult result;
 
@@ -532,11 +533,11 @@ class StudyControllerDynamicMarginCalculationTest {
 
     private void checkNotificationsAfterModifyingDynamicMarginCalculationParameters(UUID studyUuid) {
         // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS and UPDATE_TYPE_COMPUTATION_PARAMETERS from channel : studyUpdateDestination
-        Message<byte[]> studyUpdateMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> studyUpdateMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(studyUpdateMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
-        studyUpdateMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        studyUpdateMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS, studyUpdateMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         // must have message HEADER_USER_ID_VALUE from channel : elementUpdateDestination

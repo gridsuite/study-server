@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023, RTE (http://www.rte-france.com)
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -12,15 +12,27 @@ import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
-import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
-import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.asymmetricalload.AsymmetricalLoadRestService;
+import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowService;
+import org.gridsuite.study.server.service.pccmin.PccMinRestService;
+import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
+import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
+import org.gridsuite.study.server.service.stateestimation.StateEstimationRestService;
+import org.gridsuite.study.server.service.voltageinit.VoltageInitRestService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
@@ -56,27 +68,31 @@ public class SupervisionService {
 
     private final LoadFlowService loadFlowService;
 
-    private final DynamicSimulationService dynamicSimulationService;
+    private final LoadFlowRestService loadFlowRestService;
 
-    private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
+    private final DynamicSimulationRestService dynamicSimulationRestService;
 
-    private final DynamicMarginCalculationService dynamicMarginCalculationService;
+    private final DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
 
-    private final SecurityAnalysisService securityAnalysisService;
+    private final DynamicMarginCalculationRestService dynamicMarginCalculationRestService;
 
-    private final SensitivityAnalysisService sensitivityAnalysisService;
+    private final SecurityAnalysisRestService securityAnalysisService;
 
-    private final ShortCircuitService shortCircuitService;
+    private final SensitivityAnalysisRestService sensitivityAnalysisService;
 
-    private final VoltageInitService voltageInitService;
+    private final ShortCircuitRestService shortCircuitService;
+
+    private final VoltageInitRestService voltageInitService;
 
     private final EquipmentInfosService equipmentInfosService;
 
     private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
 
-    private final StateEstimationService stateEstimationService;
+    private final StateEstimationRestService stateEstimationService;
 
-    private final PccMinService pccMinService;
+    private final PccMinRestService pccMinService;
+
+    private final AsymmetricalLoadRestService asymmetricalLoadRestService;
 
     private final ElasticsearchOperations elasticsearchOperations;
 
@@ -84,33 +100,47 @@ public class SupervisionService {
 
     private final RootNetworkService rootNetworkService;
 
+    private final NodeRepository nodeRepository;
+
+    private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+
+    private final NetworkModificationService networkModificationService;
+
+    private static final String SUPERVISION_USER = "Supervision";
+
     public SupervisionService(StudyService studyService,
-                              NetworkModificationTreeService networkModificationTreeService,
+                              NetworkModificationTreeService networkModificationTreeService, LoadFlowService loadFlowService,
                               RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                               ReportService reportService,
-                              LoadFlowService loadFlowService,
-                              DynamicSimulationService dynamicSimulationService,
-                              DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-                              DynamicMarginCalculationService dynamicMarginCalculationService,
-                              SecurityAnalysisService securityAnalysisService,
-                              SensitivityAnalysisService sensitivityAnalysisService,
-                              ShortCircuitService shortCircuitService,
-                              VoltageInitService voltageInitService,
+                              LoadFlowRestService loadFlowRestService,
+                              DynamicSimulationRestService dynamicSimulationRestService,
+                              DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService,
+                              DynamicMarginCalculationRestService dynamicMarginCalculationRestService,
+                              SecurityAnalysisRestService securityAnalysisService,
+                              SensitivityAnalysisRestService sensitivityAnalysisService,
+                              ShortCircuitRestService shortCircuitService,
+                              VoltageInitRestService voltageInitService,
                               EquipmentInfosService equipmentInfosService,
-                              StateEstimationService stateEstimationService,
-                              PccMinService pccMinService,
+                              AsymmetricalLoadRestService asymmetricalLoadRestService,
+                              StateEstimationRestService stateEstimationService,
+                              PccMinRestService pccMinService,
                               ElasticsearchOperations elasticsearchOperations,
                               StudyInfosService studyInfosService,
                               RootNetworkService rootNetworkService,
-                              StudyRepository studyRepository) {
+                              StudyRepository studyRepository,
+                              NodeRepository nodeRepository,
+                              NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
+                              NetworkModificationService networkModificationService) {
+
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
+        this.loadFlowService = loadFlowService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.reportService = reportService;
-        this.loadFlowService = loadFlowService;
-        this.dynamicSimulationService = dynamicSimulationService;
-        this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
-        this.dynamicMarginCalculationService = dynamicMarginCalculationService;
+        this.loadFlowRestService = loadFlowRestService;
+        this.dynamicSimulationRestService = dynamicSimulationRestService;
+        this.dynamicSecurityAnalysisRestService = dynamicSecurityAnalysisRestService;
+        this.dynamicMarginCalculationRestService = dynamicMarginCalculationRestService;
         this.securityAnalysisService = securityAnalysisService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.shortCircuitService = shortCircuitService;
@@ -118,34 +148,40 @@ public class SupervisionService {
         this.equipmentInfosService = equipmentInfosService;
         this.stateEstimationService = stateEstimationService;
         this.pccMinService = pccMinService;
+        this.asymmetricalLoadRestService = asymmetricalLoadRestService;
         this.elasticsearchOperations = elasticsearchOperations;
         this.studyInfosService = studyInfosService;
         this.rootNetworkService = rootNetworkService;
         this.studyRepository = studyRepository;
+        this.nodeRepository = nodeRepository;
+        this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
+        this.networkModificationService = networkModificationService;
     }
 
     @Transactional
     public Integer deleteComputationResults(ComputationType computationType, boolean dryRun) {
         return switch (computationType) {
-            case LOAD_FLOW -> dryRun ? loadFlowService.getLoadFlowResultsCount() : deleteLoadflowResults();
+            case LOAD_FLOW -> dryRun ? loadFlowRestService.getLoadFlowResultsCount() : deleteLoadflowResults();
             case DYNAMIC_SIMULATION ->
-                    dryRun ? dynamicSimulationService.getResultsCount() : deleteDynamicSimulationResults();
+                dryRun ? dynamicSimulationRestService.getResultsCount() : deleteDynamicSimulationResults();
             case DYNAMIC_SECURITY_ANALYSIS ->
-                    dryRun ? dynamicSecurityAnalysisService.getResultsCount() : deleteDynamicSecurityAnalysisResults();
+                dryRun ? dynamicSecurityAnalysisRestService.getResultsCount() : deleteDynamicSecurityAnalysisResults();
             case DYNAMIC_MARGIN_CALCULATION ->
-                    dryRun ? dynamicMarginCalculationService.getResultsCount() : deleteDynamicMarginCalculationResults();
+                dryRun ? dynamicMarginCalculationRestService.getResultsCount() : deleteDynamicMarginCalculationResults();
             case SECURITY_ANALYSIS ->
-                    dryRun ? securityAnalysisService.getSecurityAnalysisResultsCount() : deleteSecurityAnalysisResults();
+                dryRun ? securityAnalysisService.getSecurityAnalysisResultsCount() : deleteSecurityAnalysisResults();
             case SENSITIVITY_ANALYSIS ->
-                    dryRun ? sensitivityAnalysisService.getSensitivityAnalysisResultsCount() : deleteSensitivityAnalysisResults();
+                dryRun ? sensitivityAnalysisService.getSensitivityAnalysisResultsCount() : deleteSensitivityAnalysisResults();
             case SHORT_CIRCUIT, SHORT_CIRCUIT_ONE_BUS ->
-                    dryRun ? shortCircuitService.getShortCircuitResultsCount() : deleteShortcircuitResults();
+                dryRun ? shortCircuitService.getShortCircuitResultsCount() : deleteShortcircuitResults();
             case VOLTAGE_INITIALIZATION ->
-                    dryRun ? voltageInitService.getVoltageInitResultsCount() : deleteVoltageInitResults();
+                dryRun ? voltageInitService.getVoltageInitResultsCount() : deleteVoltageInitResults();
             case STATE_ESTIMATION ->
                 dryRun ? stateEstimationService.getStateEstimationResultsCount() : deleteStateEstimationResults();
             case PCC_MIN ->
                 dryRun ? pccMinService.getPccMinResultsCount() : deletePccMinResults();
+            case ASYMMETRICAL_LOAD ->
+                dryRun ? asymmetricalLoadRestService.getAsymmetricalLoadResultsCount() : deleteAsymmetricalLoadResults();
         };
     }
 
@@ -200,7 +236,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
         List<UUID> studyUuids = rootNetworkNodeInfoEntities.stream().map(rnnie -> rnnie.getRootNetwork().getStudy().getId()).distinct().toList();
-        studyUuids.forEach(studyService::invalidateAllStudyLoadFlowStatus);
+        studyUuids.forEach(loadFlowService::invalidateAllStudyLoadFlowStatus);
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.LOAD_FLOW, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
@@ -210,7 +246,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeStatusEntities = rootNetworkNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull();
         rootNetworkNodeStatusEntities.forEach(rootNetworkNodeStatus -> rootNetworkNodeStatus.setDynamicSimulationResultUuid(null));
-        dynamicSimulationService.deleteAllResults();
+        dynamicSimulationRestService.deleteAllResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.DYNAMIC_SIMULATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeStatusEntities.size();
     }
@@ -220,7 +256,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeStatusEntities = rootNetworkNodeInfoRepository.findAllByDynamicSecurityAnalysisResultUuidNotNull();
         rootNetworkNodeStatusEntities.forEach(rootNetworkNodeStatus -> rootNetworkNodeStatus.setDynamicSecurityAnalysisResultUuid(null));
-        dynamicSecurityAnalysisService.deleteAllResults();
+        dynamicSecurityAnalysisRestService.deleteAllResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.DYNAMIC_SECURITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeStatusEntities.size();
     }
@@ -230,7 +266,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeStatusEntities = rootNetworkNodeInfoRepository.findAllByDynamicMarginCalculationResultUuidNotNull();
         rootNetworkNodeStatusEntities.forEach(rootNetworkNodeStatus -> rootNetworkNodeStatus.setDynamicMarginCalculationResultUuid(null));
-        dynamicMarginCalculationService.deleteAllResults();
+        dynamicMarginCalculationRestService.deleteAllResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.DYNAMIC_MARGIN_CALCULATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeStatusEntities.size();
     }
@@ -354,13 +390,80 @@ public class SupervisionService {
         return rootNetworkNodeInfoEntities.size();
     }
 
+    private Integer deleteAsymmetricalLoadResults() {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        startTime.set(System.nanoTime());
+        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByAsymmetricalLoadResultUuidNotNull();
+        List<UUID> reportsToDelete = new ArrayList<>();
+        rootNetworkNodeInfoEntities.forEach(rootNetworkNodeInfo -> {
+            rootNetworkNodeInfo.setAsymmetricalLoadResultUuid(null);
+            reportsToDelete.add(rootNetworkNodeInfo.getComputationReports().get(ComputationType.ASYMMETRICAL_LOAD.name()));
+            rootNetworkNodeInfo.getComputationReports().remove(ComputationType.ASYMMETRICAL_LOAD.name());
+        });
+        reportService.deleteReports(reportsToDelete);
+        asymmetricalLoadRestService.deleteAllAsymmetricalLoadResults();
+        LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.ASYMMETRICAL_LOAD, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        return rootNetworkNodeInfoEntities.size();
+    }
+
     @Transactional
     public void unbuildAllNodes(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
-        studyService.unbuildNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false);
+        studyService.unbuildNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), SUPERVISION_USER);
 
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+    }
+
+    public void unloadStudy(UUID studyUuid) {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        startTime.set(System.nanoTime());
+        // remove all stashed nodes and stashed network modifications
+        try {
+            deleteAllStashedElements(studyUuid);
+        } catch (Exception e) {
+            LOGGER.error("Error while deleting stashed elements", e);
+        }
+        rootNetworkService.getStudyRootNetworkIds(studyUuid).forEach(rnId -> {
+            try {
+                rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADING);
+                studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER, false);
+                rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADED);
+            } catch (Exception e) {
+                rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.LOADED);
+                LOGGER.error("Error while invalidating study root network", e);
+            }
+        });
+        LOGGER.trace("Study {} nodes builds deleted and root node invalidated in : {} milliseconds", studyUuid, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime.get()));
+    }
+
+    public void deleteAllStashedElements(UUID studyId) {
+        List<NodeEntity> nodes = nodeRepository.findAllByStudyId(studyId);
+        List<NodeEntity> stashedNodes = new ArrayList<>();
+        List<NodeEntity> notStashedNodes = new ArrayList<>();
+        for (NodeEntity nodeEntity : nodes) {
+            if (nodeEntity.isStashed()) {
+                stashedNodes.add(nodeEntity);
+            } else {
+                notStashedNodes.add(nodeEntity);
+            }
+        }
+
+        // remove stashed modification on not stashed nodes
+        List<NetworkModificationNodeInfoEntity> networkModificationNodeInfos = networkModificationNodeInfoRepository
+                .findAllById(notStashedNodes.stream().map(NodeEntity::getIdNode).toList());
+        List<UUID> notStashedModificationGroupUuids = networkModificationNodeInfos.stream()
+                .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
+                .toList();
+        networkModificationService.deleteStashedModificationsFromGroups(notStashedModificationGroupUuids, SUPERVISION_USER);
+
+        // remove stashed nodes and their modifications
+        studyService.deleteNodes(studyId, stashedNodes.stream().map(NodeEntity::getIdNode).toList(), true, SUPERVISION_USER, false);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UUID> getLoadedStudyUuids(List<UUID> studyUuids) {
+        return rootNetworkService.getLoadedStudyIds(studyUuids);
     }
 
     @Transactional

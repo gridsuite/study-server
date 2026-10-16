@@ -14,9 +14,9 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
+import com.powsybl.contingency.violations.LimitViolationType;
 import com.powsybl.iidm.network.TwoSides;
 import com.powsybl.loadflow.LoadFlowParameters;
-import com.powsybl.security.LimitViolationType;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.*;
@@ -32,6 +32,8 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -64,6 +66,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
@@ -71,12 +74,15 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.notification.NotificationService.*;
-import static org.gridsuite.study.server.utils.TestUtils.USER_DEFAULT_PROFILE_JSON;
+import static org.gridsuite.study.server.utils.TestUtils.*;
 import static org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria.removeRequestMatching;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -113,8 +119,10 @@ class LoadFlowTest {
     private static final String VALID_PARAMS_IN_PROFILE_USER_ID = "validParamInProfileUser";
     private static final String INVALID_PARAMS_IN_PROFILE_USER_ID = "invalidParamInProfileUser";
     private static final String USER_PROFILE_NO_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile No params\"}";
-    private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid params\",\"loadFlowParameterId\":\"" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":true}";
-    private static final String USER_PROFILE_INVALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with broken params\",\"loadFlowParameterId\":\"" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":false}";
+    private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid params\",\"loadFlowParameterId\":\""
+            + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":true}";
+    private static final String USER_PROFILE_INVALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with broken params\",\"loadFlowParameterId\":\""
+            + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":false}";
 
     private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString(LOADFLOW_PARAMETERS_UUID_STRING);
 
@@ -130,10 +138,13 @@ class LoadFlowTest {
 
     private static final String DEFAULT_PROVIDER = "defaultProvider";
 
+    @SuppressWarnings("checkstyle:AbbreviationAsWordInName")
     private static String LIMIT_VIOLATIONS_JSON;
 
+    @SuppressWarnings("checkstyle:AbbreviationAsWordInName")
     private static String COMPUTING_STATUS_JSON;
 
+    @SuppressWarnings("checkstyle:AbbreviationAsWordInName")
     private static String LOADFLOW_DEFAULT_PARAMETERS_JSON;
 
     //output destinations
@@ -143,6 +154,8 @@ class LoadFlowTest {
     private static final String LOADFLOW_STOPPED_DESTINATION = "loadflow.stopped";
     private static final String LOADFLOW_FAILED_DESTINATION = "loadflow.run.dlx";
     private static final String LOADFLOW_MODIFICATIONS = "loadflow modifications mock";
+
+    private record ParameterDifference(Object value, Object defaultValue) { }
 
     @Autowired
     private MockMvc mockMvc;
@@ -156,7 +169,7 @@ class LoadFlowTest {
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
     @Autowired
-    private LoadFlowService loadFlowService;
+    private LoadFlowRestService loadFlowRestService;
     @Autowired
     private StudyRepository studyRepository;
     @MockitoSpyBean
@@ -177,6 +190,10 @@ class LoadFlowTest {
     private TestUtils studyTestUtils;
     @Autowired
     private ConsumerService consumerService;
+    @MockitoSpyBean
+    private StudyServerExecutionService studyServerExecutionService;
+    @MockitoSpyBean
+    private LoadFlowService loadFlowService;
 
     private static WireMockServer wireMockServer;
     private WireMockStubs wireMockStubs;
@@ -194,8 +211,10 @@ class LoadFlowTest {
         wireMockStubs = new WireMockStubs(wireMockServer);
         reportService.setReportServerBaseUri(wireMockServer.baseUrl());
         userAdminService.setUserAdminServerBaseUri(wireMockServer.baseUrl());
-        loadFlowService.setLoadFlowServerBaseUri(wireMockServer.baseUrl());
+        loadFlowRestService.setBaseUri(wireMockServer.baseUrl());
         networkModificationService.setNetworkModificationServerBaseUri(wireMockServer.baseUrl());
+
+        synchronizeStudyServerExecutionService(studyServerExecutionService);
 
         List<LimitViolationInfos> limitViolations = List.of(LimitViolationInfos.builder()
                         .subjectId("lineId2")
@@ -233,25 +252,18 @@ class LoadFlowTest {
         LIMIT_VIOLATIONS_JSON = objectMapper.writeValueAsString(limitViolations);
         COMPUTING_STATUS_JSON = objectMapper.writeValueAsString(List.of("CONVERGED", "FAILED"));
 
-        LoadFlowParametersInfos loadFlowParametersInfos = LoadFlowParametersInfos.builder()
-                .provider(PROVIDER)
-                .commonParameters(LoadFlowParameters.load())
-                .specificParametersPerProvider(Map.of())
-                .build();
+        Map<String, Object> loadFlowParametersInfos = Map.of(
+                "provider", PROVIDER,
+                "commonParameters", LoadFlowParameters.load(),
+                "specificParametersPerProvider", Map.of());
         LOADFLOW_DEFAULT_PARAMETERS_JSON = objectMapper.writeValueAsString(loadFlowParametersInfos);
-    }
-
-    private void assertNodeBlocked(UUID nodeUuid, UUID rootNetworkUuid, boolean isNodeBlocked) {
-        Optional<RootNetworkNodeInfoEntity> networkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
-        assertTrue(networkNodeInfoEntity.isPresent());
-        assertEquals(isNodeBlocked, networkNodeInfoEntity.get().getBlockedNode());
     }
 
     private void consumeLoadFlowResult(UUID studyUuid, UUID rootNetworkUuid, NetworkModificationNode modificationNode) throws JsonProcessingException {
         UUID nodeUuid = modificationNode.getId();
 
-        assertNodeBlocked(nodeUuid, rootNetworkUuid, true);
-        doNothing().when(studyService).buildFirstLevelChildren(studyUuid, nodeUuid, rootNetworkUuid, "userId");
+        doReturn(List.of()).when(studyService).getFirstLevelChildrenToBuild(studyUuid, nodeUuid, rootNetworkUuid, "userId");
+        doNothing().when(studyService).buildNodes(eq(studyUuid), anyList(), eq(rootNetworkUuid), eq("userId"));
 
         // consume loadflow result
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid));
@@ -265,14 +277,13 @@ class LoadFlowTest {
                 HEADER_RECEIVER, resultUuidJson,
                 USER_ID_HEADER, "userId"));
         consumerService.consumeLoadFlowResult().accept(MessageBuilder.createMessage("", messageHeaders));
-        checkUpdateStatusMessageReceived(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        checkUpdateStatusMessageReceived(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
+        checkLoadFlowStatusesThen(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
 
-        assertNodeBlocked(nodeUuid, rootNetworkUuid, false);
         if (modificationNode.isSecurityNode()) {
             // if running successful loadflow on security node -> first children are built
             wireMockStubs.loadflowServer.verifyGetLoadflowStatus(UUID.fromString(LOADFLOW_RESULT_UUID));
-            verify(studyService, times(1)).buildFirstLevelChildren(studyUuid, nodeUuid, rootNetworkUuid, "userId");
+            verify(studyService, times(1)).getFirstLevelChildrenToBuild(studyUuid, nodeUuid, rootNetworkUuid, "userId");
+            verify(studyService, times(1)).buildNodes(eq(studyUuid), anyList(), eq(rootNetworkUuid), eq("userId"));
         }
     }
 
@@ -342,7 +353,8 @@ class LoadFlowTest {
         wireMockStubs.loadflowServer.stubGetLoadflowResult(loadflowResultUuid, TestUtils.resourceToString("/loadflow-result.json"));
 
         // get loadflow result
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/result", studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)).andExpectAll(
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/result", studyNameUserIdUuid, firstRootNetworkUuid,
+                modificationNodeUuid)).andExpectAll(
             status().isOk()).andReturn();
 
         assertEquals(TestUtils.resourceToString("/loadflow-result.json"), mvcResult.getResponse().getContentAsString());
@@ -351,7 +363,8 @@ class LoadFlowTest {
 
         // get loadflow status
         wireMockStubs.loadflowServer.stubGetLoadflowStatus(loadflowResultUuid, objectMapper.writeValueAsString(LoadFlowStatus.CONVERGED), false);
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/status?withRatioTapChangers={withRatioTapChangers}", studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid, false))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/status?withRatioTapChangers={withRatioTapChangers}", studyNameUserIdUuid,
+                firstRootNetworkUuid, modificationNodeUuid, false))
             .andExpect(status().isOk())
             .andReturn();
         assertEquals(LoadFlowStatus.CONVERGED.name(), mvcResult.getResponse().getContentAsString());
@@ -359,7 +372,8 @@ class LoadFlowTest {
 
         // stop loadflow
         wireMockStubs.loadflowServer.stubStopLoadflow(loadflowResultUuid, modificationNodeUuid, firstRootNetworkUuid, objectMapper.writeValueAsString(LoadFlowStatus.CONVERGED));
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/stop?withRatioTapChangers={withRatioTapChangers}", studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid, false)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/stop?withRatioTapChangers={withRatioTapChangers}", studyNameUserIdUuid,
+                firstRootNetworkUuid, modificationNodeUuid, false)
                 .header(HEADER_USER_ID, "userId"))
             .andExpect(status().isOk());
         wireMockStubs.loadflowServer.verifyStopLoadflow(loadflowResultUuid);
@@ -370,17 +384,20 @@ class LoadFlowTest {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
         UUID networkUuid = studyTestUtils.getNetworkUuid(studyNameUserIdUuid);
         wireMockStubs.loadflowServer.stubGetLoadflowProvider(LOADFLOW_PARAMETERS_UUID.toString(), DEFAULT_PROVIDER);
-        wireMockStubs.loadflowServer.stubRunLoadflowFailed(networkUuid, modificationNodeUuid, objectMapper.writeValueAsString(LOADFLOW_ERROR_RESULT_UUID));
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+        wireMockStubs.loadflowServer.stubRunLoadflowFailed(networkUuid, modificationNodeUuid, objectMapper.writeValueAsString(LOADFLOW_ERROR_RESULT_UUID), countDownLatch);
 
         // loadflow failed
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
+        // send the loadflow failed message to the consumer
+        countDownLatch.countDown();
+
         wireMockStubs.loadflowServer.verifyGetLoadflowProvider(LOADFLOW_PARAMETERS_UUID.toString());
         wireMockStubs.loadflowServer.verifyRunLoadflow(networkUuid);
-        checkUpdateStatusMessageReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        checkUpdateStatusMessageReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_FAILED);
+        checkLoadFlowStatusesThen(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_FAILED);
     }
 
     @Test
@@ -424,14 +441,16 @@ class LoadFlowTest {
 
         wireMockStubs.loadflowServer.stubGetLimitViolation(LOADFLOW_RESULT_UUID, LIMIT_VIOLATIONS_JSON, false);
         // get limit violations
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/limit-violations", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/limit-violations", studyNameUserIdUuid, firstRootNetworkUuid,
+                modificationNode1Uuid)).andExpectAll(
                 status().isOk(),
                 content().string(LIMIT_VIOLATIONS_JSON));
         wireMockStubs.loadflowServer.verifyGetLimitViolation(LOADFLOW_RESULT_UUID, false);
 
         wireMockStubs.loadflowServer.stubGetLimitViolation(LOADFLOW_RESULT_UUID, LIMIT_VIOLATIONS_JSON, true);
         // get limit violations with filters, globalFilters and sort
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/limit-violations?filters=lineId2&sort=subjectId,ASC&globalFilters=ss", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/limit-violations?filters=lineId2&sort=subjectId,ASC&globalFilters=ss", studyNameUserIdUuid,
+                firstRootNetworkUuid, modificationNode1Uuid)).andExpectAll(
                 status().isOk(),
                 content().string(LIMIT_VIOLATIONS_JSON));
         wireMockStubs.loadflowServer.verifyGetLimitViolation(LOADFLOW_RESULT_UUID, true);
@@ -507,7 +526,7 @@ class LoadFlowTest {
         //Test result count
         testResultCount();
 
-        //Delete Voltage init results
+        //Delete loadflow results
         testDeleteResults(studyNameUserIdUuid, 1);
     }
 
@@ -528,13 +547,13 @@ class LoadFlowTest {
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), LOADFLOW_FAILED_DESTINATION);
             return resultUuid;
-        }).when(studyService).rerunLoadflow(any(), any(), any(), any(), any(), any());
-        studyService.rerunLoadflow(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, resultUuid, true, "");
+        }).when(loadFlowService).rerunLoadflow(any(), any(), any(), any(), any(), any(), any());
+        loadFlowService.rerunLoadflow(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, resultUuid, true, "", null);
 
         // Test reset uuid result in the database
         assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, LOAD_FLOW));
 
-        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
 
@@ -542,7 +561,7 @@ class LoadFlowTest {
     }
 
     private void checkUpdateStatusMessageReceived(UUID studyUuid, String updateTypeToCheck, String otherUpdateTypeToCheck) {
-        Message<byte[]> loadFlowStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> loadFlowStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, loadFlowStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) loadFlowStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         if (otherUpdateTypeToCheck == null) {
@@ -554,6 +573,22 @@ class LoadFlowTest {
 
     private void checkUpdateStatusMessageReceived(UUID studyUuid, String updateTypeToCheck) {
         checkUpdateStatusMessageReceived(studyUuid, updateTypeToCheck, null);
+    }
+
+    /**
+     * A loadflow on a security node invalidates its children as well, which adds a status update.
+     */
+    private void checkLoadFlowStatusesThen(UUID studyUuid, String expectedUpdateType) {
+        int statuses = 0;
+        String updateType;
+        do {
+            Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
+            assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+            updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
+            statuses += NotificationService.UPDATE_TYPE_LOADFLOW_STATUS.equals(updateType) ? 1 : 0;
+        } while (NotificationService.UPDATE_TYPE_LOADFLOW_STATUS.equals(updateType));
+        assertTrue(statuses >= 1);
+        assertEquals(expectedUpdateType, updateType);
     }
 
     private void testResultCount() throws Exception {
@@ -576,6 +611,7 @@ class LoadFlowTest {
                         .queryParam("type", LOAD_FLOW.toString())
                         .queryParam("dryRun", "false"))
                 .andExpect(status().isOk());
+
         wireMockStubs.loadflowServer.verifyDeleteLoadflowResults();
         wireMockStubs.reportServer.verifyDeleteReport();
 
@@ -602,15 +638,18 @@ class LoadFlowTest {
                 status().isNoContent());
 
         // No loadflow status
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/status?withRatioTapChangers={withRatioTapChangers}", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, false)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/status?withRatioTapChangers={withRatioTapChangers}", studyNameUserIdUuid,
+                firstRootNetworkUuid, modificationNode1Uuid, false)).andExpectAll(
                 status().isNoContent());
 
         // stop non-existing loadflow
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/stop?withRatioTapChangers={withRatioTapChangers}", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, false)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/stop?withRatioTapChangers={withRatioTapChangers}", studyNameUserIdUuid,
+                firstRootNetworkUuid, modificationNode1Uuid, false)
                 .header(HEADER_USER_ID, "userId")).andExpect(status().isOk());
     }
 
-    private void updateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String loadflowParametersUuid, String userId, HttpStatusCode status, String returnedUserProfileJson, boolean shouldDuplicate, String duplicateFromUuid, boolean duplicateIsNotFound) throws Exception {
+    private void updateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String loadflowParametersUuid, String userId, HttpStatusCode status, String returnedUserProfileJson,
+            boolean shouldDuplicate, String duplicateFromUuid, boolean duplicateIsNotFound) throws Exception {
         wireMockStubs.loadflowServer.stubPutLoadflowParameters(loadflowParametersUuid, parameters);
         UUID duplicatedLoadflowParametersUuid = UUID.randomUUID();
         if (parameters == null || parameters.isEmpty()) {
@@ -635,7 +674,8 @@ class LoadFlowTest {
         testMessages(studyNameUserIdUuid);
     }
 
-    private void updateParametersAndDoChecksForResetLoadFlowParameters(UUID studyNameUserIdUuid, String loadflowParametersUuid, String userId, String returnedUserProfileJson, String duplicateFromUuid) throws Exception {
+    private void updateParametersAndDoChecksForResetLoadFlowParameters(UUID studyNameUserIdUuid, String loadflowParametersUuid, String userId, String returnedUserProfileJson,
+            String duplicateFromUuid) throws Exception {
         UUID duplicatedLoadflowParametersUuid = UUID.randomUUID();
         wireMockStubs.userAdminServer.stubGetUserProfile(userId, returnedUserProfileJson);
         wireMockStubs.loadflowServer.stubDuplicateLoadflowParameters(duplicateFromUuid, objectMapper.writeValueAsString(duplicatedLoadflowParametersUuid), false);
@@ -654,7 +694,8 @@ class LoadFlowTest {
         testMessages(studyNameUserIdUuid);
     }
 
-    private void createParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String userId, String returnedUserProfileJson, boolean shouldDuplicate, String duplicateFromUuid) throws Exception {
+    private void createParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String userId, String returnedUserProfileJson, boolean shouldDuplicate,
+            String duplicateFromUuid) throws Exception {
         String createdLoadflowParametersUuid = UUID.randomUUID().toString();
         wireMockStubs.loadflowServer.stubCreateLoadflowParameters(objectMapper.writeValueAsString(createdLoadflowParametersUuid));
         if (parameters == null || parameters.isEmpty()) {
@@ -681,23 +722,23 @@ class LoadFlowTest {
     }
 
     private void testMessages(UUID studyNameUserIdUuid) {
-        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_LOADFLOW_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         message = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
         assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
-        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
@@ -719,14 +760,16 @@ class LoadFlowTest {
     void testResetLoadFlowParametersUserHasInvalidParamsInProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        updateParametersAndDoChecks(studyNameUserIdUuid, null, LOADFLOW_PARAMETERS_UUID_STRING, INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT, USER_PROFILE_INVALID_PARAMS_JSON, true, PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING, true);
+        updateParametersAndDoChecks(studyNameUserIdUuid, null, LOADFLOW_PARAMETERS_UUID_STRING, INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT, USER_PROFILE_INVALID_PARAMS_JSON, true,
+                PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING, true);
     }
 
     @Test
     void testResetLoadFlowParametersUserHasValidParamsInProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        updateParametersAndDoChecksForResetLoadFlowParameters(studyNameUserIdUuid, LOADFLOW_PARAMETERS_UUID_STRING, VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING);
+        updateParametersAndDoChecksForResetLoadFlowParameters(studyNameUserIdUuid, LOADFLOW_PARAMETERS_UUID_STRING, VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON,
+                PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING);
     }
 
     @Test
@@ -742,21 +785,30 @@ class LoadFlowTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
 
-        wireMockStubs.loadflowServer.stubGetLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING, LOADFLOW_DEFAULT_PARAMETERS_JSON, false);
+        String loadFlowParametersJson = LOADFLOW_DEFAULT_PARAMETERS_JSON;
+
+        wireMockStubs.userAdminServer.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
+        wireMockStubs.loadflowServer.stubGetLoadflowParametersWithDifferences(LOADFLOW_PARAMETERS_UUID_STRING, null, loadFlowParametersJson, false);
+
         //get initial loadFlow parameters
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)).andExpectAll(
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
+                .header("userId", NO_PROFILE_USER_ID)).andExpectAll(
                 status().isOk()).andReturn();
-        wireMockStubs.loadflowServer.verifyGetLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING);
+        wireMockStubs.userAdminServer.verifyGetUserProfile(NO_PROFILE_USER_ID);
+        wireMockStubs.loadflowServer.verifyGetLoadflowParametersWithDifferences(LOADFLOW_PARAMETERS_UUID_STRING, null, 1);
 
         JSONAssert.assertEquals(LOADFLOW_DEFAULT_PARAMETERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
 
         updateParametersAndDoChecks(studyNameUserIdUuid, LOADFLOW_DEFAULT_PARAMETERS_JSON, LOADFLOW_PARAMETERS_UUID_STRING, "userId", HttpStatus.OK, null, false, null, false);
 
-        wireMockStubs.loadflowServer.stubGetLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING, LOADFLOW_DEFAULT_PARAMETERS_JSON, false);
+        wireMockStubs.userAdminServer.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
+        wireMockStubs.loadflowServer.stubGetLoadflowParametersWithDifferences(LOADFLOW_PARAMETERS_UUID_STRING, null, loadFlowParametersJson, false);
+
         //checking update is registered
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)).andExpectAll(
-                status().isOk()).andReturn();
-        wireMockStubs.loadflowServer.verifyGetLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING);
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
+            .header("userId", NO_PROFILE_USER_ID)).andExpectAll(status().isOk()).andReturn();
+        wireMockStubs.userAdminServer.verifyGetUserProfile(NO_PROFILE_USER_ID);
+        wireMockStubs.loadflowServer.verifyGetLoadflowParametersWithDifferences(LOADFLOW_PARAMETERS_UUID_STRING, null, 1);
 
         JSONAssert.assertEquals(LOADFLOW_DEFAULT_PARAMETERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
 
@@ -766,13 +818,91 @@ class LoadFlowTest {
         createParametersAndDoChecks(studyNameUserIdUuid, LOADFLOW_DEFAULT_PARAMETERS_JSON, "userId", null, false, null);
         UUID study2loadFlowParametersUuid = studyRepository.findById(studyNameUserIdUuid).orElseThrow().getLoadFlowParametersUuid();
 
-        wireMockStubs.loadflowServer.stubGetLoadflowParameters(study2loadFlowParametersUuid.toString(), LOADFLOW_DEFAULT_PARAMETERS_JSON, false);
+        wireMockStubs.userAdminServer.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
+        wireMockStubs.loadflowServer.stubGetLoadflowParametersWithDifferences(study2loadFlowParametersUuid.toString(), null, loadFlowParametersJson, false);
+
         //get initial loadFlow parameters
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)).andExpectAll(
-                status().isOk()).andReturn();
-        wireMockStubs.loadflowServer.verifyGetLoadflowParameters(study2loadFlowParametersUuid.toString());
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
+            .header("userId", NO_PROFILE_USER_ID)).andExpectAll(status().isOk()).andReturn();
+        wireMockStubs.userAdminServer.verifyGetUserProfile(NO_PROFILE_USER_ID);
+        wireMockStubs.loadflowServer.verifyGetLoadflowParametersWithDifferences(study2loadFlowParametersUuid.toString(), null, 1);
 
         JSONAssert.assertEquals(LOADFLOW_DEFAULT_PARAMETERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
+    }
+
+    @Test
+    void testLoadFlowParametersWithDifferencesFromDefaultValues() throws Exception {
+        LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+        Map<String, Object> loadFlowParametersInfosWithDifferences = Map.of(
+            "provider", PROVIDER,
+            "commonParameters", loadFlowParameters,
+            "specificParametersPerProvider", Map.of(PROVIDER, Map.of("specificParam1", "value1", "specificParam2", "value2")),
+            "parametersDifferences", Map.of("specificParam1", new ParameterDifference(true, false), "specificParam2", new ParameterDifference(3, 2)));
+        String loadFlowParametersWithValuesDifferentFromDefaultJson = objectMapper.writeValueAsString(loadFlowParametersInfosWithDifferences);
+
+        //insert a study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+
+        wireMockStubs.userAdminServer.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
+        wireMockStubs.loadflowServer.stubGetLoadflowParametersWithDifferences(LOADFLOW_PARAMETERS_UUID_STRING, null, loadFlowParametersWithValuesDifferentFromDefaultJson, false);
+
+        // get loadFlow parameters
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
+            .header("userId", NO_PROFILE_USER_ID)).andExpectAll(status().isOk()).andReturn();
+        wireMockStubs.userAdminServer.verifyGetUserProfile(NO_PROFILE_USER_ID);
+        wireMockStubs.loadflowServer.verifyGetLoadflowParametersWithDifferences(LOADFLOW_PARAMETERS_UUID_STRING, null, 1);
+
+        String actualResult = mvcResult.getResponse().getContentAsString();
+        assertTrue(actualResult.contains("parametersDifferences"));
+        assertTrue(actualResult.contains("\"specificParam1\":{\"value\":true,\"defaultValue\":false}"));
+        assertTrue(actualResult.contains("\"specificParam2\":{\"value\":3,\"defaultValue\":2}"));
+    }
+
+    @Test
+    void testLoadFlowParametersWithDifferencesFromProfileValues() throws Exception {
+        LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+        Map<String, Object> loadFlowParametersInfosWithDifferences = Map.of(
+            "provider", PROVIDER,
+            "commonParameters", loadFlowParameters,
+            "specificParametersPerProvider", Map.of(PROVIDER, Map.of("specificParam1", true, "specificParam2", 3)),
+            "parametersDifferences", Map.of("specificParam1", new ParameterDifference(true, false), "specificParam2", new ParameterDifference(3, 2)));
+        String loadFlowParametersWithValuesDifferentFromDefaultJson = objectMapper.writeValueAsString(loadFlowParametersInfosWithDifferences);
+
+        //insert a study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+
+        // test with user profile having loadflow parameters
+        //
+        String userProfileWithLoadFlowParametersJson = """
+        {
+            "id":null,
+            "name":"default profile",
+            "loadFlowParameterId":"%s",
+            "securityAnalysisParameterId":null,
+            "sensitivityAnalysisParameterId":null,
+            "shortcircuitParameterId":null,
+            "voltageInitParameterId":null,
+            "allLinksValid":null,
+            "maxAllowedCases":20,
+            "maxAllowedBuilds":20,
+            "spreadsheetConfigCollectionId":null,
+            "networkVisualizationParameterId":null,
+            "workspaceId":null
+        }""".formatted(LOADFLOW_PARAMETERS_UUID_STRING);
+        wireMockStubs.userAdminServer.stubGetUserProfile(NO_PROFILE_USER_ID, userProfileWithLoadFlowParametersJson);
+        wireMockStubs.loadflowServer.stubGetLoadflowParametersWithDifferences(LOADFLOW_PARAMETERS_UUID_STRING, LOADFLOW_PARAMETERS_UUID_STRING, loadFlowParametersWithValuesDifferentFromDefaultJson, false);
+
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
+            .header("userId", NO_PROFILE_USER_ID)).andExpectAll(status().isOk()).andReturn();
+        wireMockStubs.userAdminServer.verifyGetUserProfile(NO_PROFILE_USER_ID);
+        wireMockStubs.loadflowServer.verifyGetLoadflowParametersWithDifferences(LOADFLOW_PARAMETERS_UUID_STRING, LOADFLOW_PARAMETERS_UUID_STRING, 1);
+
+        String actualResult = mvcResult.getResponse().getContentAsString();
+        assertTrue(actualResult.contains("parametersDifferences"));
+        assertTrue(actualResult.contains("\"specificParam1\":{\"value\":true,\"defaultValue\":false}"));
+        assertTrue(actualResult.contains("\"specificParam2\":{\"value\":3,\"defaultValue\":2}"));
     }
 
     @Test
@@ -809,7 +939,7 @@ class LoadFlowTest {
     void testGetStatusNotFound() {
         UUID notExistingNetworkUuid = UUID.fromString(LOADFLOW_ERROR_RESULT_UUID);
         wireMockStubs.loadflowServer.stubGetLoadflowStatus(UUID.fromString(LOADFLOW_ERROR_RESULT_UUID), null, true);
-        assertThrows(HttpClientErrorException.NotFound.class, () -> loadFlowService.getLoadFlowStatus(notExistingNetworkUuid), NOT_FOUND.name());
+        assertThrows(HttpClientErrorException.NotFound.class, () -> loadFlowRestService.getLoadFlowStatus(notExistingNetworkUuid), NOT_FOUND.name());
         wireMockStubs.loadflowServer.verifyGetLoadflowStatus(UUID.fromString(LOADFLOW_ERROR_RESULT_UUID));
     }
 
@@ -854,7 +984,7 @@ class LoadFlowTest {
         wireMockStubs.reportServer.stubDeleteReport();
 
         // run loadflow invalidation on all study after parameter change
-        studyService.setLoadFlowParameters(studyUuid, null, NO_PROFILE_USER_ID);
+        loadFlowService.setLoadFlowParameters(studyUuid, null, NO_PROFILE_USER_ID);
 
         wireMockStubs.userAdminServer.verifyGetUserProfile(NO_PROFILE_USER_ID);
         wireMockStubs.loadflowServer.verifyPutLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING, null);
@@ -874,9 +1004,12 @@ class LoadFlowTest {
         checkUpdateStatusMessageReceived(studyUuid, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
         checkUpdateStatusMessageReceived(studyUuid, NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS);
 
-        assertEquals(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT), rootNetworkNodeInfoService.getRootNetworkNodeInfo(node1.getId(), rootNetworkUuid).map(RootNetworkNodeInfoEntity::getNodeBuildStatus).orElseThrow());
-        assertEquals(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT), rootNetworkNodeInfoService.getRootNetworkNodeInfo(node2.getId(), rootNetworkUuid).map(RootNetworkNodeInfoEntity::getNodeBuildStatus).orElseThrow());
-        assertEquals(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT), rootNetworkNodeInfoService.getRootNetworkNodeInfo(node3.getId(), rootNetworkUuid).map(RootNetworkNodeInfoEntity::getNodeBuildStatus).orElseThrow());
+        assertEquals(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT), rootNetworkNodeInfoService.getRootNetworkNodeInfo(node1.getId(),
+                rootNetworkUuid).map(RootNetworkNodeInfoEntity::getNodeBuildStatus).orElseThrow());
+        assertEquals(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT), rootNetworkNodeInfoService.getRootNetworkNodeInfo(node2.getId(),
+                rootNetworkUuid).map(RootNetworkNodeInfoEntity::getNodeBuildStatus).orElseThrow());
+        assertEquals(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT), rootNetworkNodeInfoService.getRootNetworkNodeInfo(node3.getId(),
+                rootNetworkUuid).map(RootNetworkNodeInfoEntity::getNodeBuildStatus).orElseThrow());
     }
 
     @Test
@@ -962,11 +1095,11 @@ class LoadFlowTest {
         mnBodyJson = jsonObject.toString();
 
         reset(studyService);
-        doNothing().when(studyService).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
+        doReturn(List.of()).when(studyService).getRootNetworksToBuildNewNode(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
                 .andExpect(status().isOk());
-        var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        var mess = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
@@ -974,14 +1107,14 @@ class LoadFlowTest {
         rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder().variantId(variantId).build());
 
-        verify(studyService, times(1)).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
+        verify(studyService, times(1)).getRootNetworksToBuildNewNode(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
 
         return modificationNode;
     }
 
     private void checkUpdateStatusMessageReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
         // assert that the broker message has been sent for updating model status
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> messageStatus = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
@@ -992,11 +1125,11 @@ class LoadFlowTest {
     }
 
     private void checkUpdateStatusMessagesReceived(UUID studyUuid, UUID nodeUuid) {
-        TestUtils.ALL_COMPUTATION_STATUS.forEach(computationStatus -> checkUpdateStatusMessageReceived(studyUuid, nodeUuid, computationStatus));
+        checkUpdateStatusMessageReceived(studyUuid, nodeUuid, UPDATE_TYPE_ALL_COMPUTATION_STATUS);
     }
 
     private void checkUpdateStatusMessagesReceived(UUID studyUuid) {
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> messageStatus = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NODE_BUILD_STATUS_UPDATED, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
@@ -1018,5 +1151,21 @@ class LoadFlowTest {
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
         }
+    }
+
+    @Test
+    void consumeLoadFlowRunning() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationConstructionNode(studyNameUserIdUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "node 1");
+
+        Message<String> runningMessage = MessageBuilder.withPayload("")
+                .setHeader(HEADER_RECEIVER, objectMapper.writeValueAsString(new NodeReceiver(modificationNode1.getId(), rootNodeUuid)))
+                .build();
+        consumerService.consumeLoadFlowRunning().accept(runningMessage);
+        Message<byte[]> test = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
+        assertEquals(UPDATE_TYPE_LOADFLOW_STATUS, test.getHeaders().get(HEADER_UPDATE_TYPE));
     }
 }

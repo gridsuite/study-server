@@ -8,6 +8,7 @@ package org.gridsuite.study.server.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import org.springframework.data.util.Pair;
 
 import java.util.List;
 import java.util.UUID;
@@ -22,5 +23,6 @@ public class DeleteStudyInfos {
 
     private List<RootNetworkInfos> rootNetworkInfosList;
 
-    private List<UUID> modificationGroupUuids;
+    // group uuids as keys and each their own node as values
+    private List<Pair<UUID, UUID>> modificationGroupUuidsNodeUuids;
 }

@@ -12,12 +12,18 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.MissingNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.rabbitmq.client.LongString;
 import lombok.NonNull;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
+import org.gridsuite.study.server.error.StudyException;
 import org.springframework.data.util.Pair;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
+
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.UNPROCESSABLE_IMPORT_PARAMETER;
 
 public final class JsonUtils {
     private JsonUtils() {
@@ -64,5 +70,38 @@ public final class JsonUtils {
         } catch (JsonProcessingException | NoSuchFieldException e) {
             throw new IllegalStateException("Impossible to parse modification context", e);
         }
+    }
+
+    public static Map<String, Object> deserializeImportParameters(Map<String, String> rawParams, ObjectMapper objectMapper) {
+        Map<String, Object> result = new HashMap<>();
+        if (rawParams == null) {
+            return result;
+        }
+
+        rawParams.forEach((key, value) -> {
+            try {
+                result.put(key, value == null ? null : objectMapper.readValue(value, Object.class));
+            } catch (JsonProcessingException e) {
+                throw new StudyException(UNPROCESSABLE_IMPORT_PARAMETER, "Import parameter '" + key + " => " + value + "' is not valid JSON: " + e.getMessage());
+            }
+        });
+        return result;
+    }
+
+    public static Map<String, String> serializeImportParameters(Map<String, Object> params, ObjectMapper objectMapper) {
+        Map<String, String> result = new HashMap<>();
+        if (params == null) {
+            return result;
+        }
+
+        params.forEach((key, value) -> {
+            try {
+                // String longer than 1024 bytes are converted to com.rabbitmq.client.LongString (https://docs.spring.io/spring-amqp/docs/3.0.0/reference/html/#message-properties-converters)
+                result.put(key, objectMapper.writeValueAsString((value instanceof LongString) ? value.toString() : value));
+            } catch (JsonProcessingException e) {
+                throw new StudyException(UNPROCESSABLE_IMPORT_PARAMETER, "Import parameter '" + key + " => " + value + "' is not serializable: " + e.getMessage());
+            }
+        });
+        return result;
     }
 }

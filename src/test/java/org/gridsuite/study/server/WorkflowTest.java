@@ -12,10 +12,12 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.ConsumerService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +57,10 @@ class WorkflowTest {
     private StudyService studyService;
     @MockitoBean
     private NotificationService notificationService;
+    @MockitoBean
+    private LoadFlowService loadFlowService;
+    @MockitoBean
+    private NodeActivityRunnerService nodeActivityService;
 
     @Test
     void testConsumeBuildResultInRerunLoadFlowWorkflow() throws JsonProcessingException {
@@ -74,13 +80,14 @@ class WorkflowTest {
         MessageHeaders messageHeaders = new MessageHeaders(headers);
 
         when(networkModificationTreeService.getStudyUuidForNodeId(nodeUuid)).thenReturn(studyUuid);
+        when(networkModificationTreeService.isSecurityNode(nodeUuid)).thenReturn(true);
 
         // execute consume
         consumerService.consumeBuildResult().accept(MessageBuilder.createMessage(networkModificationResult, messageHeaders));
 
         // check loadflow is actually ran after build is completed
         verify(studyService, times(1)).handleBuildSuccess(studyUuid, nodeUuid, rootNetworkUuid, networkModificationResult);
-        verify(studyService, times(1)).sendLoadflowRequestWorflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+        verify(loadFlowService, times(1)).sendLoadflowRequestWorflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId, null);
     }
 
     @Test
@@ -108,6 +115,6 @@ class WorkflowTest {
 
         // check loadflow is actually ran after build is completed
         verify(notificationService, times(1)).emitNodeBuildFailed(studyUuid, nodeUuid, rootNetworkUuid, errorMessage);
-        verify(studyService, times(1)).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid);
+        verify(loadFlowService, times(1)).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid);
     }
 }

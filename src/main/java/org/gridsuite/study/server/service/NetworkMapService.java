@@ -17,7 +17,10 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.gridsuite.study.server.dto.InfoTypeParameters;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -38,6 +41,12 @@ public class NetworkMapService {
     public NetworkMapService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
         this.networkMapServerBaseUri = remoteServicesProperties.getServiceUri("network-map-server");
         this.restTemplate = restTemplate;
+    }
+
+    public String getElementSchema(String elementType, String infoType) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION + "/schemas/{elementType}/{infoType}")
+            .buildAndExpand(elementType, infoType).toUriString();
+        return restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
     }
 
     public String getElementsInfos(UUID networkUuid,

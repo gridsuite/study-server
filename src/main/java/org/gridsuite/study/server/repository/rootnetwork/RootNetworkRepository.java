@@ -6,8 +6,11 @@
  */
 package org.gridsuite.study.server.repository.rootnetwork;
 
+import org.gridsuite.study.server.dto.RootNetworkLoadStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -28,15 +31,23 @@ public interface RootNetworkRepository extends JpaRepository<RootNetworkEntity, 
     @EntityGraph(attributePaths = {"rootNetworkNodeInfos"}, type = EntityGraph.EntityGraphType.LOAD)
     Optional<RootNetworkEntity> findWithRootNetworkNodeInfosById(UUID rootNetworkUuid);
 
+    @EntityGraph(attributePaths = {"rootNetworkNodeInfos.modificationReports", "rootNetworkNodeInfos.computationReports"}, type = EntityGraph.EntityGraphType.LOAD)
+    Optional<RootNetworkEntity> findWithRootNetworkNodeInfosAndReportsById(UUID rootNetworkUuid);
+
     boolean existsByIdAndStudyId(UUID rootNetworkUuid, UUID studyUuid);
 
     int countAllByStudyId(UUID studyUuid);
 
     Optional<RootNetworkEntity> findByNameAndStudyId(String name, UUID studyUuid);
 
+    List<RootNetworkEntity> findAllByStudyId(UUID studyUuid);
+
     Optional<RootNetworkEntity> findByTagAndStudyId(String tag, UUID studyUuid);
 
     boolean existsByIdAndName(UUID rootNetworkUuid, String rootNetworkName);
 
     boolean existsByIdAndTag(UUID rootNetworkUuid, String rootNetworkName);
+
+    @Query("select distinct r.study.id from RootNetworkEntity r where r.study.id in :studyUuids and r.loadStatus = :rootNetworkLoadStatus")
+    List<UUID> findDistinctStudyIdsByStudyIdInAndLoadStatus(@Param("studyUuids") List<UUID> studyUuids, @Param("rootNetworkLoadStatus") RootNetworkLoadStatus rootNetworkLoadStatus);
 }

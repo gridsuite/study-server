@@ -14,6 +14,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
+import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
@@ -23,6 +24,8 @@ import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModi
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
@@ -31,16 +34,20 @@ import org.springframework.util.CollectionUtils;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 
 /**
- * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
+ * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
  */
 @Service
 public class NetworkModificationTreeService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(NetworkModificationTreeService.class);
 
     public static final String ROOT_NODE_NAME = "Root";
 
@@ -57,7 +64,12 @@ public class NetworkModificationTreeService {
     private final RootNodeInfoRepository rootNodeInfoRepository;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final RootNetworkService rootNetworkService;
+    private final NetworkService networkStoreService;
     private final ReportService reportService;
+    private final UserAdminService userAdminService;
+
+    private final StudyServerExecutionService studyServerExecutionService;
+    private final DirectoryService directoryService;
 
     public NetworkModificationTreeService(NodeRepository nodesRepository,
                                           RootNodeInfoRepository rootNodeInfoRepository,
@@ -67,7 +79,11 @@ public class NetworkModificationTreeService {
                                           @Lazy NetworkModificationTreeService networkModificationTreeService,
                                           RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                           RootNetworkService rootNetworkService,
-                                          ReportService reportService) {
+                                          NetworkService networkStoreService,
+                                          ReportService reportService,
+                                          UserAdminService userAdminService,
+                                          StudyServerExecutionService studyServerExecutionService,
+                                          DirectoryService directoryService) {
         this.nodesRepository = nodesRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.networkModificationService = networkModificationService;
@@ -76,10 +92,14 @@ public class NetworkModificationTreeService {
         this.rootNodeInfoRepository = rootNodeInfoRepository;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.rootNetworkService = rootNetworkService;
+        this.networkStoreService = networkStoreService;
         this.reportService = reportService;
+        this.userAdminService = userAdminService;
+        this.studyServerExecutionService = studyServerExecutionService;
+        this.directoryService = directoryService;
     }
 
-    private NodeEntity createNetworkModificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {
+    private NetworkModificationNodeInfoEntity createNetworkModificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {
         NodeEntity newNode = nodesRepository.save(new NodeEntity(null, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null, new ArrayList<>()));
         if (networkModificationNode.getModificationGroupUuid() == null) {
             networkModificationNode.setModificationGroupUuid(UUID.randomUUID());
@@ -87,7 +107,7 @@ public class NetworkModificationTreeService {
         if (networkModificationNode.getNodeType() == null) {
             networkModificationNode.setNodeType(NetworkModificationNodeType.CONSTRUCTION);
         }
-        networkModificationNodeInfoRepository.save(
+        NetworkModificationNodeInfoEntity newNodeInfo = networkModificationNodeInfoRepository.save(
             NetworkModificationNodeInfoEntity.builder()
                 .modificationGroupUuid(networkModificationNode.getModificationGroupUuid())
                 .idNode(newNode.getIdNode())
@@ -96,7 +116,35 @@ public class NetworkModificationTreeService {
                 .nodeType(networkModificationNode.getNodeType())
                 .build()
         );
-        return newNode;
+        newNodeInfo.setNode(newNode);
+        return newNodeInfo;
+    }
+
+    @Transactional
+    public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId, AbstractWorkflowInfos workflowInfos) {
+        if (doGetNodeBuildStatus(nodeUuid, rootNetworkUuid).isBuilt()) {
+            return;
+        }
+        assertNoMaxBuilds(studyUuid, rootNetworkUuid, userId);
+        BuildInfos buildInfos = getBuildInfos(nodeUuid, rootNetworkUuid);
+
+        // Store all reports (inherited + new) for this node
+        setModificationReports(nodeUuid, rootNetworkUuid, buildInfos.getAllReportsAsMap());
+        networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos, workflowInfos);
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    private void assertNoMaxBuilds(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
+        Map<QuotaType, QuotaState> userQuotaState = userAdminService.getUserQuotaState(userId);
+
+        // check restrictions on node builds number
+        Integer maxBuilds = Optional.ofNullable(userQuotaState.get(QuotaType.BUILD)).map(QuotaState::max).orElse(null);
+        if (maxBuilds != null) {
+            long nbBuiltNodes = countBuiltNodes(studyUuid, rootNetworkUuid);
+            if (nbBuiltNodes >= maxBuilds) {
+                throw new StudyException(MAX_NODE_BUILDS_EXCEEDED, "max allowed built nodes reached", Map.of("limit", maxBuilds));
+            }
+        }
     }
 
     public List<ModificationsSearchResultByNode> getNetworkModificationsByNodeInfos(
@@ -114,8 +162,15 @@ public class NetworkModificationTreeService {
                 .toList();
     }
 
-    // TODO test if studyUuid exist and have a node <nodeId>
-    private NetworkModificationNode createAndInsertNode(StudyEntity study, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode, String userId) {
+    @Transactional(readOnly = true)
+    public List<NodeInfos> getNodesInfos(List<UUID> nodeUuids) {
+        // unknown node uuids are simply absent from the result
+        return networkModificationNodeInfoRepository.findAllByIdInWithNode(nodeUuids).stream()
+                .map(nodeInfo -> new NodeInfos(nodeInfo.getId(), nodeInfo.getName(), nodeInfo.getNode().getStudy().getId()))
+                .toList();
+    }
+
+    private NetworkModificationNode createAndInsertNode(StudyEntity study, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode) {
         NodeEntity reference = getNodeEntity(nodeId);
 
         assertNodeNameNotExist(study.getId(), nodeInfo.getName());
@@ -123,24 +178,23 @@ public class NetworkModificationTreeService {
         if (insertMode.equals(InsertMode.BEFORE) && reference.getType().equals(NodeType.ROOT)) {
             throw new StudyException(NOT_ALLOWED);
         }
-        NodeEntity parent = insertMode.equals(InsertMode.BEFORE) ? reference.getParentNode() : reference;
-        NodeEntity node = createNetworkModificationNode(study, parent, nodeInfo);
-        nodeInfo.setId(node.getIdNode());
 
-        if (insertMode.equals(InsertMode.BEFORE)) {
-            reference.setParentNode(node);
-        } else if (insertMode.equals(InsertMode.AFTER)) {
-            getChildren(nodeId).stream()
-                .filter(n -> !n.getIdNode().equals(node.getIdNode()))
-                .forEach(child -> child.setParentNode(node));
-        }
+        // Create node
+        NetworkModificationNodeInfoEntity nodeInfoEntity = createNetworkModificationNode(study, insertMode.equals(InsertMode.BEFORE) ? reference.getParentNode() : reference, nodeInfo);
+        nodeInfo.setId(nodeInfoEntity.getIdNode());
+
+        // Set parent and position
+        insertNodeToReference(reference, nodeInfoEntity, insertMode, nodeInfo.getColumnPosition());
+
+        nodeInfo.setColumnPosition(nodeInfoEntity.getColumnPosition());
+
         return nodeInfo;
     }
 
     @Transactional
     public NetworkModificationNode createNode(@NonNull StudyEntity study, @NonNull UUID nodeId, @NonNull NetworkModificationNode nodeInfo, @NonNull InsertMode insertMode, String userId) {
         // create new node
-        NetworkModificationNode newNode = createAndInsertNode(study, nodeId, nodeInfo, insertMode, userId);
+        NetworkModificationNode newNode = createAndInsertNode(study, nodeId, nodeInfo, insertMode);
 
         NetworkModificationNodeInfoEntity newNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(newNode.getId());
         rootNetworkNodeInfoService.createNodeLinks(study, newNodeInfoEntity);
@@ -148,28 +202,27 @@ public class NetworkModificationTreeService {
         return newNode;
     }
 
-    private NetworkModificationNode duplicateNode(@NonNull StudyEntity targetStudy, @NonNull UUID referenceNodeId, @NonNull NetworkModificationNode newNodeInfo, @NonNull UUID originNodeUuid, @NonNull InsertMode insertMode, Map<UUID, UUID> mappingModificationUuids) {
+    private NetworkModificationNode duplicateNode(@NonNull StudyEntity targetStudy, @NonNull UUID referenceNodeId, @NonNull NetworkModificationNode newNodeInfo,
+            @NonNull InsertMode insertMode) {
         // create new node
-        NetworkModificationNode newNode = createAndInsertNode(targetStudy, referenceNodeId, newNodeInfo, insertMode, null);
+        NetworkModificationNode newNode = createAndInsertNode(targetStudy, referenceNodeId, newNodeInfo, insertMode);
 
         NetworkModificationNodeInfoEntity newNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(newNode.getId());
-        NetworkModificationNodeInfoEntity originNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(originNodeUuid);
-
-        rootNetworkNodeInfoService.createNodeLinksFromTags(targetStudy, originNodeInfoEntity, newNodeInfoEntity, mappingModificationUuids);
+        rootNetworkNodeInfoService.createNodeLinks(targetStudy, newNodeInfoEntity);
 
         return newNode;
     }
 
     @Transactional
-    public UUID duplicateStudyNode(UUID nodeToCopyUuid, UUID anchorNodeUuid, InsertMode insertMode) {
+    public UUID duplicateStudyNode(UUID nodeToCopyUuid, UUID anchorNodeUuid, InsertMode insertMode, String userId) {
         NodeEntity anchorNode = getNodeEntity(anchorNodeUuid);
         NodeEntity parent = insertMode == InsertMode.BEFORE ? anchorNode.getParentNode() : anchorNode;
-        UUID newNodeUUID = duplicateNode(nodeToCopyUuid, anchorNodeUuid, insertMode);
+        UUID newNodeUUID = duplicateNode(nodeToCopyUuid, anchorNodeUuid, insertMode, userId);
         notificationService.emitNodeInserted(anchorNode.getStudy().getId(), parent.getIdNode(), newNodeUUID, insertMode, anchorNodeUuid);
         return newNodeUUID;
     }
 
-    private UUID duplicateNode(UUID nodeToCopyUuid, UUID anchorNodeUuid, InsertMode insertMode) {
+    private UUID duplicateNode(UUID nodeToCopyUuid, UUID anchorNodeUuid, InsertMode insertMode, String userId) {
         NodeEntity anchorNodeEntity = getNodeEntity(anchorNodeUuid);
         if (insertMode.equals(InsertMode.BEFORE) && anchorNodeEntity.getType().equals(NodeType.ROOT)) {
             throw new StudyException(NOT_ALLOWED);
@@ -177,10 +230,8 @@ public class NetworkModificationTreeService {
 
         UUID newGroupUuid = UUID.randomUUID();
         UUID modificationGroupUuid = self.getModificationGroupUuid(nodeToCopyUuid);
-        //First we create the modification group
-        Map<UUID, UUID> originToDuplicateModificationUuidMap = networkModificationService.duplicateModificationsGroup(modificationGroupUuid, newGroupUuid);
 
-        //Then we create the node
+        // First we create the node
         NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = getNetworkModificationNodeInfoEntity(nodeToCopyUuid);
         UUID studyUuid = anchorNodeEntity.getStudy().getId();
 
@@ -193,10 +244,11 @@ public class NetworkModificationTreeService {
                 .description(networkModificationNodeInfoEntity.getDescription())
                 .nodeType(networkModificationNodeInfoEntity.getNodeType())
                 .build(),
-                nodeToCopyUuid,
-                insertMode,
-            originToDuplicateModificationUuidMap
+                insertMode
         );
+
+        // Then we create the modification group and recreate references
+        networkModificationService.duplicateModificationsGroup(modificationGroupUuid, newGroupUuid, node.getId(), studyUuid, userId);
 
         return node.getId();
     }
@@ -220,58 +272,59 @@ public class NetworkModificationTreeService {
         } else {
             parent = anchorNode;
         }
-        UUID studyUuid = moveNode(nodeToMoveUuid, anchorNodeUuid, insertMode);
+        UUID studyUuid = moveNode(nodeToMoveUuid, anchorNodeUuid, insertMode, false);
         notificationService.emitNodeMoved(studyUuid, parent.getIdNode(), nodeToMoveUuid, insertMode, anchorNodeUuid);
     }
 
-    private UUID moveNode(UUID nodeToMoveUuid, UUID anchorNodeUuid, InsertMode insertMode) {
-        NodeEntity nodeToMoveEntity = getNodeEntity(nodeToMoveUuid);
-
-        getChildren(nodeToMoveUuid)
-            .forEach(child -> child.setParentNode(nodeToMoveEntity.getParentNode()));
-
+    private UUID moveNode(UUID nodeToMoveUuid, UUID anchorNodeUuid, InsertMode insertMode, boolean moveStudySubtree) {
         NodeEntity anchorNodeEntity = getNodeEntity(anchorNodeUuid);
-
         if (insertMode.equals(InsertMode.BEFORE) && anchorNodeEntity.getType().equals(NodeType.ROOT)) {
             throw new StudyException(NOT_ALLOWED);
         }
 
-        NodeEntity parent = insertMode.equals(InsertMode.BEFORE) ?
-            anchorNodeEntity.getParentNode() : anchorNodeEntity;
+        NetworkModificationNodeInfoEntity nodeToMoveEntityInfo = getNetworkModificationNodeInfoEntity(nodeToMoveUuid);
+        NodeEntity nodeToMoveEntity = nodeToMoveEntityInfo.getNode();
 
+        // Need to remember the anchor's new parent before modification.
+        // If the anchor's current parent is the node being moved, the anchor will be reattached to that
+        // node's own parent, so its effective new parent is the moved node's old parent.
+        NodeEntity oldParent;
         if (insertMode.equals(InsertMode.BEFORE)) {
-            anchorNodeEntity.setParentNode(nodeToMoveEntity);
-        } else if (insertMode.equals(InsertMode.AFTER)) {
-            getChildren(anchorNodeUuid).stream()
-                .filter(n -> !n.getIdNode().equals(nodeToMoveEntity.getIdNode()))
-                .forEach(child -> child.setParentNode(nodeToMoveEntity));
+            NodeEntity anchorParent = anchorNodeEntity.getParentNode();
+            oldParent = anchorParent.getIdNode().equals(nodeToMoveUuid) ? nodeToMoveEntity.getParentNode() : anchorParent;
+        } else {
+            oldParent = anchorNodeEntity;
         }
 
-        nodeToMoveEntity.setParentNode(parent);
+        if (!moveStudySubtree) {
+            insertNodesToParent(nodeToMoveEntity.getParentNode(), nodeToMoveEntityInfo.getColumnPosition(), getChildren(nodeToMoveUuid));
+        }
+
+        insertNodeToReference(anchorNodeEntity, nodeToMoveEntityInfo, insertMode, null);
+        nodeToMoveEntity.setParentNode(oldParent);
+
         return anchorNodeEntity.getStudy().getId();
     }
 
     @Transactional
     public void moveStudySubtree(UUID parentNodeToMoveUuid, UUID anchorNodeUuid) {
-        List<NodeEntity> children = getChildren(parentNodeToMoveUuid);
-        moveNode(parentNodeToMoveUuid, anchorNodeUuid, InsertMode.CHILD);
-        children.forEach(child -> self.moveStudySubtree(child.getIdNode(), parentNodeToMoveUuid));
+        moveNode(parentNodeToMoveUuid, anchorNodeUuid, InsertMode.CHILD, true);
     }
 
     @Transactional
     // TODO test if studyUuid exist and have a node <nodeId>
     public void doDeleteNode(UUID nodeId, boolean deleteChildren, DeleteNodeInfos deleteNodeInfos) {
         UUID studyId = self.getStudyUuidForNodeId(nodeId);
-        deleteNodes(nodeId, deleteChildren, false, deleteNodeInfos);
+        deleteNode(nodeId, deleteChildren, false, deleteNodeInfos);
         notificationService.emitNodesDeleted(studyId, deleteNodeInfos.getRemovedNodeUuids(), deleteChildren);
     }
 
     @Transactional
     // TODO test if studyUuid exist and have a node <nodeId>
-    public void doStashNode(UUID nodeId, boolean stashChildren) {
+    public void doStashNode(UUID nodeId, boolean stashChildren, String userId) {
         List<UUID> stashedNodes = new ArrayList<>();
         UUID studyId = self.getStudyUuidForNodeId(nodeId);
-        stashNodes(nodeId, stashChildren, stashedNodes, true);
+        stashNode(nodeId, stashChildren, stashedNodes, true, userId);
         notificationService.emitNodesDeleted(studyId, stashedNodes, stashChildren);
     }
 
@@ -280,28 +333,75 @@ public class NetworkModificationTreeService {
         return getNodeEntity(id).getStudy().getId();
     }
 
-    private void stashNodes(UUID id, boolean stashChildren, List<UUID> stashedNodes, boolean firstIteration) {
-        Optional<NodeEntity> optNodeToStash = nodesRepository.findById(id);
-        optNodeToStash.ifPresent(nodeToStash -> {
-            UUID modificationGroupUuid = self.getModificationGroupUuid(nodeToStash.getIdNode());
-            networkModificationService.deleteStashedModifications(modificationGroupUuid);
-            if (!stashChildren) {
-                getChildren(id).forEach(node -> node.setParentNode(nodeToStash.getParentNode()));
-            } else {
-                getChildren(id)
-                    .forEach(child -> stashNodes(child.getIdNode(), true, stashedNodes, false));
-            }
-            stashedNodes.add(id);
-            nodeToStash.setStashed(true);
-            nodeToStash.setStashDate(Instant.now());
-            //We only unlink the first deleted node so the rest of the tree is still connected as it was
-            if (firstIteration) {
-                nodeToStash.setParentNode(null);
-            }
-        });
+    private void stashNode(UUID nodeId, boolean stashChildren, List<UUID> stashedNodes, boolean firstIteration, String userId) {
+        NetworkModificationNodeInfoEntity nodeToStashInfo = getNetworkModificationNodeInfoEntity(nodeId);
+        NodeEntity nodeToStash = nodeToStashInfo.getNode();
+        UUID modificationGroupUuid = nodeToStashInfo.getModificationGroupUuid();
+        networkModificationService.deleteStashedModificationsFromGroups(List.of(modificationGroupUuid), userId);
+        if (!stashChildren) {
+            insertNodesToParent(nodeToStash.getParentNode(), nodeToStashInfo.getColumnPosition(), getChildren(nodeId));
+        } else {
+            getChildren(nodeId)
+                .forEach(child -> stashNode(child.getIdNode(), true, stashedNodes, false, userId));
+        }
+        stashedNodes.add(nodeId);
+        nodeToStash.setStashed(true);
+        nodeToStash.setStashDate(Instant.now());
+        //We only unlink the first deleted node so the rest of the tree is still connected as it was
+        if (firstIteration) {
+            nodeToStash.setParentNode(null);
+        }
     }
 
-    private void deleteNodes(UUID id, boolean deleteChildren, boolean allowDeleteRoot, DeleteNodeInfos deleteNodeInfos) {
+    private int getNextColumnPosition(UUID parentNodeId) {
+        return networkModificationNodeInfoRepository.findMaxColumnPositionByParentNodeId(parentNodeId)
+            .map(max -> max + 1)
+            .orElse(0);
+    }
+
+    private void insertNodeToReference(NodeEntity reference, NetworkModificationNodeInfoEntity nodeInfoEntity, InsertMode insertMode, Integer position) {
+        // Parent of node to insert already set
+        NodeEntity nodeEntity = nodeInfoEntity.getNode();
+
+        switch (insertMode) {
+            case CHILD -> nodeInfoEntity.setColumnPosition(position == null ? getNextColumnPosition(reference.getIdNode()) : position);
+            case BEFORE -> {
+                AbstractNodeInfoEntity referenceNodeInfoEntity = getNodeInfoEntity(reference.getIdNode());
+                nodeInfoEntity.setColumnPosition(referenceNodeInfoEntity.getColumnPosition());
+                reference.setParentNode(nodeEntity);
+                referenceNodeInfoEntity.setColumnPosition(0);
+            }
+            case AFTER -> {
+                nodeInfoEntity.setColumnPosition(0);
+                getChildren(reference.getIdNode()).stream()
+                    .filter(n -> !n.getIdNode().equals(nodeEntity.getIdNode()))
+                    .forEach(child -> child.setParentNode(nodeEntity));
+            }
+        }
+    }
+
+    private void insertNodesToParent(NodeEntity parent, Integer position, List<NodeEntity> newChildren) {
+        if (newChildren.isEmpty()) {
+            return;
+        }
+        newChildren.forEach(node -> node.setParentNode(parent));
+
+        if (position == null) {
+            return;
+        }
+        List<NetworkModificationNodeInfoEntity> childrenInfos = networkModificationNodeInfoRepository.findAllByIdIn(nodesRepository.findChildrenUuids(parent.getIdNode()));
+        List<NetworkModificationNodeInfoEntity> newChildrenInfos = networkModificationNodeInfoRepository.findAllByIdIn(newChildren.stream().map(NodeEntity::getIdNode).toList());
+        childrenInfos.stream()
+            .filter(info -> info.getColumnPosition() != null && info.getColumnPosition() >= position)
+            .forEach(info -> info.setColumnPosition(info.getColumnPosition() + newChildrenInfos.size() - 1));
+        int insertPosition = position;
+        for (NetworkModificationNodeInfoEntity info : newChildrenInfos) {
+            info.setColumnPosition(insertPosition++);
+        }
+    }
+
+    @SuppressWarnings("checkstyle:LambdaBodyLength")
+    private void deleteNode(UUID id, boolean deleteChildren, boolean allowDeleteRoot, DeleteNodeInfos deleteNodeInfos) {
         Optional<NodeEntity> optNodeToDelete = nodesRepository.findById(id);
         optNodeToDelete.ifPresent(nodeToDelete -> {
             /* root cannot be deleted by accident */
@@ -316,10 +416,10 @@ public class NetworkModificationTreeService {
             rootNetworkNodeInfoService.fillDeleteNodeInfo(id, deleteNodeInfos);
 
             if (!deleteChildren) {
-                getChildren(id).forEach(node -> node.setParentNode(nodeToDelete.getParentNode()));
+                insertNodesToParent(nodeToDelete.getParentNode(), getNodeInfoEntity(id).getColumnPosition(), getChildren(id));
             } else {
                 getChildren(id)
-                    .forEach(child -> deleteNodes(child.getIdNode(), true, false, deleteNodeInfos));
+                    .forEach(child -> deleteNode(child.getIdNode(), true, false, deleteNodeInfos));
             }
             deleteNodeInfos.addRemovedNodeUuid(id);
             if (nodeToDelete.getType() == NodeType.ROOT) {
@@ -338,12 +438,6 @@ public class NetworkModificationTreeService {
     public List<UUID> getNodeTreeUuids(UUID parentUuid) {
         List<UUID> nodesUuids = nodesRepository.findAllChildrenUuids(parentUuid);
         nodesUuids.add(parentUuid);
-        return nodesUuids;
-    }
-
-    public List<UUID> getNodeBranchUuids(UUID nodeUuid) {
-        List<UUID> nodesUuids = nodesRepository.findAllAncestorsUuids(nodeUuid);
-        nodesUuids.addAll(getNodeTreeUuids(nodeUuid));
         return nodesUuids;
     }
 
@@ -419,7 +513,8 @@ public class NetworkModificationTreeService {
             if (nodeInfo instanceof RootNode rootNode) {
                 rootNode.setReportUuid(rootNetworkEntity.getReportUuid());
             } else {
-                ((NetworkModificationNode) nodeInfo).completeDtoFromRootNetworkNodeInfo(rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeInfo.getId(), rootNetworkEntity.getId()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")));
+                ((NetworkModificationNode) nodeInfo).completeDtoFromRootNetworkNodeInfo(rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeInfo.getId(),
+                        rootNetworkEntity.getId()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")));
             }
         });
     }
@@ -443,17 +538,17 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void duplicateStudyNodes(StudyEntity studyEntity, StudyEntity sourceStudyEntity) {
-        createRoot(studyEntity);
+    public void duplicateStudyNodes(StudyEntity newStudyEntity, StudyEntity sourceStudyEntity, String userId) {
+        createRoot(newStudyEntity);
         AbstractNode rootNode = getStudyTree(sourceStudyEntity.getId(), null);
-        self.cloneStudyTree(rootNode, null, studyEntity);
+        self.cloneStudyTree(rootNode, null, newStudyEntity, userId);
     }
 
     @Transactional
-    public UUID cloneStudyTree(AbstractNode nodeToDuplicate, UUID nodeParentId, StudyEntity studyEntity) {
+    public UUID cloneStudyTree(AbstractNode nodeToDuplicate, UUID nodeParentId, StudyEntity newStudyEntity, String userId) {
         UUID rootId = null;
         if (NodeType.ROOT.equals(nodeToDuplicate.getType())) {
-            rootId = getStudyRootNodeUuid(studyEntity.getId());
+            rootId = getStudyRootNodeUuid(newStudyEntity.getId());
         }
         UUID nextParentId;
         UUID newModificationGroupId = UUID.randomUUID();
@@ -461,16 +556,19 @@ public class NetworkModificationTreeService {
         if (nodeToDuplicate instanceof NetworkModificationNode model) {
             UUID modificationGroupToDuplicateId = model.getModificationGroupUuid();
             model.setModificationGroupUuid(newModificationGroupId);
-            model.setName(getSuffixedNodeName(studyEntity.getId(), model.getName()));
+            model.setName(getSuffixedNodeName(newStudyEntity.getId(), model.getName()));
 
-            Map<UUID, UUID> originToDuplicateModificationUuidMap = networkModificationService.duplicateModificationsGroup(modificationGroupToDuplicateId, newModificationGroupId);
-            nextParentId = duplicateNode(studyEntity, nodeParentId, model, nodeToDuplicate.getId(), InsertMode.CHILD, originToDuplicateModificationUuidMap).getId();
+            nextParentId = duplicateNode(newStudyEntity, nodeParentId, model, InsertMode.CHILD).getId();
+
+            networkModificationService.duplicateModificationsGroup(modificationGroupToDuplicateId, newModificationGroupId, nextParentId, newStudyEntity.getId(), userId);
         } else {
             // when cloning studyTree, we don't clone root node
             // if cloning the whole study, the root node is previously created
             nextParentId = rootId;
         }
-        nodeToDuplicate.getChildren().forEach(childToDuplicate -> self.cloneStudyTree(childToDuplicate, nextParentId, studyEntity));
+        nodeToDuplicate.getChildren().forEach(
+                childToDuplicate -> self.cloneStudyTree(childToDuplicate, nextParentId, newStudyEntity, userId)
+        );
 
         return nextParentId;
     }
@@ -667,7 +765,8 @@ public class NetworkModificationTreeService {
 
     @Transactional(readOnly = true)
     public boolean isNodeNameExists(UUID studyUuid, String nodeName) {
-        return ROOT_NODE_NAME.equals(nodeName) || !networkModificationNodeInfoRepository.findAllByNodeStudyIdAndName(studyUuid, nodeName).stream().filter(abstractNodeInfoEntity -> !abstractNodeInfoEntity.getNode().isStashed()).toList().isEmpty();
+        return ROOT_NODE_NAME.equals(nodeName) || !networkModificationNodeInfoRepository.findAllByNodeStudyIdAndName(studyUuid,
+                nodeName).stream().filter(abstractNodeInfoEntity -> !abstractNodeInfoEntity.getNode().isStashed()).toList().isEmpty();
     }
 
     @Transactional(readOnly = true)
@@ -721,19 +820,8 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public String getNetworkModifications(@NonNull UUID nodeUuid, boolean onlyStashed, boolean onlyMetadata) {
-        return networkModificationService.getModifications(self.getModificationGroupUuid(nodeUuid), onlyStashed, onlyMetadata);
-    }
-
-    @Transactional
-    public List<ExcludedNetworkModifications> getModificationsToExclude(@NonNull UUID nodeUuid) {
-        List<RootNetworkNodeInfoEntity> rootNetworkByNodeInfos = rootNetworkNodeInfoService.getAllWithRootNetworkByNodeInfoId(nodeUuid);
-        return rootNetworkByNodeInfos.stream().
-        map(r -> new ExcludedNetworkModifications(
-                r.getRootNetwork().getId(),
-                new HashSet<>(r.getModificationsUuidsToExclude())
-
-                )).toList();
+    public String getNetworkModifications(@NonNull UUID nodeUuid, boolean onlyStashed, boolean onlyMetadata, String userId) {
+        return networkModificationService.getModifications(self.getModificationGroupUuid(nodeUuid), onlyStashed, onlyMetadata, userId);
     }
 
     private Integer getNetworkModificationsCount(@NonNull UUID nodeUuid, boolean stashed) {
@@ -784,11 +872,12 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void restoreNode(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId) {
+    public void restoreNode(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId, String userId) {
         for (UUID nodeId : nodeIds) {
             NodeEntity nodeToRestore = getNodeEntity(nodeId);
             NodeEntity anchorNode = getNodeEntity(anchorNodeId);
-            NetworkModificationNodeInfoEntity modificationNodeToRestore = networkModificationNodeInfoRepository.findById(nodeToRestore.getIdNode()).orElseThrow(() -> new StudyException(NOT_FOUND, "Node not found"));
+            NetworkModificationNodeInfoEntity modificationNodeToRestore = networkModificationNodeInfoRepository.findById(nodeToRestore.getIdNode()).orElseThrow(() -> new StudyException(NOT_FOUND,
+                    "Node not found"));
             if (self.isNodeNameExists(studyId, modificationNodeToRestore.getName())) {
                 String newName = getSuffixedNodeName(studyId, modificationNodeToRestore.getName());
                 modificationNodeToRestore.setName(newName);
@@ -797,7 +886,11 @@ public class NetworkModificationTreeService {
             nodeToRestore.setParentNode(anchorNode);
             nodeToRestore.setStashed(false);
             nodeToRestore.setStashDate(null);
-            nodesRepository.save(nodeToRestore);
+            modificationNodeToRestore.setColumnPosition(getNextColumnPosition(anchorNodeId));
+            NodeEntity newNode = nodesRepository.save(nodeToRestore);
+            // restore the references pointing from directory server to netmod-server
+            List<ModificationReference> modificationsReferences = networkModificationService.getModificationReferences(getModificationGroupUuid(newNode.getIdNode()));
+            directoryService.createElementsReferences(modificationsReferences, studyId, newNode.getIdNode(), userId);
             if (hasChildren(nodeId)) {
                 restoreNodeChildren(studyId, nodeId);
                 notificationService.emitSubtreeInserted(studyId, nodeId, anchorNodeId);
@@ -821,19 +914,23 @@ public class NetworkModificationTreeService {
         return rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Node not found")).getComputationReports();
     }
 
-    @Transactional
-    public void setModificationReports(UUID nodeUuid, UUID rootNetworkUuid, Map<UUID, UUID> modificationReports) {
+    private void setModificationReports(UUID nodeUuid, UUID rootNetworkUuid, Map<UUID, UUID> modificationReports) {
         rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).ifPresent(tpNodeInfo -> tpNodeInfo.setModificationReports(modificationReports));
     }
 
     @Transactional
     public Map<UUID, UUID> getModificationReports(UUID nodeUuid, UUID rootNetworkUuid) {
+        return doGetModificationReports(nodeUuid, rootNetworkUuid);
+    }
+
+    private Map<UUID, UUID> doGetModificationReports(UUID nodeUuid, UUID rootNetworkUuid) {
         return rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Node not found")).getModificationReports();
     }
 
     private void restoreNodeChildren(UUID studyId, UUID parentNodeId) {
         getChildren(parentNodeId).forEach(nodeEntity -> {
-            NetworkModificationNodeInfoEntity modificationNodeToRestore = networkModificationNodeInfoRepository.findById(nodeEntity.getIdNode()).orElseThrow(() -> new StudyException(NOT_FOUND, "Node not found"));
+            NetworkModificationNodeInfoEntity modificationNodeToRestore = networkModificationNodeInfoRepository.findById(nodeEntity.getIdNode()).orElseThrow(() -> new StudyException(NOT_FOUND,
+                    "Node not found"));
             if (self.isNodeNameExists(studyId, modificationNodeToRestore.getName())) {
                 String newName = getSuffixedNodeName(studyId, modificationNodeToRestore.getName());
                 modificationNodeToRestore.setName(newName);
@@ -867,7 +964,7 @@ public class NetworkModificationTreeService {
      * @return the report UUID to use (existing or new)
      */
     private UUID getModificationReportUuid(UUID nodeUuid, UUID rootNetworkUuid, UUID nodeToBuildUuid) {
-        Map<UUID, UUID> targetNodeReports = self.getModificationReports(nodeToBuildUuid, rootNetworkUuid);
+        Map<UUID, UUID> targetNodeReports = doGetModificationReports(nodeToBuildUuid, rootNetworkUuid);
         if (targetNodeReports.containsKey(nodeUuid)) {
             return targetNodeReports.get(nodeUuid);
         }
@@ -908,7 +1005,7 @@ public class NetworkModificationTreeService {
      * @param buildInfos Build information to populate with inherited reports
      */
     private void inheritModificationReportsFromBuiltParent(UUID builtParentNodeUuid, UUID rootNetworkUuid, BuildInfos buildInfos) {
-        Map<UUID, UUID> parentReports = self.getModificationReports(
+        Map<UUID, UUID> parentReports = doGetModificationReports(
                 builtParentNodeUuid,
                 rootNetworkUuid
         );
@@ -942,11 +1039,12 @@ public class NetworkModificationTreeService {
         AbstractNode node = getSimpleNode(nodeEntity.getIdNode());
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-            RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeEntity.getIdNode(), rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+            RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeEntity.getIdNode(),
+                    rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
             if (!rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt()) {
                 UUID reportUuid = getModificationReportUuid(nodeEntity.getIdNode(), rootNetworkUuid, nodeToBuildUuid);
                 ReportInfos reportInfos = new ReportInfos(reportUuid, modificationNode.getId(), ReportMode.REPLACE);
-                buildInfos.insertModificationInfos(modificationNode.getModificationGroupUuid(), rootNetworkNodeInfoEntity.getModificationsUuidsToExclude(), reportInfos);
+                buildInfos.insertModificationInfos(modificationNode.getModificationGroupUuid(), reportInfos);
                 getBuildInfos(nodeEntity.getParentNode(), rootNetworkUuid, buildInfos, nodeToBuildUuid);
             } else {
                 buildInfos.setOriginVariantId(self.getVariantId(nodeEntity.getIdNode(), rootNetworkUuid));
@@ -955,8 +1053,7 @@ public class NetworkModificationTreeService {
         }
     }
 
-    @Transactional
-    public BuildInfos getBuildInfos(UUID nodeUuid, UUID rootNetworkUuid) {
+    private BuildInfos getBuildInfos(UUID nodeUuid, UUID rootNetworkUuid) {
         BuildInfos buildInfos = new BuildInfos();
 
         nodesRepository.findById(nodeUuid).ifPresentOrElse(entity -> {
@@ -964,6 +1061,7 @@ public class NetworkModificationTreeService {
                 throw new StudyException(BAD_NODE_TYPE, "The node " + entity.getIdNode() + " is not a modification node");
             } else {
                 buildInfos.setDestinationVariantId(self.getVariantId(nodeUuid, rootNetworkUuid));
+                buildInfos.setRootNetworkTag(rootNetworkService.getApplicabilityTag(rootNetworkUuid));
                 getBuildInfos(entity, rootNetworkUuid, buildInfos, nodeUuid);
             }
         }, () -> {
@@ -973,8 +1071,7 @@ public class NetworkModificationTreeService {
         return buildInfos;
     }
 
-    @Transactional
-    public InvalidateNodeInfos invalidateNode(UUID nodeUuid, UUID rootNetworkUuid) {
+    private InvalidateNodeInfos invalidateNode(UUID nodeUuid, UUID rootNetworkUuid) {
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
 
         InvalidateNodeInfos invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ALL);
@@ -986,14 +1083,13 @@ public class NetworkModificationTreeService {
         return invalidateNodeInfos;
     }
 
-    @Transactional
-    public InvalidateNodeInfos invalidateNodeTree(UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
+    private InvalidateNodeInfos invalidateNodeTree(UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
 
         // Node status before invalidation
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
         boolean isModificationNode = nodeEntity.getType().equals(NodeType.NETWORK_MODIFICATION);
-        boolean isNodeBuilt = self.getNodeBuildStatus(nodeEntity.getIdNode(), rootNetworkUuid).isBuilt();
+        boolean isNodeBuilt = doGetNodeBuildStatus(nodeEntity.getIdNode(), rootNetworkUuid).isBuilt();
         boolean shouldInvalidateIndexedInfos = isNodeBuilt || hasAnyBuiltChildren(nodeEntity, rootNetworkUuid);
 
         // First node
@@ -1003,11 +1099,12 @@ public class NetworkModificationTreeService {
 
         // Invalidate indexed nodes
         if (shouldInvalidateIndexedInfos) {
-            fillIndexedNodeTreeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos, isNodeBuilt && (invalidateTreeParameters.isOnlyChildren() || invalidateTreeParameters.isOnlyChildrenBuildStatus()));
+            fillIndexedNodeTreeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos,
+                    isNodeBuilt && (invalidateTreeParameters.isOnlyChildren() || invalidateTreeParameters.isOnlyChildrenBuildStatus()));
         }
 
         // Children
-        invalidateNodeInfos.add(invalidateChildrenNodes(nodeUuid, rootNetworkUuid, invalidateTreeParameters));
+        invalidateNodeInfos.add(invalidateChildrenNodes(nodeUuid, rootNetworkUuid));
 
         if (!invalidateNodeInfos.getNodeUuids().isEmpty()) {
             notificationService.emitNodeBuildStatusUpdated(nodeEntity.getStudy().getId(), invalidateNodeInfos.getNodeUuids().stream().toList(), rootNetworkUuid);
@@ -1016,34 +1113,16 @@ public class NetworkModificationTreeService {
         return invalidateNodeInfos;
     }
 
-    private InvalidateNodeInfos invalidateChildrenNodes(UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
+    /** Children are always invalidated in full, whatever was asked of the node itself. */
+    private InvalidateNodeInfos invalidateChildrenNodes(UUID nodeUuid, UUID rootNetworkUuid) {
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
-        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoService.getRootNetworkNodes(rootNetworkUuid, getAllChildrenUuids(nodeUuid));
-
         InvalidateNodeTreeParameters invalidateChildrenParameters = InvalidateNodeTreeParameters.builder()
             .invalidationMode(InvalidateNodeTreeParameters.InvalidationMode.ALL)
-            .withBlockedNode(invalidateTreeParameters.withBlockedNode())
             .build();
-        rootNetworkNodeInfoEntities.forEach(child ->
-            invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNode(child, invalidateChildrenParameters))
-        );
+
+        invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNodes(rootNetworkUuid, getAllChildrenUuids(nodeUuid), invalidateChildrenParameters));
 
         return invalidateNodeInfos;
-    }
-
-    @Transactional
-    public void unblockNodeTree(UUID rootNetworkUuid, UUID nodeUuid) {
-        rootNetworkNodeInfoService.unblockNodes(rootNetworkUuid, getNodeTreeUuids(nodeUuid));
-    }
-
-    @Transactional
-    public void unblockNode(UUID rootNetworkUuid, UUID nodeUuid) {
-        rootNetworkNodeInfoService.unblockNodes(rootNetworkUuid, List.of(nodeUuid));
-    }
-
-    @Transactional
-    public void blockNode(UUID rootNetworkUuid, UUID nodeUuid) {
-        rootNetworkNodeInfoService.blockNodes(rootNetworkUuid, List.of(nodeUuid));
     }
 
     /**
@@ -1063,7 +1142,7 @@ public class NetworkModificationTreeService {
         while (currentNode.getParentNode() != null) {
             NodeEntity parentNode = currentNode.getParentNode();
             if (parentNode.getType().equals(NodeType.ROOT)
-                || self.getNodeBuildStatus(parentNode.getIdNode(), rootNetworkUuid).isBuilt()
+                || doGetNodeBuildStatus(parentNode.getIdNode(), rootNetworkUuid).isBuilt()
                 || hasAnyBuiltChildren(parentNode, rootNetworkUuid, descendantsChecked)) {
                 return currentNode;
             }
@@ -1080,7 +1159,7 @@ public class NetworkModificationTreeService {
     }
 
     private boolean hasAnyBuiltChildren(NodeEntity node, UUID rootNetworkUuid, Set<NodeEntity> checkedChildren) {
-        if (self.getNodeBuildStatus(node.getIdNode(), rootNetworkUuid).isBuilt()) {
+        if (doGetNodeBuildStatus(node.getIdNode(), rootNetworkUuid).isBuilt()) {
             return true;
         }
         checkedChildren.add(node);
@@ -1121,8 +1200,13 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public void updateNodeBuildStatus(UUID nodeUuid, UUID rootNetworkUuid, NodeBuildStatus nodeBuildStatus) {
+        doUpdateNodeBuildStatus(nodeUuid, rootNetworkUuid, nodeBuildStatus);
+    }
+
+    private void doUpdateNodeBuildStatus(UUID nodeUuid, UUID rootNetworkUuid, NodeBuildStatus nodeBuildStatus) {
         UUID studyId = self.getStudyUuidForNodeId(nodeUuid);
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND,
+                "Root network not found"));
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
         NodeBuildStatusEmbeddable currentNodeStatus = rootNetworkNodeInfoEntity.getNodeBuildStatus();
 
@@ -1131,7 +1215,7 @@ public class NetworkModificationTreeService {
         if (nodeBuildStatus.isBuilt()) {
             newLocalStatus = nodeBuildStatus.getLocalBuildStatus().max(currentNodeStatus.getLocalBuildStatus());
             NodeEntity previousBuiltNode = doGetLastParentNodeBuilt(nodeEntity, rootNetworkUuid);
-            BuildStatus previousGlobalBuildStatus = getNodeBuildStatus(previousBuiltNode.getIdNode(), rootNetworkUuid).getGlobalBuildStatus();
+            BuildStatus previousGlobalBuildStatus = doGetNodeBuildStatus(previousBuiltNode.getIdNode(), rootNetworkUuid).getGlobalBuildStatus();
             newGlobalStatus = nodeBuildStatus.getGlobalBuildStatus().max(previousGlobalBuildStatus);
         } else {
             newLocalStatus = nodeBuildStatus.getLocalBuildStatus();
@@ -1151,12 +1235,17 @@ public class NetworkModificationTreeService {
 
     @Transactional(readOnly = true)
     public NodeBuildStatus getNodeBuildStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+        return doGetNodeBuildStatus(nodeUuid, rootNetworkUuid);
+    }
+
+    private NodeBuildStatus doGetNodeBuildStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
         if (nodeEntity.getType().equals(NodeType.ROOT)) {
             return NodeBuildStatus.from(BuildStatus.NOT_BUILT);
         }
 
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND,
+                "Root network not found"));
         return rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto();
     }
 
@@ -1224,7 +1313,7 @@ public class NetworkModificationTreeService {
     public long countBuiltNodes(UUID studyUuid, UUID rootNetworkUuid) {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyIdAndTypeAndStashed(studyUuid, NodeType.NETWORK_MODIFICATION, false);
         // perform N queries, but it's fast: 25 ms for 400 nodes
-        return nodes.stream().filter(n -> self.getNodeBuildStatus(n.getIdNode(), rootNetworkUuid).isBuilt()).count();
+        return nodes.stream().filter(n -> doGetNodeBuildStatus(n.getIdNode(), rootNetworkUuid).isBuilt()).count();
     }
 
     private void fillIndexedNodeInfosToInvalidate(UUID parentNodeUuid, boolean includeParentNode, InvalidateNodeInfos invalidateNodeInfos) {
@@ -1293,5 +1382,72 @@ public class NetworkModificationTreeService {
         return nodesRepository.findExportStatus(exportUuid)
                 .map(ExportNetworkStatus::valueOf)
                 .orElseThrow(() -> new StudyException(NOT_FOUND, "No export found for exportUuid=" + exportUuid));
+    }
+
+    @Transactional
+    public void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters, boolean skipDeleteVariants) {
+        AtomicReference<Long> startTime = new AtomicReference<>(null);
+        startTime.set(System.nanoTime());
+
+        InvalidateNodeInfos invalidateNodeInfos = invalidateNodeTree(nodeUuid, rootNetworkUuid, invalidateTreeParameters);
+        invalidateNodeInfos.setNetworkUuid(rootNetworkService.getNetworkUuid(rootNetworkUuid));
+        deleteInvalidationInfos(invalidateNodeInfos, skipDeleteVariants);
+
+        if (!isRootNode(nodeUuid)) {
+            emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters.computationsInvalidationMode());
+        }
+
+        if (startTime.get() != null) {
+            LOGGER.trace("unbuild node '{}' of study '{}' : {} seconds", nodeUuid, studyUuid,
+                TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        }
+    }
+
+    @Transactional
+    public void invalidateNode(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
+        AtomicReference<Long> startTime = new AtomicReference<>(null);
+        startTime.set(System.nanoTime());
+
+        InvalidateNodeInfos invalidateNodeInfos = invalidateNode(nodeUuid, rootNetworkUuid);
+        invalidateNodeInfos.setNetworkUuid(rootNetworkService.getNetworkUuid(rootNetworkUuid));
+
+        deleteInvalidationInfos(invalidateNodeInfos);
+        emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ComputationsInvalidationMode.ALL);
+
+        if (startTime.get() != null) {
+            LOGGER.trace("unbuild node '{}' of study '{}' : {} seconds", nodeUuid, studyUuid,
+                TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        }
+    }
+
+    private CompletableFuture<Void> deleteInvalidationInfos(InvalidateNodeInfos invalidateNodeInfos) {
+        return deleteInvalidationInfos(invalidateNodeInfos, false);
+    }
+
+    private CompletableFuture<Void> deleteInvalidationInfos(InvalidateNodeInfos invalidateNodeInfos, boolean skipDeleteVariants) {
+        List<CompletableFuture<?>> futures = new ArrayList<>();
+
+        // We might want to skip variant deletion in a study invalidation scenario when a network is wholly deleted at the end of the process
+        if (!skipDeleteVariants) {
+            futures.add(studyServerExecutionService.runAsync(() ->
+                networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(),
+                    invalidateNodeInfos.getVariantIds())));
+        }
+        futures.add(studyServerExecutionService.runAsync(() ->
+            networkModificationService.deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(),
+                invalidateNodeInfos.getNetworkUuid())));
+        futures.addAll(rootNetworkNodeInfoService.getRemoteDeletions(
+            invalidateNodeInfos.toRemoteDeletionInfos(invalidateNodeInfos)));
+        // Do not wait completion and do not throw exception
+        return CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
+    }
+
+    private void emitAllComputationStatusChanged(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters.ComputationsInvalidationMode computationsInvalidationMode) {
+        if (InvalidateNodeTreeParameters.ComputationsInvalidationMode.isPreserveLoadFlowResults(computationsInvalidationMode)) {
+            // use for security node, when reruning loadflow, there is a modification due to the first lf and the node is unbuild when a modification is deleted and we want to keep the results
+            notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_ALL_COMPUTATION_STATUS_WITHOUT_LOADFLOW);
+        } else {
+            notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_ALL_COMPUTATION_STATUS);
+        }
     }
 }

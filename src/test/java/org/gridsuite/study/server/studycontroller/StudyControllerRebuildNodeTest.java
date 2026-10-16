@@ -6,15 +6,16 @@
  */
 package org.gridsuite.study.server.studycontroller;
 
-import org.gridsuite.study.server.dto.ModificationsToCopyInfos;
-import org.gridsuite.study.server.service.RebuildNodeService;
-import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.controller.StudyController;
-import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
+import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
+import org.gridsuite.study.server.service.NetworkModificationService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.RebuildNodeService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,11 +29,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 /**
- * @author Kevin Le Saulnier <kevin.lesaulnier@rte-france.com>
+ * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 @SpringBootTest
 @DisableElasticsearch
@@ -47,6 +51,14 @@ class StudyControllerRebuildNodeTest {
 
     @MockitoBean
     NetworkModificationTreeService networkModificationTreeService;
+
+    // RebuildNodeService now looks up each modification's real parent composite before delegating
+    // to studyService; mock it here too so this delegation-only test doesn't hit the real HTTP client
+    @MockitoBean
+    private NetworkModificationService networkModificationService;
+
+    @MockitoBean
+    private NodeActivityRunnerService nodeActivityService;
 
     @Autowired
     private StudyController studyController;
@@ -64,6 +76,9 @@ class StudyControllerRebuildNodeTest {
 
         doAnswer(invocation -> List.of(nodeUuid)).when(networkModificationTreeService).getHighestNodeUuids(any(), any());
         doAnswer(invocation -> false).when(networkModificationTreeService).isRootOrConstructionNode(any());
+        doAnswer(invocation -> Map.of()).when(networkModificationService).findParentComposites(any());
+
+        TestUtils.bypassNodeActivities(nodeActivityService);
     }
 
     @Test
@@ -75,21 +90,13 @@ class StudyControllerRebuildNodeTest {
     }
 
     @Test
-    void testMoveNetworkModification() {
-        studyController.moveModification(studyUuid, nodeUuid, modificationUuid, null, userId);
-
-        verify(rebuildNodeService, times(1)).moveNetworkModification(eq(studyUuid), eq(nodeUuid), eq(modificationUuid), isNull(), eq(userId));
-        verify(studyService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
-    }
-
-    @Test
     void testMoveNetworkModifications() {
-        List<ModificationsToCopyInfos> modifications = List.of(ModificationsToCopyInfos.builder().uuid(UUID.randomUUID()).build());
         UUID originNodeUuid = UUID.randomUUID();
-        studyController.moveOrCopyModifications(studyUuid, nodeUuid, StudyConstants.ModificationsActionType.MOVE, studyUuid, originNodeUuid, modifications, userId);
+        List<ModificationMoveInfos> modificationMoveInfos = List.of(new ModificationMoveInfos(UUID.randomUUID(), null, null, null));
 
-        List<UUID> modificationUuids = modifications.stream().map(ModificationsToCopyInfos::getUuid).toList();
-        verify(rebuildNodeService, times(1)).moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationUuids, userId);
+        studyController.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationMoveInfos, userId);
+
+        verify(rebuildNodeService, times(1)).moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationMoveInfos, userId);
         verify(studyService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
     }
 
@@ -123,7 +130,7 @@ class StudyControllerRebuildNodeTest {
     @Test
     void updateNetworkModificationMetadata() {
         List<UUID> modificationUuids = List.of(UUID.randomUUID());
-        NetworkModificationMetadata networkModificationMetadata = new NetworkModificationMetadata(true, "description", "type");
+        NetworkModificationMetadata networkModificationMetadata = new NetworkModificationMetadata(true, "description", "type", null);
         studyController.updateNetworkModificationsMetadata(studyUuid, nodeUuid, modificationUuids, networkModificationMetadata, userId);
 
         verify(rebuildNodeService, times(1)).updateNetworkModificationsMetadata(studyUuid, nodeUuid, modificationUuids, userId, networkModificationMetadata);
@@ -131,11 +138,11 @@ class StudyControllerRebuildNodeTest {
     }
 
     @Test
-    void testUpdateNetworkModificationActivationByRootNetwork() {
+    void testUpdateNetworkModificationApplicabilityByRootNetwork() {
         Set<UUID> modificationUuids = Set.of(UUID.randomUUID());
-        studyController.updateNetworkModificationsActivation(studyUuid, rootNetworkUuid, nodeUuid, modificationUuids, true, userId);
+        studyController.updateNetworkModificationsApplicability(studyUuid, rootNetworkUuid, nodeUuid, modificationUuids, true, userId);
 
-        verify(rebuildNodeService, times(1)).updateNetworkModificationsActivation(studyUuid, nodeUuid, rootNetworkUuid, modificationUuids, userId, true);
+        verify(rebuildNodeService, times(1)).updateNetworkModificationsApplicability(studyUuid, nodeUuid, rootNetworkUuid, modificationUuids, userId, true);
         verify(studyService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
     }
 }

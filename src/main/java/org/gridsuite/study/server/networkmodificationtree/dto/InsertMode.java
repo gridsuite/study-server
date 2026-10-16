@@ -8,10 +8,14 @@
 package org.gridsuite.study.server.networkmodificationtree.dto;
 
 /**
- * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
+ * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
  */
 public enum InsertMode {
     BEFORE,
     AFTER,
     CHILD;
+
+    public boolean isChild() {
+        return this == CHILD;
+    }
 }

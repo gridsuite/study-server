@@ -6,6 +6,8 @@
  */
 package org.gridsuite.study.server;
 
+import org.gridsuite.study.server.dto.QuotaState;
+import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.dto.sequence.SecuritySequence;
 import org.gridsuite.study.server.error.StudyException;
@@ -34,7 +36,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import java.util.Optional;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -42,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 /**
- * @author Kevin Le Saulnier <kevin.le-saulnier at rte-france.com
+ * @author Kevin Le Saulnier <kevin.le-saulnier at rte-france.com>
  */
 @SpringBootTest
 @DisableElasticsearch
@@ -83,7 +85,7 @@ class NodeSequenceTest {
         studyEntity = studyRepository.save(study);
         studyUuid = studyEntity.getId();
 
-        doReturn(Optional.of(10)).when(userAdminService).getUserMaxAllowedBuilds(userId);
+        doReturn(Map.of(QuotaType.BUILD, new QuotaState(0, 10))).when(userAdminService).getUserQuotaState(userId);
     }
 
     @Test
@@ -97,7 +99,7 @@ class NodeSequenceTest {
         AbstractNode nNode = parentOfSubtree.getChildren().getFirst();
         checkSecuritySequence(nNode, "");
 
-       // verify notifications
+        // verify notifications
         verify(notificationService, times(1)).emitSubtreeInserted(studyUuid, nNode.getId(), parentOfSubtree.getId());
         verify(notificationService, times(1)).emitElementUpdated(studyUuid, userId);
 
@@ -151,7 +153,8 @@ class NodeSequenceTest {
     }
 
     NetworkModificationNode createNode(UUID parentNodeUuid, String name, NetworkModificationNodeType networkModificationNodeType) {
-        return networkModificationTreeService.createNode(studyEntity, parentNodeUuid, NetworkModificationNode.builder().name(name).nodeType(networkModificationNodeType).build(), InsertMode.CHILD, userId);
+        return networkModificationTreeService.createNode(studyEntity, parentNodeUuid, NetworkModificationNode.builder().name(name).nodeType(networkModificationNodeType).build(), InsertMode.CHILD,
+                userId);
     }
 
     void checkSecuritySequence(AbstractNode nNode, String nameSuffix) {

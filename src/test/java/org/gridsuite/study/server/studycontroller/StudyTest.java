@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, RTE (http://www.rte-france.com)
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -24,9 +24,12 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.service.DirectoryService;
 import org.gridsuite.study.server.service.StudyServerExecutionService;
+import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.utils.MatcherReport;
+import org.gridsuite.study.server.utils.TestUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.data.util.Pair;
@@ -47,9 +50,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyConstants.HEADER_ERROR;
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-import static org.gridsuite.study.server.notification.NotificationService.*;
+import static org.gridsuite.study.server.notification.NotificationService.DEFAULT_ERROR_MESSAGE;
+import static org.gridsuite.study.server.notification.NotificationService.HEADER_EXPORT_UUID;
 import static org.gridsuite.study.server.utils.JsonUtils.getModificationContextJsonString;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
@@ -66,6 +68,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class StudyTest extends StudyTestBase {
 
+    @Autowired
+    StudyService studyService;
+
     @Test
     void test() throws Exception {
         MvcResult result;
@@ -73,8 +78,9 @@ class StudyTest extends StudyTestBase {
         String userId = "userId";
 
         //empty list
-        mockMvc.perform(get("/v1/studies").header(USER_ID_HEADER, "userId")).andExpectAll(status().isOk(),
-            content().contentType(MediaType.APPLICATION_JSON), content().string("[]"));
+        List<CreatedStudyBasicInfos> createdStudyBasicInfosList = studyService.getStudies();
+
+        assertTrue(createdStudyBasicInfosList.isEmpty());
 
         //empty list
         mockMvc.perform(get("/v1/study_creation_requests").header(USER_ID_HEADER, "userId")).andExpectAll(status().isOk(),
@@ -103,11 +109,7 @@ class StudyTest extends StudyTestBase {
 
         wireMockStubs.caseServer.verifyCaseExists(stubCaseNotExistsId, NOT_EXISTING_CASE_UUID);
 
-        result = mockMvc.perform(get("/v1/studies").header(USER_ID_HEADER, "userId"))
-            .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
-
-        resultAsString = result.getResponse().getContentAsString();
-        List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
+        createdStudyBasicInfosList = studyService.getStudies();
 
         assertThat(createdStudyBasicInfosList.get(0), createMatcherCreatedStudyBasicInfos(studyUuid));
 
@@ -115,10 +117,7 @@ class StudyTest extends StudyTestBase {
         //even with the same name should work
         studyUuid = createStudyWithStubs("userId2", CASE_UUID);
 
-        resultAsString = mockMvc.perform(get("/v1/studies").header("userId", "userId2"))
-            .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn().getResponse().getContentAsString();
-
-        createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
+        createdStudyBasicInfosList = studyService.getStudies();
 
         assertThat(createdStudyBasicInfosList.get(1),
             createMatcherCreatedStudyBasicInfos(studyUuid));
@@ -136,11 +135,7 @@ class StudyTest extends StudyTestBase {
 
         // expect only 1 study (public one) since the other is private and we use
         // another userId
-        result = mockMvc.perform(get("/v1/studies").header("userId", "a"))
-            .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
-
-        resultAsString = result.getResponse().getContentAsString();
-        createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
+        createdStudyBasicInfosList = studyService.getStudies();
         assertEquals(2, createdStudyBasicInfosList.size());
 
         //get available export format
@@ -155,22 +150,28 @@ class StudyTest extends StudyTestBase {
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName",
             studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isOk());
-
         wireMockStubs.networkConversionServer.verifyNetworkExport(stubNetworkExportId, NETWORK_UUID_STRING, "XIIDM",
             Map.of("fileName", WireMock.equalTo("myFileName")));
 
         stubNetworkExportId = wireMockStubs.networkConversionServer.stubNetworkExport(NETWORK_UUID_STRING, "XIIDM", UUID.randomUUID().toString());
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?compression=GZIP&fileName=myFileName",
+            studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isOk());
+        wireMockStubs.networkConversionServer.verifyNetworkExport(stubNetworkExportId, NETWORK_UUID_STRING, "XIIDM",
+            Map.of("compression", WireMock.equalTo(CompressionType.GZIP.name()), "fileName", WireMock.equalTo("myFileName")));
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName&formatParameters=%7B%22iidm.export.xml.indent%22%3Afalse%7D", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM")
+        stubNetworkExportId = wireMockStubs.networkConversionServer.stubNetworkExport(NETWORK_UUID_STRING, "XIIDM", UUID.randomUUID().toString());
+        mockMvc.perform(
+                post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName&formatParameters=%7B%22iidm.export.xml.indent%22%3Afalse%7D",
+                        studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM")
             .header(HEADER_USER_ID, userId)).andExpect(status().isOk());
-
         wireMockStubs.networkConversionServer.verifyNetworkExport(stubNetworkExportId, NETWORK_UUID_STRING, "XIIDM",
             Map.of("fileName", WireMock.equalTo("myFileName")));
 
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 3", userId);
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, "XIIDM")
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName", studyNameUserIdUuid, firstRootNetworkUuid,
+                modificationNode1Uuid, "XIIDM")
             .header(HEADER_USER_ID, userId)).andExpect(status().isInternalServerError());
 
         rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode1.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid),
@@ -222,7 +223,7 @@ class StudyTest extends StudyTestBase {
         headers.put(HEADER_ERROR, errorMessage);
         Message<String> message = new GenericMessage<>("", headers);
         consumeService.consumeNetworkExportFinished(message);
-        var mess = output.receive(TIMEOUT, studyUpdateDestination);
+        var mess = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertNotNull(mess);
         assertEquals(EXPORT_UUID, mess.getHeaders().get(HEADER_EXPORT_UUID));
     }
@@ -245,15 +246,17 @@ class StudyTest extends StudyTestBase {
         UUID stubUuid = wireMockStubs.stubNetworkModificationDeleteGroup();
         UUID stubDeleteCaseId = wireMockStubs.caseServer.stubDeleteCase(CASE_UUID_STRING);
         DeleteStudyStubs deleteStudyStubs = setupDeleteStudyStubs();
+        UUID stubReferencesUuid = wireMockStubs.stubGetAllReferencesDataFromGroup();
 
         mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
 
         assertTrue(studyRepository.findById(studyUuid).isEmpty());
 
-        wireMockStubs.verifyNetworkModificationDeleteGroup(stubUuid, false);
+        wireMockStubs.verifyGetReferencesDataFromGroup(stubReferencesUuid);
+        wireMockStubs.verifyNetworkModificationDeleteGroup(stubUuid);
         wireMockStubs.caseServer.verifyDeleteCase(stubDeleteCaseId, CASE_UUID_STRING);
-        deleteStudyStubs.verify(wireMockStubs, computationServerStubs, 8); // voltageInit, loadFlow, securityAnalysis, sensitivityAnalysis, stateEstimation, pccMin, dynamic, shortCircuit
+        deleteStudyStubs.verify(wireMockStubs, computationServerStubs, 10); // voltageInit, loadFlow, securityAnalysis, sensitivityAnalysis, stateEstimation, pccMin, dynamic, shortCircuit
     }
 
     @Test
@@ -279,13 +282,15 @@ class StudyTest extends StudyTestBase {
         }).when(caseService).deleteCase(any());
         UUID stubUuid = wireMockStubs.stubNetworkModificationDeleteGroup();
         DeleteStudyStubs deleteStudyStubs = setupDeleteStudyStubs();
+        UUID stubReferencesUuid = wireMockStubs.stubGetAllReferencesDataFromGroup();
 
         mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
             .andExpectAll(status().isOk());
         assertTrue(capturedOutput.getOut().contains(StudyServerExecutionService.class.getName() + " - " + CompletionException.class.getName() + ": " + InterruptedException.class.getName()));
 
-        wireMockStubs.verifyNetworkModificationDeleteGroup(stubUuid, false);
-        deleteStudyStubs.verify(wireMockStubs, computationServerStubs, 1); // loadflow, security, sensitivity, stateEstimation, shortCircuit, pccMin
+        wireMockStubs.verifyGetReferencesDataFromGroup(stubReferencesUuid);
+        wireMockStubs.verifyNetworkModificationDeleteGroup(stubUuid);
+        deleteStudyStubs.verify(wireMockStubs, computationServerStubs, 3); // loadflow, security, sensitivity, stateEstimation, shortCircuit, pccMin
     }
 
     @Test
@@ -294,6 +299,7 @@ class StudyTest extends StudyTestBase {
         UUID nonExistingCaseUuid = UUID.randomUUID();
 
         UUID stubUuid = wireMockStubs.stubNetworkModificationDeleteGroup();
+        UUID stubReferencesUuid = wireMockStubs.stubGetAllReferencesDataFromGroup();
 
         // Changing the study case uuid with a non-existing case
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
@@ -310,9 +316,10 @@ class StudyTest extends StudyTestBase {
 
         assertTrue(studyRepository.findById(studyUuid).isEmpty());
 
-        wireMockStubs.verifyNetworkModificationDeleteGroup(stubUuid, false);
+        wireMockStubs.verifyGetReferencesDataFromGroup(stubReferencesUuid);
+        wireMockStubs.verifyNetworkModificationDeleteGroup(stubUuid);
         wireMockStubs.caseServer.verifyDeleteCase(stubDeleteCaseId, nonExistingCaseUuid.toString());
-        deleteStudyStubs.verify(wireMockStubs, computationServerStubs, 8);
+        deleteStudyStubs.verify(wireMockStubs, computationServerStubs, 10);
     }
 
     @Test
@@ -363,10 +370,10 @@ class StudyTest extends StudyTestBase {
         studyUuid = createStudyWithStubs("userId2", CASE_UUID);
 
         MvcResult mvcResult = mockMvc
-            .perform(get("/v1/studies/metadata?ids="
-                + Stream.of(oldStudyUuid, studyUuid).map(Object::toString).collect(Collectors.joining(",")))
-                .header(USER_ID_HEADER, "userId"))
-            .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
+                .perform(get("/v1/studies/metadata?ids="
+                        + Stream.of(oldStudyUuid, studyUuid).map(Object::toString).collect(Collectors.joining(",")))
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
         List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
 
@@ -376,9 +383,9 @@ class StudyTest extends StudyTestBase {
             Collections.reverse(createdStudyBasicInfosList);
         }
         assertTrue(createMatcherCreatedStudyBasicInfos(oldStudyUuid)
-            .matchesSafely(createdStudyBasicInfosList.get(0)));
+                .matchesSafely(createdStudyBasicInfosList.get(0)));
         assertTrue(createMatcherCreatedStudyBasicInfos(studyUuid)
-            .matchesSafely(createdStudyBasicInfosList.get(1)));
+                .matchesSafely(createdStudyBasicInfosList.get(1)));
     }
 
     @Test
@@ -400,7 +407,8 @@ class StudyTest extends StudyTestBase {
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .withBody(mapper.writeValueAsString(REPORT_TEST))));
 
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/parent-nodes-report?reportType=NETWORK_MODIFICATION", studyUuid, firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/parent-nodes-report?reportType=NETWORK_MODIFICATION", studyUuid,
+                firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk()).andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
         List<Report> reports = mapper.readValue(resultAsString, new TypeReference<>() { });
@@ -417,12 +425,14 @@ class StudyTest extends StudyTestBase {
 
         wireMockStubs.stubGetReportsLogs(mapper.writeValueAsString(REPORT_PAGE));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs/search?reportId=" + REPORT_ID + "&searchTerm=testTerm&pageSize=10", studyUuid, firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs/search?reportId=" + REPORT_ID + "&searchTerm=testTerm&pageSize=10", studyUuid,
+                firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         wireMockStubs.verifyGetReportLogsSearchWithReportId(REPORT_ID.toString(), "testTerm", 10);
 
         //test with severityFilter and messageFilter param
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs/search?reportId=" + REPORT_ID + "&searchTerm=testTerm&pageSize=10&severityLevels=WARN&message=testMsgFilter", studyUuid, firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs/search?reportId=" + REPORT_ID
+                + "&searchTerm=testTerm&pageSize=10&severityLevels=WARN&message=testMsgFilter", studyUuid, firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         wireMockStubs.verifyGetReportLogsSearchWithReportId(REPORT_ID.toString(), "testTerm", 10, "WARN", "testMsgFilter");
     }
@@ -456,7 +466,7 @@ class StudyTest extends StudyTestBase {
         // note: it's a new case UUID
         wireMockStubs.networkConversionServer.verifyImportNetwork(postNetworkStubId, CLONED_CASE_UUID_STRING, FIRST_VARIANT_ID);
         createStudyStubs.verify(wireMockStubs);
-        verifyCreateParameters(1, 7, 1, 1, 1);
+        verifyCreateParameters(1, 9, 1, 1, 1);
         wireMockStubs.caseServer.verifyDuplicateCase(stubDuplicateCaseId, caseUuid.toString());
         wireMockStubs.caseServer.verifyDisableCaseExpiration(stubDisableCaseExpirationClonedId, CLONED_CASE_UUID_STRING);
         return studyUuid;
@@ -478,16 +488,22 @@ class StudyTest extends StudyTestBase {
         mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_IMPORT_ERROR)
                 .header("userId", userId)
                 .param(CASE_FORMAT, "UCTE"))
-            .andExpect(status().isInternalServerError());
+            .andExpect(status().isOk());
 
         countDownLatch.await();
 
         // assert that the broker message has been sent a study creation request message
-        Message<byte[]> message = output.receive(TIMEOUT, "study.update");
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, "study.update");
 
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_STARTED, headers.get(HEADER_UPDATE_TYPE));
+
+        message = TestUtils.receiveStudyUpdate(output, "study.update");
+
+        headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_FINISHED, headers.get(HEADER_UPDATE_TYPE));
 
         MvcResult mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header(USER_ID_HEADER, "userId")).andExpectAll(
                 status().isOk(),
@@ -518,16 +534,16 @@ class StudyTest extends StudyTestBase {
         countDownLatch.await();
 
         // assert that the broker message has been sent a study creation request message
-        Message<byte[]> message = output.receive(TIMEOUT, "study.update");
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, "study.update");
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_STARTED, headers.get(HEADER_UPDATE_TYPE));
 
         // checks that the error message has a default value set
-        message = output.receive(TIMEOUT, "study.update");
+        message = TestUtils.receiveStudyUpdate(output, "study.update");
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_FINISHED, headers.get(HEADER_UPDATE_TYPE));
         assertEquals(DEFAULT_ERROR_MESSAGE, headers.get(NotificationService.HEADER_ERROR));
 
         wireMockStubs.caseServer.verifyCaseExists(stubCaseExistsId, CASE_UUID_CAUSING_CONVERSION_ERROR);
@@ -538,7 +554,8 @@ class StudyTest extends StudyTestBase {
     void testCreateStudyWithErrorDuringStudyCreation() throws Exception {
         String userId = "userId";
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        UUID stubPostNetworkConversionErrorId = wireMockStubs.networkConversionServer.stubImportNetworkWithError(CASE_UUID_CAUSING_STUDY_CREATION_ERROR, FIRST_VARIANT_ID, STUDY_CREATION_ERROR_MESSAGE, countDownLatch);
+        UUID stubPostNetworkConversionErrorId = wireMockStubs.networkConversionServer.stubImportNetworkWithError(CASE_UUID_CAUSING_STUDY_CREATION_ERROR, FIRST_VARIANT_ID, STUDY_CREATION_ERROR_MESSAGE,
+                countDownLatch);
         UUID stubCaseExistsId = wireMockStubs.caseServer.stubCaseExists(CASE_UUID_CAUSING_STUDY_CREATION_ERROR, true);
 
         mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_STUDY_CREATION_ERROR)
@@ -549,16 +566,16 @@ class StudyTest extends StudyTestBase {
         countDownLatch.await();
 
         // assert that the broker message has been sent a study creation request message
-        Message<byte[]> message = output.receive(TIMEOUT, "study.update");
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, "study.update");
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_STARTED, headers.get(HEADER_UPDATE_TYPE));
 
         // study error message
-        message = output.receive(TIMEOUT, "study.update");
+        message = TestUtils.receiveStudyUpdate(output, "study.update");
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_FINISHED, headers.get(HEADER_UPDATE_TYPE));
         assertEquals(STUDY_CREATION_ERROR_MESSAGE, headers.get(NotificationService.HEADER_ERROR));
 
         wireMockStubs.caseServer.verifyCaseExists(stubCaseExistsId, CASE_UUID_CAUSING_STUDY_CREATION_ERROR);
@@ -590,13 +607,13 @@ class StudyTest extends StudyTestBase {
         countDownLatch.countDown();
 
         // drop the broker message for study creation request (creation)
-        output.receive(TIMEOUT, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         // drop the broker message for study creation
-        output.receive(TIMEOUT * 3, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination, TIMEOUT * 3);
         // drop the broker message for node creation
-        output.receive(TIMEOUT, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         // drop the broker message for study creation request (deletion)
-        output.receive(TIMEOUT, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
 
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header(USER_ID_HEADER, "userId")).andExpectAll(
                 status().isOk(),
@@ -608,13 +625,9 @@ class StudyTest extends StudyTestBase {
 
         assertEquals(List.of(), bsiListResult);
 
-        mvcResult = mockMvc.perform(get("/v1/studies").header(USER_ID_HEADER, "userId")).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON))
-            .andReturn();
+        List<CreatedStudyBasicInfos> csbiListResponse = studyService.getStudies();
 
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        List<CreatedStudyBasicInfos> csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });
+        assertTrue(csbiListResponse.isEmpty());
 
         countDownLatch = new CountDownLatch(1);
 
@@ -642,13 +655,13 @@ class StudyTest extends StudyTestBase {
         countDownLatch.countDown();
 
         // drop the broker message for study creation request (creation)
-        output.receive(TIMEOUT, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         // drop the broker message for study creation
-        output.receive(TIMEOUT * 3);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination, TIMEOUT * 3);
         // drop the broker message for node creation
-        output.receive(TIMEOUT, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         // drop the broker message for study creation request (deletion)
-        output.receive(TIMEOUT, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
 
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests")
                 .header(USER_ID_HEADER, "userId")).andExpectAll(
@@ -661,23 +674,19 @@ class StudyTest extends StudyTestBase {
 
         assertEquals(List.of(), bsiListResult);
 
-        mvcResult = mockMvc.perform(get("/v1/studies")
-                .header(USER_ID_HEADER, "userId")).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON))
-            .andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });
+        csbiListResponse = studyService.getStudies();
+
+        assertFalse(csbiListResponse.isEmpty());
 
         // Verify HTTP requests were sent to remote services
         createStudyStubs.verify(wireMockStubs);
-        verifyCreateParameters(1, 7, 1, 1, 1);
+        verifyCreateParameters(1, 9, 1, 1, 1);
         wireMockStubs.caseServer.verifyDisableCaseExpiration(stubDisableCaseExpirationId, NEW_STUDY_CASE_UUID);
         wireMockStubs.networkConversionServer.verifyImportNetwork(postNetworkStubId, NEW_STUDY_CASE_UUID, FIRST_VARIANT_ID);
     }
 
     private void checkNodeAliasUpdateMessageReceived(UUID studyUuid) {
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
@@ -686,7 +695,7 @@ class StudyTest extends StudyTestBase {
 
     private void checkStudyMetadataUpdatedMessagesReceived() {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_METADATA_UPDATED, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
@@ -700,7 +709,7 @@ class StudyTest extends StudyTestBase {
         createStudy(NO_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         createStudyStubs.verify(wireMockStubs);
-        verifyCreateParameters(1, 7, 1, 1, 1);
+        verifyCreateParameters(1, 9, 1, 1, 1);
     }
 
     @Test
@@ -714,7 +723,7 @@ class StudyTest extends StudyTestBase {
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        verifyCreateParameters(0, 4, 0, 0, 1);
+        verifyCreateParameters(0, 6, 0, 0, 1);
         wireMockStubs.computationServer.verifyParametersDuplicateFrom(PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, computationServerStubs, 4, 1, 1, 0);
     }
@@ -730,7 +739,7 @@ class StudyTest extends StudyTestBase {
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        verifyCreateParameters(0, 3, 0, 0, 1);
+        verifyCreateParameters(0, 5, 0, 0, 1);
         wireMockStubs.computationServer.verifyParametersDuplicateFrom(PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, computationServerStubs, 4, 1, 1, 0);
     }
@@ -746,7 +755,7 @@ class StudyTest extends StudyTestBase {
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        verifyCreateParameters(0, 4, 0, 0, 1);
+        verifyCreateParameters(0, 6, 0, 0, 1);
         wireMockStubs.computationServer.verifyParametersDuplicateFrom(PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, computationServerStubs, 4, 1, 1, 0);
     }
@@ -762,7 +771,7 @@ class StudyTest extends StudyTestBase {
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        verifyCreateParameters(0, 3, 0, 0, 1);
+        verifyCreateParameters(0, 5, 0, 0, 1);
         wireMockStubs.computationServer.verifyParametersDuplicateFrom(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, computationServerStubs, 4, 1, 1, 0);
     }
@@ -778,7 +787,7 @@ class StudyTest extends StudyTestBase {
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        verifyCreateParameters(0, 4, 0, 0, 1);
+        verifyCreateParameters(0, 6, 0, 0, 1);
         wireMockStubs.computationServer.verifyParametersDuplicateFrom(PROFILE_SENSITIVITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, computationServerStubs, 4, 1, 1, 0);
     }
@@ -794,7 +803,7 @@ class StudyTest extends StudyTestBase {
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        verifyCreateParameters(0, 3, 0, 0, 1);
+        verifyCreateParameters(0, 5, 0, 0, 1);
         wireMockStubs.computationServer.verifyParametersDuplicateFrom(PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, computationServerStubs, 4, 1, 1, 0);
     }
@@ -810,7 +819,7 @@ class StudyTest extends StudyTestBase {
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        verifyCreateParameters(0, 4, 0, 0, 1);
+        verifyCreateParameters(0, 6, 0, 0, 1);
         wireMockStubs.computationServer.verifyParametersDuplicateFrom(PROFILE_SHORTCIRCUIT_INVALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, computationServerStubs, 4, 1, 1, 0);
     }
@@ -826,7 +835,7 @@ class StudyTest extends StudyTestBase {
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        verifyCreateParameters(0, 3, 0, 0, 1);
+        verifyCreateParameters(0, 5, 0, 0, 1);
         wireMockStubs.computationServer.verifyParametersDuplicateFrom(PROFILE_SHORTCIRCUIT_VALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, computationServerStubs, 4, 1, 1, 0);
     }
@@ -842,7 +851,7 @@ class StudyTest extends StudyTestBase {
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        verifyCreateParameters(0, 3, 1, 0, 1);
+        verifyCreateParameters(0, 5, 1, 0, 1);
         wireMockStubs.verifySpreadsheetConfigDuplicateFrom(stubSpreadsheetConfigDuplicateFromNotFoundId, PROFILE_SPREADSHEET_CONFIG_COLLECTION_INVALID_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, computationServerStubs, 5, 0, 1, 0);
     }
@@ -852,13 +861,14 @@ class StudyTest extends StudyTestBase {
         CreateStudyStubs createStudyStubs = setupCreateStudyStubs(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
         setupCreateParametersStubs();
         DuplicateParameterStubs duplicateParameterStubs = setupDuplicateParametersStubs();
-        UUID stubSpreadsheetConfigDuplicateFromId = wireMockStubs.stubSpreadsheetConfigDuplicateFrom(PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING, DUPLICATED_SPREADSHEET_CONFIG_COLLECTION_UUID_JSON);
+        UUID stubSpreadsheetConfigDuplicateFromId = wireMockStubs.stubSpreadsheetConfigDuplicateFrom(PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING,
+                DUPLICATED_SPREADSHEET_CONFIG_COLLECTION_UUID_JSON);
 
         createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        verifyCreateParameters(0, 3, 0, 0, 1);
+        verifyCreateParameters(0, 5, 0, 0, 1);
         wireMockStubs.verifySpreadsheetConfigDuplicateFrom(stubSpreadsheetConfigDuplicateFromId, PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, computationServerStubs, 5, 0, 1, 0);
     }
@@ -874,7 +884,7 @@ class StudyTest extends StudyTestBase {
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        verifyCreateParameters(0, 3, 0, 1, 1);
+        verifyCreateParameters(0, 5, 0, 1, 1);
         wireMockStubs.verifyNetworkVisualizationParamsDuplicateFrom(stubNetworkVisualizationParamsDuplicateFromNotFoundId, PROFILE_NETWORK_VISUALIZATION_INVALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, computationServerStubs, 5, 1, 0, 0);
     }
@@ -884,13 +894,14 @@ class StudyTest extends StudyTestBase {
         CreateStudyStubs createStudyStubs = setupCreateStudyStubs(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
         setupCreateParametersStubs();
         DuplicateParameterStubs duplicateParameterStubs = setupDuplicateParametersStubs();
-        UUID stubNetworkVisualizationParamsDuplicateFromId = wireMockStubs.stubNetworkVisualizationParamsDuplicateFrom(PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING, DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
+        UUID stubNetworkVisualizationParamsDuplicateFromId = wireMockStubs.stubNetworkVisualizationParamsDuplicateFrom(PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING,
+                DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
 
         createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        verifyCreateParameters(0, 3, 0, 0, 1);
+        verifyCreateParameters(0, 5, 0, 0, 1);
         wireMockStubs.verifyNetworkVisualizationParamsDuplicateFrom(stubNetworkVisualizationParamsDuplicateFromId, PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, computationServerStubs, 5, 1, 0, 0);
     }
@@ -906,7 +917,7 @@ class StudyTest extends StudyTestBase {
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        verifyCreateParameters(1, 3, 0, 0, 1);
+        verifyCreateParameters(1, 5, 0, 0, 1);
         wireMockStubs.computationServer.verifyParametersDuplicateFrom(PROFILE_VOLTAGE_INIT_INVALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, computationServerStubs, 4, 1, 1, 0);
     }
@@ -922,7 +933,7 @@ class StudyTest extends StudyTestBase {
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        verifyCreateParameters(0, 3, 0, 0, 1);
+        verifyCreateParameters(0, 5, 0, 0, 1);
         wireMockStubs.computationServer.verifyParametersDuplicateFrom(PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, computationServerStubs, 4, 1, 1, 0);
     }
@@ -934,7 +945,10 @@ class StudyTest extends StudyTestBase {
         NetworkModificationNode node2 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID_2, "node2", userId);
 
         // add modification on node "node1"
-        String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
+        String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION
+                + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\","
+                        + "\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\","
+                                + "\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
 
         wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId(), rootNetworkUuid)
@@ -943,14 +957,16 @@ class StudyTest extends StudyTestBase {
                 .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
-        checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
-        Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkUuid, node1.getId(), NETWORK_UUID)));
+        Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes,
+                List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkUuid, node1.getId(), NETWORK_UUID)));
         wireMockStubs.verifyNetworkModificationPostWithVariant(getModificationContextJsonString(mapper, modificationBody));
 
         // add modification on node "node2"
-        String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
+        String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION
+                + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\","
+                        + "\"busId\":\"idBus1\"}";
 
         wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId(), rootNetworkUuid)
@@ -959,7 +975,6 @@ class StudyTest extends StudyTestBase {
                 .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
         checkUpdateStatusMessagesReceived(study1Uuid, node2.getId(), output);
-        checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         modificationBody = Pair.of(createLoadAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkUuid, node2.getId(), NETWORK_UUID)));
@@ -988,12 +1003,16 @@ class StudyTest extends StudyTestBase {
         mockMvc.perform(post("/v1/studies/{studyUuid}/node-aliases", study1Uuid)
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectWriter.writeValueAsString(aliases))
+            .header(USER_ID_HEADER, userId)
         ).andExpect(status().isOk());
         checkNodeAliasUpdateMessageReceived(study1Uuid);
+        checkElementUpdatedMessageSent(study1Uuid, userId);
 
         // duplicate the study
         StudyEntity duplicatedStudy = duplicateStudy(study1Uuid, userId);
         assertNotEquals(study1Uuid, duplicatedStudy.getId());
+        StudyEntity originalStudy = studyRepository.findById(study1Uuid).orElseThrow();
+        assertEquals(originalStudy.isMonoRoot(), duplicatedStudy.isMonoRoot());
 
         // Verify node aliases on the duplicated study
         aliases = mapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/node-aliases", duplicatedStudy.getId())).andExpect(status().isOk()).andReturn()
@@ -1014,7 +1033,7 @@ class StudyTest extends StudyTestBase {
         assertEquals(1, networkVariants.size(), "Network should be cloned with only one variant");
 
         //Test duplication from a non-existing source study
-        mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", UUID.randomUUID())
+        mockMvc.perform(post(STUDIES_URL + "/{studyUuid}/duplicate", UUID.randomUUID())
                 .header(USER_ID_HEADER, userId))
             .andExpect(status().isNotFound());
     }
@@ -1026,6 +1045,9 @@ class StudyTest extends StudyTestBase {
         StudyEntity studyEntity = studyRepository.findById(study1Uuid).orElseThrow();
         studyEntity.setLoadFlowParametersUuid(UUID.randomUUID());
         studyEntity.setSecurityAnalysisParametersUuid(UUID.randomUUID());
+        studyEntity.setDynamicSimulationParametersUuid(UUID.randomUUID());
+        studyEntity.setDynamicSecurityAnalysisParametersUuid(UUID.randomUUID());
+        studyEntity.setDynamicMarginCalculationParametersUuid(UUID.randomUUID());
         studyEntity.setVoltageInitParametersUuid(UUID.randomUUID());
         studyEntity.setSensitivityAnalysisParametersUuid(UUID.randomUUID());
         studyEntity.setStateEstimationParametersUuid(UUID.randomUUID());
@@ -1044,6 +1066,9 @@ class StudyTest extends StudyTestBase {
         StudyEntity studyEntity = studyRepository.findById(study1Uuid).orElseThrow();
         studyEntity.setLoadFlowParametersUuid(null);
         studyEntity.setSecurityAnalysisParametersUuid(null);
+        studyEntity.setDynamicSimulationParametersUuid(null);
+        studyEntity.setDynamicSecurityAnalysisParametersUuid(null);
+        studyEntity.setDynamicMarginCalculationParametersUuid(null);
         studyEntity.setVoltageInitParametersUuid(null);
         studyEntity.setSensitivityAnalysisParametersUuid(null);
         studyEntity.setStateEstimationParametersUuid(null);
@@ -1070,18 +1095,18 @@ class StudyTest extends StudyTestBase {
             throw new RuntimeException();
         }).when(caseService).duplicateCase(any(), any());
 
-        String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
+        String response = mockMvc.perform(post(STUDIES_URL + "/{studyUuid}/duplicate", studyUuid)
                 .param(CASE_FORMAT, "XIIDM")
                 .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 
         String duplicatedStudyUuid = mapper.readValue(response, String.class);
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(TestUtils.receiveStudyUpdate(output, studyUpdateDestination));
 
         assertTrue(studyRepository.findById(UUID.fromString(duplicatedStudyUuid)).isEmpty());
 
         //now case are duplicated after parameters, case import error does not prevent parameters from being duplicated
-        computationServerStubs.verifyParametersDuplicateFromAny(stubParametersDuplicateFromId, 7);
+        computationServerStubs.verifyParametersDuplicateFromAny(stubParametersDuplicateFromId, 10);
         wireMockStubs.verifyNetworkVisualizationParamsDuplicateFrom(stubNetworkVisualizationParamsDuplicateFromId, studyEntity.getNetworkVisualizationParametersUuid().toString());
         wireMockStubs.verifySpreadsheetConfigDuplicateFrom(stubSpreadsheetConfigDuplicateFromId, studyEntity.getSpreadsheetConfigCollectionUuid().toString());
         wireMockStubs.verifyWorkspacesConfigDuplicateFromAny(stubWorkspacesConfigDuplicateFromId, 1);
@@ -1094,7 +1119,7 @@ class StudyTest extends StudyTestBase {
             .whenScenarioStateIs(Scenario.STARTED)
             .willSetStateTo("indexed")
             .willReturn(WireMock.ok())).getId();
-        UUID stubUuid = wireMockStubs.stubDuplicateModificationGroup(mapper.writeValueAsString(Map.of()));
+        UUID stubUuid = wireMockStubs.stubDuplicateModificationGroup();
         UUID stubDuplicateCaseId = wireMockStubs.caseServer.stubDuplicateCaseWithBody(CASE_UUID_STRING, mapper.writeValueAsString(CLONED_CASE_UUID));
         UUID stubReportsDuplicateId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/reports/.*/duplicate"))
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -1105,18 +1130,18 @@ class StudyTest extends StudyTestBase {
         UUID stubNetworkVisualizationParamsDuplicateFromId = wireMockStubs.stubNetworkVisualizationParamsDuplicateFromAny(DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
         UUID stubWorkspacesConfigDuplicateFromId = wireMockStubs.stubWorkspacesConfigDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
 
-        String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
+        String response = mockMvc.perform(post(STUDIES_URL + "/{studyUuid}/duplicate", studyUuid)
                 .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         String newUuid = mapper.readValue(response, String.class);
         StudyEntity sourceStudy = studyRepository.findById(studyUuid).orElseThrow();
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        Message<byte[]> indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
+        assertNotNull(TestUtils.receiveStudyUpdate(output, studyUpdateDestination));
+        assertNotNull(TestUtils.receiveStudyUpdate(output, studyUpdateDestination));
+        Message<byte[]> indexationStatusMessageOnGoing = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(newUuid, indexationStatusMessageOnGoing.getHeaders().get(NotificationService.HEADER_STUDY_UUID).toString());
         assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageOnGoing.getHeaders().get(HEADER_UPDATE_TYPE));
         assertEquals(RootNetworkIndexationStatus.INDEXING_ONGOING.name(), indexationStatusMessageOnGoing.getHeaders().get(NotificationService.HEADER_INDEXATION_STATUS));
-        Message<byte[]> indexationStatusMessageDone = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> indexationStatusMessageDone = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(newUuid, indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_STUDY_UUID).toString());
         assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageDone.getHeaders().get(HEADER_UPDATE_TYPE));
         assertEquals(RootNetworkIndexationStatus.INDEXED.name(), indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_INDEXATION_STATUS));
@@ -1213,6 +1238,15 @@ class StudyTest extends StudyTestBase {
         if (sourceStudy.getSecurityAnalysisParametersUuid() != null) {
             wireMockStubs.computationServer.verifyParametersDuplicateFrom(sourceStudy.getSecurityAnalysisParametersUuid().toString());
         }
+        if (sourceStudy.getDynamicSimulationParametersUuid() != null) {
+            wireMockStubs.computationServer.verifyParametersDuplicateFrom(sourceStudy.getDynamicSimulationParametersUuid().toString());
+        }
+        if (sourceStudy.getDynamicSecurityAnalysisParametersUuid() != null) {
+            wireMockStubs.computationServer.verifyParametersDuplicateFrom(sourceStudy.getDynamicSecurityAnalysisParametersUuid().toString());
+        }
+        if (sourceStudy.getDynamicMarginCalculationParametersUuid() != null) {
+            wireMockStubs.computationServer.verifyParametersDuplicateFrom(sourceStudy.getDynamicMarginCalculationParametersUuid().toString());
+        }
         if (sourceStudy.getSensitivityAnalysisParametersUuid() != null) {
             wireMockStubs.computationServer.verifyParametersDuplicateFrom(sourceStudy.getSensitivityAnalysisParametersUuid().toString());
         }
@@ -1284,8 +1318,8 @@ class StudyTest extends StudyTestBase {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", notExistingNetworkStudyUuid, notExistingNetworkRootNetworkUuid))
             .andExpect(status().isNotFound());
-        Message<byte[]> indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
-        Message<byte[]> indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
 
         wireMockStubs.verifyReindexAll(stubReindexAllNotFoundId, NOT_EXISTING_NETWORK_UUID.toString());
 
@@ -1300,15 +1334,15 @@ class StudyTest extends StudyTestBase {
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/indexation/status", study1Uuid, study1RootNetworkUuid))
             .andExpectAll(status().isOk(),
                 content().string("NOT_INDEXED"));
-        indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
 
         wireMockStubs.verifyIndexedEquipments(stubIndexedEquipmentsNoContentId, NETWORK_UUID_STRING);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", study1Uuid, study1RootNetworkUuid))
             .andExpect(status().isOk());
 
-        indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
-        Message<byte[]> indexationStatusMessageDone = output.receive(TIMEOUT, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
+        Message<byte[]> indexationStatusMessageDone = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(study1Uuid, indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageDone.getHeaders().get(HEADER_UPDATE_TYPE));
         wireMockStubs.verifyReindexAll(stubReindexAllId, NETWORK_UUID_STRING);
@@ -1321,8 +1355,8 @@ class StudyTest extends StudyTestBase {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", study1Uuid, study1RootNetworkUuid))
             .andExpect(status().is5xxServerError());
-        indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
-        indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
 
         wireMockStubs.verifyReindexAll(stubReindexAllErrorId, NETWORK_UUID_STRING);
     }

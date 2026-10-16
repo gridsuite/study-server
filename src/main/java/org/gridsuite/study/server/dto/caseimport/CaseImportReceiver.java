@@ -11,11 +11,10 @@ package org.gridsuite.study.server.dto.caseimport;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
-import java.util.UUID;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import java.util.UUID;
 
 @Getter
 @AllArgsConstructor

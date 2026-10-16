@@ -30,7 +30,11 @@ public enum StudyBusinessErrorCode implements BusinessErrorCode {
     NETWORK_EXPORT_FAILED("study.networkExportFailed"),
     TOO_MANY_NAD_CONFIGS("study.tooManyNadConfigs"),
     TOO_MANY_MAP_CARDS("study.tooManyMapCards"),
-    ELEMENT_ALREADY_EXISTS("study.elementAlreadyExists");
+    ELEMENT_ALREADY_EXISTS("study.elementAlreadyExists"),
+    UNPROCESSABLE_IMPORT_PARAMETER("study.unprocessableImportParameter"),
+    MAX_OPERATION_TYPE_EXCEEDED("study.maxOperationTypeExceeded"),
+    EXPORT_STUDY_ERROR("study.exportStudyError"),
+    NODE_ACTIVITY_CONFLICT("study.nodeActivityConflict");
 
     private final String value;
 

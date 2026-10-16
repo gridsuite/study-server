@@ -19,6 +19,7 @@ import org.gridsuite.study.server.dto.Report;
 import org.gridsuite.study.server.error.StudyBusinessErrorCode;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
@@ -26,6 +27,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.StudyServerExecutionService;
 import org.gridsuite.study.server.utils.assertions.Assertions;
+import org.gridsuite.study.server.utils.wiremock.UserAdminServerStubs;
 import org.junit.platform.commons.util.StringUtils;
 import org.mockito.stubbing.Answer;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
@@ -39,12 +41,15 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_ALL_COMPUTATION_STATUS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doAnswer;
 
 /**
@@ -53,25 +58,12 @@ import static org.mockito.Mockito.doAnswer;
 @Service
 public final class TestUtils {
 
-    public static final List<String> ALL_COMPUTATION_STATUS = List.of(
-            NotificationService.UPDATE_TYPE_LOADFLOW_STATUS,
-            NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS,
-            NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS,
-            NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS,
-            NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS,
-            NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS,
-            NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS,
-            NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS,
-            NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS,
-            NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS,
-            NotificationService.UPDATE_TYPE_PCC_MIN_STATUS
-    );
-
     //output destinations
     public static final String STUDY_UPDATE_DESTINATION = "study.update";
     public static final String ELEMENT_UPDATE_DESTINATION = "element.update";
 
     private static final long TIMEOUT = 100;
+    private static final long MESSAGE_TIMEOUT = 1000;
     public static final String USER_DEFAULT_PROFILE_JSON = """
         {
             "id":null,
@@ -124,7 +116,10 @@ public final class TestUtils {
     public static void assertRequestMatches(String method, String path, MockWebServer server) {
         RecordedRequest recordedRequest;
         try {
-            recordedRequest = Objects.requireNonNull(server.takeRequest(TIMEOUT, TimeUnit.MILLISECONDS));
+            do {
+                recordedRequest = Objects.requireNonNull(server.takeRequest(TIMEOUT, TimeUnit.MILLISECONDS));
+                // skip quota start/end requests that are auto-handled and not part of test assertions
+            } while (recordedRequest.getPath() != null && recordedRequest.getPath().matches("/v1/users/.*/quota/.*"));
         } catch (InterruptedException e) {
             throw new UncheckedInterruptedException(e);
         }
@@ -136,7 +131,12 @@ public final class TestUtils {
     public static Set<String> getRequestsDone(int n, MockWebServer server) {
         return IntStream.range(0, n).mapToObj(i -> {
             try {
-                return Objects.requireNonNull(server.takeRequest(TIMEOUT, TimeUnit.MILLISECONDS)).getPath();
+                RecordedRequest req;
+                do {
+                    req = Objects.requireNonNull(server.takeRequest(TIMEOUT, TimeUnit.MILLISECONDS));
+                    // skip quota start/end requests that are auto-handled and not part of test assertions
+                } while (req.getPath() != null && req.getPath().matches("/v1/users/.*/quota/.*"));
+                return req.getPath();
             } catch (InterruptedException e) {
                 throw new UncheckedInterruptedException(e);
             }
@@ -183,6 +183,111 @@ public final class TestUtils {
         return studyEntity;
     }
 
+    // TODO remove all createDummyStudy and use the builder
+    public static class CreateDummyStudyBuilder {
+        private UUID networkUuid;
+        private String networkId;
+        private UUID caseUuid;
+        private String caseFormat;
+        private String caseName;
+        private UUID reportUuid;
+        private UUID loadFlowParametersUuid;
+        private UUID shortCircuitParametersUuid;
+        private UUID securityAnalysisParametersUuid;
+        private UUID sensitivityParametersUuid;
+        private UUID stateEstimationParametersUuid;
+        private UUID pccMinParametersUuid;
+        private UUID asymmetricalLoadParametersUuid;
+
+        public static CreateDummyStudyBuilder builder() {
+            return new CreateDummyStudyBuilder();
+        }
+
+        public CreateDummyStudyBuilder setNetworkUuid(UUID networkUuid) {
+            this.networkUuid = networkUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setNetworkId(String networkId) {
+            this.networkId = networkId;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setCaseUuid(UUID caseUuid) {
+            this.caseUuid = caseUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setCaseFormat(String caseFormat) {
+            this.caseFormat = caseFormat;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setCaseName(String caseName) {
+            this.caseName = caseName;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setReportUuid(UUID reportUuid) {
+            this.reportUuid = reportUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setLoadFlowParametersUuid(UUID loadFlowParametersUuid) {
+            this.loadFlowParametersUuid = loadFlowParametersUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setShortCircuitParametersUuid(UUID shortCircuitParametersUuid) {
+            this.shortCircuitParametersUuid = shortCircuitParametersUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setSecurityAnalysisParametersUuid(UUID securityAnalysisParametersUuid) {
+            this.securityAnalysisParametersUuid = securityAnalysisParametersUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setSensitivityParametersUuid(UUID sensitivityParametersUuid) {
+            this.sensitivityParametersUuid = sensitivityParametersUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setStateEstimationParametersUuid(UUID stateEstimationParametersUuid) {
+            this.stateEstimationParametersUuid = stateEstimationParametersUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setPccMinParametersUuid(UUID pccMinParametersUuid) {
+            this.pccMinParametersUuid = pccMinParametersUuid;
+            return this;
+        }
+
+        public CreateDummyStudyBuilder setAsymmetricalLoadParametersUuid(UUID asymmetricalLoadParametersUuid) {
+            this.asymmetricalLoadParametersUuid = asymmetricalLoadParametersUuid;
+            return this;
+        }
+
+        public StudyEntity build() {
+            StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
+                    .loadFlowParametersUuid(loadFlowParametersUuid)
+                    .shortCircuitParametersUuid(shortCircuitParametersUuid)
+                    .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
+                    .sensitivityAnalysisParametersUuid(sensitivityParametersUuid)
+                    .stateEstimationParametersUuid(stateEstimationParametersUuid)
+                    .pccMinParametersUuid(pccMinParametersUuid)
+                    .asymmetricalLoadParametersUuid(asymmetricalLoadParametersUuid)
+                    .build();
+            RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder()
+                    .id(UUID.randomUUID()).name("rootNetworkName").tag("dum")
+                    .caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName)
+                    .networkId(networkId).networkUuid(networkUuid).reportUuid(reportUuid)
+                    .build();
+            studyEntity.addRootNetwork(rootNetworkEntity);
+            return studyEntity;
+        }
+    }
+
     public static StudyEntity createDummyStudy(UUID networkUuid, String networkId, UUID caseUuid, String caseFormat, String caseName, UUID reportUuid,
                                                UUID loadFlowParametersUuid,
                                                UUID shortCircuitParametersUuid,
@@ -205,7 +310,7 @@ public final class TestUtils {
 
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseName, String caseFormat, UUID reportUuid) {
         StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
-//            .shortCircuitParametersUuid(UUID.randomUUID())
+            //            .shortCircuitParametersUuid(UUID.randomUUID())
             .build();
         studyEntity.addRootNetwork(RootNetworkEntity.builder().id(UUID.randomUUID()).name("rootNetworkName").tag("dum").caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId("netId").networkUuid(networkUuid).reportUuid(reportUuid).build());
 
@@ -220,9 +325,43 @@ public final class TestUtils {
             .children(Collections.emptyList()).build();
     }
 
+    /**
+     * Runs guarded actions straight through, for tests whose node uuids have no activity rows: the
+     * activity insert would otherwise fail on its foreign keys. The rules themselves are covered by
+     * NodeActivityRulesTest.
+     */
+    public static void bypassNodeActivities(NodeActivityRunnerService nodeActivityService) {
+        Answer<Object> runIt = invocation -> {
+            invocation.getArgument(invocation.getArguments().length - 1, Runnable.class).run();
+            return null;
+        };
+        Answer<Object> supplyIt = invocation ->
+            invocation.getArgument(invocation.getArguments().length - 1, Supplier.class).get();
+
+        doAnswer(runIt).when(nodeActivityService).runWith(any(), any(), any(), anyList(), any(Runnable.class));
+        doAnswer(runIt).when(nodeActivityService).runWith(any(), any(), anyList(), any(Runnable.class));
+        doAnswer(supplyIt).when(nodeActivityService).runWith(any(), any(), any(), anyList(), any(Supplier.class));
+        doAnswer(supplyIt).when(nodeActivityService).runWith(any(), any(), anyList(), any(Supplier.class));
+    }
+
+    /** Node activity notifications interleave with every other study update, so reads for anything else skip them. */
+    public static Message<byte[]> receiveStudyUpdate(OutputDestination output, String destination) {
+        return receiveStudyUpdate(output, destination, MESSAGE_TIMEOUT);
+    }
+
+    public static Message<byte[]> receiveStudyUpdate(OutputDestination output, String destination, long timeout) {
+        Message<byte[]> message = output.receive(timeout, destination);
+        while (message != null && NotificationService.UPDATE_NODE_ACTIVITIES
+                .equals(message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE))) {
+            message = output.receive(timeout, destination);
+        }
+        return message;
+    }
+
+    @SuppressWarnings("checkstyle:IllegalCatch")
     public static void assertQueuesEmptyThenClear(List<String> destinations, OutputDestination output) {
         try {
-            destinations.forEach(destination -> assertNull(output.receive(TIMEOUT, destination), "Should not be any messages in queue " + destination + " : "));
+            destinations.forEach(destination -> assertNull(receiveStudyUpdate(output, destination, TIMEOUT), "Should not be any messages in queue " + destination + " : "));
         } catch (NullPointerException e) {
             // Ignoring
         } finally {
@@ -230,6 +369,7 @@ public final class TestUtils {
         }
     }
 
+    @SuppressWarnings("checkstyle:IllegalCatch")
     public static void assertServerRequestsEmptyThenShutdown(MockWebServer server) throws UncheckedInterruptedException {
         try {
             assertNull(getRequestsDone(1, server), "Should not be any http requests : ");
@@ -241,6 +381,9 @@ public final class TestUtils {
     public static void assertWiremockServerRequestsEmptyThenShutdown(WireMockServer wireMockServer) throws UncheckedInterruptedException {
         try {
             wireMockServer.checkForUnmatchedRequests(); // requests no matched ? (it returns an exception if a request was not matched by wireMock, but does not complain if it was not verified by 'verify')
+            // Remove quota operation consume/release requests that are auto-stubbed and do not need explicit verification
+            wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_CONSUME_URL_PATTERN)).build());
+            wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_RELEASE_URL_PATTERN)).build());
             var requests = wireMockServer.findAll(WireMock.anyRequestedFor(WireMock.anyUrl()));
             assertEquals(0, requests.size(), "Unverified WireMock requests found:\n" + requests.stream()
                 .map(r -> "URL: " + r.getUrl() + ", Method: " + r.getMethod() + ", Body: " + r.getBodyAsString() + ", Params: " + r.getQueryParams())
@@ -253,6 +396,9 @@ public final class TestUtils {
     public static void assertWiremockServerRequestsEmptyThenClear(WireMockServer wireMockServer) throws UncheckedInterruptedException {
         try {
             wireMockServer.checkForUnmatchedRequests();
+            // Remove quota operation consume/release requests that are auto-stubbed and do not need explicit verification
+            wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_CONSUME_URL_PATTERN)).build());
+            wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_RELEASE_URL_PATTERN)).build());
             assertEquals(0, wireMockServer.findAll(WireMock.anyRequestedFor(WireMock.anyUrl())).size());
         } finally {
             wireMockServer.resetAll();
@@ -294,7 +440,7 @@ public final class TestUtils {
 
     public static void checkUpdateTypeMessageReceived(UUID studyUuid, UUID nodeUuid, String updateType, OutputDestination output, String destination) {
         // assert that the broker message has been sent for updating updateType
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, destination);
+        Message<byte[]> messageStatus = receiveStudyUpdate(output, destination);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
@@ -305,6 +451,6 @@ public final class TestUtils {
     }
 
     public static void checkUpdateStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, OutputDestination output) {
-        ALL_COMPUTATION_STATUS.forEach(computationStatus -> checkUpdateTypeMessageReceived(studyUuid, nodeUuid, computationStatus, output, STUDY_UPDATE_DESTINATION));
+        checkUpdateTypeMessageReceived(studyUuid, nodeUuid, UPDATE_TYPE_ALL_COMPUTATION_STATUS, output, STUDY_UPDATE_DESTINATION);
     }
 }

@@ -13,9 +13,9 @@ import org.gridsuite.study.server.dto.AboutInfo;
 import org.gridsuite.study.server.dto.ServiceStatusInfos;
 import org.gridsuite.study.server.dto.ServiceStatusInfos.ServiceStatus;
 import org.gridsuite.study.server.exception.PartialResultException;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
 import org.gridsuite.study.server.service.FrontService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RemoteServicesInspector;
@@ -36,11 +36,9 @@ import org.springframework.cloud.stream.binder.test.TestChannelBinderConfigurati
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -101,7 +99,8 @@ class RemoteServicesInspectorEndpointTest {
         mockMvc.perform(get("/v1/optional-services"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(content().json("[{\"name\":\"loadflow-server\",\"status\":\"UP\"},{\"name\":\"security-analysis-server\",\"status\":\"UP\"},{\"name\":\"voltage-init-server\",\"status\":\"UP\"}]", true));
+                .andExpect(content().json(
+                        "[{\"name\":\"loadflow-server\",\"status\":\"UP\"},{\"name\":\"security-analysis-server\",\"status\":\"UP\"},{\"name\":\"voltage-init-server\",\"status\":\"UP\"}]", true));
         Mockito.verify(remoteServicesInspector, Mockito.times(1)).getOptionalServices();
     }
 
@@ -111,20 +110,19 @@ class RemoteServicesInspectorEndpointTest {
         // select 2 services to be optional
         final List<String> optionalServices = List.of(
                 RemoteServiceName.SENSITIVITY_ANALYSIS_SERVER.serviceName(),
-                RemoteServiceName.SHORTCIRCUIT_SERVER.serviceName(),
-                RemoteServiceName.STATE_ESTIMATION_SERVER.serviceName());
+                RemoteServiceName.SHORTCIRCUIT_SERVER.serviceName());
         remoteServicesProperties.getServices().forEach(s -> s.setOptional(optionalServices.contains(s.getName())));
 
         Mockito.when(remoteServicesInspector.getOptionalServices()).thenReturn(List.of(
                 new ServiceStatusInfos(RemoteServiceName.SENSITIVITY_ANALYSIS_SERVER, ServiceStatus.DOWN),
-                new ServiceStatusInfos(RemoteServiceName.SHORTCIRCUIT_SERVER, ServiceStatus.DOWN),
-                new ServiceStatusInfos(RemoteServiceName.STATE_ESTIMATION_SERVER, ServiceStatus.DOWN)));
+                new ServiceStatusInfos(RemoteServiceName.SHORTCIRCUIT_SERVER, ServiceStatus.DOWN)));
 
         // all services are supposed to be Down
         mockMvc.perform(get("/v1/optional-services"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(content().json("[{\"name\":\"sensitivity-analysis-server\",\"status\":\"DOWN\"},{\"name\":\"shortcircuit-server\",\"status\":\"DOWN\"},{\"name\":\"state-estimation-server\",\"status\":\"DOWN\"}]", true));
+                .andExpect(content().json(
+                        "[{\"name\":\"sensitivity-analysis-server\",\"status\":\"DOWN\"},{\"name\":\"shortcircuit-server\",\"status\":\"DOWN\"}]", true));
         Mockito.verify(remoteServicesInspector, Mockito.times(1)).getOptionalServices();
     }
 

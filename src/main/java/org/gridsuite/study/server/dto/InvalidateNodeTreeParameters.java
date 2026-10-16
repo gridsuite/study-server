@@ -10,19 +10,19 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 
 /**
- * @author Slimane amar <slimane.amar at rte-france.com
+ * @author Slimane amar <slimane.amar at rte-france.com>
  */
 @Schema(description = "Invalidation node parameters")
 @Builder
 public record InvalidateNodeTreeParameters(
     InvalidationMode invalidationMode,
-    boolean withBlockedNode,
     ComputationsInvalidationMode computationsInvalidationMode // Only for the first node (root node)
 ) {
-    public static InvalidateNodeTreeParameters ALL = new InvalidateNodeTreeParameters(InvalidationMode.ALL, false, ComputationsInvalidationMode.ALL);
-    public static InvalidateNodeTreeParameters ALL_WITH_BLOCK_NODES = new InvalidateNodeTreeParameters(InvalidationMode.ALL, true, ComputationsInvalidationMode.ALL);
-    public static InvalidateNodeTreeParameters ONLY_CHILDREN = new InvalidateNodeTreeParameters(InvalidationMode.ONLY_CHILDREN, false, ComputationsInvalidationMode.ALL);
-    public static InvalidateNodeTreeParameters ONLY_CHILDREN_BUILD_STATUS = new InvalidateNodeTreeParameters(InvalidationMode.ONLY_CHILDREN_BUILD_STATUS, false, ComputationsInvalidationMode.ALL);
+    public static InvalidateNodeTreeParameters ALL = new InvalidateNodeTreeParameters(InvalidationMode.ALL, ComputationsInvalidationMode.ALL);
+    @SuppressWarnings("checkstyle:AbbreviationAsWordInName")
+    public static InvalidateNodeTreeParameters ONLY_CHILDREN = new InvalidateNodeTreeParameters(InvalidationMode.ONLY_CHILDREN, ComputationsInvalidationMode.ALL);
+    @SuppressWarnings("checkstyle:AbbreviationAsWordInName")
+    public static InvalidateNodeTreeParameters ONLY_CHILDREN_BUILD_STATUS = new InvalidateNodeTreeParameters(InvalidationMode.ONLY_CHILDREN_BUILD_STATUS, ComputationsInvalidationMode.ALL);
 
     public enum InvalidationMode {
         ALL, ONLY_CHILDREN, ONLY_CHILDREN_BUILD_STATUS

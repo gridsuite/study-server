@@ -9,7 +9,7 @@ on:
 
 jobs:
   run-patch:
-    uses: powsybl/github-ci/.github/workflows/patch-backend-app-generic.yml@3ed0caeb3395e55868884f466d726ddaee877850
+    uses: powsybl/github-ci/.github/workflows/patch-backend-app-generic.yml@c0849fd1236966d31e8f7167ec5beab4517bbf28
     with:
       githubappId: ${{ vars.GRIDSUITE_ACTIONS_APPID }}
       dockerImage: docker.io/gridsuite/study-server

@@ -18,11 +18,12 @@ import org.springframework.http.MediaType;
 
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 
 import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
 
 /**
- * @author Abdelsalem Hedhili <abdelsalem.hedhili@rte-france.com>
+ * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 public class LoadflowServerStubs {
     private final WireMockServer wireMock;
@@ -49,16 +50,18 @@ public class LoadflowServerStubs {
         );
     }
 
-    public void stubRunLoadflowFailed(UUID networkUuid, UUID nodeUuid, String responseBody) {
-        MappingBuilder mappingBuilder = WireMock.post(WireMock.urlMatching("/v1/networks/" + networkUuid + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=.*"));
+    public void stubRunLoadflowFailed(UUID networkUuid, UUID nodeUuid, String responseBody, CountDownLatch countDownLatch) {
+        MappingBuilder mappingBuilder = WireMock.post(WireMock.urlMatching("/v1/networks/" + networkUuid
+                + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=.*"));
 
         mappingBuilder = mappingBuilder.withPostServeAction(POST_ACTION_SEND_INPUT,
                 Parameters.from(
                         Map.of(
                                 "payload", "",
                                 "destination", "loadflow.run.dlx",
-                                "receiver", "%7B%22nodeUuid%22%3A%22" + nodeUuid + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + networkUuid + "%22%2C%20%22userId%22%3A%22userId%22%7D"
-
+                                "receiver", "%7B%22nodeUuid%22%3A%22" + nodeUuid + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + networkUuid + "%22%2C%20%22userId%22%3A%22userId%22%7D",
+                                "latch", countDownLatch,
+                                "waitForLatch", true
                         )
                 )
         );
@@ -68,7 +71,8 @@ public class LoadflowServerStubs {
     }
 
     public void verifyRunLoadflow(UUID networkUuid) {
-        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/networks/" + networkUuid + "/run-and-save", Map.of("withRatioTapChangers", new RegexPattern(".*"), "receiver", new RegexPattern(".*"), "reportUuid", new RegexPattern(".*"), "reporterId", new RegexPattern(".*"), "variantId", new RegexPattern(".*")));
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/networks/" + networkUuid + "/run-and-save", Map.of("withRatioTapChangers", new RegexPattern(".*"), "receiver", new RegexPattern(".*"),
+                "reportUuid", new RegexPattern(".*"), "reporterId", new RegexPattern(".*"), "variantId", new RegexPattern(".*")));
     }
 
     public void stubGetLoadflowResult(UUID resultUuid, String responseBody) {
@@ -143,8 +147,28 @@ public class LoadflowServerStubs {
         );
     }
 
+    public void stubGetLoadflowParametersWithDifferences(String parametersUuid, String referenceParametersUuid, String parameters, boolean isNotFound) {
+        MappingBuilder request = WireMock.get(
+                WireMock.urlPathEqualTo("/v1/parameters/" + parametersUuid))
+            .withQueryParam("withDifferences", WireMock.equalTo("true"));
+
+        if (referenceParametersUuid != null) {
+            request.withQueryParam("referenceUuid", WireMock.equalTo(referenceParametersUuid));
+        }
+        wireMock.stubFor(request.willReturn(isNotFound ? WireMock.notFound() : WireMock.ok().withBody(parameters).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+    }
+
     public void verifyGetLoadflowParameters(String parametersUuid) {
-        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/parameters/" + parametersUuid, Map.of());
+        verifyGetLoadflowParameters(parametersUuid, 1);
+    }
+
+    public void verifyGetLoadflowParameters(String parametersUuid, int nbRequests) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/parameters/" + parametersUuid, Map.of(), nbRequests);
+    }
+
+    public void verifyGetLoadflowParametersWithDifferences(String parametersUuid, String referenceParametersUuid, int nbRequests) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/parameters/" + parametersUuid + "?withDifferences=true"
+            + (referenceParametersUuid != null ? "&referenceUuid=" + referenceParametersUuid : ""), Map.of(), nbRequests);
     }
 
     public void stubPutLoadflowParameters(String parametersUuid, String parameters) {
@@ -199,12 +223,12 @@ public class LoadflowServerStubs {
     }
 
     public void stubDuplicateLoadflowParameters(String loadflowParametersToDuplicateUuid, String createdLoadflowParametersUuidJson, boolean isNotFound) {
-        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/v1/parameters?duplicateFrom=" + loadflowParametersToDuplicateUuid))
+        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/v1/parameters/" + loadflowParametersToDuplicateUuid + "/duplicate"))
                 .willReturn(isNotFound ? WireMock.notFound() : WireMock.ok().withBody(createdLoadflowParametersUuidJson).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
     }
 
     public void verifyDuplicateLoadflowParameters(String loadflowParametersToDuplicateUuid) {
-        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters", Map.of("duplicateFrom", WireMock.equalTo(loadflowParametersToDuplicateUuid)));
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters/" + loadflowParametersToDuplicateUuid + "/duplicate", Map.of());
     }
 
     public void stubDeleteLoadFlowParameters(String parametersUuid) {
@@ -239,7 +263,8 @@ public class LoadflowServerStubs {
     }
 
     public void stubGetLimitViolation(String resultUuid, String limitViolationResponse, boolean withRequestParam) {
-        wireMock.stubFor(WireMock.get(WireMock.urlMatching("/v1/results/" + resultUuid + "/limit-violations" + (withRequestParam ? "\\?filters=.*globalFilters=.*networkUuid=.*variantId.*sort=.*" : "")))
+        wireMock.stubFor(WireMock.get(WireMock.urlMatching("/v1/results/" + resultUuid + "/limit-violations"
+                + (withRequestParam ? "\\?filters=.*globalFilters=.*networkUuid=.*variantId.*sort=.*" : "")))
                 .willReturn(WireMock.ok()
                         .withBody(limitViolationResponse)
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
@@ -249,7 +274,8 @@ public class LoadflowServerStubs {
     public void verifyGetLimitViolation(String resultUuid, boolean withRequestParam) {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/results/" + resultUuid + "/limit-violations",
                 withRequestParam ?
-                        Map.of("filters", new RegexPattern(".*"), "globalFilters", new RegexPattern(".*"), "networkUuid", new RegexPattern(".*"), "variantId", new RegexPattern(".*"), "sort", new RegexPattern(".*"))
+                        Map.of("filters", new RegexPattern(".*"), "globalFilters", new RegexPattern(".*"), "networkUuid", new RegexPattern(".*"), "variantId", new RegexPattern(".*"), "sort", new
+                                RegexPattern(".*"))
                         : Map.of());
     }
 
@@ -262,5 +288,4 @@ public class LoadflowServerStubs {
     public void verifyPutInvalidateStatus() {
         WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/results/invalidate-status", Map.of("resultUuid", new RegexPattern(".*")), null);
     }
-
 }

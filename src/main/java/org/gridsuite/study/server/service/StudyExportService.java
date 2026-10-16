@@ -1,0 +1,331 @@
+/**
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+package org.gridsuite.study.server.service;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.gridsuite.study.server.dto.ComputationType;
+import org.gridsuite.study.server.dto.networkexport.PermissionType;
+import org.gridsuite.study.server.dto.studyexport.*;
+import org.gridsuite.study.server.dto.studyexport.modifications.ExportedModificationsInfos;
+import org.gridsuite.study.server.dto.studyexport.parameters.*;
+import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.service.common.ComputationParametersService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.EXPORT_STUDY_ERROR;
+
+/**
+ * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
+ */
+@Service
+public class StudyExportService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(StudyExportService.class);
+
+    public static final String TREE_JSON_FILE_NAME = "tree.json";
+    public static final String CASES_FOLDER = "cases";
+    public static final String PARAMETERS_FOLDER = "computationParameters";
+    public static final String CONTINGENCY_LIST_JSON = "contingencyList.json";
+    public static final String FILTERS_JSON = "filters.json";
+    public static final String ID = "id";
+    public static final String UUID_FIELD = "uuid";
+    public static final String JSON = ".json";
+    public static final String MODIFICATIONS_FOLDER = "networkModifications";
+    public static final String LOAD_FLOW_PARAMETERS_JSON = "loadFlowParameters.json";
+
+    private final StudyService studyService;
+    private final CaseService caseService;
+    private final DirectoryService directoryService;
+    private final ObjectMapper objectMapper;
+    private final ComputationParametersService computationParametersService;
+    private final FilterService filterService;
+    private final ActionsService actionsService;
+    private final NetworkModificationService networkModificationService;
+    private final LoadFlowRestService loadFlowRestService;
+
+    public StudyExportService(StudyService studyService, CaseService caseService, DirectoryService directoryService,
+                              ObjectMapper objectMapper, ComputationParametersService computationParametersService,
+                              FilterService filterService, ActionsService actionsService,
+                              NetworkModificationService networkModificationService,
+                              LoadFlowRestService loadFlowRestService) {
+        this.studyService = studyService;
+        this.caseService = caseService;
+        this.directoryService = directoryService;
+        this.objectMapper = objectMapper;
+        this.computationParametersService = computationParametersService;
+        this.filterService = filterService;
+        this.actionsService = actionsService;
+        this.networkModificationService = networkModificationService;
+        this.loadFlowRestService = loadFlowRestService;
+    }
+
+    /**
+     * Export a study as a zip
+     * @param studyUuid the study UUID
+     * @param userId the requesting user checked for read access to the study
+     * @return InputStreamResource containing the zip archive
+     */
+    public InputStreamResource exportStudy(UUID studyUuid, String userId) {
+        directoryService.checkPermission(List.of(studyUuid), null, userId, PermissionType.READ, false);
+        Path tempDir = createTempWorkDir(studyUuid);
+        Path zipFile = null;
+        try {
+            zipFile = compressStudyToZip(studyUuid, tempDir, userId);
+            InputStream stream = Files.newInputStream(zipFile, StandardOpenOption.DELETE_ON_CLOSE);
+            zipFile = null;
+            return new InputStreamResource(stream);
+        } catch (IOException _) {
+            throw new StudyException(EXPORT_STUDY_ERROR, "Failed to export study: " + studyUuid);
+        } finally {
+            try {
+                deleteDirectory(tempDir);
+            } catch (IOException e) {
+                LOGGER.warn("Failed to clean up temp export directory {} for study {}", tempDir, studyUuid, e);
+            }
+            if (zipFile != null) {
+                try {
+                    Files.deleteIfExists(zipFile);
+                } catch (IOException e) {
+                    LOGGER.warn("Failed to delete temp zip file {} for study {}", zipFile, studyUuid, e);
+                }
+            }
+        }
+    }
+
+    /**
+     * Build tree.json and the case files under tempDir, then compress them into a temp zip file
+     */
+    private Path compressStudyToZip(UUID studyUuid, Path tempDir, String userId) throws IOException {
+        TreeExportInfos treeExportInfos = studyService.buildTreeExport(studyUuid);
+        Path studyJsonPath = tempDir.resolve(TREE_JSON_FILE_NAME);
+        objectMapper.writerWithDefaultPrettyPrinter().writeValue(studyJsonPath.toFile(), treeExportInfos);
+        Path casesDir = Files.createDirectories(tempDir.resolve(CASES_FOLDER));
+        for (RootNetworkExportInfos rootNetworkInfos : treeExportInfos.rootNetworks()) {
+            UUID caseUuid = rootNetworkInfos.caseInfos().getCaseUuid();
+            String caseName = rootNetworkInfos.caseInfos().getCaseName();
+            exportCaseFile(caseUuid, caseName, casesDir);
+        }
+        exportParameters(studyUuid, tempDir);
+        exportModifications(treeExportInfos.nodeTree(), tempDir, userId);
+        Path zipFile = createTempExportFile(studyUuid);
+        try (OutputStream fos = Files.newOutputStream(zipFile);
+             ZipOutputStream zipOut = new ZipOutputStream(fos)) {
+            writeZipEntries(tempDir, zipOut);
+        }
+        return zipFile;
+    }
+
+    private void exportParameters(UUID studyUuid, Path tempDir) throws IOException {
+        Path parametersDir = Files.createDirectories(tempDir.resolve(PARAMETERS_FOLDER));
+        Set<UUID> filterUuids = new HashSet<>();
+        Set<UUID> contingencyListUuids = new HashSet<>();
+        for (Map.Entry<ComputationType, String> parameters : computationParametersService.exportParameters(studyService.getStudy(studyUuid)).entrySet()) {
+            Files.writeString(parametersDir.resolve(parameters.getKey().name() + JSON), parameters.getValue());
+            ExportedParameters exportedParameters = readParametersReferences(parameters.getKey(), parameters.getValue());
+            filterUuids.addAll(exportedParameters.getFilterUuids());
+            contingencyListUuids.addAll(exportedParameters.getContingencyListUuids());
+        }
+        if (!contingencyListUuids.isEmpty()) {
+            filterUuids.addAll(actionsService.getReferencedFilterUuids(contingencyListUuids));
+        }
+        if (!filterUuids.isEmpty()) {
+            filterUuids.addAll(filterService.getReferencedFilterUuids(filterUuids));
+        }
+        Map<UUID, String> names = directoryService.getElementNames(Stream.concat(filterUuids.stream(), contingencyListUuids.stream()).collect(Collectors.toSet()));
+        List<ExportedElementInfos> contingencyLists = toExportedElements(actionsService.getContingencyLists(contingencyListUuids), names);
+        List<ExportedElementInfos> filters = toExportedElements(filterService.getFilters(filterUuids), names);
+        objectMapper.writeValue(parametersDir.resolve(CONTINGENCY_LIST_JSON).toFile(), contingencyLists);
+        objectMapper.writeValue(parametersDir.resolve(FILTERS_JSON).toFile(), filters);
+    }
+
+    private List<ExportedElementInfos> toExportedElements(String content, Map<UUID, String> names) throws IOException {
+        return toExportedElements(content, names, ID);
+    }
+
+    private List<ExportedElementInfos> toExportedElements(String content, Map<UUID, String> names, String idField) throws IOException {
+        List<ExportedElementInfos> elements = new ArrayList<>();
+        for (JsonNode jsonNodeContent : objectMapper.readTree(content)) {
+            UUID uuid = UUID.fromString(jsonNodeContent.get(idField).asText());
+            elements.add(new ExportedElementInfos(uuid, names.get(uuid), jsonNodeContent));
+        }
+        return elements;
+    }
+
+    private ExportedParameters readParametersReferences(ComputationType type, String parametersJson) throws IOException {
+        Class<? extends ExportedParameters> referencesClass = switch (type) {
+            case SECURITY_ANALYSIS -> SecurityAnalysisExportedParameters.class;
+            case SHORT_CIRCUIT -> ShortCircuitExportedParameters.class;
+            case SENSITIVITY_ANALYSIS -> SensitivityAnalysisExportedParameters.class;
+            case VOLTAGE_INITIALIZATION -> VoltageInitExportedParameters.class;
+            case PCC_MIN -> PccMinExportedParameters.class;
+            // LOAD_FLOW: the load flow parameters do not reference any filter or contingency list
+            default -> null;
+        };
+        return referencesClass == null ? new ExportedParameters() { } : objectMapper.readValue(parametersJson, referencesClass);
+    }
+
+    private void exportModifications(NodeTreeExportInfos nodeTree, Path tempDir, String userId) throws IOException {
+        if (nodeTree != null) {
+            Set<UUID> filterUuids = new HashSet<>();
+            Set<UUID> loadFlowParametersUuids = new HashSet<>();
+            Path modificationsDir = Files.createDirectories(tempDir.resolve(MODIFICATIONS_FOLDER));
+            exportNodeModifications(nodeTree, modificationsDir, filterUuids, loadFlowParametersUuids, userId);
+            collectFiltersByByGroupUuid(modificationsDir, filterUuids);
+            collectLoadFlowParametersUuidsByByGroupUuid(modificationsDir, loadFlowParametersUuids);
+        }
+    }
+
+    private void exportNodeModifications(NodeTreeExportInfos node, Path modificationsDir, Set<UUID> filterUuids, Set<UUID> loadFlowParametersUuids, String userId) throws IOException {
+        if (node.modificationGroupUuid() != null) {
+            collectModificationsByGroupUuid(modificationsDir, node.modificationGroupUuid(), filterUuids, loadFlowParametersUuids, userId);
+        }
+        if (node.children() != null) {
+            for (NodeTreeExportInfos child : node.children()) {
+                exportNodeModifications(child, modificationsDir, filterUuids, loadFlowParametersUuids, userId);
+            }
+        }
+    }
+
+    private void collectModificationsByGroupUuid(Path modificationsDir, UUID groupUuid, Set<UUID> filterUuids, Set<UUID> loadFlowParametersUuids, String userId) throws IOException {
+        String modifications = networkModificationService.getModifications(groupUuid, false, false, userId);
+        Files.writeString(modificationsDir.resolve(groupUuid + JSON), modifications);
+        for (ExportedModificationsInfos references : objectMapper.readValue(modifications, ExportedModificationsInfos[].class)) {
+            filterUuids.addAll(references.getFilterUuids());
+            loadFlowParametersUuids.addAll(references.getLoadFlowParametersUuids());
+        }
+    }
+
+    private void collectFiltersByByGroupUuid(Path modificationsDir, Set<UUID> filterUuids) throws IOException {
+        if (!filterUuids.isEmpty()) {
+            filterUuids.addAll(filterService.getReferencedFilterUuids(filterUuids));
+            List<ExportedElementInfos> filters = toExportedElements(filterService.getFilters(filterUuids), directoryService.getElementNames(filterUuids));
+            objectMapper.writeValue(modificationsDir.resolve(FILTERS_JSON).toFile(), filters);
+        }
+    }
+
+    private void collectLoadFlowParametersUuidsByByGroupUuid(Path modificationsDir, Set<UUID> loadFlowParametersUuids) throws IOException {
+        if (!loadFlowParametersUuids.isEmpty()) {
+            String parameters = loadFlowParametersUuids.stream().map(loadFlowRestService::getParameters).collect(Collectors.joining(",", "[", "]"));
+            List<ExportedElementInfos> loadFlowParameters = toExportedElements(parameters, directoryService.getElementNames(loadFlowParametersUuids), UUID_FIELD);
+            objectMapper.writeValue(modificationsDir.resolve(LOAD_FLOW_PARAMETERS_JSON).toFile(), loadFlowParameters);
+        }
+    }
+
+    private Path createTempWorkDir(UUID studyUuid) {
+        return createTempPath(studyUuid, "temp directory", "rwx------",
+                attr -> Files.createTempDirectory("study-export-" + studyUuid, attr));
+    }
+
+    private Path createTempExportFile(UUID studyUuid) {
+        return createTempPath(studyUuid, "temp file", "rw-------",
+                attr -> Files.createTempFile("study-export-" + studyUuid, ".zip", attr));
+    }
+
+    private Path createTempPath(UUID studyUuid, String errorContext, String permissions,
+                                IOFunction<FileAttribute<Set<PosixFilePermission>>, Path> creator) {
+        FileAttribute<Set<PosixFilePermission>> attr =
+                PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString(permissions));
+        try {
+            return creator.apply(attr);
+        } catch (IOException _) {
+            throw new StudyException(EXPORT_STUDY_ERROR, "Failed to create " + errorContext + " for study: " + studyUuid);
+        }
+    }
+
+    @FunctionalInterface
+    private interface IOFunction<T, R> {
+        R apply(T t) throws IOException;
+    }
+
+    /**
+     * Export a case file from the case-server
+     */
+    private void exportCaseFile(UUID caseUuid, String caseName, Path casesDir) throws IOException {
+        ResponseEntity<byte[]> response = caseService.getCaseContent(caseUuid);
+        byte[] body = response.getBody();
+        if (body != null) {
+            Path caseDir = casesDir.resolve(caseUuid.toString());
+            Files.createDirectories(caseDir);
+            String contentEncoding = response.getHeaders().getFirst(HttpHeaders.CONTENT_ENCODING);
+            // plain file cases are gzip by the case-server and need to be decompressed
+            if ("gzip".equalsIgnoreCase(contentEncoding)) {
+                body = decompressGzip(body);
+            }
+            Path caseFile = caseDir.resolve(caseName);
+            Files.write(caseFile, body);
+        }
+    }
+
+    private static byte[] decompressGzip(byte[] data) throws IOException {
+        try (GZIPInputStream gzipIn = new GZIPInputStream(new ByteArrayInputStream(data));
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            gzipIn.transferTo(out);
+            return out.toByteArray();
+        }
+    }
+
+    private void writeZipEntries(Path directory, ZipOutputStream zipOut) throws IOException {
+        walkAndConsume(directory, null, file -> {
+            if (Files.isRegularFile(file)) {
+                Path relativePath = directory.relativize(file);
+                String entryName = relativePath.toString().replace('\\', '/');
+                ZipEntry entry = new ZipEntry(entryName);
+                entry.setSize(Files.size(file));
+                zipOut.putNextEntry(entry);
+                try (InputStream in = Files.newInputStream(file)) {
+                    in.transferTo(zipOut);
+                }
+                zipOut.closeEntry();
+            }
+        });
+    }
+
+    private void deleteDirectory(Path directory) throws IOException {
+        if (Files.exists(directory)) {
+            walkAndConsume(directory, Comparator.reverseOrder(), Files::delete);
+        }
+    }
+
+    private void walkAndConsume(Path directory, Comparator<Path> order, IOConsumer<Path> action) throws IOException {
+        try (Stream<Path> paths = Files.walk(directory)) {
+            (order == null ? paths : paths.sorted(order)).forEach(path -> {
+                try {
+                    action.accept(path);
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            });
+        } catch (UncheckedIOException e) {
+            throw e.getCause();
+        }
+    }
+
+    @FunctionalInterface
+    private interface IOConsumer<T> {
+        void accept(T t) throws IOException;
+    }
+}

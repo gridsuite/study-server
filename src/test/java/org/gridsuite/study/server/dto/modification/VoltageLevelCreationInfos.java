@@ -6,14 +6,13 @@
  */
 package org.gridsuite.study.server.dto.modification;
 
-import java.util.List;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import java.util.List;
 
 /**
  * @author Laurent GARNIER <laurent.garnier at rte-france.com>

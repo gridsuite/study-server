@@ -8,29 +8,51 @@
 package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.dto.QuotaState;
+import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.dto.UserProfileInfos;
+import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.repository.QuotaConsumptionEntity;
+import org.gridsuite.study.server.repository.QuotaConsumptionRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.Optional;
+import java.util.Map;
+import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyConstants.DELIMITER;
+import static org.gridsuite.study.server.StudyConstants.USER_ADMIN_API_VERSION;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAX_OPERATION_TYPE_EXCEEDED;
 
 /**
  * @author David Braquart <david.braquart at rte-france.com>
  */
 @Service
 public class UserAdminService {
-    private static final String USERS_PROFILE_URI = "/users/{sub}/profile";
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserAdminService.class);
 
-    private static final String USERS_MAX_ALLOWED_BUILDS_URI = USERS_PROFILE_URI + "/max-builds";
+    private static final String USERS_PROFILE_URI = "/users/{sub}/profile";
+    private static final String USERS_QUOTA_URI = "/users/{sub}/quota";
+    private static final String USERS_QUOTA_STATE_URI = USERS_QUOTA_URI + "/state";
+    private static final String USERS_CONSUME_QUOTA_URI = USERS_QUOTA_URI + "/{operation}/consume";
+    private static final String USERS_RELEASE_QUOTA_URI = USERS_QUOTA_URI + "/{quotaId}/release";
+
     private final RestTemplate restTemplate;
+    private final QuotaConsumptionRepository quotaConsumptionRepository;
     private String userAdminServerBaseUri;
 
-    public UserAdminService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
+    public UserAdminService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate,
+                            QuotaConsumptionRepository quotaConsumptionRepository) {
         this.userAdminServerBaseUri = remoteServicesProperties.getServiceUri("user-admin-server");
         this.restTemplate = restTemplate;
+        this.quotaConsumptionRepository = quotaConsumptionRepository;
     }
 
     public void setUserAdminServerBaseUri(String serverBaseUri) {
@@ -39,13 +61,68 @@ public class UserAdminService {
 
     public UserProfileInfos getUserProfile(String sub) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_PROFILE_URI)
-            .buildAndExpand(sub).toUriString();
+                .buildAndExpand(sub).toUriString();
         return restTemplate.getForObject(userAdminServerBaseUri + path, UserProfileInfos.class);
     }
 
-    public Optional<Integer> getUserMaxAllowedBuilds(String sub) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_MAX_ALLOWED_BUILDS_URI)
-            .buildAndExpand(sub).toUriString();
-        return Optional.ofNullable(restTemplate.getForObject(userAdminServerBaseUri + path, Integer.class));
+    public Map<QuotaType, QuotaState> getUserQuotaState(String sub) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_QUOTA_STATE_URI)
+                .buildAndExpand(sub).toUriString();
+        return restTemplate.exchange(
+                userAdminServerBaseUri + path,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<QuotaType, QuotaState>>() {
+                }).getBody();
+    }
+
+    public UUID consumeQuota(String sub, QuotaType quotaType) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_CONSUME_QUOTA_URI)
+                .buildAndExpand(sub, quotaType)
+                .toUriString();
+        try {
+            return restTemplate.postForObject(userAdminServerBaseUri + path, null, UUID.class);
+        } catch (HttpClientErrorException.TooManyRequests e) {
+            throw new StudyException(MAX_OPERATION_TYPE_EXCEEDED, "Max number of " + quotaType.name() + " already reached");
+        }
+    }
+
+    public void releaseQuotaId(String sub, UUID quotaId) {
+        if (quotaId == null) {
+            return;
+        }
+        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_RELEASE_QUOTA_URI)
+                .buildAndExpand(sub, quotaId)
+                .toUriString();
+        try {
+            restTemplate.postForEntity(userAdminServerBaseUri + path, null, Void.class);
+        } catch (Exception e) {
+            LOGGER.error("Could not release quota '{}' for user '{}'", quotaId, sub, e);
+        }
+    }
+
+    @Transactional
+    public void registerQuotaConsumption(UUID resultUuid, UUID quotaId) {
+        if (quotaId == null) {
+            return;
+        }
+        quotaConsumptionRepository.save(new QuotaConsumptionEntity(resultUuid, quotaId));
+    }
+
+    @Transactional
+    public void releaseQuota(String sub, UUID resultUuid) {
+        if (resultUuid == null) {
+            return;
+        }
+        quotaConsumptionRepository.findById(resultUuid).ifPresent(mapping -> {
+            releaseQuotaId(sub, mapping.getQuotaId());
+            quotaConsumptionRepository.delete(mapping);
+        });
+    }
+
+    @Transactional
+    public void releaseFailedQuotaId(String sub, UUID quotaId) {
+        quotaConsumptionRepository.findByQuotaId(quotaId).ifPresent(quotaConsumptionRepository::delete);
+        releaseQuotaId(sub, quotaId);
     }
 }

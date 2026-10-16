@@ -80,7 +80,6 @@ class NetworkVisualizationParamsTest {
         }
     }
 
-    private static final long TIMEOUT = 1000;
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
 
     @Autowired
@@ -107,7 +106,7 @@ class NetworkVisualizationParamsTest {
                 String path = Objects.requireNonNull(request.getPath());
                 String method = Objects.requireNonNull(request.getMethod());
                 if (path.startsWith("/v1/network-visualizations-params")) {
-                    if (method.equals("GET")) {
+                    if ("GET".equals(method)) {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), NETWORK_VISU_DEFAULT_PARAMETERS_JSON);
                     } else {
                         return new MockResponse(200);
@@ -157,7 +156,7 @@ class NetworkVisualizationParamsTest {
                 .andExpect(status().is(HttpStatus.OK.value()));
 
         // check update notification on visu params
-        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_NETWORK_VISUALIZATION_PARAMETERS, updateType);

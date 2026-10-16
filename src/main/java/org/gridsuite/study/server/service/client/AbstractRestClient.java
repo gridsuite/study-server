@@ -21,10 +21,10 @@ public abstract class AbstractRestClient implements RestClient {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    private final RestTemplate restTemplate;
+    protected final RestTemplate restTemplate;
 
     @Setter
-    private String baseUri;
+    protected String baseUri;
 
     protected AbstractRestClient(String baseUri, RestTemplate restTemplate) {
         this.baseUri = baseUri;

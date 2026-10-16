@@ -14,19 +14,18 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.gridsuite.study.server.StudyApi;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
+import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.SupervisionService;
-
-import java.util.List;
-import java.util.UUID;
-
-import org.gridsuite.study.server.dto.ComputationType;
-import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.UUID;
 
 /**
  * @author Hugo Marcellin <hugo.marcelin at rte-france.com>
@@ -45,7 +44,8 @@ public class SupervisionController {
 
     private final RestClient restClient;
 
-    public SupervisionController(SupervisionService supervisionService, StudyService studyService, RootNetworkService rootNetworkService, EquipmentInfosService equipmentInfosService, RestClient restClient) {
+    public SupervisionController(SupervisionService supervisionService, StudyService studyService, RootNetworkService rootNetworkService, EquipmentInfosService equipmentInfosService, RestClient
+            restClient) {
         this.supervisionService = supervisionService;
         this.studyService = studyService;
         this.rootNetworkService = rootNetworkService;
@@ -178,6 +178,21 @@ public class SupervisionController {
     public ResponseEntity<Void> invalidateAllNodesBuilds(@PathVariable("studyUuid") UUID studyUuid) {
         supervisionService.unbuildAllNodes(studyUuid);
         return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping(value = "/studies/{studyUuid}/unload")
+    @Operation(summary = "Invalidate all node tree, clean stashed elements and delete root networks")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "study has been unloaded")})
+    public ResponseEntity<Void> unloadStudy(@PathVariable("studyUuid") UUID studyUuid) {
+        supervisionService.unloadStudy(studyUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/loaded")
+    @Operation(summary = "Get the study uuids whose network is currently loaded")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of the study uuids whose network is currently loaded")})
+    public ResponseEntity<List<UUID>> getLoadedStudies(@Parameter(description = "Study uuids to filter") @RequestParam("ids") List<UUID> studyUuids) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.getLoadedStudyUuids(studyUuids));
     }
 
 }

@@ -37,7 +37,11 @@ public enum ComputationType {
         NotificationService.UPDATE_TYPE_STATE_ESTIMATION_FAILED),
     PCC_MIN("Pcc min", "pccMinResultUuid",
         NotificationService.UPDATE_TYPE_PCC_MIN_STATUS, NotificationService.UPDATE_TYPE_PCC_MIN_RESULT,
-        NotificationService.UPDATE_TYPE_PCC_MIN_FAILED);
+        NotificationService.UPDATE_TYPE_PCC_MIN_FAILED),
+    ASYMMETRICAL_LOAD("Asymmetrical load", "asymmetricalLoadResultUuid",
+            NotificationService.UPDATE_TYPE_ASYMMETRICAL_LOAD_STATUS,
+            NotificationService.UPDATE_TYPE_ASYMMETRICAL_LOAD_RESULT,
+            NotificationService.UPDATE_TYPE_ASYMMETRICAL_LOAD_FAILED);
 
     private final String label; // used for logs
     private final String resultUuidLabel;

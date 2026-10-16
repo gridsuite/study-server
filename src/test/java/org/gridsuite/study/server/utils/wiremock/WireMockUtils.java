@@ -39,6 +39,10 @@ public final class WireMockUtils {
         verifyPostRequest(wireMockServer, stubId, urlPath, false, queryParams, null, nbRequests);
     }
 
+    public static void verifyPostRequest(WireMockServer wireMockServer, UUID stubId, String urlPath, boolean regexMatching, Map<String, StringValuePattern> queryParams, int nbRequests) {
+        verifyPostRequest(wireMockServer, stubId, urlPath, regexMatching, queryParams, null, nbRequests);
+    }
+
     public static void verifyPostRequest(WireMockServer wireMockServer, UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams) {
         verifyPostRequest(wireMockServer, stubId, urlPath, queryParams, 1);
     }

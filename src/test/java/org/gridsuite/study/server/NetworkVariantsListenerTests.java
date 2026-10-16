@@ -46,11 +46,19 @@ class NetworkVariantsListenerTests {
     @Test
     void testVariantNotifications() {
         // In initial variant
-        equipmentInfosService.addEquipmentInfos(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("load0").name("load0").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build());
-        equipmentInfosService.addEquipmentInfos(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("gen0").name("gen0").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build());
+        equipmentInfosService.addEquipmentInfos(
+                EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("load0").name("load0").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LOAD").voltageLevels(
+                        Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build());
+        equipmentInfosService.addEquipmentInfos(
+                EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("gen0").name("gen0").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("GENERATOR").voltageLevels(
+                        Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build());
 
-        equipmentInfosService.addEquipmentInfos(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("load1").name("load1").variantId(VARIANT_ID).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build());
-        equipmentInfosService.addEquipmentInfos(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("gen1").name("gen1").variantId(VARIANT_ID).type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build());
+        equipmentInfosService.addEquipmentInfos(
+                EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("load1").name("load1").variantId(VARIANT_ID).type("LOAD").voltageLevels(
+                        Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build());
+        equipmentInfosService.addEquipmentInfos(
+                EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("gen1").name("gen1").variantId(VARIANT_ID).type("GENERATOR").voltageLevels(
+                        Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build());
 
         NetworkVariantsListener listener = new NetworkVariantsListener(NETWORK_UUID, equipmentInfosService);
 

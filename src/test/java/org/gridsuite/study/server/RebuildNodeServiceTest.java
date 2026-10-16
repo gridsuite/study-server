@@ -6,11 +6,15 @@
  */
 package org.gridsuite.study.server;
 
+import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
+import org.gridsuite.study.server.service.NetworkModificationService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RebuildNodeService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,7 +26,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 @DisableElasticsearch
@@ -35,6 +42,12 @@ class RebuildNodeServiceTest {
 
     @MockitoBean
     private StudyService studyService;
+
+    @MockitoBean
+    private NetworkModificationService networkModificationService;
+
+    @MockitoBean
+    private NodeActivityRunnerService nodeActivityService;
 
     UUID studyUuid = UUID.randomUUID();
     UUID node1Uuid = UUID.randomUUID();
@@ -49,6 +62,8 @@ class RebuildNodeServiceTest {
         doReturn(List.of(node1Uuid, node2Uuid)).when(networkModificationTreeService).getHighestNodeUuids(node1Uuid, node2Uuid);
         doReturn(List.of(node1Uuid)).when(networkModificationTreeService).getHighestNodeUuids(node1Uuid, node1Uuid);
         doReturn(false).when(networkModificationTreeService).isRootOrConstructionNode(any());
+        doReturn(Map.of()).when(networkModificationService).findParentComposites(any());
+        TestUtils.bypassNodeActivities(nodeActivityService);
     }
 
     @Test
@@ -57,7 +72,9 @@ class RebuildNodeServiceTest {
             Map.of(rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILT))
         ).when(studyService).getNodeBuildStatusByRootNetwork(studyUuid, node1Uuid);
 
-        rebuildNodeService.moveNetworkModification(studyUuid, node1Uuid, UUID.randomUUID(), UUID.randomUUID(), userId);
+        UUID modificationUuid = UUID.randomUUID();
+        ModificationMoveInfos modificationMoveInfos = new ModificationMoveInfos(modificationUuid, null, null, null);
+        rebuildNodeService.moveNetworkModifications(studyUuid, node1Uuid, node1Uuid, List.of(modificationMoveInfos), userId);
 
         verify(studyService, times(1)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
     }
@@ -123,7 +140,9 @@ class RebuildNodeServiceTest {
 
         doReturn(true).when(networkModificationTreeService).isRootOrConstructionNode(any());
 
-        rebuildNodeService.moveNetworkModification(studyUuid, node1Uuid, UUID.randomUUID(), UUID.randomUUID(), userId);
+        UUID modificationUuid = UUID.randomUUID();
+        ModificationMoveInfos modificationMoveInfos = new ModificationMoveInfos(modificationUuid, null, null, null);
+        rebuildNodeService.moveNetworkModifications(studyUuid, node1Uuid, modificationUuid, List.of(modificationMoveInfos), userId);
 
         verify(studyService, times(0)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
     }

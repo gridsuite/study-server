@@ -112,15 +112,4 @@ public class WorkspaceController {
         return ResponseEntity.status(HttpStatus.CREATED).body(configUuid);
     }
 
-    @DeleteMapping("/{workspaceId}/panels/{panelId}/current-nad-config")
-    @Operation(summary = "Delete current NAD config")
-    @ApiResponse(responseCode = "204", description = "Current NAD config deleted")
-    @ApiResponse(responseCode = "404", description = "Study not found")
-    public ResponseEntity<Void> deleteNadConfig(
-            @PathVariable UUID studyUuid,
-            @PathVariable UUID workspaceId,
-            @PathVariable UUID panelId) {
-        workspaceService.deleteNadConfig(studyUuid, workspaceId, panelId);
-        return ResponseEntity.noContent().build();
-    }
 }

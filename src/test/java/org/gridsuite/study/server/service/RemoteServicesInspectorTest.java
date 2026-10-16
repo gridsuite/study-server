@@ -148,7 +148,8 @@ class RemoteServicesInspectorTest implements WithAssertions {
 
     private void testOptionalServices(final String jsonResponse, final ServiceStatus statusTest, int delayResponse) {
         // select 3 services to be optional
-        final List<String> optionalServices = List.of(RemoteServiceName.LOADFLOW_SERVER.serviceName(), RemoteServiceName.SECURITY_ANALYSIS_SERVER.serviceName(), RemoteServiceName.VOLTAGE_INIT_SERVER.serviceName());
+        final List<String> optionalServices = List.of(RemoteServiceName.LOADFLOW_SERVER.serviceName(), RemoteServiceName.SECURITY_ANALYSIS_SERVER.serviceName(),
+                RemoteServiceName.VOLTAGE_INIT_SERVER.serviceName());
         remoteServicesProperties.getServices().forEach(s -> s.setOptional(optionalServices.contains(s.getName())));
 
         // any optional service will be mocked with JSON to respond

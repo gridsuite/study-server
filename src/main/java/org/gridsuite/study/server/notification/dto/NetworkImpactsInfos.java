@@ -7,11 +7,9 @@
 
 package org.gridsuite.study.server.notification.dto;
 
-import java.util.Set;
-
 import com.fasterxml.jackson.annotation.JsonInclude;
-
 import lombok.*;
+import java.util.Set;
 
 @AllArgsConstructor
 @Setter

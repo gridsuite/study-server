@@ -177,7 +177,7 @@ class ComputationResultFiltersTest {
     }
 
     private void checkComputationResultTabUpdateMessageReceived(UUID studyUuid, String expectedNotificationType, String expectedComputationType, String expectedComputationSubtype) {
-        Message<byte[]> messageStudyUpdate = output.receive(1000, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> messageStudyUpdate = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION, 1000);
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(expectedNotificationType, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));

@@ -18,4 +18,7 @@ public interface RestClient {
     RestTemplate getRestTemplate();
 
     String getBaseUri();
+
+    void setBaseUri(String baseUri);
+
 }

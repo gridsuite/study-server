@@ -14,7 +14,6 @@ import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
  */
 public enum BuildStatus {
     NOT_BUILT(-2),
-    BUILDING(-1),
     BUILT(0),
     BUILT_WITH_WARNING(1),
     BUILT_WITH_ERROR(2);
@@ -42,10 +41,6 @@ public enum BuildStatus {
 
     public boolean isNotBuilt() {
         return this.severityLevel == -2;
-    }
-
-    public boolean isBuilding() {
-        return this.severityLevel == -1;
     }
 
     public boolean isBuilt() {

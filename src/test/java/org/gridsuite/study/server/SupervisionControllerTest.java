@@ -15,12 +15,10 @@ import com.powsybl.iidm.network.Identifiable;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.serde.XMLImporter;
+import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import org.elasticsearch.client.RestClient;
-import org.gridsuite.study.server.dto.BasicRootNetworkInfos;
-import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
-import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
-import org.gridsuite.study.server.dto.VoltageLevelInfos;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
@@ -28,6 +26,7 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -37,8 +36,10 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.MediaType;
+import org.springframework.messaging.Message;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -48,11 +49,18 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -71,6 +79,11 @@ class SupervisionControllerTest {
     private static final UUID CASE_UUID = UUID.randomUUID();
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final UUID STUDY_UUID = UUID.randomUUID();
+    private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
+    private static final long TIMEOUT = 1000;
+
+    private static final UUID SECOND_NETWORK_UUID = UUID.randomUUID();
+    private static final UUID SECOND_CASE_UUID = UUID.randomUUID();
 
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
@@ -102,8 +115,17 @@ class SupervisionControllerTest {
     @MockitoBean
     private NetworkService networkService;
 
+    @MockitoBean
+    private NetworkStoreService networkStoreService;
+
     @Autowired
     private StudyInfosService studyInfosService;
+
+    @Autowired
+    private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
+
+    @Autowired
+    private OutputDestination output;
 
     private static EquipmentInfos toEquipmentInfos(Identifiable<?> i) {
         return EquipmentInfos.builder()
@@ -131,14 +153,20 @@ class SupervisionControllerTest {
         network.getIdentifiables().forEach(idable -> equipmentInfosService.addEquipmentInfos(toEquipmentInfos(idable)));
 
         when(networkConversionService.checkStudyIndexationStatus(NETWORK_UUID)).thenReturn(true);
+        rootNetworkNodeInfoRepository.deleteAll();
+        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
     }
 
     @AfterEach
     void tearDown() {
         equipmentInfosService.deleteAllByNetworkUuid(NETWORK_UUID);
+        equipmentInfosService.deleteAllByNetworkUuid(SECOND_NETWORK_UUID);
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
+        rootNetworkNodeInfoRepository.deleteAll();
         studyRepository.deleteAll();
+        // Each test must consume the notifications it triggers, so nothing leaks into the next test
+        TestUtils.assertQueuesEmptyThenClear(List.of(ELEMENT_UPDATE_DESTINATION), output);
     }
 
     private StudyEntity initStudy() throws Exception {
@@ -148,6 +176,24 @@ class SupervisionControllerTest {
         when(rootNetworkService.getNetworkUuid(rootNetworkUuid)).thenReturn(NETWORK_UUID);
         assertIndexationStatus(STUDY_UUID, RootNetworkIndexationStatus.INDEXED.name());
         return study;
+    }
+
+    private void addSecondRootNetwork(UUID rootNetworkUuid, UUID networkUuid) {
+        rootNetworkService.insertCreationRequest(STUDY_UUID,
+                RootNetworkInfos.builder()
+                        .id(rootNetworkUuid)
+                        .name("second")
+                        .tag("SND")
+                        .caseInfos(new CaseInfos(SECOND_CASE_UUID, null, "secondCase", "XIIDM"))
+                        .networkInfos(new NetworkInfos(networkUuid, "secondNetworkId"))
+                        .build(),
+                "userId");
+        studyService.createRootNetwork(STUDY_UUID,
+                RootNetworkInfos.builder()
+                        .id(rootNetworkUuid)
+                        .networkInfos(new NetworkInfos(networkUuid, "secondNetworkId"))
+                        .caseInfos(new CaseInfos(SECOND_CASE_UUID, null, "secondCase", "XIIDM"))
+                        .build());
     }
 
     private void assertIndexationCount(long expectedEquipmentsIndexationCount, long expectedTombstonedEquipmentsIndexationCount) throws Exception {
@@ -214,6 +260,11 @@ class SupervisionControllerTest {
 
         mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/nodes/builds", STUDY_UUID))
             .andExpect(status().isOk());
+
+        // Root network is LOADED, so unbuilding the tree emits an element.update notification for the study
+        Message<byte[]> elementUpdateMessage = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
+        assertNotNull(elementUpdateMessage);
+        assertEquals(STUDY_UUID.toString(), String.valueOf(elementUpdateMessage.getHeaders().get("elementUuid")));
 
         assertIndexationCount(74, 0);
         assertIndexationStatus(STUDY_UUID, RootNetworkIndexationStatus.INDEXED.name());
@@ -301,5 +352,58 @@ class SupervisionControllerTest {
         // checks that the supervision extra data are here
         assertEquals(1, infos.get(0).getCaseUuids().size());
         assertEquals(1, infos.get(0).getRootNetworkInfos().size());
+    }
+
+    @Test
+    void testUnloadStudy() throws Exception {
+        initStudy();
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(STUDY_UUID);
+        UUID secondRootNetworkUuid = UUID.randomUUID();
+        addSecondRootNetwork(secondRootNetworkUuid, SECOND_NETWORK_UUID);
+        when(rootNetworkService.getNetworkUuid(secondRootNetworkUuid)).thenReturn(SECOND_NETWORK_UUID);
+
+        Mockito.doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
+        Mockito.doNothing().when(networkStoreService).deleteNetwork(SECOND_NETWORK_UUID);
+
+        mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/unload", STUDY_UUID))
+                .andExpect(status().isOk());
+
+        // Check that both root network underlying networks have been erased
+        Mockito.verify(rootNetworkService, Mockito.times(2))
+                .invalidateRootNetworkRemoteInfos(any(), eq(true), eq(false));
+        Mockito.verify(networkStoreService, Mockito.times(1)).deleteNetwork(NETWORK_UUID);
+        Mockito.verify(networkStoreService, Mockito.times(1)).deleteNetwork(SECOND_NETWORK_UUID);
+
+        // Check that the study index data has been erased
+        assertIndexationStatus(STUDY_UUID, RootNetworkIndexationStatus.NOT_INDEXED.name());
+        assertIndexationCount(0, 0);
+
+        List<UUID> allRootNetworkUuids = rootNetworkService.getStudyRootNetworkIds(STUDY_UUID);
+        assertThat(allRootNetworkUuids).hasSize(2);
+        assertEquals(RootNetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(firstRootNetworkUuid).orElseThrow().getLoadStatus());
+        assertEquals(RootNetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(secondRootNetworkUuid).orElseThrow().getLoadStatus());
+        // While invalidating the root network set to UNLOADING so doUnbuildNodeTree
+        // noneMatch(UNLOADING) check never holds and no element.update notification is emitted
+        TestUtils.assertQueuesEmptyThenClear(List.of(ELEMENT_UPDATE_DESTINATION), output);
+    }
+
+    @Test
+    void testGetLoadedStudies() throws Exception {
+        initStudy();
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(STUDY_UUID);
+        assertEquals(RootNetworkLoadStatus.LOADED, rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow().getLoadStatus());
+        UUID unknownStudyUuid = UUID.randomUUID();
+        MvcResult mvcResult = mockMvc.perform(get("/v1/supervision/studies/loaded")
+                        .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
+        List<UUID> loadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        assertEquals(List.of(STUDY_UUID), loadedStudyUuids);
+        mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/unload", STUDY_UUID))
+                .andExpect(status().isOk());
+        mvcResult = mockMvc.perform(get("/v1/supervision/studies/loaded")
+                        .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
+        loadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        assertThat(loadedStudyUuids).isEmpty();
     }
 }
