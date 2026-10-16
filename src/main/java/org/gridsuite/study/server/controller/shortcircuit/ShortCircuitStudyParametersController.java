@@ -36,14 +36,24 @@ public class ShortCircuitStudyParametersController {
     }
 
     @PostMapping(value = "/parameters", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "set short-circuit analysis parameters on study, reset to default ones if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set"),
-        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    @Operation(summary = "set short-circuit analysis parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set")})
     public ResponseEntity<Void> setShortCircuitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String shortCircuitParametersInfos,
+            @RequestBody String shortCircuitParametersInfos,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        return shortCircuitService.setShortCircuitParameters(studyUuid, shortCircuitParametersInfos, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
+        shortCircuitService.setShortCircuitParameters(studyUuid, shortCircuitParametersInfos, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/parameters/reset")
+    @Operation(summary = "reset short-circuit analysis parameters on study to the user profile or default ones")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are reset"),
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    public ResponseEntity<Void> resetShortCircuitParameters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        return shortCircuitService.resetShortCircuitParameters(studyUuid, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/parameters", produces = MediaType.APPLICATION_JSON_VALUE)

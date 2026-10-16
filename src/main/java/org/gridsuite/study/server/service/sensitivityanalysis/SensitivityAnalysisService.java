@@ -57,17 +57,31 @@ public class SensitivityAnalysisService extends AbstractComputationService {
     }
 
     @Transactional
-    public boolean setSensitivityAnalysisParameters(UUID studyUuid, String parameters, String userId) {
-        return setComputationParameters(
+    public void setSensitivityAnalysisParameters(UUID studyUuid, String parameters, String userId) {
+        setComputationParameters(
                 studyUuid,
                 parameters,
                 userId,
                 StudyEntity::getSensitivityAnalysisParametersUuid,
                 StudyEntity::setSensitivityAnalysisParametersUuid,
-                UserProfileInfos::getSensitivityAnalysisParameterId,
-                sensitivityAnalysisRestService,
                 sensitivityAnalysisRestService::createSensitivityAnalysisParameters,
                 sensitivityAnalysisRestService::updateSensitivityAnalysisParameters,
+                SENSITIVITY_ANALYSIS,
+                List.of(rootNetworkNodeInfoService::invalidateSensitivityAnalysisStatusOnAllNodes),
+                NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS
+        );
+    }
+
+    @Transactional
+    public boolean resetSensitivityAnalysisParameters(UUID studyUuid, String userId) {
+        return resetComputationParameters(
+                studyUuid,
+                userId,
+                StudyEntity::getSensitivityAnalysisParametersUuid,
+                StudyEntity::setSensitivityAnalysisParametersUuid,
+                UserProfileInfos::getSensitivityAnalysisParameterId,
+                sensitivityAnalysisRestService,
+                sensitivityAnalysisRestService::resetSensitivityAnalysisParameters,
                 SENSITIVITY_ANALYSIS,
                 List.of(rootNetworkNodeInfoService::invalidateSensitivityAnalysisStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS

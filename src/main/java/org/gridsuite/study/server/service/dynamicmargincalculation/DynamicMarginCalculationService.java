@@ -64,17 +64,31 @@ public class DynamicMarginCalculationService extends AbstractComputationService 
     }
 
     @Transactional
-    public boolean setDynamicMarginCalculationParameters(UUID studyUuid, String dmcParameter, String userId) {
-        return setComputationParameters(
+    public void setDynamicMarginCalculationParameters(UUID studyUuid, String dmcParameter, String userId) {
+        setComputationParameters(
                 studyUuid,
                 dmcParameter,
                 userId,
                 StudyEntity::getDynamicMarginCalculationParametersUuid,
                 StudyEntity::setDynamicMarginCalculationParametersUuid,
-                UserProfileInfos::getDynamicMarginCalculationParameterId,
-                dynamicMarginCalculationRestService,
                 dynamicMarginCalculationRestService::createParameters,
                 dynamicMarginCalculationRestService::updateParameters,
+                DYNAMIC_MARGIN_CALCULATION,
+                List.of(rootNetworkNodeInfoService::invalidateDynamicMarginCalculationStatusOnAllNodes),
+                NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS
+        );
+    }
+
+    @Transactional
+    public boolean resetDynamicMarginCalculationParameters(UUID studyUuid, String userId) {
+        return resetComputationParameters(
+                studyUuid,
+                userId,
+                StudyEntity::getDynamicMarginCalculationParametersUuid,
+                StudyEntity::setDynamicMarginCalculationParametersUuid,
+                UserProfileInfos::getDynamicMarginCalculationParameterId,
+                dynamicMarginCalculationRestService,
+                dynamicMarginCalculationRestService::resetParameters,
                 DYNAMIC_MARGIN_CALCULATION,
                 List.of(rootNetworkNodeInfoService::invalidateDynamicMarginCalculationStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS

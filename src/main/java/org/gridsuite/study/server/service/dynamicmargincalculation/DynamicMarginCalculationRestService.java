@@ -130,6 +130,14 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
         getRestTemplate().put(url, httpEntity);
     }
 
+    public void resetParameters(UUID parametersUuid) {
+        Objects.requireNonNull(parametersUuid);
+
+        String url = getParametersWithUuidUrl(parametersUuid) + "/reset";
+
+        getRestTemplate().put(url, null);
+    }
+
     @Override
     public UUID duplicateParameters(UUID sourceParameterId) {
         Objects.requireNonNull(sourceParameterId);
