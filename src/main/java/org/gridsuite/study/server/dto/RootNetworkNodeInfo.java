@@ -56,6 +56,8 @@ public class RootNetworkNodeInfo {
 
     private UUID asymmetricalLoadResultUuid;
 
+    private UUID logicalControlsResultUuid;
+
     private NodeBuildStatus nodeBuildStatus;
 
     private List<NodeExportEmbeddable> nodeExportNetwork;
