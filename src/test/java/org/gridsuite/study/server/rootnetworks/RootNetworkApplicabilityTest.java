@@ -24,6 +24,7 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -353,6 +354,27 @@ class RootNetworkApplicabilityTest {
         studyService.deleteRootNetworks(studyEntity.getId(), List.of(deletedRootNetworkUuid), USER_ID);
 
         verify(networkModificationService, times(1)).deleteRootNetworkTags(List.of(firstNode.getModificationGroupUuid()), List.of(ROOT_NETWORK_TAG_2));
+    }
+
+    @Test
+    void testCreatingRootNetworkInitializesTagApplicability() {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
+        NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
+
+        RootNetworkInfos secondRootNetworkInfos = RootNetworkInfos.builder()
+            .id(UUID.randomUUID())
+            .name("secondRootNetworkName")
+            .caseInfos(new CaseInfos(UUID.randomUUID(), UUID.randomUUID(), CASE_NAME, CASE_FORMAT))
+            .networkInfos(new NetworkInfos(UUID.randomUUID(), UUID.randomUUID().toString()))
+            .reportUuid(UUID.randomUUID())
+            .tag(ROOT_NETWORK_TAG_2)
+            .build();
+        rootNetworkService.insertCreationRequest(studyEntity.getId(), secondRootNetworkInfos, USER_ID);
+        Assertions.assertNotNull(studyEntity.getId());
+        studyService.createRootNetwork(studyEntity.getId(), secondRootNetworkInfos);
+        verify(networkModificationService, times(1)).initRootNetworkTag(List.of(firstNode.getModificationGroupUuid()), List.of(ROOT_NETWORK_TAG_1), ROOT_NETWORK_TAG_2);
     }
 
     private void updateRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String tag) throws Exception {
