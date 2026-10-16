@@ -371,6 +371,7 @@ public class StudyService {
             rootNetworkInfos.setName(rootNetworkCreationRequestEntityOpt.get().getName());
             rootNetworkInfos.setTag(rootNetworkCreationRequestEntityOpt.get().getTag());
             rootNetworkInfos.setDescription(rootNetworkCreationRequestEntityOpt.get().getDescription());
+            networkModificationService.addRootNetworkTag(getStudyModificationGroupUuids(studyUuid), rootNetworkInfos.getTag());
             rootNetworkService.createRootNetwork(studyEntity, rootNetworkInfos);
             rootNetworkService.deleteRootNetworkRequest(rootNetworkCreationRequestEntityOpt.get());
             //update study entity to multi root

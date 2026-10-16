@@ -59,6 +59,8 @@ public class NetworkModificationService {
     private static final String QUERY_PARAM_ROOT_NETWORK_TAG = "rootNetworkTag";
     private static final String QUERY_PARAM_GROUP_UUIDS = "groupUuids";
     private static final String QUERY_PARAM_ROOT_NETWORK_TAGS = "rootNetworkTags";
+    private static final String QUERY_PARAM_OLD_TAG = "oldTag";
+    private static final String QUERY_PARAM_NEW_TAG = "newTag";
     private static final String ROOT_NETWORK_TAG_PATH = "root-network-tag";
     private static final String PARAM_USER_INPUT = "userInput";
 
@@ -395,6 +397,27 @@ public class NetworkModificationService {
     }
 
     /**
+     * Adds a root network tag to the applicabilities held by the modifications of the given groups.
+     */
+    public void addRootNetworkTag(List<UUID> groupUuids, String newTag) {
+        Objects.requireNonNull(newTag);
+        if (CollectionUtils.isEmpty(groupUuids)) {
+            return;
+        }
+        var path = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + ROOT_NETWORK_TAG_PATH)
+                .queryParam(QUERY_PARAM_GROUP_UUIDS, groupUuids)
+                .queryParam(QUERY_PARAM_NEW_TAG, newTag)
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        restTemplate.exchange(path, HttpMethod.POST, new HttpEntity<>(headers), Void.class);
+    }
+
+    /**
      * Renames a root network tag in the applicabilities held by the modifications of the given groups.
      */
     public void renameRootNetworkTag(List<UUID> groupUuids, String oldTag, String newTag) {
@@ -406,8 +429,8 @@ public class NetworkModificationService {
         var path = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + ROOT_NETWORK_TAG_PATH)
                 .queryParam(QUERY_PARAM_GROUP_UUIDS, groupUuids)
-                .queryParam("oldTag", oldTag)
-                .queryParam("newTag", newTag)
+                .queryParam(QUERY_PARAM_OLD_TAG, oldTag)
+                .queryParam(QUERY_PARAM_NEW_TAG, newTag)
                 .buildAndExpand()
                 .toUriString();
 
