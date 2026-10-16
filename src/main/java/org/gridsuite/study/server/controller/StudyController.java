@@ -950,7 +950,7 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/network-modifications/references/write-access")
-    @Operation(summary = "Whether the study contains shared modifications, including nested in its composites, and, if so, whether the user can write on all of them")
+    @Operation(summary = "Whether the study contains shared modifications, including nested in its composites, and, if so, whether the user can write on all, some or none of them")
     @ApiResponse(responseCode = "200", description = "The write access on the shared modifications was returned")
     public ResponseEntity<SharedModificationsWriteAccess> getSharedModificationsWriteAccess(@PathVariable("studyUuid") UUID studyUuid,
                                                                                             @RequestHeader(HEADER_USER_ID) String userId) {

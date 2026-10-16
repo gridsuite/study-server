@@ -326,10 +326,10 @@ class RootNetworkApplicabilityTest {
 
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
         NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
-        doReturn(SharedModificationsWriteAccess.SOME_NOT_WRITABLE).when(networkModificationService)
+        doReturn(SharedModificationsWriteAccess.NONE_WRITABLE).when(networkModificationService)
             .getReferencedModificationsWriteAccess(List.of(firstNode.getModificationGroupUuid()), USER_ID);
 
-        assertEquals(SharedModificationsWriteAccess.SOME_NOT_WRITABLE, getSharedModificationsWriteAccess(studyUuid));
+        assertEquals(SharedModificationsWriteAccess.NONE_WRITABLE, getSharedModificationsWriteAccess(studyUuid));
     }
 
     private SharedModificationsWriteAccess getSharedModificationsWriteAccess(UUID studyUuid) throws Exception {

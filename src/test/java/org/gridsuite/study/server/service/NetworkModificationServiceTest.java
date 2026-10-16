@@ -289,10 +289,10 @@ class NetworkModificationServiceTest {
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, USER_ID);
         when(restTemplate.exchange(expectedUrl, HttpMethod.GET, new HttpEntity<>(headers), SharedModificationsWriteAccess.class))
-            .thenReturn(ResponseEntity.ok(SharedModificationsWriteAccess.SOME_NOT_WRITABLE));
+            .thenReturn(ResponseEntity.ok(SharedModificationsWriteAccess.NONE_WRITABLE));
 
         assertThat(networkModificationService.getReferencedModificationsWriteAccess(List.of(groupUuid), USER_ID))
-            .isEqualTo(SharedModificationsWriteAccess.SOME_NOT_WRITABLE);
+            .isEqualTo(SharedModificationsWriteAccess.NONE_WRITABLE);
     }
 
     private void expectUserIdIsForwarded(String expectedUrl) {

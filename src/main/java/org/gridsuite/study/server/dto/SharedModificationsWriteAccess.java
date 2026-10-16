@@ -14,5 +14,6 @@ package org.gridsuite.study.server.dto;
 public enum SharedModificationsWriteAccess {
     NO_SHARED_MODIFICATION,
     ALL_WRITABLE,
-    SOME_NOT_WRITABLE
+    SOME_WRITABLE,
+    NONE_WRITABLE
 }
