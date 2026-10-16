@@ -207,6 +207,22 @@ class NetworkModificationServiceTest {
     }
 
     @Test
+    void testAddRootNetworkTag() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
+                + "?groupUuids=" + groupUuid + "&newTag=PH2";
+
+        networkModificationService.addRootNetworkTag(List.of(groupUuid), "PH2");
+
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.POST), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+
+        // there is nothing to add the tag to without a group
+        networkModificationService.addRootNetworkTag(List.of(), "PH2");
+
+        verifyNoMoreInteractions(restTemplate);
+    }
+
+    @Test
     void testRenameRootNetworkTag() {
         UUID firstGroupUuid = UUID.randomUUID();
         UUID secondGroupUuid = UUID.randomUUID();
