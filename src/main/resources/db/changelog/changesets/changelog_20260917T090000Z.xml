@@ -1,0 +1,9 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!-- The modifications a root network used to leave out are no longer mapped, so nothing deletes their rows with
+         their root network node info any more and this constraint refuses to let it go. The table and its rows are
+         kept until a later release drops them. -->
+    <changeSet author="florent" id="1789657200000-1">
+        <dropForeignKeyConstraint baseTableName="root_network_node_info_modifications_to_exclude" constraintName="root_network_node_info_entity_modificationsUuidsToExclude_fk1"/>
+    </changeSet>
+</databaseChangeLog>

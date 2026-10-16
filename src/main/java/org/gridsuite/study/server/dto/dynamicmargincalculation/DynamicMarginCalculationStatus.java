@@ -12,6 +12,7 @@ package org.gridsuite.study.server.dto.dynamicmargincalculation;
  */
 public enum DynamicMarginCalculationStatus {
     NOT_DONE,
+    PRELOADING,
     RUNNING,
     SUCCEED,
     FAILED

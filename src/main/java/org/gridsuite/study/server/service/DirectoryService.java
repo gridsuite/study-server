@@ -11,6 +11,7 @@ import lombok.NonNull;
 import lombok.Setter;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ElementAttributes;
+import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.ReferenceAttributes;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 
@@ -106,6 +108,21 @@ public class DirectoryService {
         HttpEntity<Void> request = new HttpEntity<>(headers);
         ResponseEntity<Void> response = restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.HEAD, request, Void.class);
         return response.getStatusCode() == HttpStatus.OK;
+    }
+
+    public void createElementsReferences(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, String userId) {
+        references.stream()
+                .collect(Collectors.groupingBy(ModificationReference::referencedId,
+                        Collectors.mapping(ref -> {
+                            boolean insideComposite = ref.containerId() != null;
+                            return ReferenceAttributes.createReferenceAttributes(
+                                    ref.modificationUuid(),
+                                    insideComposite ? nodeUuid : studyUuid,
+                                    insideComposite ? ref.containerId() : nodeUuid,
+                                    insideComposite ? ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION
+                                            : ReferenceAttributes.ReferenceType.STUDY_NODE);
+                        }, Collectors.toList())))
+                .forEach((referencedId, referencesAttributes) -> createElementReferences(referencedId, referencesAttributes, userId));
     }
 
     public void createElementReferences(@NonNull UUID elementUuid, @NonNull List<ReferenceAttributes> referencesAttributes, String userId) {

@@ -61,12 +61,12 @@ public class SecurityAnalysisService extends AbstractComputationService {
     }
 
     @Transactional
-    public UUID runSecurityAnalysis(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
+    public UUID runSecurityAnalysis(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, UUID quotaId) {
         StudyEntity study = getStudy(studyUuid);
 
         UUID result = handleSecurityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId);
 
-        handleQuotaStart(userId, result, SECURITY_ANALYSIS);
+        handleQuotaStart(result, quotaId);
         return result;
     }
 

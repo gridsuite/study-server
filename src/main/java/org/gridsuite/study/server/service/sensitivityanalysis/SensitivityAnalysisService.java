@@ -75,12 +75,12 @@ public class SensitivityAnalysisService extends AbstractComputationService {
     }
 
     @Transactional
-    public UUID runSensitivityAnalysis(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
+    public UUID runSensitivityAnalysis(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, UUID quotaId) {
         StudyEntity study = getStudy(studyUuid);
 
         UUID result = handleSensitivityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId);
 
-        handleQuotaStart(userId, result, SENSITIVITY_ANALYSIS);
+        handleQuotaStart(result, quotaId);
         return result;
     }
 

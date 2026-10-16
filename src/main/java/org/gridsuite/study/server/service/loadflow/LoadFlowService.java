@@ -8,7 +8,10 @@
 package org.gridsuite.study.server.service.loadflow;
 
 import com.powsybl.loadflow.LoadFlowParameters;
-import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
+import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.UserProfileInfos;
+import org.gridsuite.study.server.dto.VariantInfos;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
@@ -51,7 +54,7 @@ public class LoadFlowService extends AbstractComputationService {
     }
 
     @Transactional
-    public void rerunLoadflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, Boolean withRatioTapChangers, String userId) {
+    public void rerunLoadflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, Boolean withRatioTapChangers, String userId, UUID quotaId) {
         StudyEntity studyEntity = getStudy(studyUuid);
         if (networkModificationTreeService.isSecurityNode(nodeUuid)) {
             networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid,
@@ -65,21 +68,22 @@ public class LoadFlowService extends AbstractComputationService {
                 .loadflowResultUuid(loadflowResultUuid)
                 .withRatioTapChangers(withRatioTapChangers)
                 .userId(userId)
+                .quotaId(quotaId)
                 .build());
         } else {
-            handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+            handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId, quotaId);
         }
         notificationService.emitElementUpdated(studyEntity.getId(), userId);
     }
 
     @Transactional
-    public void sendLoadflowRequestWorflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, String userId) {
+    public void sendLoadflowRequestWorflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, String userId, UUID quotaId) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+        handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId, quotaId);
     }
 
     @Transactional
-    public void sendLoadflowRequest(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, String userId) {
+    public void sendLoadflowRequest(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, String userId, UUID quotaId) {
         StudyEntity studyEntity = getStudy(studyUuid);
         if (networkModificationTreeService.isSecurityNode(nodeUuid)) {
             networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.builder()
@@ -89,7 +93,7 @@ public class LoadFlowService extends AbstractComputationService {
                 false);
         }
 
-        handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+        handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId, quotaId);
     }
 
     @Transactional
@@ -105,10 +109,14 @@ public class LoadFlowService extends AbstractComputationService {
     }
 
     @Transactional
-    public String getLoadFlowParametersValues(UUID studyUuid) {
+    public String getLoadFlowParametersValues(UUID studyUuid, String userId) {
+        // get study loadflow parameters uuid
         StudyEntity studyEntity = getStudy(studyUuid);
-        UUID loadFlowParamsUuid = loadflowRestService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
-        return loadflowRestService.getParameters(loadFlowParamsUuid);
+        UUID studyLoadFlowParamsUuid = loadflowRestService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
+
+        UUID referenceLoadflowParametersUuid = getReferenceLoadflowParametersUuid(userId);
+
+        return loadflowRestService.getParameters(studyLoadFlowParamsUuid, true, referenceLoadflowParametersUuid);
     }
 
     @Transactional
@@ -145,8 +153,19 @@ public class LoadFlowService extends AbstractComputationService {
         return loadflowRestService.getDefaultLimitReductions();
     }
 
-    public String getCommonParameters(UUID parameterUuid) {
-        return loadflowRestService.getParameters(parameterUuid);
+    public String getParameters(UUID parameterUuid, String userId) {
+        UUID referenceLoadflowParametersUuid = getReferenceLoadflowParametersUuid(userId);
+        return loadflowRestService.getParameters(parameterUuid, true, referenceLoadflowParametersUuid);
+    }
+
+    private UUID getReferenceLoadflowParametersUuid(String userId) {
+        // get reference loadflow parameters uuid from user profile, if defined
+        UUID referenceLoadflowParametersUuid = null;
+        UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
+        if (userProfileInfos != null && userProfileInfos.getLoadFlowParameterId() != null) {
+            referenceLoadflowParametersUuid = userProfileInfos.getLoadFlowParameterId();
+        }
+        return referenceLoadflowParametersUuid;
     }
 
     public void updateLoadFlowParameters(UUID parameterUuid, String parameters) {
@@ -228,7 +247,7 @@ public class LoadFlowService extends AbstractComputationService {
         loadflowRestService.invalidateLoadFlowStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, LOAD_FLOW));
     }
 
-    private void handleLoadflowRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, String userId) {
+    private void handleLoadflowRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, String userId, UUID quotaId) {
         UUID lfParametersUuid = loadflowRestService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
         UUID lfReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(LOAD_FLOW.name(), UUID.randomUUID());
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
@@ -240,7 +259,7 @@ public class LoadFlowService extends AbstractComputationService {
             new LoadFlowRestService.ParametersInfos(lfParametersUuid, withRatioTapChangers, isSecurityNode), lfReportUuid, userId);
         rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, result, withRatioTapChangers);
 
-        handleQuotaStart(userId, result, LOAD_FLOW);
+        handleQuotaStart(result, quotaId);
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
         notificationService.emitElementUpdated(studyEntity.getId(), userId);
     }

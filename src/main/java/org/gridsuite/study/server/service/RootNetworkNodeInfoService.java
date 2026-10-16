@@ -82,6 +82,7 @@ public class RootNetworkNodeInfoService {
     private final PccMinRestService pccMinRestService;
     private final ReportService reportService;
     private final AsymmetricalLoadRestService asymmetricalLoadRestService;
+    private final UserAdminService userAdminService;
 
     public RootNetworkNodeInfoService(RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                                       NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
@@ -97,7 +98,8 @@ public class RootNetworkNodeInfoService {
                                       StateEstimationRestService stateEstimationService,
                                       PccMinRestService pccMinService,
                                       AsymmetricalLoadRestService asymmetricalLoadRestService,
-                                      ReportService reportService) {
+                                      ReportService reportService,
+                                      UserAdminService userAdminService) {
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.studyServerExecutionService = studyServerExecutionService;
@@ -113,6 +115,7 @@ public class RootNetworkNodeInfoService {
         this.pccMinRestService = pccMinService;
         this.reportService = reportService;
         this.asymmetricalLoadRestService = asymmetricalLoadRestService;
+        this.userAdminService = userAdminService;
     }
 
     public void createRootNetworkLinks(@NonNull UUID studyUuid, @NonNull RootNetworkEntity rootNetworkEntity) {
@@ -862,46 +865,54 @@ public class RootNetworkNodeInfoService {
     /*******************************
      * STOP COMPUTATION EXECUTIONS *
      *******************************/
+    private void stopWithQuotaRelease(Runnable runnable, String userId, UUID resultUuid) {
+        try {
+            runnable.run();
+        } finally {
+            userAdminService.releaseQuota(userId, resultUuid);
+        }
+    }
+
     @Transactional
     public void stopLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
-        loadFlowRestService.stopLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
+        stopWithQuotaRelease(() -> loadFlowRestService.stopLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId), userId, resultUuid);
     }
 
     @Transactional
     public void stopSecurityAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS);
-        securityAnalysisRestService.stopSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
+        stopWithQuotaRelease(() -> securityAnalysisRestService.stopSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId), userId, resultUuid);
     }
 
     @Transactional
     public void stopSensitivityAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
-        sensitivityAnalysisRestService.stopSensitivityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
+        stopWithQuotaRelease(() -> sensitivityAnalysisRestService.stopSensitivityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId), userId, resultUuid);
     }
 
     @Transactional
     public void stopShortCircuitAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT);
-        shortCircuitRestService.stopShortCircuitAnalysis(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
+        stopWithQuotaRelease(() -> shortCircuitRestService.stopShortCircuitAnalysis(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId), userId, resultUuid);
     }
 
     @Transactional
     public void stopVoltageInit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
-        voltageInitRestService.stopVoltageInit(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
+        stopWithQuotaRelease(() -> voltageInitRestService.stopVoltageInit(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId), userId, resultUuid);
     }
 
     @Transactional
-    public void stopStateEstimation(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
+    public void stopStateEstimation(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION);
-        stateEstimationRestService.stopStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, resultUuid);
+        stopWithQuotaRelease(() -> stateEstimationRestService.stopStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, resultUuid), userId, resultUuid);
     }
 
     @Transactional
-    public void stopPccMin(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
+    public void stopPccMin(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN);
-        pccMinRestService.stopPccMin(studyUuid, nodeUuid, rootNetworkUuid, resultUuid);
+        stopWithQuotaRelease(() -> pccMinRestService.stopPccMin(studyUuid, nodeUuid, rootNetworkUuid, resultUuid), userId, resultUuid);
     }
 
     public void invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {

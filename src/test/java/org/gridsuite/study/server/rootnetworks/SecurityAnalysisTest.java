@@ -526,9 +526,9 @@ class SecurityAnalysisTest {
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), saFailedDestination);
             return resultUuid;
-        }).when(securityAnalysisService).runSecurityAnalysis(any(), any(), any(), any());
+        }).when(securityAnalysisService).runSecurityAnalysis(any(), any(), any(), any(), any());
         assertNotNull(studyEntity.getId());
-        securityAnalysisService.runSecurityAnalysis(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, "");
+        securityAnalysisService.runSecurityAnalysis(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, "", null);
 
         // Test reset uuid result in the database
         assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SECURITY_ANALYSIS));

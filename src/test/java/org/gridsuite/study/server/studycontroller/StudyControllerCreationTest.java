@@ -258,7 +258,7 @@ class StudyControllerCreationTest {
         verify(voltageInitService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
         verify(dynamicSecurityAnalysisRestService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
         verify(stateEstimationService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
-        verify(studyConfigService, times(1)).createDefaultSpreadsheetConfigCollection();
+        verify(studyConfigService, times(1)).createDefaultSpreadsheetConfigCollection(anyString(), any());
     }
 
     private void sendStudyCreationRequest(String userId, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, boolean duplicateCase) throws Exception {

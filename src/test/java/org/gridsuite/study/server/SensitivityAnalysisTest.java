@@ -572,9 +572,9 @@ class SensitivityAnalysisTest {
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), SENSITIVITY_ANALYSIS_FAILED_DESTINATION);
             return resultUuid;
-        }).when(sensitivityAnalysisServiceMock).runSensitivityAnalysis(any(), any(), any(), any());
+        }).when(sensitivityAnalysisServiceMock).runSensitivityAnalysis(any(), any(), any(), any(), any());
         assertNotNull(studyEntity.getId());
-        sensitivityAnalysisServiceMock.runSensitivityAnalysis(studyEntity.getId(), modificationNode.getId(), firstRootNetworkUuid, "testUserId");
+        sensitivityAnalysisServiceMock.runSensitivityAnalysis(studyEntity.getId(), modificationNode.getId(), firstRootNetworkUuid, "testUserId", null);
 
         // Test reset uuid result in the database
         assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), firstRootNetworkUuid, SENSITIVITY_ANALYSIS));
@@ -882,5 +882,22 @@ class SensitivityAnalysisTest {
         List<String> destinations = List.of(STUDY_UPDATE_DESTINATION, SENSITIVITY_ANALYSIS_FAILED_DESTINATION, SENSITIVITY_ANALYSIS_RESULT_DESTINATION, SENSITIVITY_ANALYSIS_STOPPED_DESTINATION);
         TestUtils.assertWiremockServerRequestsEmptyThenShutdown(wireMockServer);
         TestUtils.assertQueuesEmptyThenClear(destinations, output);
+    }
+
+    @Test
+    void consumeSensitivityAnalysisRunning() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
+
+        Message<String> runningMessage = MessageBuilder.withPayload("")
+                .setHeader(HEADER_RECEIVER, objectMapper.writeValueAsString(new NodeReceiver(modificationNode1Uuid, firstRootNetworkUuid)))
+                .build();
+        consumerService.consumeSensitivityAnalysisRunning().accept(runningMessage);
+        Message<byte[]> test = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
+        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, test.getHeaders().get(HEADER_UPDATE_TYPE));
     }
 }

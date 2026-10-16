@@ -67,12 +67,12 @@ public class ShortCircuitService extends AbstractComputationService {
     }
 
     @Transactional
-    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Optional<String> busId, boolean debug, String userId) {
+    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Optional<String> busId, boolean debug, String userId, UUID quotaId) {
         StudyEntity studyEntity = getStudy(studyUuid);
 
         UUID result = handleShortCircuitRequest(studyEntity, nodeUuid, rootNetworkUuid, busId, debug, userId);
 
-        handleQuotaStart(userId, result, SHORT_CIRCUIT);
+        handleQuotaStart(result, quotaId);
         return result;
     }
 

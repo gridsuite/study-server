@@ -61,8 +61,7 @@ import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.dto.ComputationType.STATE_ESTIMATION;
-import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
-import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
+import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -103,6 +102,8 @@ class StateEstimationTest {
     private static final String WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING = "72c9d1ef-d8ab-4388-a6fe-855604c2dc10";
 
     private static final String ESTIM_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
+
+    private static final String LOGICAL_CONTROLS_RESULT_JSON = "{\"balances\":{}}";
 
     private static final String VARIANT_ID = "variant_1";
     private static final String VARIANT_ID_2 = "variant_2";
@@ -226,6 +227,8 @@ class StateEstimationTest {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(STATE_ESTIMATION_PARAMETERS_UUID));
                 } else if (path.matches("/v1/users/.*/quota/.*") && "POST".equals(method)) {
                     return new MockResponse(200);
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/logical-controls\\?variantId=.*") && "POST".equals(method)) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), LOGICAL_CONTROLS_RESULT_JSON);
                 } else {
                     return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
                 }
@@ -385,7 +388,8 @@ class StateEstimationTest {
         runEstim(server, ids);
 
         // stop running estim
-        mockMvc.perform(put(STATE_ESTIMATION_URL_BASE + "stop", ids.studyId, ids.rootNetworkUuid, ids.nodeId)).andExpect(status().isOk());
+        mockMvc.perform(put(STATE_ESTIMATION_URL_BASE + "stop", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
+                .header("userId", "userId")).andExpect(status().isOk());
         checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_RESULT);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID + "/stop\\?receiver=.*nodeUuid.*")));
     }
@@ -487,5 +491,28 @@ class StateEstimationTest {
                 status().isOk(),
                 content().string(ESTIM_STATUS_JSON));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID + "/status")));
+    }
+
+    @Test
+    void testComputeLogicalControls(final MockWebServer server) throws Exception {
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
+
+        MvcResult mvcResult = mockMvc.perform(post(STATE_ESTIMATION_URL_BASE + "logical-controls", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertEquals(LOGICAL_CONTROLS_RESULT_JSON, mvcResult.getResponse().getContentAsString());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches(
+                "/v1/networks/" + NETWORK_UUID_STRING + "/logical-controls\\?variantId=" + VARIANT_ID)));
+    }
+
+    @Test
+    void consumeStateEstimationRunning() throws Exception {
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node1", null);
+        Message<String> runningMessage = MessageBuilder.withPayload("")
+                .setHeader(HEADER_RECEIVER, objectMapper.writeValueAsString(new NodeReceiver(ids.nodeId, ids.rootNetworkUuid)))
+                .build();
+        consumerService.consumeStateEstimationRunning().accept(runningMessage);
+        Message<byte[]> test = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
+        assertEquals(UPDATE_TYPE_STATE_ESTIMATION_STATUS, test.getHeaders().get(HEADER_UPDATE_TYPE));
     }
 }

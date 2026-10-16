@@ -65,12 +65,12 @@ public class PccMinService extends AbstractComputationService {
     }
 
     @Transactional
-    public UUID runPccMin(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
+    public UUID runPccMin(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, UUID quotaId) {
         StudyEntity studyEntity = getStudy(studyUuid);
 
         UUID result = handlePccMinRequest(studyEntity, nodeUuid, rootNetworkUuid, userId);
 
-        handleQuotaStart(userId, result, PCC_MIN);
+        handleQuotaStart(result, quotaId);
         return result;
     }
 

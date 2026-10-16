@@ -23,6 +23,7 @@ import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
+import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.exception.PartialResultException;
@@ -46,7 +47,9 @@ import java.beans.PropertyEditorSupport;
 import java.util.*;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyConstants.CASE_FORMAT;
+import static org.gridsuite.study.server.StudyConstants.CompositeModificationsActionType;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MOVE_NETWORK_MODIFICATION_FORBIDDEN;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.*;
 
@@ -70,6 +73,7 @@ public class StudyController {
     private final NodeActivityRunnerService nodeActivityRunnerService;
     private final NodeActivityService nodeActivityService;
     private final StudyExportService studyExportService;
+    private final StudyImportService studyImportService;
 
     public StudyController(StudyService studyService,
                            NetworkService networkStoreService,
@@ -82,7 +86,8 @@ public class StudyController {
                            RebuildNodeService rebuildNodeService,
                            NodeActivityRunnerService nodeActivityRunnerService,
                            NodeActivityService nodeActivityService,
-                           StudyExportService studyExportService) {
+                           StudyExportService studyExportService,
+                           StudyImportService studyImportService) {
         this.nodeActivityService = nodeActivityService;
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -95,6 +100,7 @@ public class StudyController {
         this.rebuildNodeService = rebuildNodeService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
         this.studyExportService = studyExportService;
+        this.studyImportService = studyImportService;
     }
 
     @InitBinder
@@ -546,22 +552,22 @@ public class StudyController {
                 inUpstreamBuiltParentNode, nominalVoltages));
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements-by-global-filter")
-    @Operation(summary = "Get network elements infos by evaluating a global filter")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements-from-filters")
+    @Operation(summary = "Get network elements infos by evaluating a list of filters")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The list of network elements infos matching the filter"),
+        @ApiResponse(responseCode = "200", description = "The list of network elements infos matching the filters"),
         @ApiResponse(responseCode = "404", description = "The study/root network/node is not found")
     })
-    public ResponseEntity<String> getNetworkElementsInfosByGlobalFilter(
+    public ResponseEntity<String> getNetworkElementsInfosFromFilters(
             @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "The equipment type to filter and return") @RequestParam(name = "equipmentType") @NonNull EquipmentType equipmentType,
             @Parameter(description = "Info type (e.g., LIST, TAB, MAP, FORM)") @RequestParam(name = "infoType", defaultValue = "LIST") String infoType,
-            @RequestBody @NonNull GlobalFilter filter) {
+            @RequestBody @NonNull List<UUID> filterUuids) {
         studyService.assertIsRootNetworkAndNodeInStudy(studyUuid, rootNetworkUuid, nodeUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
-                .body(studyService.getNetworkElementsInfosByGlobalFilter(studyUuid, nodeUuid, rootNetworkUuid, equipmentType, infoType, filter));
+                .body(studyService.getNetworkElementsInfosFromFilters(studyUuid, nodeUuid, rootNetworkUuid, equipmentType, infoType, filterUuids));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements/{elementId}")
@@ -647,46 +653,34 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllMapData(studyUuid, nodeUuid, rootNetworkUuid, substationsIds));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}")
-    @Operation(summary = "Move a modification within or between containers (groups or composites)")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification order has been updated")})
-    public ResponseEntity<Void> moveModification(
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/move")
+    @Operation(summary = "Move modifications within or between containers, possibly from another node of the same study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modifications have been moved")})
+    public ResponseEntity<Void> moveModifications(
             @PathVariable("studyUuid") UUID studyUuid,
-            @PathVariable("nodeUuid") UUID nodeUuid,
-            @PathVariable("modificationUuid") UUID modificationUuid,
-            @RequestBody MoveModificationInfos moveModificationInfos,
+            @PathVariable("nodeUuid") UUID targetNodeUuid,
+            @Parameter(description = "Node the modifications come from, defaults to the target node") @RequestParam(value = "originNodeUuid", required = false) UUID originNodeUuid,
+            @RequestBody List<ModificationMoveInfos> modificationMoveInfos,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
-        rebuildNodeService.moveNetworkModification(studyUuid, nodeUuid, modificationUuid, moveModificationInfos, userId);
+        UUID sourceNodeUuid = Objects.requireNonNullElse(originNodeUuid, targetNodeUuid);
+        studyService.assertIsStudyAndNodeExist(studyUuid, targetNodeUuid);
+        studyService.assertIsNodeExist(studyUuid, sourceNodeUuid, new StudyException(MOVE_NETWORK_MODIFICATION_FORBIDDEN));
+        studyService.assertIsNodeNotReadOnly(targetNodeUuid);
+        rebuildNodeService.moveNetworkModifications(studyUuid, targetNodeUuid, sourceNodeUuid, modificationMoveInfos, userId);
         return ResponseEntity.ok().build();
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "For a list of network modifications passed in body, copy or cut, then append them to target node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification list has been updated.")})
-    public ResponseEntity<Void> moveOrCopyModifications(@PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Void> copyModifications(@PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
-                                                         @RequestParam("action") ModificationsActionType action,
-                                                         @RequestParam("originStudyUuid") UUID originStudyUuid,
-                                                         @RequestParam("originNodeUuid") UUID originNodeUuid,
-                                                         @RequestBody List<ModificationMoveOrCopyInfos> modificationInfos,
+                                                         @RequestBody List<ModificationCopyInfos> modificationInfos,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        studyService.assertIsStudyAndNodeExist(originStudyUuid, originNodeUuid);
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        List<UUID> modificationsToCopyUuidList = modificationInfos.stream().map(ModificationMoveOrCopyInfos::modificationUuid).toList();
-        switch (action) {
-            case COPY:
-                handleDuplicateNetworkModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId);
-                break;
-            case MOVE:
-                // we don't cut - paste modifications from different studies
-                if (!studyUuid.equals(originStudyUuid)) {
-                    throw new StudyException(MOVE_NETWORK_MODIFICATION_FORBIDDEN);
-                }
-                rebuildNodeService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationInfos, userId);
-                break;
-        }
+        List<UUID> modificationsToCopyUuidList = modificationInfos.stream().map(ModificationCopyInfos::modificationUuid).toList();
+        handleDuplicateNetworkModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -955,6 +949,13 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(libraries);
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/network-modifications/references/exists")
+    @Operation(summary = "Whether the study contains a shared modification, including nested in its composites")
+    @ApiResponse(responseCode = "200", description = "true if at least one shared modification is found")
+    public ResponseEntity<Boolean> hasSharedModifications(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.hasSharedModifications(studyUuid));
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", produces = MediaType.TEXT_PLAIN_VALUE)
     @Operation(summary = "Get network modifications from a node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications was returned"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
@@ -962,9 +963,10 @@ public class StudyController {
                                                                                                @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                                                @RequestParam(name = "onlyStashed", required = false, defaultValue = "false") Boolean onlyStashed,
                                                                                                @Parameter(description = "Only metadata") @RequestParam(name = "onlyMetadata", required = false,
-                                                                                                       defaultValue = "false") Boolean onlyMetadata) {
+                                                                                                       defaultValue = "false") Boolean onlyMetadata,
+                                                                                               @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(networkModificationTreeService.getNetworkModifications(nodeUuid, onlyStashed, onlyMetadata));
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(networkModificationTreeService.getNetworkModifications(nodeUuid, onlyStashed, onlyMetadata, userId));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/export", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -1166,7 +1168,7 @@ public class StudyController {
                                            @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren,
                                            @RequestHeader(HEADER_USER_ID) String userId) {
         nodeActivityRunnerService.runWith(DELETE_NODES, studyUuid, nodeIds,
-            () -> studyService.deleteNodes(studyUuid, nodeIds, deleteChildren, userId));
+            () -> studyService.deleteNodes(studyUuid, nodeIds, deleteChildren, userId, true));
         return ResponseEntity.ok().build();
     }
 
@@ -1639,5 +1641,14 @@ public class StudyController {
         headers.setContentDisposition(contentDisposition);
         headers.setContentType(MediaType.parseMediaType("application/zip"));
         return ResponseEntity.ok().headers(headers).body(studyExportService.exportStudy(studyUuid, userId));
+    }
+
+    @PostMapping(value = "/studies/import")
+    @Operation(summary = "Create a study and its root networks from a previously exported study archive")
+    @ApiResponse(responseCode = "200", description = "Study imported successfully")
+    public ResponseEntity<Void> importStudy(@RequestBody TreeExportInfos treeExportInfos,
+                                            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyImportService.importStudy(treeExportInfos, userId);
+        return ResponseEntity.ok().build();
     }
 }

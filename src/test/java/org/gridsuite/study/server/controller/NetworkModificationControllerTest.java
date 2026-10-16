@@ -19,7 +19,9 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.util.List;
 import java.util.UUID;
 
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -30,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class NetworkModificationControllerTest {
 
     private static final String BASE_URL = "/v1";
+    private static final String USER_ID = "userId";
     private static final String RESPONSE = "{\"name\":\"modification\"}";
 
     @Mock
@@ -85,32 +88,24 @@ class NetworkModificationControllerTest {
     }
 
     @Test
-    void testGetNetworkModificationsFromComposite() throws Exception {
-        UUID firstUuid = UUID.randomUUID();
-        UUID secondUuid = UUID.randomUUID();
-        when(networkModificationService.getNetworkModificationsFromComposite(List.of(firstUuid, secondUuid), false)).thenReturn(RESPONSE);
+    void testGetNetworkModification() throws Exception {
+        UUID modificationUuid = UUID.randomUUID();
+        when(networkModificationService.getNetworkModification(modificationUuid, USER_ID)).thenReturn(RESPONSE);
 
-        mockMvc.perform(get(BASE_URL + "/network-composite-modifications/network-modifications")
-                .param("uuids", firstUuid.toString(), secondUuid.toString())
-                .param("onlyMetadata", "false"))
+        mockMvc.perform(get(BASE_URL + "/network-modifications/{uuid}", modificationUuid).header(HEADER_USER_ID, USER_ID))
             .andExpect(status().isOk())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
             .andExpect(content().json(RESPONSE));
 
-        verify(networkModificationService).getNetworkModificationsFromComposite(List.of(firstUuid, secondUuid), false);
+        verify(networkModificationService).getNetworkModification(modificationUuid, USER_ID);
     }
 
     @Test
-    void testGetNetworkModification() throws Exception {
-        UUID modificationUuid = UUID.randomUUID();
-        when(networkModificationService.getNetworkModification(modificationUuid)).thenReturn(RESPONSE);
+    void testReadingAModificationWithoutUserIsRejected() throws Exception {
+        mockMvc.perform(get(BASE_URL + "/network-modifications/{uuid}", UUID.randomUUID()))
+            .andExpect(status().isBadRequest());
 
-        mockMvc.perform(get(BASE_URL + "/network-modifications/{uuid}", modificationUuid))
-            .andExpect(status().isOk())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(content().json(RESPONSE));
-
-        verify(networkModificationService).getNetworkModification(modificationUuid);
+        verifyNoInteractions(networkModificationService);
     }
 
     @Test
@@ -135,12 +130,13 @@ class NetworkModificationControllerTest {
         UUID modificationUuid = UUID.randomUUID();
 
         mockMvc.perform(put(BASE_URL + "/network-modifications/{uuid}", modificationUuid)
+                .header(HEADER_USER_ID, USER_ID)
                 .content(RESPONSE)
                 .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(content().string(""));
 
-        verify(networkModificationService).updateNetworkModification(modificationUuid, RESPONSE);
+        verify(networkModificationService).updateNetworkModification(modificationUuid, RESPONSE, USER_ID);
     }
 
     @Test
@@ -152,10 +148,11 @@ class NetworkModificationControllerTest {
         mockMvc.perform(put(BASE_URL + "/network-modifications")
                 .param("uuids", firstUuid.toString(), secondUuid.toString())
                 .content(metadata)
-                .contentType(MediaType.APPLICATION_JSON))
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("userId", "userId"))
             .andExpect(status().isOk())
             .andExpect(content().string(""));
 
-        verify(networkModificationService).updateNetworkModificationsMetadata(List.of(firstUuid, secondUuid), metadata);
+        verify(networkModificationService).updateNetworkModificationsMetadata(List.of(firstUuid, secondUuid), metadata, "userId");
     }
 }

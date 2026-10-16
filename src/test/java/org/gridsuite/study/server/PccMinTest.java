@@ -305,7 +305,8 @@ class PccMinTest {
             .willReturn(ok()));
 
         // stop pcc min
-        mockMvc.perform(put(PCC_MIN_URL_BASE + "stop", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
+        mockMvc.perform(put(PCC_MIN_URL_BASE + "stop", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
+                .header("userId", "userId"))
             .andExpect(status().isOk());
 
         String receiverJson = objectMapper.writeValueAsString(new NodeReceiver(ids.nodeId, ids.rootNetworkUuid));
@@ -693,5 +694,16 @@ class PccMinTest {
             pccMinService.exportPccMinResultsAsCsv(notFoundUuid, "", null, null, Sort.unsorted(), null, null));
         assertThrows(StudyException.class, () ->
             pccMinService.exportPccMinResultsAsCsv(null, "", null, null, Sort.unsorted(), null, null));
+    }
+
+    @Test
+    void consumePccMinRunning() throws Exception {
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node1", PCC_MIN_PARAMETERS_UUID);
+        Message<String> runningMessage = MessageBuilder.withPayload("")
+                .setHeader(HEADER_RECEIVER, objectMapper.writeValueAsString(new NodeReceiver(ids.nodeId, ids.rootNetworkUuid)))
+                .build();
+        consumerService.consumePccMinRunning().accept(runningMessage);
+        Message<byte[]> test = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
+        assertEquals(UPDATE_TYPE_PCC_MIN_STATUS, test.getHeaders().get(HEADER_UPDATE_TYPE));
     }
 }

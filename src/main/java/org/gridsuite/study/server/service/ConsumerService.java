@@ -13,6 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.computation.ComputationParameterUUIDs;
@@ -32,6 +33,7 @@ import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
@@ -79,6 +81,10 @@ public class ConsumerService {
     private final LoadFlowService loadFlowService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
     private final NodeActivityService nodeActivityService;
+    private final WorkspaceService workspaceService;
+
+    @Value("${study.enable-operation-quotas}")
+    private boolean shouldCheckOperationQuotas;
 
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
@@ -94,7 +100,8 @@ public class ConsumerService {
                            UserAdminService userAdminService,
                            LoadFlowService loadFlowService,
                            NodeActivityRunnerService nodeActivityRunnerService,
-                           NodeActivityService nodeActivityService) {
+                           NodeActivityService nodeActivityService,
+                           WorkspaceService workspaceService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -110,6 +117,7 @@ public class ConsumerService {
         this.loadFlowService = loadFlowService;
         this.nodeActivityService = nodeActivityService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
+        this.workspaceService = workspaceService;
     }
 
     @Bean
@@ -135,7 +143,8 @@ public class ConsumerService {
 
         if (rerunLoadFlowInfos.isPresent()) {
             RerunLoadFlowInfos workflowInfos = rerunLoadFlowInfos.get();
-            loadFlowService.sendLoadflowRequestWorflow(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid(), workflowInfos.isWithRatioTapChangers(), workflowInfos.getUserId());
+            loadFlowService.sendLoadflowRequestWorflow(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid(),
+                workflowInfos.isWithRatioTapChangers(), workflowInfos.getUserId(), workflowInfos.getQuotaId());
         } else {
             // a rerun's loadflow removes the activity when its own result arrives
             nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
@@ -209,9 +218,11 @@ public class ConsumerService {
 
     private void handleBuildCanceledOrFailedWorkflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Message<String> message) throws JsonProcessingException {
         Optional<RerunLoadFlowInfos> rerunLoadFlowInfos = getRerunLoadFlowInfos(message);
-        // the rerun's build failed or was canceled, so no loadflow will follow to remove the activity
-        rerunLoadFlowInfos.ifPresent(infos ->
-            loadFlowService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, infos.getLoadflowResultUuid()));
+        // the rerun's build failed or was canceled, so no loadflow will follow to remove the activity nor release the quota
+        rerunLoadFlowInfos.ifPresent(infos -> {
+            userAdminService.releaseQuotaId(infos.getUserId(), infos.getQuotaId());
+            loadFlowService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, infos.getLoadflowResultUuid());
+        });
         nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
     }
 
@@ -292,71 +303,13 @@ public class ConsumerService {
         UserProfileInfos userProfileInfos = studyService.getUserProfile(userId);
 
         ComputationParameterUUIDs computationParameterUUIDs = computationParametersService.createDefaultComputationParameters(userId, userProfileInfos);
-        UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
-        UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
-        UUID workspacesConfigUuid = createWorkspacesConfig(userProfileInfos);
+        UUID networkVisualizationParametersUuid = studyConfigService.createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
+        UUID spreadsheetConfigCollectionUuid = studyConfigService.createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
+        UUID workspacesConfigUuid = workspaceService.createWorkspacesConfig(userProfileInfos);
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, computationParameterUUIDs,
             networkVisualizationParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid,
             importParameters, importReportUuid);
-    }
-
-    private UUID createDefaultNetworkVisualizationParameters(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getNetworkVisualizationParameterId() != null) {
-            // try to access/duplicate the user profile network visualization parameters
-            try {
-                return studyConfigService.duplicateNetworkVisualizationParameters(userProfileInfos.getNetworkVisualizationParameterId());
-            } catch (Exception e) {
-                // TODO try to report a log in Root subreporter ?
-                LOGGER.error(String.format("Could not duplicate network visualization parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                    userProfileInfos.getNetworkVisualizationParameterId(), userId, userProfileInfos.getName()), e);
-            }
-        }
-        // no profile, or no/bad network visualization parameters in profile => use default values
-        try {
-            return studyConfigService.createDefaultNetworkVisualizationParameters();
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating network visualization default parameters", e);
-            return null;
-        }
-    }
-
-    private UUID createDefaultSpreadsheetConfigCollection(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getSpreadsheetConfigCollectionId() != null) {
-            // try to access/duplicate the user profile spreadsheet config collection
-            try {
-                return studyConfigService.duplicateSpreadsheetConfigCollection(userProfileInfos.getSpreadsheetConfigCollectionId());
-            } catch (Exception e) {
-                // TODO try to report a log in Root subreporter ?
-                LOGGER.error(String.format("Could not duplicate spreadsheet config collection with id '%s' from user/profile '%s/%s'. Using default spreadsheet config collection",
-                    userProfileInfos.getSpreadsheetConfigCollectionId(), userId, userProfileInfos.getName()), e);
-            }
-        }
-        // no profile, or no/bad spreadsheet config collection in profile => use default values
-        try {
-            return studyConfigService.createDefaultSpreadsheetConfigCollection();
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating default spreadsheet config collection", e);
-            return null;
-        }
-    }
-
-    @SuppressWarnings("checkstyle:LambdaBodyLength")
-    private UUID createWorkspacesConfig(UserProfileInfos userProfileInfos) {
-        try {
-            List<UUID> workspaceIds = new ArrayList<>();
-            if (userProfileInfos != null && userProfileInfos.getWorkspaceId() != null) {
-                // Create config with profile workspace as first, and two empty workspaces
-                workspaceIds.add(userProfileInfos.getWorkspaceId());
-                workspaceIds.add(null);
-                workspaceIds.add(null);
-            }
-            // Empty list will create default config
-            return studyConfigService.createWorkspacesConfigFromWorkspaces(workspaceIds);
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating workspace collection", e);
-            return null;
-        }
     }
 
     @Bean
@@ -449,8 +402,11 @@ public class ConsumerService {
     }
 
     private void handleQuotaEnd(ComputationType computationType, String userId, UUID resultUuid) {
+        if (!shouldCheckOperationQuotas) {
+            return;
+        }
         QuotaType quotaType = QuotaType.mapFromComputationType(computationType);
-        userAdminService.endOperationWithQuota(userId, quotaType, resultUuid);
+        userAdminService.releaseQuota(userId, resultUuid);
         notificationService.emitQuotaChange(userId, quotaType);
     }
 
@@ -566,6 +522,13 @@ public class ConsumerService {
             }));
     }
 
+    public void consumeCalculationRunning(Message<String> msg, ComputationType computationType) {
+        getNodeReceiver(msg).ifPresent(receiverObj -> {
+            UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+            notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType());
+        });
+    }
+
     private void handleLoadFlowSuccess(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
         // Build 1st level children if loadflow is converged, and node is a security type
         if (userId != null && networkModificationTreeService.isSecurityNode(nodeUuid)) {
@@ -607,6 +570,11 @@ public class ConsumerService {
     }
 
     @Bean
+    public Consumer<Message<String>> consumeDsRunning() {
+        return message -> consumeCalculationRunning(message, DYNAMIC_SIMULATION);
+    }
+
+    @Bean
     public Consumer<Message<String>> consumeDsStopped() {
         return message -> consumeCalculationStopped(message, DYNAMIC_SIMULATION);
     }
@@ -624,6 +592,11 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeDsaResult() {
         return message -> consumeCalculationResult(message, DYNAMIC_SECURITY_ANALYSIS);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeDsaRunning() {
+        return message -> consumeCalculationRunning(message, DYNAMIC_SECURITY_ANALYSIS);
     }
 
     @Bean
@@ -647,6 +620,11 @@ public class ConsumerService {
     }
 
     @Bean
+    public Consumer<Message<String>> consumeDmcRunning() {
+        return message -> consumeCalculationRunning(message, DYNAMIC_MARGIN_CALCULATION);
+    }
+
+    @Bean
     public Consumer<Message<String>> consumeDmcStopped() {
         return message -> consumeCalculationStopped(message, DYNAMIC_MARGIN_CALCULATION);
     }
@@ -659,6 +637,11 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeSaResult() {
         return message -> consumeCalculationResult(message, SECURITY_ANALYSIS);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeSaRunning() {
+        return message -> consumeCalculationRunning(message, SECURITY_ANALYSIS);
     }
 
     @Bean
@@ -677,6 +660,11 @@ public class ConsumerService {
     }
 
     @Bean
+    public Consumer<Message<String>> consumeSensitivityAnalysisRunning() {
+        return message -> consumeCalculationRunning(message, SENSITIVITY_ANALYSIS);
+    }
+
+    @Bean
     public Consumer<Message<String>> consumeSensitivityAnalysisStopped() {
         return message -> consumeCalculationStopped(message, SENSITIVITY_ANALYSIS);
     }
@@ -689,6 +677,11 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeLoadFlowResult() {
         return message -> consumeCalculationResult(message, LOAD_FLOW);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeLoadFlowRunning() {
+        return message -> consumeCalculationRunning(message, LOAD_FLOW);
     }
 
     @Bean
@@ -723,6 +716,18 @@ public class ConsumerService {
     }
 
     @Bean
+    public Consumer<Message<String>> consumeShortCircuitAnalysisRunning() {
+        return message -> {
+            String busId = message.getHeaders().get(HEADER_BUS_ID, String.class);
+            if (!StringUtils.isEmpty(busId)) {
+                consumeCalculationRunning(message, SHORT_CIRCUIT_ONE_BUS);
+            } else {
+                consumeCalculationRunning(message, SHORT_CIRCUIT);
+            }
+        };
+    }
+
+    @Bean
     public Consumer<Message<String>> consumeShortCircuitAnalysisStopped() {
         return message -> consumeCalculationStopped(message, SHORT_CIRCUIT);
     }
@@ -742,6 +747,11 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeVoltageInitDebug() {
         return message -> consumeCalculationDebug(message, VOLTAGE_INITIALIZATION);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeVoltageInitRunning() {
+        return message -> consumeCalculationRunning(message, VOLTAGE_INITIALIZATION);
     }
 
     @Bean
@@ -765,6 +775,11 @@ public class ConsumerService {
     }
 
     @Bean
+    public Consumer<Message<String>> consumeStateEstimationRunning() {
+        return message -> consumeCalculationRunning(message, STATE_ESTIMATION);
+    }
+
+    @Bean
     public Consumer<Message<String>> consumeStateEstimationDebug() {
         return message -> consumeCalculationDebug(message, STATE_ESTIMATION);
     }
@@ -785,6 +800,11 @@ public class ConsumerService {
     }
 
     @Bean
+    public Consumer<Message<String>> consumePccMinRunning() {
+        return message -> consumeCalculationRunning(message, PCC_MIN);
+    }
+
+    @Bean
     public Consumer<Message<String>> consumePccMinStopped() {
         return message -> consumeCalculationStopped(message, PCC_MIN);
     }
@@ -797,6 +817,11 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeAsymmetricalLoadResult() {
         return message -> consumeCalculationResult(message, ASYMMETRICAL_LOAD);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeAsymmetricalLoadRunning() {
+        return message -> consumeCalculationRunning(message, ASYMMETRICAL_LOAD);
     }
 
     @Bean
@@ -861,5 +886,21 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeNetworkExportFinished() {
         return this::consumeNetworkExportFinished;
+    }
+
+    @Bean
+    public Consumer<Message<Map<ReferenceType, List<ReferenceAttributes>>>> consumeSharedElementUpdate() {
+        return message -> handleSharedElementUpdate(message.getPayload());
+    }
+
+    private void handleSharedElementUpdate(Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType) {
+        Map<UUID, List<UUID>> modificationUuidsByNode = new HashMap<>();
+        referencesByType.forEach((_, references) -> references.forEach(ref -> {
+            UUID nodeId = ref.getReferenceNodeId();
+            if (nodeId != null) {
+                modificationUuidsByNode.computeIfAbsent(nodeId, k -> new ArrayList<>()).add(ref.getReferenceId());
+            }
+        }));
+        modificationUuidsByNode.forEach(studyService::sharedModificationsUpdatedNotification);
     }
 }

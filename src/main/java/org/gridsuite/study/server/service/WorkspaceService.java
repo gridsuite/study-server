@@ -6,13 +6,17 @@
  */
 package org.gridsuite.study.server.service;
 
+import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -24,6 +28,8 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
  */
 @Service
 public class WorkspaceService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(WorkspaceService.class);
     private static final String STUDY_NOT_FOUND_MESSAGE = "Study %s not found";
 
     private final StudyRepository studyRepository;
@@ -104,6 +110,23 @@ public class WorkspaceService {
         );
         notificationService.emitWorkspaceNadConfigUpdated(studyUuid, workspaceId, panelId, clientId);
         return configUuid;
+    }
+
+    @SuppressWarnings("checkstyle:LambdaBodyLength")
+    UUID createWorkspacesConfig(UserProfileInfos userProfileInfos) {
+        try {
+            List<UUID> workspaceIds = new ArrayList<>();
+            if (userProfileInfos != null && userProfileInfos.getWorkspaceId() != null) {
+                // Create config with profile workspace as first, and two empty workspaces
+                workspaceIds.add(userProfileInfos.getWorkspaceId());
+                workspaceIds.add(null);
+                workspaceIds.add(null);
+            }
+            return studyConfigService.createWorkspacesConfigFromWorkspaces(workspaceIds);
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating workspace collection", e);
+            return null;
+        }
     }
 
 }
