@@ -395,6 +395,7 @@ class StudyTestBase {
         singleLineDiagramService.setSingleLineDiagramServerBaseUri(baseUrl);
         directoryService.setDirectoryServerServerBaseUri(baseUrl);
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
+        wireMockStubs.stubRootNetworkTagsAllowed();
     }
 
     protected UUID getRootNodeUuid(UUID studyUuid) {
