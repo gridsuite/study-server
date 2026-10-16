@@ -54,7 +54,7 @@ public class StateEstimationStudyParametersController {
     }
 
     @PostMapping(value = "/parameters/reset")
-    @Operation(summary = "reset state estimation parameters on study to default ones")
+    @Operation(summary = "Reset state estimation parameters on study to the user profile or default ones")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation parameters are reset")})
     public ResponseEntity<Void> resetStateEstimationParametersValues(
             @PathVariable("studyUuid") UUID studyUuid,

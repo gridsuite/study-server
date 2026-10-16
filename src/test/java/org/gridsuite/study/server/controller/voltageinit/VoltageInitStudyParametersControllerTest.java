@@ -62,27 +62,27 @@ class VoltageInitStudyParametersControllerTest {
     @Test
     void testResetVoltageInitParameters() throws Exception {
         UUID studyUuid = UUID.randomUUID();
-        when(voltageInitService.resetVoltageInitParameters(studyUuid, USER_ID)).thenReturn(false);
+        when(voltageInitService.resetVoltageInitParameters(studyUuid, USER_ID, true)).thenReturn(false);
 
         mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid)
                 .header(HEADER_USER_ID, USER_ID))
             .andExpect(status().isOk())
             .andExpect(content().string(""));
 
-        verify(voltageInitService).resetVoltageInitParameters(studyUuid, USER_ID);
+        verify(voltageInitService).resetVoltageInitParameters(studyUuid, USER_ID, true);
     }
 
     @Test
     void testResetVoltageInitParametersReturnsNoContent() throws Exception {
         UUID studyUuid = UUID.randomUUID();
-        when(voltageInitService.resetVoltageInitParameters(studyUuid, USER_ID)).thenReturn(true);
+        when(voltageInitService.resetVoltageInitParameters(studyUuid, USER_ID, true)).thenReturn(true);
 
         mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid)
                 .header(HEADER_USER_ID, USER_ID))
             .andExpect(status().isNoContent())
             .andExpect(content().string(""));
 
-        verify(voltageInitService).resetVoltageInitParameters(studyUuid, USER_ID);
+        verify(voltageInitService).resetVoltageInitParameters(studyUuid, USER_ID, true);
     }
 
     @Test

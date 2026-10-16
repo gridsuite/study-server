@@ -52,8 +52,9 @@ public class VoltageInitStudyParametersController {
         @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
     public ResponseEntity<Void> resetVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        return voltageInitService.resetVoltageInitParameters(studyUuid, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
+            @RequestHeader(HEADER_USER_ID) String userId,
+            @RequestParam(value = "applyModifications", defaultValue = "true", required = false) boolean applyModifications) {
+        return voltageInitService.resetVoltageInitParameters(studyUuid, userId, applyModifications) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/parameters")
@@ -63,5 +64,4 @@ public class VoltageInitStudyParametersController {
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(voltageInitService.getVoltageInitParameters(studyUuid));
     }
-
 }

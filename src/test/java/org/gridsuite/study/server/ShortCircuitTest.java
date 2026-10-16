@@ -848,23 +848,6 @@ class ShortCircuitTest implements WithAssertions {
         computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
     }
 
-    @Test
-    void testResetShortCircuitAnalysisParametersUserHasNoParamsInProfileAndNoExistingShortcircuitAnalysisParams() throws Exception {
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, null);
-        UUID studyUuid = studyEntity.getId();
-
-        userAdminServerStubs.stubGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
-
-        // nothing to reset : no parameters on the study and none in the user profile
-        mockMvc.perform(
-                post("/v1/studies/{studyUuid}/short-circuit-analysis/parameters/reset", studyUuid)
-                    .header("userId", NO_PARAMS_IN_PROFILE_USER_ID))
-            .andExpect(status().isNotFound());
-
-        userAdminServerStubs.verifyGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID);
-        assertNull(studyRepository.findById(studyUuid).orElseThrow().getShortCircuitParametersUuid());
-    }
-
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, UUID shortCircuitParametersUuid) {
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null,
                 UUID.randomUUID(), shortCircuitParametersUuid, null, null, null, null);

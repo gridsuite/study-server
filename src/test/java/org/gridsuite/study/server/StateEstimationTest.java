@@ -64,7 +64,6 @@ import static org.gridsuite.study.server.dto.ComputationType.STATE_ESTIMATION;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -213,8 +212,6 @@ class StateEstimationTest {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/parameters/" + WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING)) {
                     return new MockResponse(404);
-                } else if (path.matches("/v1/parameters")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(STATE_ESTIMATION_ERROR_RESULT_UUID));
                 } else if (path.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID + "/reset") && "PUT".equals(method)) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID)) {
@@ -228,6 +225,8 @@ class StateEstimationTest {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(STATE_ESTIMATION_PARAMETERS_UUID));
                 } else if (path.matches("/v1/parameters/default") && "POST".equals(method)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(STATE_ESTIMATION_PARAMETERS_UUID));
+                } else if (path.matches("/v1/users/.*/profile") && "GET".equals(method)) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "{}");
                 } else if (path.matches("/v1/users/.*/quota/.*") && "POST".equals(method)) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/logical-controls\\?variantId=.*") && "POST".equals(method)) {
@@ -447,7 +446,7 @@ class StateEstimationTest {
 
         //reset state estimation parameters to default ones
         resetParametersAndDoChecks(ids2.studyId, "userId");
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING + "/reset")));
+        assertTrue(TestUtils.getRequestsDone(2, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING + "/reset")));
 
         // insert a study with a wrong state estimation parameters uuid
         StudyNodeIds ids3 = createStudyAndNode(VARIANT_ID, "node 3", UUID.fromString(WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING));
@@ -457,19 +456,6 @@ class StateEstimationTest {
             status().isNotFound());
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING)));
-    }
-
-    @Test
-    void testResetStateEstimationParametersWithNoExistingParameters() throws Exception {
-        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
-
-        // nothing to reset : no state estimation parameters on the study
-        mockMvc.perform(
-                post("/v1/studies/{studyUuid}/state-estimation/parameters/reset", ids.studyId)
-                    .header("userId", "userId"))
-            .andExpect(status().isNotFound());
-
-        assertNull(studyRepository.findById(ids.studyId).orElseThrow().getStateEstimationParametersUuid());
     }
 
     private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String userId, HttpStatusCode status) throws Exception {

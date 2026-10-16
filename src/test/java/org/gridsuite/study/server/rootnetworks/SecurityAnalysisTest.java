@@ -1016,23 +1016,6 @@ class SecurityAnalysisTest {
         computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
     }
 
-    @Test
-    void testResetSecurityAnalysisParametersUserHasNoParamsInProfileAndNoExistingSecurityAnalysisParams() throws Exception {
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null);
-        UUID studyUuid = studyEntity.getId();
-
-        userAdminServerStubs.stubGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
-
-        // nothing to reset : no parameters on the study and none in the user profile
-        mockMvc.perform(
-                post("/v1/studies/{studyUuid}/security-analysis/parameters/reset", studyUuid)
-                    .header("userId", NO_PARAMS_IN_PROFILE_USER_ID))
-            .andExpect(status().isNotFound());
-
-        userAdminServerStubs.verifyGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID);
-        assertNull(studyRepository.findById(studyUuid).orElseThrow().getSecurityAnalysisParametersUuid());
-    }
-
     private void resetParametersAndDoChecks(UUID studyUuid, String userId, HttpStatusCode status) throws Exception {
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/security-analysis/parameters/reset", studyUuid)

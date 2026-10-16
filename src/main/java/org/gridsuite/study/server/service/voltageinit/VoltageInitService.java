@@ -132,9 +132,9 @@ public class VoltageInitService extends AbstractComputationService {
     }
 
     @Transactional
-    public boolean resetVoltageInitParameters(UUID studyUuid, String userId) {
+    public boolean resetVoltageInitParameters(UUID studyUuid, String userId, boolean applyModifications) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        boolean userProfileIssue = resetVoltageInitParameters(studyEntity, userId);
+        boolean userProfileIssue = resetVoltageInitParameters(studyEntity, userId, applyModifications);
         emitComputationParametersChanged(
                 studyUuid,
                 userId,
@@ -163,7 +163,13 @@ public class VoltageInitService extends AbstractComputationService {
         }
     }
 
-    public boolean resetVoltageInitParameters(StudyEntity studyEntity, String userId) {
+    public boolean resetVoltageInitParameters(StudyEntity studyEntity, String userId, boolean applyResetModifications) {
+        var voltageInitParameters = studyEntity.getVoltageInitParameters();
+        if (voltageInitParameters == null) {
+            studyEntity.setVoltageInitParameters(new StudyVoltageInitParametersEntity(applyResetModifications));
+        } else {
+            voltageInitParameters.setApplyModifications(applyResetModifications);
+        }
         boolean userProfileIssue = false;
         UUID existingVoltageInitParametersUuid = studyEntity.getVoltageInitParametersUuid();
         UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);

@@ -54,7 +54,7 @@ public class SecurityAnalysisStudyParametersController {
     }
 
     @PostMapping(value = "/parameters/reset")
-    @Operation(summary = "reset security analysis parameters to default ones")
+    @Operation(summary = "Reset security analysis parameters on study to the user profile or default ones")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The security analysis parameters were reset"),
         @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})

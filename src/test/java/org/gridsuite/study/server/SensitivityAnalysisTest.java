@@ -887,23 +887,6 @@ class SensitivityAnalysisTest {
         computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
     }
 
-    @Test
-    void testResetSensitivityAnalysisParametersUserHasNoParamsInProfileAndNoExistingSensitivityAnalysisParams() throws Exception {
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null);
-        UUID studyUuid = studyEntity.getId();
-
-        userAdminServerStubs.stubGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
-
-        // nothing to reset : no parameters on the study and none in the user profile
-        mockMvc.perform(
-                post("/v1/studies/{studyUuid}/sensitivity-analysis/parameters/reset", studyUuid)
-                    .header(HEADER_USER_ID, NO_PARAMS_IN_PROFILE_USER_ID))
-            .andExpect(status().isNotFound());
-
-        userAdminServerStubs.verifyGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID);
-        assertNull(studyRepository.findById(studyUuid).orElseThrow().getSensitivityAnalysisParametersUuid());
-    }
-
     @AfterEach
     void tearDown() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));

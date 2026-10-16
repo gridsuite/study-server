@@ -13,7 +13,6 @@ import org.gridsuite.study.server.dto.ServiceStatusInfos;
 import org.gridsuite.study.server.dto.ServiceStatusInfos.ServiceStatus;
 import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.dto.computation.ComputationParameterUUIDs;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.RemoteServiceName;
@@ -40,8 +39,6 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
 /**
  * @author Abdelsalem HEDHILI <abdelsalem.hedhili at rte-france.com>
@@ -239,7 +236,7 @@ public class ComputationParametersService {
             }
         }
 
-        resetParameters(studyEntity, studyParameterGetter, resetParameters);
+        resetParameters(studyEntity, studyParameterGetter, resetParameters, userId, userProfileInfos);
         return userProfileIssue;
     }
 
@@ -263,11 +260,12 @@ public class ComputationParametersService {
     public void resetParameters(
             StudyEntity studyEntity,
             Function<StudyEntity, UUID> studyParameterGetter,
-            Consumer<UUID> resetParameters
-    ) {
+            Consumer<UUID> resetParameters,
+            String userId,
+            UserProfileInfos userProfileInfos) {
         UUID existingParametersUuid = studyParameterGetter.apply(studyEntity);
         if (existingParametersUuid == null) {
-            throw new StudyException(NOT_FOUND, "Parameter not found");
+            createDefaultComputationParameters(userId, userProfileInfos);
         } else {
             resetParameters.accept(existingParametersUuid);
         }
