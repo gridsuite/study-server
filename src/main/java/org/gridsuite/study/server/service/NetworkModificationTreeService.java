@@ -31,6 +31,7 @@ import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
+import org.springframework.web.client.RestClientException;
 
 import java.time.Instant;
 import java.util.*;
@@ -517,6 +518,28 @@ public class NetworkModificationTreeService {
                         rootNetworkEntity.getId()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")));
             }
         });
+    }
+
+     public void completeReferencedModificationsInfos(AbstractNode tree) {
+        List<AbstractNode> nodes = new ArrayList<>();
+        collectNodes(tree, nodes);
+        List<NetworkModificationNode> modificationNodes = nodes.stream()
+                .filter(NetworkModificationNode.class::isInstance)
+                .map(NetworkModificationNode.class::cast)
+                .toList();
+        Set<UUID> groupsWithReferences;
+        try {
+            groupsWithReferences = networkModificationService.getContainersWithModificationReferences(
+                    modificationNodes.stream().map(NetworkModificationNode::getModificationGroupUuid).filter(Objects::nonNull).toList());
+        } catch (RestClientException e) {
+            return;
+        }
+        modificationNodes.forEach(node -> node.setHasReferencedModifications(groupsWithReferences.contains(node.getModificationGroupUuid())));
+    }
+
+    private static void collectNodes(AbstractNode node, List<AbstractNode> nodes) {
+        nodes.add(node);
+        node.getChildren().forEach(child -> collectNodes(child, nodes));
     }
 
     @Transactional

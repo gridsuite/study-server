@@ -267,6 +267,19 @@ class NetworkModificationServiceTest {
         verify(restTemplate).getForObject(eq(expectedUrl), eq(Boolean.class));
     }
 
+    @Test
+    void testGetContainersWithModificationReferences() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/reference-modifications?uuids=" + groupUuid;
+        when(restTemplate.exchange(eq(expectedUrl), eq(HttpMethod.GET), isNull(), any(ParameterizedTypeReference.class)))
+            .thenReturn(ResponseEntity.ok(List.of(groupUuid)));
+
+        assertThat(networkModificationService.getContainersWithModificationReferences(List.of(groupUuid))).containsExactly(groupUuid);
+        // there is nothing to ask without a container
+        assertThat(networkModificationService.getContainersWithModificationReferences(List.of())).isEmpty();
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.GET), isNull(), any(ParameterizedTypeReference.class));
+    }
+
     private void expectUserIdIsForwarded(String expectedUrl) {
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, USER_ID);
