@@ -307,6 +307,15 @@ public class StudyService {
         }
     }
 
+    public void unshareModificationReference(
+            @NonNull final UUID studyUuid,
+            @NonNull final UUID nodeUuid,
+            @NonNull final UUID modificationUuid,
+            String userId) {
+        networkModificationService.unshareModificationReference(modificationUuid, userId);
+        notificationService.emitModificationsUpdated(studyUuid, nodeUuid, Optional.empty(), List.of(modificationUuid));
+    }
+
     @Transactional
     public void deleteRootNetworks(UUID studyUuid, List<UUID> rootNetworksUuids, String userId) {
         assertIsStudyExist(studyUuid);
