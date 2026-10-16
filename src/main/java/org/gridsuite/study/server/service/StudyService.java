@@ -1454,8 +1454,10 @@ public class StudyService {
     @Transactional
     public void duplicateStudyNode(UUID sourceStudyUuid, UUID targetStudyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
         assertDuplicateStudyNode(sourceStudyUuid, targetStudyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode);
-        assertCanWriteModificationsInStudy(targetStudyUuid, List.of(networkModificationTreeService.getModificationGroupUuid(nodeToCopyUuid)),
-                List.of(), List.of(), userId);
+        if (!sourceStudyUuid.equals(targetStudyUuid)) {
+            assertCanWriteModificationsInStudy(targetStudyUuid, List.of(networkModificationTreeService.getModificationGroupUuid(nodeToCopyUuid)),
+                    List.of(), List.of(), userId);
+        }
 
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode, userId);
         boolean invalidateBuild = networkModificationTreeService.hasModifications(nodeToCopyUuid, false);
@@ -1468,8 +1470,6 @@ public class StudyService {
     @Transactional
     public void moveStudyNode(UUID studyUuid, UUID nodeToMoveUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
         assertMoveStudyNode(studyUuid, nodeToMoveUuid, referenceNodeUuid, insertMode);
-        assertCanWriteModificationsInStudy(studyUuid, List.of(networkModificationTreeService.getModificationGroupUuid(nodeToMoveUuid)),
-                List.of(), List.of(), userId);
 
         List<NodeEntity> oldChildren = null;
         boolean shouldUnbuildChildren = networkModificationTreeService.hasModifications(nodeToMoveUuid, false);
@@ -1500,8 +1500,10 @@ public class StudyService {
     @Transactional
     public void duplicateStudySubtree(UUID sourceStudyUuid, UUID targetStudyUuid, UUID parentNodeToCopyUuid, UUID referenceNodeUuid, String userId) {
         assertDuplicateStudySubtree(sourceStudyUuid, targetStudyUuid, parentNodeToCopyUuid, referenceNodeUuid);
-        assertCanWriteModificationsInStudy(targetStudyUuid, networkModificationTreeService.getSubtreeModificationGroupUuids(parentNodeToCopyUuid),
-                List.of(), List.of(), userId);
+        if (!sourceStudyUuid.equals(targetStudyUuid)) {
+            assertCanWriteModificationsInStudy(targetStudyUuid, networkModificationTreeService.getSubtreeModificationGroupUuids(parentNodeToCopyUuid),
+                    List.of(), List.of(), userId);
+        }
         AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(sourceStudyUuid, parentNodeToCopyUuid, null);
         StudyEntity studyEntity = getStudy(targetStudyUuid);
         UUID duplicatedNodeUuid = networkModificationTreeService.cloneStudyTree(studySubTree, referenceNodeUuid, studyEntity, userId);
@@ -1518,8 +1520,6 @@ public class StudyService {
     @Transactional
     public void moveStudySubtree(UUID studyUuid, UUID parentNodeToMoveUuid, UUID referenceNodeUuid, String userId) {
         assertMoveStudySubtree(studyUuid, parentNodeToMoveUuid, referenceNodeUuid);
-        assertCanWriteModificationsInStudy(studyUuid, networkModificationTreeService.getSubtreeModificationGroupUuids(parentNodeToMoveUuid),
-                List.of(), List.of(), userId);
 
         List<UUID> allChildren = networkModificationTreeService.getChildrenUuids(parentNodeToMoveUuid);
         if (allChildren.contains(referenceNodeUuid)) {
@@ -1882,11 +1882,6 @@ public class StudyService {
             boolean isTargetInDifferentNodeTree,
             String userId) {
         boolean isSameNode = originNodeUuid.equals(targetNodeUuid);
-        // a reordering, within a node, write no new modification into it
-        if (!isSameNode) {
-            assertCanWriteModificationsInStudy(studyUuid, List.of(), modificationInfos.stream().map(ModificationMoveInfos::modificationUuid).toList(),
-                    List.of(), userId);
-        }
         List<UUID> targetChildrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
         List<UUID> originChildrenUuids = isSameNode ? List.of() : networkModificationTreeService.getChildrenUuids(originNodeUuid);
 
