@@ -64,6 +64,8 @@ public class ConsumerService {
     private static final String HEADER_WITH_RATIO_TAP_CHANGERS = "withRatioTapChangers";
     private static final String HEADER_ERROR_MESSAGE = "errorMessage";
     private static final String HEADER_EXPORT_UUID = "exportUuid";
+    static final String HEADER_ACTION = "action";
+    static final String HEADER_GROUP_UUID = "groupUuid";
 
     private final ObjectMapper objectMapper;
 
@@ -891,6 +893,55 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<Map<ReferenceType, List<ReferenceAttributes>>>> consumeSharedElementUpdate() {
         return message -> handleSharedElementUpdate(message.getPayload());
+    }
+
+    @Bean
+    public Consumer<Message<List<ModificationReference>>> consumeCompositeReference() {
+        return this::handleCompositeReference;
+    }
+
+    /**
+     * Keeps the references registered on the shared elements in directory-server in sync with the modification-references
+     * network-modification-server created, moved or deleted in the group of a node.
+     */
+    void handleCompositeReference(Message<List<ModificationReference>> message) {
+        ReferenceAction action = ReferenceAction.valueOf(String.valueOf(message.getHeaders().get(HEADER_ACTION)));
+        UUID groupUuid = UUID.fromString(String.valueOf(message.getHeaders().get(HEADER_GROUP_UUID)));
+        String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
+        List<ModificationReference> references = message.getPayload();
+
+        if (action == ReferenceAction.DELETE) {
+            directoryService.removeElementsReferences(references, userId);
+            return;
+        }
+        NodeInfos nodeInfos = findNodeInfos(groupUuid);
+        if (action == ReferenceAction.CREATE) {
+            directoryService.createElementsReferences(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), userId);
+        } else {
+            directoryService.updateElementsReferences(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), userId);
+        }
+    }
+
+    @Bean
+    public Consumer<Message<List<ModificationReference>>> consumeCompositeReferenceRecreation() {
+        return this::handleCompositeReferenceRecreation;
+    }
+
+    /**
+     * Registers in directory-server the modification-references of a duplicated group, notified by network-modification-server
+     * once asked for (i.e. after the commit of the node holding the group)
+     */
+    void handleCompositeReferenceRecreation(Message<List<ModificationReference>> message) {
+        UUID groupUuid = UUID.fromString(String.valueOf(message.getHeaders().get(HEADER_GROUP_UUID)));
+        String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
+        NodeInfos nodeInfos = findNodeInfos(groupUuid);
+        directoryService.createElementsReferences(message.getPayload(), nodeInfos.studyUuid(), nodeInfos.nodeUuid(), userId);
+    }
+
+    private NodeInfos findNodeInfos(UUID groupUuid) {
+        // the node may not be committed yet when its group was duplicated in the same transaction: failing here lets the message be retried
+        return networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid)
+                .orElseThrow(() -> new IllegalStateException("No node found for the modification group " + groupUuid));
     }
 
     private void handleSharedElementUpdate(Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType) {

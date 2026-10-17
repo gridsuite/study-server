@@ -94,7 +94,6 @@ import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.S
 import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAX_NODE_BUILDS_EXCEEDED;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
-import static org.gridsuite.study.server.service.NetworkModificationService.QUERY_PARAM_NODE_CONTAINER_UUID;
 import static org.gridsuite.study.server.utils.ImpactUtils.createModificationResultWithElementImpact;
 import static org.gridsuite.study.server.utils.JsonUtils.getModificationContextJsonString;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
@@ -2328,7 +2327,6 @@ class NetworkModificationTest {
         UUID newCompositeUuid = UUID.randomUUID();
 
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-composite-modifications/"))
-                .withQueryParam(QUERY_PARAM_NODE_CONTAINER_UUID, WireMock.equalTo(nodeUuid1.toString()))
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(newCompositeUuid))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
@@ -2350,7 +2348,7 @@ class NetworkModificationTest {
         WireMockUtilsCriteria.verifyPostRequest(
                 wireMockServer,
                 "/v1/network-composite-modifications/",
-                Map.of(QUERY_PARAM_NODE_CONTAINER_UUID, WireMock.equalTo(nodeUuid1.toString())),
+                Map.of(),
                 1
         );
     }
