@@ -754,15 +754,19 @@ public class NetworkModificationService {
     }
 
     /**
-     * Asserts that the shared modifications the user cannot write on, among the ones the given containers point to, are
-     * all associated with the given root network tags. Throws a forbidden error when they are not.
+     * Asserts that the shared modifications the user cannot write on, among the given ones and the ones the content of
+     * the given containers, the given modifications and the given shared modifications refer to, are all associated with
+     * the given root network tags. Throws a forbidden error when they are not.
      */
-    public void assertRootNetworkTagsAllowed(List<UUID> containerUuids, List<String> rootNetworkTags, String userId) {
-        if (rootNetworkTags.isEmpty() || containerUuids.isEmpty()) {
+    public void assertRootNetworkTagsAllowed(List<UUID> containerUuids, List<UUID> modificationUuids, List<UUID> sharedUuids,
+                                             List<String> rootNetworkTags, String userId) {
+        if (rootNetworkTags.isEmpty() || containerUuids.isEmpty() && modificationUuids.isEmpty() && sharedUuids.isEmpty()) {
             return;
         }
         String path = UriComponentsBuilder.fromPath(CONTAINERS + DELIMITER + "root-network-tags/authorized")
-                .queryParam(UUIDS, containerUuids)
+                .queryParam("containerUuids", containerUuids)
+                .queryParam("modificationUuids", modificationUuids)
+                .queryParam("sharedUuids", sharedUuids)
                 .queryParam("tags", rootNetworkTags)
                 .build().toUriString();
 

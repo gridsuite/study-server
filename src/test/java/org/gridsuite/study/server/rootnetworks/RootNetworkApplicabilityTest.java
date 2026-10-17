@@ -299,7 +299,7 @@ class RootNetworkApplicabilityTest {
 
         // the study points to a shared modification the user is not allowed to write on, and not associated with the new tag
         doThrow(HttpClientErrorException.create(HttpStatus.FORBIDDEN, "Forbidden", null, null, null))
-            .when(networkModificationService).assertRootNetworkTagsAllowed(List.of(firstNode.getModificationGroupUuid()), List.of(ROOT_NETWORK_TAG_2), USER_ID);
+            .when(networkModificationService).assertRootNetworkTagsAllowed(List.of(firstNode.getModificationGroupUuid()), List.of(), List.of(), List.of(ROOT_NETWORK_TAG_2), USER_ID);
 
         UUID studyUuid = studyEntity.getId();
         RootNetworkInfos renamingTagInfos = RootNetworkInfos.builder().id(rootNetworkUuid).tag(ROOT_NETWORK_TAG_2).build();
@@ -311,7 +311,7 @@ class RootNetworkApplicabilityTest {
 
         // an update keeping the tag is no rename, so it needs no permission
         updateRootNetwork(studyUuid, rootNetworkUuid, ROOT_NETWORK_TAG_1);
-        verify(networkModificationService, times(1)).assertRootNetworkTagsAllowed(any(), any(), any());
+        verify(networkModificationService, times(1)).assertRootNetworkTagsAllowed(any(), any(), any(), any(), any());
     }
 
     @Test

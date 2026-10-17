@@ -259,16 +259,23 @@ class NetworkModificationServiceTest {
     @Test
     void testAssertRootNetworkTagsAllowed() {
         UUID groupUuid = UUID.randomUUID();
+        UUID modificationUuid = UUID.randomUUID();
+        UUID sharedUuid = UUID.randomUUID();
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, USER_ID);
 
-        networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of("PH1", "PH2"), USER_ID);
-        verify(restTemplate).exchange(NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/root-network-tags/authorized?uuids=" + groupUuid
-                + "&tags=PH1&tags=PH2", HttpMethod.GET, new HttpEntity<>(headers), Void.class);
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of(), List.of(), List.of("PH1", "PH2"), USER_ID);
+        verify(restTemplate).exchange(NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/root-network-tags/authorized?containerUuids=" + groupUuid
+                + "&modificationUuids&sharedUuids&tags=PH1&tags=PH2", HttpMethod.GET, new HttpEntity<>(headers), Void.class);
 
-        // there is nothing to check without a tag, or without a container to check it on
-        networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of(), USER_ID);
-        networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of("PH1"), USER_ID);
+        // the modifications and the shared modifications are checked too, an empty list is sent by its name only
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of(modificationUuid), List.of(sharedUuid), List.of("PH1"), USER_ID);
+        verify(restTemplate).exchange(NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/root-network-tags/authorized?containerUuids&modificationUuids=" + modificationUuid
+                + "&sharedUuids=" + sharedUuid + "&tags=PH1", HttpMethod.GET, new HttpEntity<>(headers), Void.class);
+
+        // there is nothing to check without a tag, or without anything to check it on
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of(), List.of(), List.of(), USER_ID);
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of(), List.of(), List.of("PH1"), USER_ID);
 
         verifyNoMoreInteractions(restTemplate);
     }
