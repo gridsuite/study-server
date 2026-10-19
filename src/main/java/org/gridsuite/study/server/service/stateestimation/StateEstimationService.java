@@ -116,12 +116,4 @@ public class StateEstimationService extends AbstractComputationService {
     public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
         return stateEstimationRestService.downloadDebugFile(resultUuid);
     }
-
-    public String computeLogicalControls(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        UUID paramsUuid = studyEntity.getStateEstimationParametersUuid();
-        return stateEstimationRestService.runLogicalComputation(networkUuid, variantId, paramsUuid);
-    }
 }
