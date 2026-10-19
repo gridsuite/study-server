@@ -1587,10 +1587,7 @@ public class StudyService {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
             }
-            List<ModificationReference> referencesToBeDeleted = networkModificationService.getModificationReferences(modificationsUuids);
             networkModificationService.deleteModifications(modificationsUuids);
-            // if there are unstashed references modifications in the deleted netmods, those references have to be removed from directory server
-            removeReferences(referencesToBeDeleted, userId);
         } finally {
             notificationService.emitModificationsDeleted(studyUuid, nodeUuid, childrenUuids);
         }
@@ -1679,7 +1676,7 @@ public class StudyService {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.restoreModifications(groupId, modificationsUuids, studyUuid, nodeUuid, userId);
+            networkModificationService.restoreModifications(groupId, modificationsUuids, userId);
             invalidateNodeTree(studyUuid, nodeUuid);
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
@@ -1785,7 +1782,7 @@ public class StudyService {
 
     public void restoreNodes(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId, String userId) {
         networkModificationTreeService.assertIsRootOrConstructionNode(anchorNodeId);
-        networkModificationTreeService.restoreNode(studyId, nodeIds, anchorNodeId, userId);
+        networkModificationTreeService.restoreNode(studyId, nodeIds, anchorNodeId);
         notificationService.emitElementUpdated(studyId, userId);
     }
 
