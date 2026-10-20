@@ -264,7 +264,7 @@ class StudyServiceTest {
         )).when(rootNetworkService).getStudyRootNetworks(studyUuid);
         doNothing().when(networkModificationTreeService).invalidateNodeTree(any(), any(), any(), any(), anyBoolean());
 
-        studyService.sharedModificationsUpdatedNotification(nodeUuid, networkModificationUuids);
+        studyService.sharedModificationsUpdatedNotification(nodeUuid, networkModificationUuids, false);
 
         verify(networkModificationTreeService, times(1))
             .invalidateNodeTree(studyUuid, nodeUuid, rootNetwork1Uuid, InvalidateNodeTreeParameters.ALL, false);

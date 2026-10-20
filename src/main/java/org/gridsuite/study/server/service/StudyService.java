@@ -1531,9 +1531,11 @@ public class StudyService {
     }
 
     @Transactional
-    public void sharedModificationsUpdatedNotification(UUID nodeUuid, List<UUID> networkModificationUuids) {
+    public void sharedModificationsUpdatedNotification(UUID nodeUuid, List<UUID> networkModificationUuids, boolean onlyMetadata) {
         UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
-        invalidateNodeTree(studyUuid, nodeUuid);
+        if (!onlyMetadata) {
+            invalidateNodeTree(studyUuid, nodeUuid);
+        }
         notificationService.emitSharedModificationsUpdated(studyUuid, nodeUuid, networkModificationUuids);
     }
 
