@@ -1587,6 +1587,7 @@ public class StudyService {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
             }
+            networkModificationService.verifyModifications(networkModificationTreeService.getModificationGroupUuid(nodeUuid), new HashSet<>(modificationsUuids));
             List<ModificationReference> referencesToBeDeleted = networkModificationService.getModificationReferences(modificationsUuids);
             networkModificationService.deleteModifications(modificationsUuids);
             // if there are unstashed references modifications in the deleted netmods, those references have to be removed from directory server
