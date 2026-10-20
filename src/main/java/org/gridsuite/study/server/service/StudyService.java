@@ -1587,6 +1587,7 @@ public class StudyService {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
             }
+            networkModificationService.verifyModifications(networkModificationTreeService.getModificationGroupUuid(nodeUuid), new HashSet<>(modificationsUuids));
             networkModificationService.deleteModifications(modificationsUuids);
         } finally {
             notificationService.emitModificationsDeleted(studyUuid, nodeUuid, childrenUuids);

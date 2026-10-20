@@ -1150,6 +1150,8 @@ class NetworkModificationTest {
 
         UUID modificationUuid = UUID.randomUUID();
         UUID stubId = wireMockServer.stubFor(WireMock.delete(urlPathMatching("/v1/network-modifications")).willReturn(WireMock.ok())).getId();
+        UUID verifyStubId = wireMockServer.stubFor(WireMock.get(urlPathMatching("/v1/containers/.*/network-modifications/verify"))
+                .willReturn(WireMock.ok())).getId();
 
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyUuid = studyEntity.getId();
@@ -1174,6 +1176,8 @@ class NetworkModificationTest {
                         .queryParam("uuids", modificationUuid.toString())
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
+        WireMockUtils.verifyGetRequest(wireMockServer, verifyStubId, "/v1/containers/" + modificationNode.getModificationGroupUuid() + "/network-modifications/verify",
+                Map.of("uuids", equalTo(modificationUuid.toString())));
         WireMockUtils.verifyDeleteRequest(wireMockServer, stubId, "/v1/network-modifications", false, Map.of("uuids", equalTo(modificationUuid.toString())));
         checkEquipmentDeletingFinishedMessagesReceived(studyUuid, modificationNode.getId());
 
@@ -1184,6 +1188,8 @@ class NetworkModificationTest {
                 .queryParam("uuids", modificationUuid.toString())
                 .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isInternalServerError());
+        WireMockUtils.verifyGetRequest(wireMockServer, verifyStubId, "/v1/containers/" + modificationNode.getModificationGroupUuid() + "/network-modifications/verify",
+                Map.of("uuids", equalTo(modificationUuid.toString())));
         WireMockUtils.verifyDeleteRequest(wireMockServer, stubId, "/v1/network-modifications", false, Map.of("uuids", equalTo(modificationUuid.toString())));
         checkEquipmentDeletingFinishedMessagesReceived(studyUuid, modificationNode.getId());
     }
