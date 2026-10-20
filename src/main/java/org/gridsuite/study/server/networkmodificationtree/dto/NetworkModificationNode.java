@@ -63,7 +63,7 @@ public class NetworkModificationNode extends AbstractNode {
     @Builder.Default
     private NetworkModificationNodeType nodeType = NetworkModificationNodeType.CONSTRUCTION;
 
-     private Boolean hasReferencedModifications;
+    private Boolean hasReferencedModifications;
 
     //TODO: temporary, used to keep nodeDTO identical since we don't export rootNetworks in APIs yet, once rootNetworks are exported, result uuid won't be stored in nodeDto
     public void completeDtoFromRootNetworkNodeInfo(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {

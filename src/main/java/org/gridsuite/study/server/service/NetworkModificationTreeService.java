@@ -520,7 +520,7 @@ public class NetworkModificationTreeService {
         });
     }
 
-     public void completeReferencedModificationsInfos(AbstractNode tree) {
+    public void completeReferencedModificationsInfos(AbstractNode tree) {
         List<AbstractNode> nodes = new ArrayList<>();
         collectNodes(tree, nodes);
         List<NetworkModificationNode> modificationNodes = nodes.stream()
