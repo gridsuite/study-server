@@ -43,13 +43,6 @@ public class NetworkModificationController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationService.getLineTypeWithLimits(uuid, area, temperature, shapeFactor));
     }
 
-    @GetMapping(value = "/network-composite-modifications/network-modifications")
-    public ResponseEntity<String> getNetworkModificationsFromComposite(@RequestParam("uuids") List<UUID> compositeModificationUuids,
-                                                                       @RequestParam(name = "onlyMetadata", defaultValue = "true") boolean onlyMetadata,
-                                                                       @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationService.getNetworkModificationsFromComposite(compositeModificationUuids, onlyMetadata, userId));
-    }
-
     @GetMapping(value = "/network-modifications/{uuid}")
     public ResponseEntity<String> getNetworkModification(@PathVariable UUID uuid, @RequestHeader(HEADER_USER_ID) String userId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationService.getNetworkModification(uuid, userId));
@@ -74,10 +67,5 @@ public class NetworkModificationController {
                                                                    @RequestHeader(HEADER_USER_ID) String userId) {
         networkModificationService.updateNetworkModificationsMetadata(networkModificationUuids, metadata, userId);
         return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/containers/references/exists")
-    public ResponseEntity<Boolean> hasModificationReferences(@RequestParam("uuids") List<UUID> containerUuids) {
-        return ResponseEntity.ok().body(networkModificationService.hasModificationReferences(containerUuids));
     }
 }
