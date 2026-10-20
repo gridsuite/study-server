@@ -814,6 +814,36 @@ class RootNetworkTest {
     }
 
     @Test
+    void getRootNetworkImportParameters() throws Exception {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        UUID rootNetworkUuid = UUID.randomUUID();
+        Map<String, Object> importParameters = new HashMap<>();
+        importParameters.put("param1", "value1");
+        importParameters.put("param2", true);
+        importParameters.put("param3", List.of("v1", "v2"));
+        importParameters.put("param4", null);
+        createDummyRootNetwork(studyEntity, RootNetworkInfos.builder()
+            .name(CASE_NAME2)
+            .caseInfos(new CaseInfos(CASE_UUID2, CASE_UUID, CASE_NAME2, CASE_FORMAT2))
+            .networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
+            .reportUuid(REPORT_UUID2)
+            .id(rootNetworkUuid)
+            .tag("rn2")
+            .importParameters(importParameters)
+            .build());
+        studyRepository.save(studyEntity);
+
+        String response = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/import-parameters", studyEntity.getId(), rootNetworkUuid))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        Map<String, Object> result = objectMapper.readValue(response, new TypeReference<>() { });
+        assertEquals(importParameters, result);
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/import-parameters", studyEntity.getId(), UUID.randomUUID()))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
     void getOrderedRootNetworksFromController() throws Exception {
         // create study with one root node, two network modification node and a root network
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);

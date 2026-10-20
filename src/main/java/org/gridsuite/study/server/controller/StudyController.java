@@ -119,6 +119,14 @@ public class StudyController {
         return StringUtils.isEmpty(studyCaseName) ? ResponseEntity.noContent().build() : ResponseEntity.ok().body(studyCaseName);
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/import-parameters", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get the import parameters stored for a root network, used to (re)create its network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The root network import parameters"),
+                           @ApiResponse(responseCode = "404", description = "The root network doesn't exist")})
+    public ResponseEntity<Map<String, Object>> getRootNetworkImportParameters(@PathVariable("studyUuid") UUID studyUuid, @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
+        return ResponseEntity.ok().body(rootNetworkService.getImportParameters(rootNetworkUuid));
+    }
+
     @GetMapping(value = "/study_creation_requests")
     @Operation(summary = "Get all study creation requests for a user")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of study creation requests")})
