@@ -38,6 +38,7 @@ import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -209,6 +210,7 @@ public class ComputationParametersService {
             Function<UserProfileInfos, UUID> profileParameterGetter,
             ComputationParameters computationParameters,
             Consumer<UUID> resetParameters,
+            Supplier<UUID> createDefaultParameters,
             String computationType
     ) {
         boolean userProfileIssue = false;
@@ -236,7 +238,7 @@ public class ComputationParametersService {
             }
         }
 
-        resetParameters(studyEntity, studyParameterGetter, resetParameters, userId, userProfileInfos);
+        resetParameters(studyEntity, studyParameterGetter, studyParameterSetter, resetParameters, createDefaultParameters);
         return userProfileIssue;
     }
 
@@ -260,12 +262,13 @@ public class ComputationParametersService {
     public void resetParameters(
             StudyEntity studyEntity,
             Function<StudyEntity, UUID> studyParameterGetter,
+            BiConsumer<StudyEntity, UUID> studyParameterSetter,
             Consumer<UUID> resetParameters,
-            String userId,
-            UserProfileInfos userProfileInfos) {
+            Supplier<UUID> createDefaultParameters) {
         UUID existingParametersUuid = studyParameterGetter.apply(studyEntity);
         if (existingParametersUuid == null) {
-            createDefaultComputationParameters(userId, userProfileInfos);
+            UUID newParametersUuid = createDefaultParameters.get();
+            studyParameterSetter.accept(studyEntity, newParametersUuid);
         } else {
             resetParameters.accept(existingParametersUuid);
         }

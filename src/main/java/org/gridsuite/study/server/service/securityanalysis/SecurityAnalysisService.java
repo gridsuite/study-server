@@ -123,6 +123,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
                 UserProfileInfos::getSecurityAnalysisParameterId,
                 securityAnalysisRestService,
                 securityAnalysisRestService::resetSecurityAnalysisParameters,
+                securityAnalysisRestService::createDefaultParameters,
                 SECURITY_ANALYSIS,
                 List.of(rootNetworkNodeInfoService::invalidateSecurityAnalysisStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS

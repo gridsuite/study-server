@@ -124,6 +124,7 @@ public class ShortCircuitService extends AbstractComputationService {
                 UserProfileInfos::getShortcircuitParameterId,
                 shortCircuitRestService,
                 shortCircuitRestService::resetParameters,
+                shortCircuitRestService::createDefaultParameters,
                 SHORT_CIRCUIT,
                 List.of(this::invalidateShortCircuitStatusOnAllNodes,
                         rootNetworkNodeInfoService::invalidatePccMinStatusOnAllNodes,

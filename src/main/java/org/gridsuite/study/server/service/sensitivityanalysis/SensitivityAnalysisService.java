@@ -82,6 +82,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
                 UserProfileInfos::getSensitivityAnalysisParameterId,
                 sensitivityAnalysisRestService,
                 sensitivityAnalysisRestService::resetSensitivityAnalysisParameters,
+                sensitivityAnalysisRestService::createDefaultParameters,
                 SENSITIVITY_ANALYSIS,
                 List.of(rootNetworkNodeInfoService::invalidateSensitivityAnalysisStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS

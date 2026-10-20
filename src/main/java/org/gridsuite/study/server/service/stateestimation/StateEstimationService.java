@@ -113,13 +113,12 @@ public class StateEstimationService extends AbstractComputationService {
     @Transactional
     public void resetStateEstimationParametersValues(UUID studyUuid, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
         computationParametersService.resetParameters(
                 studyEntity,
                 StudyEntity::getStateEstimationParametersUuid,
+                StudyEntity::setStateEstimationParametersUuid,
                 stateEstimationRestService::resetStateEstimationParameters,
-                userId,
-                userProfileInfos
+                stateEstimationRestService::createDefaultParameters
         );
         emitComputationParametersChanged(
                 studyUuid,

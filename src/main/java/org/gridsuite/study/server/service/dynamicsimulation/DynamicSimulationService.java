@@ -89,6 +89,7 @@ public class DynamicSimulationService extends AbstractComputationService {
                 UserProfileInfos::getDynamicSimulationParameterId,
                 dynamicSimulationRestService,
                 dynamicSimulationRestService::resetParameters,
+                dynamicSimulationRestService::createDefaultParameters,
                 DYNAMIC_SIMULATION,
                 List.of(rootNetworkNodeInfoService::invalidateDynamicSimulationStatusOnAllNodes,
                         rootNetworkNodeInfoService::invalidateDynamicSecurityAnalysisStatusOnAllNodes),

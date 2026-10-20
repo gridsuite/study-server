@@ -26,6 +26,7 @@ import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
@@ -70,6 +71,7 @@ public abstract class AbstractComputationService {
                                                    Function<UserProfileInfos, UUID> profileParameterGetter,
                                                    ComputationParameters computationParameters,
                                                    Consumer<UUID> resetParameters,
+                                                   Supplier<UUID> createDefaultParameters,
                                                    ComputationType computationType,
                                                    List<Consumer<UUID>> statusInvalidations,
                                                    String... statusUpdateTypes) {
@@ -82,6 +84,7 @@ public abstract class AbstractComputationService {
                 profileParameterGetter,
                 computationParameters,
                 resetParameters,
+                createDefaultParameters,
                 computationType.getLabel()
         );
         emitComputationParametersChanged(studyUuid, userId, computationType, statusInvalidations, statusUpdateTypes);

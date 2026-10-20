@@ -446,7 +446,7 @@ class StateEstimationTest {
 
         //reset state estimation parameters to default ones
         resetParametersAndDoChecks(ids2.studyId, "userId");
-        assertTrue(TestUtils.getRequestsDone(2, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING + "/reset")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING + "/reset")));
 
         // insert a study with a wrong state estimation parameters uuid
         StudyNodeIds ids3 = createStudyAndNode(VARIANT_ID, "node 3", UUID.fromString(WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING));
@@ -456,6 +456,16 @@ class StateEstimationTest {
             status().isNotFound());
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING)));
+    }
+
+    @Test
+    void testResetStateEstimationParametersWithNoExistingParameters(final MockWebServer server) throws Exception {
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
+
+        resetParametersAndDoChecks(ids.studyId, "userId");
+
+        assertEquals(STATE_ESTIMATION_PARAMETERS_UUID, studyRepository.findById(ids.studyId).orElseThrow().getStateEstimationParametersUuid());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/default")));
     }
 
     private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
