@@ -16,7 +16,7 @@ spring:
       consumeStateEstimationResult;consumeStateEstimationRunning;consumeStateEstimationDebug;consumeStateEstimationStopped;consumeStateEstimationFailed;\
       consumePccMinResult;consumePccMinRunning;consumePccMinStopped;consumePccMinFailed;\
       consumeAsymmetricalLoadResult;consumeAsymmetricalLoadRunning;consumeAsymmetricalLoadStopped;consumeAsymmetricalLoadFailed;\
-      consumeLogicalControlsResult;consumeLogicalControlsRunning;consumeLogicalControlsFailed;\
+      consumeLogicalControlsResult;consumeLogicalControlsRunning;consumeLogicalControlsStopped;consumeLogicalControlsFailed;\
       consumeNetworkExportFinished;\
       consumeSharedElementUpdate"
     stream:
@@ -219,6 +219,9 @@ spring:
         consumeLogicalControlsRunning-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}logicalcontrols.running
           group: studyLogicalControlsResultGroup
+        consumeLogicalControlsStopped-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}logicalcontrols.stopped
+          group: studyLogicalControlsStoppedGroup
         consumeLogicalControlsFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}logicalcontrols.run.dlx
           group: dlq

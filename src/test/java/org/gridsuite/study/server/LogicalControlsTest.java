@@ -46,6 +46,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.HttpClientErrorException;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -286,10 +288,37 @@ class LogicalControlsTest {
     }
 
     @Test
-    void testNoStopEndpoint() throws Exception {
+    void testStop() throws Exception {
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node1");
+        runLogicalControls(ids);
+
+        wireMockServer.stubFor(WireMock.put(urlPathEqualTo("/v1/logical-controls/results/" + LOGICAL_CONTROLS_RESULT_UUID + "/stop"))
+            .willReturn(ok()));
+
+        mockMvc.perform(put(LOGICAL_CONTROLS_URL_BASE + "stop", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
+            .andExpect(status().isOk());
+
+        String receiverJson = objectMapper.writeValueAsString(new NodeReceiver(ids.nodeId, ids.rootNetworkUuid));
+        computationServerStubs.verifyComputationStop(LOGICAL_CONTROLS_RESULT_UUID,
+            Map.of("receiver", WireMock.equalTo(URLEncoder.encode(receiverJson, StandardCharsets.UTF_8))), LOGICAL_CONTROLS_PREFIX);
+
+        consumerService.consumeLogicalControlsStopped().accept(MessageBuilder.withPayload("")
+            .setHeader(HEADER_RECEIVER, receiverJson)
+            .setHeader("resultUuid", LOGICAL_CONTROLS_RESULT_UUID)
+            .build());
+
+        checkLogicalControlsMessagesReceived(ids.studyId, UPDATE_TYPE_LOGICAL_CONTROLS_STATUS);
+        assertNull(rootNetworkNodeInfoService.getComputationResultUuid(ids.nodeId, ids.rootNetworkUuid, ComputationType.LOGICAL_CONTROLS));
+        mockMvc.perform(get(LOGICAL_CONTROLS_URL_BASE + "status", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
+            .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void testStopWithoutRun() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node1");
         mockMvc.perform(put(LOGICAL_CONTROLS_URL_BASE + "stop", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
-            .andExpect(status().is4xxClientError());
+            .andExpect(status().isOk());
+        wireMockServer.verify(0, putRequestedFor(urlPathMatching("/v1/logical-controls/results/.*/stop")));
     }
 
     @Test

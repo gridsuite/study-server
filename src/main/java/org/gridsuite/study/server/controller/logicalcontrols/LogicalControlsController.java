@@ -59,6 +59,16 @@ public class LogicalControlsController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping(value = "/stop")
+    @Operation(summary = "stop logical controls on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The logical controls has been stopped")})
+    public ResponseEntity<Void> stopLogicalControls(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                    @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                    @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        rootNetworkNodeInfoService.stopLogicalControls(studyUuid, nodeUuid, rootNetworkUuid);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping(value = "/result")
     @Operation(summary = "Get a logical controls result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The logical controls result"),

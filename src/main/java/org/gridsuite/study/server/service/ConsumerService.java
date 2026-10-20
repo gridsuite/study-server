@@ -845,6 +845,11 @@ public class ConsumerService {
     }
 
     @Bean
+    public Consumer<Message<String>> consumeLogicalControlsStopped() {
+        return message -> consumeCalculationStopped(message, LOGICAL_CONTROLS);
+    }
+
+    @Bean
     public Consumer<Message<String>> consumeLogicalControlsFailed() {
         return message -> consumeCalculationFailed(message, LOGICAL_CONTROLS);
     }

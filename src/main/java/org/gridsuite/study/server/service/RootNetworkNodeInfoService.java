@@ -970,4 +970,10 @@ public class RootNetworkNodeInfoService {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ASYMMETRICAL_LOAD);
         asymmetricalLoadRestService.stopAsymmetricalLoad(studyUuid, nodeUuid, rootNetworkUuid, resultUuid);
     }
+
+    @Transactional
+    public void stopLogicalControls(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOGICAL_CONTROLS);
+        logicalControlsRestService.stopLogicalControls(studyUuid, nodeUuid, rootNetworkUuid, resultUuid);
+    }
 }
