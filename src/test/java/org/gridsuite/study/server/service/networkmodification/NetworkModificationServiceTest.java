@@ -20,6 +20,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -218,7 +219,7 @@ class NetworkModificationServiceTest {
 
         networkModificationService.addRootNetworkTag(List.of(groupUuid), "PH2");
 
-        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.POST), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+        verify(restTemplate).exchange(eq(URI.create(expectedUrl)), eq(HttpMethod.POST), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
 
         // there is nothing to add the tag to without a group
         networkModificationService.addRootNetworkTag(List.of(), "PH2");
@@ -235,7 +236,7 @@ class NetworkModificationServiceTest {
 
         networkModificationService.renameRootNetworkTag(List.of(firstGroupUuid, secondGroupUuid), "PH1", "PH2");
 
-        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+        verify(restTemplate).exchange(eq(URI.create(expectedUrl)), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
 
         // there is nothing to rename without a group
         networkModificationService.renameRootNetworkTag(List.of(), "PH1", "PH2");

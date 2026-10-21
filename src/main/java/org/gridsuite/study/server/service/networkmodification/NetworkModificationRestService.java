@@ -413,17 +413,18 @@ public class NetworkModificationRestService {
         if (CollectionUtils.isEmpty(groupUuids)) {
             return;
         }
-        var path = UriComponentsBuilder
+        var uri = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + ROOT_NETWORK_TAG_PATH)
                 .queryParam(QUERY_PARAM_GROUP_UUIDS, groupUuids)
-                .queryParam(QUERY_PARAM_NEW_TAG, newTag)
-                .buildAndExpand()
-                .toUriString();
+                .queryParam(QUERY_PARAM_NEW_TAG, "{newTag}")
+                .encode()
+                .buildAndExpand(newTag)
+                .toUri();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        restTemplate.exchange(path, HttpMethod.POST, new HttpEntity<>(headers), Void.class);
+        restTemplate.exchange(uri, HttpMethod.POST, new HttpEntity<>(headers), Void.class);
     }
 
     /**
@@ -435,18 +436,19 @@ public class NetworkModificationRestService {
         if (CollectionUtils.isEmpty(groupUuids)) {
             return;
         }
-        var path = UriComponentsBuilder
+        var uri = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + ROOT_NETWORK_TAG_PATH)
                 .queryParam(QUERY_PARAM_GROUP_UUIDS, groupUuids)
-                .queryParam(QUERY_PARAM_OLD_TAG, oldTag)
-                .queryParam(QUERY_PARAM_NEW_TAG, newTag)
-                .buildAndExpand()
-                .toUriString();
+                .queryParam(QUERY_PARAM_OLD_TAG, "{oldTag}")
+                .queryParam(QUERY_PARAM_NEW_TAG, "{newTag}")
+                .encode()
+                .buildAndExpand(oldTag, newTag)
+                .toUri();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        restTemplate.exchange(path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
+        restTemplate.exchange(uri, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
     /**

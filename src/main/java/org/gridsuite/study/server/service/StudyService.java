@@ -380,7 +380,6 @@ public class StudyService {
             rootNetworkInfos.setName(rootNetworkCreationRequestEntityOpt.get().getName());
             rootNetworkInfos.setTag(rootNetworkCreationRequestEntityOpt.get().getTag());
             rootNetworkInfos.setDescription(rootNetworkCreationRequestEntityOpt.get().getDescription());
-            networkModificationRestService.addRootNetworkTag(getStudyModificationGroupUuids(studyUuid), rootNetworkInfos.getTag());
             rootNetworkService.createRootNetwork(studyEntity, rootNetworkInfos);
             rootNetworkService.deleteRootNetworkRequest(rootNetworkCreationRequestEntityOpt.get());
             //update study entity to multi root
@@ -388,6 +387,7 @@ public class StudyService {
                 studyEntity.setMonoRoot(false);
                 invalidatePreviousRootNetworkNodeTree(studyEntity);
             }
+            networkModificationRestService.addRootNetworkTag(getStudyModificationGroupUuids(studyUuid), rootNetworkInfos.getTag());
         } else {
             rootNetworkService.deleteRootNetworks(studyEntity, List.of(rootNetworkInfos));
         }
