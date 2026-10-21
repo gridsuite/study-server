@@ -137,29 +137,6 @@ public class DirectoryService {
         restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.POST, requestEntity, ElementAttributes.class);
     }
 
-    /**
-     * remove reference from the shared modification in directory server
-     * @param referenceUuid uuid of the composite or group where the 'Modification reference' is located
-     * @param userId id of the user who caused the unreferencing
-     * @param sharedElementUuid uuid of the referenced shared element in the directory-server
-     */
-    public void removeElementReference(UUID sharedElementUuid, UUID referenceUuid, String userId) {
-        Objects.requireNonNull(referenceUuid);
-        Objects.requireNonNull(sharedElementUuid);
-
-        var path = UriComponentsBuilder.fromPath(
-                        DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references/{referenceUuid}")
-                .buildAndExpand(sharedElementUuid, referenceUuid)
-                .toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<Object> requestEntity = new HttpEntity<>(headers);
-        restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.DELETE, requestEntity, ElementAttributes.class);
-    }
-
     public void createElement(UUID directoryUuid, String description, UUID elementUuid, String elementName, String type, String userId) {
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/directories/{directoryUuid}/elements");
         ElementAttributes elementAttributes = new ElementAttributes(elementUuid, elementName, type, userId, 0, description);
