@@ -27,6 +27,7 @@ import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurit
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.service.logicalcontrols.LogicalControlsRestService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
@@ -107,7 +108,7 @@ public class SupervisionService {
 
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
-    private final NetworkModificationService networkModificationService;
+    private final NetworkModificationRestService networkModificationService;
 
     private static final String SUPERVISION_USER = "Supervision";
 
@@ -134,7 +135,7 @@ public class SupervisionService {
                               StudyRepository studyRepository,
                               NodeRepository nodeRepository,
                               NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
-                              NetworkModificationService networkModificationService) {
+                              NetworkModificationRestService networkModificationService) {
 
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
