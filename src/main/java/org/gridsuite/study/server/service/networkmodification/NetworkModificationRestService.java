@@ -4,7 +4,7 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.service;
+package org.gridsuite.study.server.service.networkmodification;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
+import org.gridsuite.study.server.service.RootNetworkService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.util.Pair;
@@ -41,7 +42,7 @@ import static org.gridsuite.study.server.utils.JsonUtils.getModificationContextJ
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Service
-public class NetworkModificationService {
+public class NetworkModificationRestService {
 
     private static final String DELIMITER = "/";
     private static final String COMPOSITE_PATH = "network-composite-modifications" + DELIMITER;
@@ -70,9 +71,9 @@ public class NetworkModificationService {
     private String networkModificationServerBaseUri;
 
     @Autowired
-    NetworkModificationService(RemoteServicesProperties remoteServicesProperties,
-                               RestTemplate restTemplate,
-                               ObjectMapper objectMapper, RootNetworkService rootNetworkService) {
+    NetworkModificationRestService(RemoteServicesProperties remoteServicesProperties,
+                                   RestTemplate restTemplate,
+                                   ObjectMapper objectMapper, RootNetworkService rootNetworkService) {
         this.networkModificationServerBaseUri = remoteServicesProperties.getServiceUri("network-modification-server");
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
@@ -127,14 +128,6 @@ public class NetworkModificationService {
         return restTemplate.getForObject(getNetworkModificationServerURI(false) + path, String.class);
     }
 
-    public String getNetworkModificationsFromComposite(List<UUID> compositeModificationUuids, boolean onlyMetadata, String userId) {
-        String path = UriComponentsBuilder.fromPath(CONTAINERS + DELIMITER + NETWORK_MODIFICATIONS_PATH)
-            .queryParam(UUIDS, compositeModificationUuids)
-            .queryParam("onlyMetadata", onlyMetadata)
-            .build().toUriString();
-        return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, userIdEntity(userId), String.class).getBody();
-    }
-
     public String getNetworkModification(UUID networkModificationUuid, String userId) {
         String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + "/{uuid}").buildAndExpand(networkModificationUuid).toUriString();
         return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, userIdEntity(userId), String.class).getBody();
@@ -156,6 +149,14 @@ public class NetworkModificationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set(HEADER_USER_ID, userId);
         restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, new HttpEntity<>(modificationInfos, headers), Void.class);
+    }
+
+    public void unshareModificationReference(UUID modificationReferenceUuid, String userId) {
+        String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + "/{uuid}/unshare").buildAndExpand(modificationReferenceUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HEADER_USER_ID, userId);
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
     public void updateNetworkModificationsMetadata(List<UUID> networkModificationUuids, String metadata, String userId) {
@@ -612,13 +613,14 @@ public class NetworkModificationService {
         ).getBody();
     }
 
-    public void duplicateModificationsGroup(UUID sourceGroupUuid, UUID groupUuid, UUID newNodeUuid, UUID studyUuid, String userId) {
+    public void duplicateModificationsGroup(UUID sourceGroupUuid, UUID groupUuid, UUID newNodeUuid, UUID studyUuid, List<String> rootNetworkTags, String userId) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(sourceGroupUuid);
         var path = UriComponentsBuilder.fromPath("groups/{uuid}/duplicate")
                 .queryParam(QUERY_PARAM_GROUP_UUID, groupUuid)
                 .queryParam(QUERY_PARAM_NODE_CONTAINER_UUID, newNodeUuid)
                 .queryParam(QUERY_PARAM_STUDY_ROOT_CONTAINER_UUID, studyUuid)
+                .queryParam(QUERY_PARAM_ROOT_NETWORK_TAGS, rootNetworkTags)
                 .buildAndExpand(sourceGroupUuid)
                 .toUriString();
 

@@ -21,6 +21,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
@@ -101,7 +102,7 @@ class RootNetworkApplicabilityTest {
     private OutputDestination output;
 
     @MockitoBean
-    private NetworkModificationService networkModificationService;
+    private NetworkModificationRestService networkModificationService;
     @MockitoBean
     private DirectoryService directoryService;
     @MockitoBean
@@ -214,7 +215,7 @@ class RootNetworkApplicabilityTest {
     }
 
     @Test
-    void testMonoRootStudyCarriesNoRootNetworkTag() {
+    void testMonoRootStudyBuildCarriesNoRootNetworkTag() {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyEntity.setMonoRoot(true);
         studyRepository.save(studyEntity);
@@ -228,7 +229,9 @@ class RootNetworkApplicabilityTest {
         ArgumentCaptor<BuildInfos> buildInfosCaptor = ArgumentCaptor.captor();
         verify(networkModificationService).buildNode(any(UUID.class), any(UUID.class), buildInfosCaptor.capture(), isNull());
         assertNull(buildInfosCaptor.getValue().getRootNetworkTag());
-        assertNull(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), firstNode.getId(), NETWORK_UUID).rootNetworkTag());
+        // whereas the modifications written are associated with the real tag, for the study to turn multi root network later
+        assertEquals(rootNetworkEntity.getTag(),
+                rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), firstNode.getId(), NETWORK_UUID).rootNetworkTag());
     }
 
     @Test
