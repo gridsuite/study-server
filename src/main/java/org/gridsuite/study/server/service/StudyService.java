@@ -2237,6 +2237,15 @@ public class StudyService {
         return studyConfigService.getSpreadsheetConfigCollection(studyConfigService.getSpreadsheetConfigCollectionUuidOrElseCreateDefaults(studyEntity));
     }
 
+    @Transactional(readOnly = true)
+    public String getSpreadsheetConfigCollectionForExport(UUID studyUuid) {
+        UUID spreadsheetConfigCollectionUuid = getStudy(studyUuid).getSpreadsheetConfigCollectionUuid();
+        if (spreadsheetConfigCollectionUuid == null) {
+            return null;
+        }
+        return studyConfigService.getSpreadsheetConfigCollection(spreadsheetConfigCollectionUuid);
+    }
+
     @Transactional
     public String getComputationResultGlobalFilters(UUID studyUuid, String computationType) {
         StudyEntity studyEntity = getStudy(studyUuid);
