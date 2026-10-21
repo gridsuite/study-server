@@ -241,6 +241,11 @@ public class RootNetworkNodeInfoService {
                 deleteNodeInfos.addStateEstimationResultUuid(stateEstimationResultUuid);
             }
 
+            UUID logicalControlsResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, LOGICAL_CONTROLS);
+            if (logicalControlsResultUuid != null) {
+                deleteNodeInfos.addLogicalControlsResultUuid(logicalControlsResultUuid);
+            }
+
             UUID pccMinResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, PCC_MIN);
             if (pccMinResultUuid != null) {
                 deleteNodeInfos.addPccMinResultUuid(pccMinResultUuid);
