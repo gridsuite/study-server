@@ -240,8 +240,11 @@ public class StudyExportService {
     }
 
     private void exportSpreadsheetConfigCollection(UUID studyUuid, Path tempDir) throws IOException {
+        String spreadsheetConfigCollection = studyService.getSpreadsheetConfigCollectionForExport(studyUuid);
+        if (spreadsheetConfigCollection == null) {
+            return;
+        }
         Path spreadsheetsDir = Files.createDirectories(tempDir.resolve(SPREADSHEETS_FOLDER));
-        String spreadsheetConfigCollection = studyService.getSpreadsheetConfigCollection(studyUuid);
         Files.writeString(spreadsheetsDir.resolve(SPREADSHEET_CONFIG_COLLECTION_JSON), spreadsheetConfigCollection);
         Set<UUID> filterUuids = objectMapper.readValue(spreadsheetConfigCollection, ExportedSpreadsheetConfigCollection.class).getFilterUuids();
         collectFiltersByByGroupUuid(spreadsheetsDir, filterUuids);

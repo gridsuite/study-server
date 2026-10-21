@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
+import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.ActionsService;
 import org.gridsuite.study.server.service.FilterService;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria;
@@ -322,6 +323,41 @@ class TreeExportTest extends StudyTestBase {
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/filters/referenced-filter-uuids", false, Map.of("ids", WireMock.equalTo(filterA.toString())), 1);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/filters/metadata", false, Map.of("ids", WireMock.matching(".*")), 1);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/elements/names", false, Map.of("ids", WireMock.matching(".*"), "strictMode", WireMock.equalTo("false")), 1);
+    }
+
+    @Test
+    void testExportStudyWithoutSpreadsheetConfigCollection() throws Exception {
+        UUID studyUuid = createStudyWithStubs("testUser", CASE_UUID);
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow();
+        studyEntity.setSpreadsheetConfigCollectionUuid(null);
+        studyRepository.save(studyEntity);
+        ReflectionTestUtils.setField(caseService, "caseServerBaseUri", wireMockServer.baseUrl());
+        wireMockStubs.directoryServer.stubCheckPermission(List.of(studyUuid), null, "testUser", PermissionType.READ, false, HttpStatus.OK.value());
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + CASE_UUID))
+                .willReturn(WireMock.aResponse().withStatus(200).withHeader("Content-Type", "application/octet-stream").withBody("dummy case content".getBytes())));
+        computationServerStubs.stubGetParametersAny("{}");
+        stubJsonGet(GROUP_MODIFICATIONS_URL, "[]");
+
+        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName").header(HEADER_USER_ID, "testUser"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Map<String, String> zipContents = new HashMap<>();
+        try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(result.getResponse().getContentAsByteArray()))) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                zipContents.put(entry.getName(), new String(zis.readAllBytes()));
+            }
+        }
+        assertTrue(zipContents.keySet().stream().noneMatch(name -> name.startsWith("spreadsheets/")));
+        assertNull(studyRepository.findById(studyUuid).orElseThrow().getSpreadsheetConfigCollectionUuid());
+
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
+        wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
+        computationServerStubs.verifyParametersGetAny(6);
+        verifyGetGroupModifications();
+        wireMockStubs.verifySpreadsheetConfigDefault(0);
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, SPREADSHEET_CONFIG_COLLECTION_URL, true, Map.of(), 0);
     }
 
     private void stubJsonGet(String urlRegex, String body) {
