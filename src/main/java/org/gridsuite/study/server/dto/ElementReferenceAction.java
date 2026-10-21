@@ -11,7 +11,7 @@ package org.gridsuite.study.server.dto;
  *
  * @author Maissa Souissi <maissa.souissi at rte-france.com>
  */
-public enum ReferenceAction {
+public enum ElementReferenceAction {
     CREATE,
     UPDATE,
     DELETE,

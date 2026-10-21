@@ -8,7 +8,7 @@ package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.NodeInfos;
-import org.gridsuite.study.server.dto.ReferenceAction;
+import org.gridsuite.study.server.dto.ElementReferenceAction;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.nodeactivity.NodeActivityService;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -93,7 +93,7 @@ class ConsumerServiceCompositeReferenceTest {
         when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid))
                 .thenReturn(Optional.of(new NodeInfos(nodeUuid, "node", studyUuid)));
 
-        consumeCompositeReference.accept(compositeReferenceMessage(ReferenceAction.CREATE));
+        consumeCompositeReference.accept(compositeReferenceMessage(ElementReferenceAction.CREATE));
 
         verify(directoryService).createElementsReferences(references, studyUuid, nodeUuid, USER_ID);
         verifyNoMoreInteractions(directoryService);
@@ -104,7 +104,7 @@ class ConsumerServiceCompositeReferenceTest {
         when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid))
                 .thenReturn(Optional.of(new NodeInfos(nodeUuid, "node", studyUuid)));
 
-        consumeCompositeReference.accept(compositeReferenceMessage(ReferenceAction.UPDATE));
+        consumeCompositeReference.accept(compositeReferenceMessage(ElementReferenceAction.UPDATE));
 
         verify(directoryService).updateElementsReferences(references, studyUuid, nodeUuid, USER_ID);
         verifyNoMoreInteractions(directoryService);
@@ -112,7 +112,7 @@ class ConsumerServiceCompositeReferenceTest {
 
     @Test
     void testDeleteReferences() {
-        consumeCompositeReference.accept(compositeReferenceMessage(ReferenceAction.DELETE));
+        consumeCompositeReference.accept(compositeReferenceMessage(ElementReferenceAction.DELETE));
 
         // the node is not needed to delete a reference: it may well be deleted already
         verify(directoryService).removeElementsReferences(references, USER_ID);
@@ -123,7 +123,7 @@ class ConsumerServiceCompositeReferenceTest {
     void testCreateReferencesWithUnknownGroup() {
         when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid)).thenReturn(Optional.empty());
 
-        Message<List<ModificationReference>> message = compositeReferenceMessage(ReferenceAction.CREATE);
+        Message<List<ModificationReference>> message = compositeReferenceMessage(ElementReferenceAction.CREATE);
         // failing lets the message be retried, for the node to be committed
         assertThrows(IllegalStateException.class, () -> consumeCompositeReference.accept(message));
         verifyNoInteractions(directoryService);
@@ -157,7 +157,7 @@ class ConsumerServiceCompositeReferenceTest {
                 .build();
     }
 
-    private Message<List<ModificationReference>> compositeReferenceMessage(ReferenceAction action) {
+    private Message<List<ModificationReference>> compositeReferenceMessage(ElementReferenceAction action) {
         // headers are received as strings from the broker
         return MessageBuilder.withPayload(references)
                 .setHeader(ConsumerService.HEADER_ACTION, action.name())

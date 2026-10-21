@@ -905,17 +905,17 @@ public class ConsumerService {
      * network-modification-server created, moved or deleted in the group of a node.
      */
     void handleCompositeReference(Message<List<ModificationReference>> message) {
-        ReferenceAction action = ReferenceAction.valueOf(String.valueOf(message.getHeaders().get(HEADER_ACTION)));
+        ElementReferenceAction action = ElementReferenceAction.valueOf(String.valueOf(message.getHeaders().get(HEADER_ACTION)));
         UUID groupUuid = UUID.fromString(String.valueOf(message.getHeaders().get(HEADER_GROUP_UUID)));
         String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
         List<ModificationReference> references = message.getPayload();
 
-        if (action == ReferenceAction.DELETE) {
+        if (action == ElementReferenceAction.DELETE) {
             directoryService.removeElementsReferences(references, userId);
             return;
         }
         NodeInfos nodeInfos = findNodeInfos(groupUuid);
-        if (action == ReferenceAction.CREATE) {
+        if (action == ElementReferenceAction.CREATE) {
             directoryService.createElementsReferences(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), userId);
         } else {
             directoryService.updateElementsReferences(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), userId);
