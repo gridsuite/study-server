@@ -130,27 +130,6 @@ class ConsumerServiceCompositeReferenceTest {
         verifyNoInteractions(directoryService);
     }
 
-    @Test
-    void testRecreateReferences() {
-        when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid))
-                .thenReturn(new NodeInfos(nodeUuid, "node", studyUuid));
-
-        consumeCompositeReferenceChanges.accept(compositeReferenceMessage(ElementReferenceAction.RECREATE));
-
-        verify(directoryService).createElementsReferences(references, studyUuid, nodeUuid, USER_ID);
-        verifyNoMoreInteractions(directoryService);
-    }
-
-    @Test
-    void testRecreateReferencesWithUnknownGroup() {
-        when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid))
-                .thenThrow(new StudyException(NOT_FOUND, "Node infos not found"));
-
-        Message<List<ModificationReference>> message = compositeReferenceMessage(ElementReferenceAction.RECREATE);
-        assertThrows(StudyException.class, () -> consumeCompositeReferenceChanges.accept(message));
-        verifyNoInteractions(directoryService);
-    }
-
     private Message<List<ModificationReference>> compositeReferenceMessage(ElementReferenceAction action) {
         // headers are received as strings from the broker
         return MessageBuilder.withPayload(references)

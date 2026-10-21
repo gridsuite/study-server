@@ -913,7 +913,7 @@ public class ConsumerService {
         NodeInfos nodeInfos = networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid);
         switch (action) {
             case DELETE -> directoryService.removeElementsReferences(references, userId);
-            case CREATE, RECREATE -> directoryService.createElementsReferences(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), userId);
+            case CREATE -> directoryService.createElementsReferences(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), userId);
             case UPDATE -> directoryService.updateElementsReferences(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), userId);
         }
     }

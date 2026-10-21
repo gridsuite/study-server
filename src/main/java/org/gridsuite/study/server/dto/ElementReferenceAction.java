@@ -15,5 +15,4 @@ public enum ElementReferenceAction {
     CREATE,
     UPDATE,
     DELETE,
-    RECREATE,
 }
