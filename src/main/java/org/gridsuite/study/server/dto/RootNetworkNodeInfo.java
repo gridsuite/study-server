@@ -79,6 +79,7 @@ public class RootNetworkNodeInfo {
             .dynamicSecurityAnalysisResultUuid(dynamicSecurityAnalysisResultUuid)
             .dynamicMarginCalculationResultUuid(dynamicMarginCalculationResultUuid)
             .stateEstimationResultUuid(stateEstimationResultUuid)
+            .logicalControlsResultUuid(logicalControlsResultUuid)
             .pccMinResultUuid(pccMinResultUuid)
             .nodeBuildStatus(nodeBuildStatus.toEntity())
             .build();
