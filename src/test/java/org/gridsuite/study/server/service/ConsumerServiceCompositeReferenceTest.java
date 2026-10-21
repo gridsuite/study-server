@@ -6,9 +6,9 @@
  */
 package org.gridsuite.study.server.service;
 
+import org.gridsuite.study.server.dto.ElementReferenceAction;
 import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.NodeInfos;
-import org.gridsuite.study.server.dto.ElementReferenceAction;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.nodeactivity.NodeActivityService;
