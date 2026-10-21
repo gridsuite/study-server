@@ -1867,7 +1867,7 @@ public class StudyService {
             NetworkModificationsResult result = networkModificationRestService.moveModifications(
                     networkModificationTreeService.getModificationGroupUuid(originNodeUuid),
                     networkModificationTreeService.getModificationGroupUuid(targetNodeUuid),
-                    modificationInfos, applicationContexts, isTargetInDifferentNodeTree);
+                    modificationInfos, applicationContexts, isTargetInDifferentNodeTree, userId);
             if (result != null && isTargetInDifferentNodeTree) {
                 emitNetworkModificationImpactsForAllRootNetworks(result.modificationResults(), studyEntity, targetNodeUuid);
             }
@@ -1941,7 +1941,7 @@ public class StudyService {
             String userId) {
         duplicateModificationsOrInsertComposites(targetStudyUuid, targetNodeUuid,
                 (groupUuid, modificationApplicationContexts) -> {
-                    NetworkModificationsResult result = networkModificationRestService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts));
+                    NetworkModificationsResult result = networkModificationRestService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts), userId);
                     directoryService.createElementsReferences(networkModificationRestService.getChildrenModificationsReferences(result.modificationUuids()), targetStudyUuid, targetNodeUuid, userId);
                     return result;
                 },
@@ -2239,6 +2239,15 @@ public class StudyService {
         return studyConfigService.getSpreadsheetConfigCollection(studyConfigService.getSpreadsheetConfigCollectionUuidOrElseCreateDefaults(studyEntity));
     }
 
+    @Transactional(readOnly = true)
+    public String getSpreadsheetConfigCollectionForExport(UUID studyUuid) {
+        UUID spreadsheetConfigCollectionUuid = getStudy(studyUuid).getSpreadsheetConfigCollectionUuid();
+        if (spreadsheetConfigCollectionUuid == null) {
+            return null;
+        }
+        return studyConfigService.getSpreadsheetConfigCollection(spreadsheetConfigCollectionUuid);
+    }
+
     @Transactional
     public String getComputationResultGlobalFilters(UUID studyUuid, String computationType) {
         StudyEntity studyEntity = getStudy(studyUuid);
@@ -2443,7 +2452,7 @@ public class StudyService {
             });
             // duplicate the modification created by voltageInit server into the current node
             NetworkModificationsResult networkModificationResults = networkModificationRestService.duplicateModificationsFromGroup(networkModificationTreeService.getModificationGroupUuid(nodeUuid),
-                    voltageInitModificationsGroupUuid, Pair.of(List.of(), modificationApplicationContexts));
+                    voltageInitModificationsGroupUuid, Pair.of(List.of(), modificationApplicationContexts), userId);
 
             // We expect a single voltageInit modification in the result list
             if (networkModificationResults != null && networkModificationResults.modificationUuids().size() == 1) {
@@ -2879,7 +2888,7 @@ public class StudyService {
 
     private void createNodeRecursively(StudyEntity studyEntity, UUID parentNodeUuid, NodeTreeExportInfos exportNode, String userId) {
         NetworkModificationNodeType nodeType = NetworkModificationNodeType.valueOf(exportNode.nodeType());
-        UUID newGroupUuid = exportNode.modificationGroupUuid() != null ? UUID.randomUUID() : null;
+        UUID newGroupUuid = exportNode.modificationGroupUuid();
         NetworkModificationNode newNode = networkModificationTreeService.createNode(
                 studyEntity,
                 parentNodeUuid,

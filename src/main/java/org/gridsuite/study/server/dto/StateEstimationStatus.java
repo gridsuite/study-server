@@ -11,6 +11,7 @@ package org.gridsuite.study.server.dto;
  */
 public enum StateEstimationStatus {
     NOT_DONE,
+    PRELOADING,
     RUNNING,
     COMPLETED,
 }
