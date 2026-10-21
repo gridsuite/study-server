@@ -214,7 +214,7 @@ public class NetworkModificationService {
             NetworkModificationsResult result = networkModificationRestService.moveModifications(
                 networkModificationTreeService.getModificationGroupUuid(originNodeUuid),
                 networkModificationTreeService.getModificationGroupUuid(targetNodeUuid),
-                modificationInfos, applicationContexts, isTargetInDifferentNodeTree);
+                modificationInfos, applicationContexts, isTargetInDifferentNodeTree, userId);
             if (result != null && isTargetInDifferentNodeTree) {
                 handleNetworkModificationApplyResult(studyUuid, result.modificationResults(), rootNetworkEntities, targetNodeUuid);
             }

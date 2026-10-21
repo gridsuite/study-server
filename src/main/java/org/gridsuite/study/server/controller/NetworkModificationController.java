@@ -20,63 +20,53 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION)
 public class NetworkModificationController {
-    private final NetworkModificationRestService networkModificationService;
+    private final NetworkModificationRestService networkModificationRestService;
 
-    public NetworkModificationController(NetworkModificationRestService networkModificationService) {
-        this.networkModificationService = networkModificationService;
+    public NetworkModificationController(NetworkModificationRestService networkModificationRestService) {
+        this.networkModificationRestService = networkModificationRestService;
     }
 
     @GetMapping(value = "/network-modifications/catalog/line_types")
     public ResponseEntity<String> getLineTypesCatalog() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationService.getLineTypesCatalog());
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationRestService.getLineTypesCatalog());
     }
 
     @GetMapping(value = "/network-modifications/catalog/line_types/{uuid}")
     public ResponseEntity<String> getLineType(@PathVariable UUID uuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationService.getLineType(uuid));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationRestService.getLineType(uuid));
     }
 
     @GetMapping(value = "/network-modifications/catalog/line_types/{uuid}/with-limits")
     public ResponseEntity<String> getLineTypeWithLimits(@PathVariable UUID uuid, @RequestParam String area,
                                                         @RequestParam(required = false) String temperature,
                                                         @RequestParam(required = false) String shapeFactor) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationService.getLineTypeWithLimits(uuid, area, temperature, shapeFactor));
-    }
-
-    @GetMapping(value = "/network-composite-modifications/network-modifications")
-    public ResponseEntity<String> getNetworkModificationsFromComposite(@RequestParam("uuids") List<UUID> compositeModificationUuids,
-                                                                       @RequestParam(name = "onlyMetadata", defaultValue = "true") boolean onlyMetadata,
-                                                                       @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationService.getNetworkModificationsFromComposite(compositeModificationUuids, onlyMetadata, userId));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationRestService.getLineTypeWithLimits(uuid, area, temperature, shapeFactor));
     }
 
     @GetMapping(value = "/network-modifications/{uuid}")
     public ResponseEntity<String> getNetworkModification(@PathVariable UUID uuid, @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationService.getNetworkModification(uuid, userId));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationRestService.getNetworkModification(uuid, userId));
     }
 
     @GetMapping(value = "/network-modifications/busbar-sections-for-new-coupler")
     public ResponseEntity<String> getBusBarSectionsForNewCoupler(@RequestParam String voltageLevelId, @RequestParam Integer busBarCount,
                                                                  @RequestParam Integer sectionCount,
                                                                  @RequestParam(name = "switchKindList", required = false) List<String> switchKindList) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationService.getBusBarSectionsForNewCoupler(voltageLevelId, busBarCount, sectionCount, switchKindList));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
+            .body(networkModificationRestService.getBusBarSectionsForNewCoupler(voltageLevelId, busBarCount, sectionCount, switchKindList));
     }
 
     @PutMapping(value = "/network-modifications/{uuid}")
     public ResponseEntity<Void> updateNetworkModification(@PathVariable UUID uuid, @RequestBody String modificationInfos,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        networkModificationService.updateNetworkModification(uuid, modificationInfos, userId);
+        networkModificationRestService.updateNetworkModification(uuid, modificationInfos, userId);
         return ResponseEntity.ok().build();
     }
 
     @PutMapping(value = "/network-modifications")
-    public ResponseEntity<Void> updateNetworkModificationsMetadata(@RequestParam("uuids") List<UUID> networkModificationUuids, @RequestBody String metadata) {
-        networkModificationService.updateNetworkModificationsMetadata(networkModificationUuids, metadata);
+    public ResponseEntity<Void> updateNetworkModificationsMetadata(@RequestParam("uuids") List<UUID> networkModificationUuids, @RequestBody String metadata,
+                                                                   @RequestHeader(HEADER_USER_ID) String userId) {
+        networkModificationRestService.updateNetworkModificationsMetadata(networkModificationUuids, metadata, userId);
         return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/containers/references/exists")
-    public ResponseEntity<Boolean> hasModificationReferences(@RequestParam("uuids") List<UUID> containerUuids) {
-        return ResponseEntity.ok().body(networkModificationService.hasModificationReferences(containerUuids));
     }
 }
