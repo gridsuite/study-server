@@ -17,6 +17,7 @@ import org.gridsuite.study.server.dto.studyexport.spreadsheets.ExportedSpreadshe
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.InputStreamResource;
@@ -67,13 +68,13 @@ public class StudyExportService {
     private final ComputationParametersService computationParametersService;
     private final FilterService filterService;
     private final ActionsService actionsService;
-    private final NetworkModificationService networkModificationService;
+    private final NetworkModificationRestService networkModificationRestService;
     private final LoadFlowRestService loadFlowRestService;
 
     public StudyExportService(StudyService studyService, CaseService caseService, DirectoryService directoryService,
                               ObjectMapper objectMapper, ComputationParametersService computationParametersService,
                               FilterService filterService, ActionsService actionsService,
-                              NetworkModificationService networkModificationService,
+                              NetworkModificationRestService networkModificationRestService,
                               LoadFlowRestService loadFlowRestService) {
         this.studyService = studyService;
         this.caseService = caseService;
@@ -82,7 +83,7 @@ public class StudyExportService {
         this.computationParametersService = computationParametersService;
         this.filterService = filterService;
         this.actionsService = actionsService;
-        this.networkModificationService = networkModificationService;
+        this.networkModificationRestService = networkModificationRestService;
         this.loadFlowRestService = loadFlowRestService;
     }
 
@@ -215,7 +216,7 @@ public class StudyExportService {
     }
 
     private void collectModificationsByGroupUuid(Path modificationsDir, UUID groupUuid, Set<UUID> filterUuids, Set<UUID> loadFlowParametersUuids, String userId) throws IOException {
-        String modifications = networkModificationService.getModifications(groupUuid, false, false, userId);
+        String modifications = networkModificationRestService.getModifications(groupUuid, false, false, userId);
         Files.writeString(modificationsDir.resolve(groupUuid + JSON), modifications);
         for (ExportedModificationsInfos references : objectMapper.readValue(modifications, ExportedModificationsInfos[].class)) {
             filterUuids.addAll(references.getFilterUuids());
