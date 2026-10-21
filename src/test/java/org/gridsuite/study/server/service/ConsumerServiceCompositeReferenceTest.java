@@ -113,9 +113,6 @@ class ConsumerServiceCompositeReferenceTest {
 
     @Test
     void testDeleteReferences() {
-        when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid))
-                .thenReturn(new NodeInfos(nodeUuid, "node", studyUuid));
-
         consumeCompositeReferenceChanges.accept(compositeReferenceMessage(ElementReferenceAction.DELETE));
 
         verify(directoryService).removeElementsReferences(references, USER_ID);
