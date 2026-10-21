@@ -316,6 +316,28 @@ public class StudyService {
         notificationService.emitModificationsUpdated(studyUuid, nodeUuid, Optional.empty(), List.of(modificationUuid));
     }
 
+    public void unshareAllReferencesInStudy(
+            @NonNull final UUID studyUuid,
+            String userId) {
+        // get the modification references of the whole study
+        List<ModificationReference> modificationsReference = new ArrayList<>();
+        List<UUID> nodes = networkModificationTreeService.getAllNodes(studyUuid).stream().map(NodeEntity::getIdNode).toList();
+        List<UUID> nodesAffected = new ArrayList<>();
+        nodes.forEach(nodeUuid -> {
+                UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+                List<ModificationReference> modificationReferences = networkModificationRestService.getModificationReferences(groupUuid);
+                if (!modificationReferences.isEmpty()) {
+                    modificationsReference.addAll(modificationReferences);
+                    nodesAffected.add(nodeUuid);
+                }
+            }
+        );
+        modificationsReference.forEach(modificationReference ->
+            networkModificationRestService.unshareModificationReference(modificationReference.modificationUuid(), userId)
+        );
+        notificationService.emitNodesChanged(studyUuid, nodesAffected);
+    }
+
     @Transactional
     public void deleteRootNetworks(UUID studyUuid, List<UUID> rootNetworksUuids, String userId) {
         assertIsStudyExist(studyUuid);
