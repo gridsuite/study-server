@@ -7,7 +7,8 @@
 package org.gridsuite.study.server.studycontroller;
 
 import org.gridsuite.study.server.controller.StudyController;
-import org.gridsuite.study.server.dto.modification.*;
+import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
+import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
@@ -31,9 +32,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -135,6 +134,25 @@ class StudyControllerRebuildNodeTest {
 
         verify(rebuildNodeService, times(1)).updateNetworkModificationsMetadata(studyUuid, nodeUuid, modificationUuids, userId, networkModificationMetadata);
         verify(studyService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
+    }
+
+    @Test
+    void testUpdateNetworkModificationsNameAndDescription() {
+        UUID studyUuid = UUID.randomUUID();
+        UUID nodeUuid = UUID.randomUUID();
+        UUID modificationUuid = UUID.randomUUID();
+        String metadata =
+                "{\"message\":" +
+                        "{" +
+                        "\"name\":\"newName\"," +
+                        "\"description\":\"newDescription\"" +
+                        "}" +
+                        "}";
+
+        studyController.updateModificationNameAndDescription(studyUuid, nodeUuid, modificationUuid, metadata);
+
+        verify(studyService, times(1))
+                .updateNetworkModificationNameAndDescription(studyUuid, nodeUuid, modificationUuid, metadata);
     }
 
     @Test

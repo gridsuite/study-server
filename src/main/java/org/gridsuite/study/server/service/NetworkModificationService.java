@@ -289,12 +289,11 @@ public class NetworkModificationService {
         restTemplate.exchange(path, HttpMethod.PUT, userIdEntity(userId, metadata), Void.class);
     }
 
-    public void updateNetworkModificationNameAndDescription(UUID networkModificationUuid, String metadata, String userId) {
+    public void updateNetworkModificationNameAndDescription(UUID networkModificationUuid, String metadata) {
         String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + DELIMITER + networkModificationUuid.toString() + DELIMITER + "name-and-description")
                 .build().toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set(HEADER_USER_ID, userId);
         restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, new HttpEntity<>(metadata, headers), Void.class);
     }
 

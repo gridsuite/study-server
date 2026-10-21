@@ -68,12 +68,4 @@ public class NetworkModificationController {
         networkModificationService.updateNetworkModificationsMetadata(networkModificationUuids, metadata, userId);
         return ResponseEntity.ok().build();
     }
-
-    @PutMapping(value = "/network-modifications/{uuid}/name-and-description")
-    public ResponseEntity<Void> updateModificationNameAndDescription(@PathVariable UUID uuid,
-                                                                     @RequestHeader(HEADER_USER_ID) String userId,
-                                                                     @RequestBody String metadata) {
-        networkModificationService.updateNetworkModificationNameAndDescription(uuid, metadata, userId);
-        return ResponseEntity.ok().build();
-    }
 }

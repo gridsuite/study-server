@@ -1641,6 +1641,11 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
+    public void updateNetworkModificationNameAndDescription(UUID studyUuid, UUID nodeUuid, UUID networkModificationUuid, String metadata) {
+        networkModificationService.updateNetworkModificationNameAndDescription(networkModificationUuid, metadata);
+        notificationService.emitModificationsUpdated(studyUuid, nodeUuid, List.of(networkModificationUuid));
+    }
+
     /**
      * A shared modification holds the applicabilities used by every study referencing it: only a user allowed to write
      * on the shared element may change them.

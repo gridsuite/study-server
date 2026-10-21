@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -21,9 +20,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -155,30 +152,5 @@ class NetworkModificationControllerTest {
             .andExpect(content().string(""));
 
         verify(networkModificationService).updateNetworkModificationsMetadata(List.of(firstUuid, secondUuid), metadata, "userId");
-    }
-
-    @Test
-    void testUpdateNetworkModificationsNameAndDescription() throws Exception {
-        UUID modificationUuid = UUID.randomUUID();
-        String userId = "user";
-        String metadata =
-                "{\"message\":" +
-                    "{" +
-                        "\"name\":\"newName\"," +
-                        "\"description\":\"newDescription\"" +
-                    "}" +
-                "}";
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set(HEADER_USER_ID, userId);
-
-        mockMvc.perform(put(BASE_URL + "/network-modifications/" + modificationUuid + "/name-and-description")
-                        .headers(headers)
-                        .content(metadata)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(content().string(""));
-
-        verify(networkModificationService).updateNetworkModificationNameAndDescription(modificationUuid, metadata, userId);
     }
 }
