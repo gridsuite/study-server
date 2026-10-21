@@ -312,7 +312,7 @@ public class StudyService {
             @NonNull final UUID nodeUuid,
             @NonNull final UUID modificationUuid,
             String userId) {
-        networkModificationService.unshareModificationReference(modificationUuid, userId);
+        networkModificationRestService.unshareModificationReference(modificationUuid, userId);
         notificationService.emitModificationsUpdated(studyUuid, nodeUuid, Optional.empty(), List.of(modificationUuid));
     }
 
