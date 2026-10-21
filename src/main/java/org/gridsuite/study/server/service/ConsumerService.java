@@ -896,7 +896,7 @@ public class ConsumerService {
     }
 
     @Bean
-    public Consumer<Message<List<ModificationReference>>> consumeCompositeReference() {
+    public Consumer<Message<List<ModificationReference>>> consumeCompositeReferenceChanges() {
         return this::handleCompositeReference;
     }
 
@@ -913,21 +913,9 @@ public class ConsumerService {
         NodeInfos nodeInfos = networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid);
         switch (action) {
             case DELETE -> directoryService.removeElementsReferences(references, userId);
-            case CREATE -> directoryService.createElementsReferences(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), userId);
+            case CREATE, RECREATE -> directoryService.createElementsReferences(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), userId);
             case UPDATE -> directoryService.updateElementsReferences(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), userId);
         }
-    }
-
-    @Bean
-    public Consumer<Message<List<ModificationReference>>> consumeCompositeReferenceRecreation() {
-        return this::handleCompositeReferenceRecreation;
-    }
-
-    void handleCompositeReferenceRecreation(Message<List<ModificationReference>> message) {
-        UUID groupUuid = UUID.fromString(String.valueOf(message.getHeaders().get(HEADER_GROUP_UUID)));
-        String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
-        NodeInfos nodeInfos = networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid);
-        directoryService.createElementsReferences(message.getPayload(), nodeInfos.studyUuid(), nodeInfos.nodeUuid(), userId);
     }
 
     private void handleSharedElementUpdate(Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType) {

@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service;
 import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.NodeInfos;
 import org.gridsuite.study.server.dto.ElementReferenceAction;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.nodeactivity.NodeActivityService;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -25,10 +26,10 @@ import org.springframework.messaging.Message;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
@@ -73,7 +74,7 @@ class ConsumerServiceCompositeReferenceTest {
     @Autowired
     private ConsumerService consumerService;
 
-    private Consumer<Message<List<ModificationReference>>> consumeCompositeReference;
+    private Consumer<Message<List<ModificationReference>>> consumeCompositeReferenceChanges;
 
     private static final String USER_ID = "userId";
     private final UUID groupUuid = UUID.randomUUID();
@@ -85,15 +86,15 @@ class ConsumerServiceCompositeReferenceTest {
 
     @BeforeEach
     void setup() {
-        consumeCompositeReference = consumerService.consumeCompositeReference();
+        consumeCompositeReferenceChanges = consumerService.consumeCompositeReferenceChanges();
     }
 
     @Test
     void testCreateReferences() {
         when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid))
-                .thenReturn(Optional.of(new NodeInfos(nodeUuid, "node", studyUuid)));
+                .thenReturn(new NodeInfos(nodeUuid, "node", studyUuid));
 
-        consumeCompositeReference.accept(compositeReferenceMessage(ElementReferenceAction.CREATE));
+        consumeCompositeReferenceChanges.accept(compositeReferenceMessage(ElementReferenceAction.CREATE));
 
         verify(directoryService).createElementsReferences(references, studyUuid, nodeUuid, USER_ID);
         verifyNoMoreInteractions(directoryService);
@@ -102,9 +103,9 @@ class ConsumerServiceCompositeReferenceTest {
     @Test
     void testUpdateReferences() {
         when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid))
-                .thenReturn(Optional.of(new NodeInfos(nodeUuid, "node", studyUuid)));
+                .thenReturn(new NodeInfos(nodeUuid, "node", studyUuid));
 
-        consumeCompositeReference.accept(compositeReferenceMessage(ElementReferenceAction.UPDATE));
+        consumeCompositeReferenceChanges.accept(compositeReferenceMessage(ElementReferenceAction.UPDATE));
 
         verify(directoryService).updateElementsReferences(references, studyUuid, nodeUuid, USER_ID);
         verifyNoMoreInteractions(directoryService);
@@ -112,29 +113,31 @@ class ConsumerServiceCompositeReferenceTest {
 
     @Test
     void testDeleteReferences() {
-        consumeCompositeReference.accept(compositeReferenceMessage(ElementReferenceAction.DELETE));
+        when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid))
+                .thenReturn(new NodeInfos(nodeUuid, "node", studyUuid));
 
-        // the node is not needed to delete a reference: it may well be deleted already
+        consumeCompositeReferenceChanges.accept(compositeReferenceMessage(ElementReferenceAction.DELETE));
+
         verify(directoryService).removeElementsReferences(references, USER_ID);
-        verifyNoMoreInteractions(directoryService, networkModificationTreeService);
+        verifyNoMoreInteractions(directoryService);
     }
 
     @Test
     void testCreateReferencesWithUnknownGroup() {
-        when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid)).thenReturn(Optional.empty());
+        when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid))
+                .thenThrow(new StudyException(NOT_FOUND, "Node infos not found"));
 
         Message<List<ModificationReference>> message = compositeReferenceMessage(ElementReferenceAction.CREATE);
-        // failing lets the message be retried, for the node to be committed
-        assertThrows(IllegalStateException.class, () -> consumeCompositeReference.accept(message));
+        assertThrows(StudyException.class, () -> consumeCompositeReferenceChanges.accept(message));
         verifyNoInteractions(directoryService);
     }
 
     @Test
     void testRecreateReferences() {
         when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid))
-                .thenReturn(Optional.of(new NodeInfos(nodeUuid, "node", studyUuid)));
+                .thenReturn(new NodeInfos(nodeUuid, "node", studyUuid));
 
-        consumerService.consumeCompositeReferenceRecreation().accept(compositeReferenceRecreationMessage());
+        consumeCompositeReferenceChanges.accept(compositeReferenceMessage(ElementReferenceAction.RECREATE));
 
         verify(directoryService).createElementsReferences(references, studyUuid, nodeUuid, USER_ID);
         verifyNoMoreInteractions(directoryService);
@@ -142,19 +145,12 @@ class ConsumerServiceCompositeReferenceTest {
 
     @Test
     void testRecreateReferencesWithUnknownGroup() {
-        when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid)).thenReturn(Optional.empty());
+        when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid))
+                .thenThrow(new StudyException(NOT_FOUND, "Node infos not found"));
 
-        Message<List<ModificationReference>> message = compositeReferenceRecreationMessage();
-        Consumer<Message<List<ModificationReference>>> consumeRecreation = consumerService.consumeCompositeReferenceRecreation();
-        assertThrows(IllegalStateException.class, () -> consumeRecreation.accept(message));
+        Message<List<ModificationReference>> message = compositeReferenceMessage(ElementReferenceAction.RECREATE);
+        assertThrows(StudyException.class, () -> consumeCompositeReferenceChanges.accept(message));
         verifyNoInteractions(directoryService);
-    }
-
-    private Message<List<ModificationReference>> compositeReferenceRecreationMessage() {
-        return MessageBuilder.withPayload(references)
-                .setHeader(ConsumerService.HEADER_GROUP_UUID, groupUuid.toString())
-                .setHeader("userId", USER_ID)
-                .build();
     }
 
     private Message<List<ModificationReference>> compositeReferenceMessage(ElementReferenceAction action) {
