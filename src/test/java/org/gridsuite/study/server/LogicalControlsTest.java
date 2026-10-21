@@ -26,6 +26,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.logicalcontrols.LogicalControlsRestService;
+import org.gridsuite.study.server.service.stateestimation.StateEstimationRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.ComputationServerStubs;
@@ -109,6 +110,8 @@ class LogicalControlsTest {
     private NetworkModificationTreeService networkModificationTreeService;
     @MockitoSpyBean
     private LogicalControlsRestService logicalControlsRestService;
+    @Autowired
+    private StateEstimationRestService stateEstimationRestService;
     @Autowired
     private StudyRepository studyRepository;
     @Autowired
@@ -285,6 +288,55 @@ class LogicalControlsTest {
             .andExpect(status().isNoContent());
         mockMvc.perform(get(LOGICAL_CONTROLS_URL_BASE + "result", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
             .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void testParameterUpdateInvalidatesOnlyStudyResults() throws Exception {
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1");
+        runLogicalControls(ids);
+        StudyNodeIds otherStudy = createStudyAndNode(VARIANT_ID, "other study node");
+        UUID otherResultUuid = UUID.randomUUID();
+        rootNetworkNodeInfoService.updateComputationResultUuid(otherStudy.nodeId, otherStudy.rootNetworkUuid, otherResultUuid, ComputationType.LOGICAL_CONTROLS);
+        UUID stateEstimationResultUuid = UUID.randomUUID();
+        rootNetworkNodeInfoService.updateComputationResultUuid(ids.nodeId, ids.rootNetworkUuid, stateEstimationResultUuid, ComputationType.STATE_ESTIMATION);
+        wireMockServer.stubFor(WireMock.put(urlPathEqualTo("/v1/results/invalidate-status"))
+            .withQueryParam("resultUuid", equalTo(stateEstimationResultUuid.toString())).willReturn(ok()));
+        wireMockServer.stubFor(WireMock.put(urlPathEqualTo("/v1/logical-controls/results/invalidate-status"))
+            .withQueryParam("resultUuid", equalTo(LOGICAL_CONTROLS_RESULT_UUID)).willReturn(ok()));
+
+        updateStateEstimationParameters(ids);
+
+        wireMockServer.verify(1, putRequestedFor(urlPathEqualTo("/v1/results/invalidate-status"))
+            .withQueryParam("resultUuid", equalTo(stateEstimationResultUuid.toString())));
+        wireMockServer.verify(1, putRequestedFor(urlPathEqualTo("/v1/logical-controls/results/invalidate-status"))
+            .withQueryParam("resultUuid", equalTo(LOGICAL_CONTROLS_RESULT_UUID)));
+        wireMockServer.verify(0, putRequestedFor(urlPathEqualTo("/v1/logical-controls/results/invalidate-status"))
+            .withQueryParam("resultUuid", containing(otherResultUuid.toString())));
+    }
+
+    @Test
+    void testParameterUpdateWithoutLogicalControlsResults() throws Exception {
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1");
+
+        updateStateEstimationParameters(ids);
+
+        wireMockServer.verify(0, putRequestedFor(urlPathEqualTo("/v1/logical-controls/results/invalidate-status")));
+    }
+
+    private void updateStateEstimationParameters(StudyNodeIds ids) throws Exception {
+        stateEstimationRestService.setBaseUri(wireMockServer.baseUrl());
+        wireMockServer.stubFor(WireMock.put(urlPathEqualTo("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID))
+            .willReturn(ok()));
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/state-estimation/parameters", ids.studyId)
+                .header("userId", "userId")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestUtils.resourceToString("/estim-parameters.json")))
+            .andExpect(status().isOk());
+
+        checkLogicalControlsMessagesReceived(ids.studyId, UPDATE_TYPE_STATE_ESTIMATION_STATUS);
+        checkLogicalControlsMessagesReceived(ids.studyId, UPDATE_TYPE_LOGICAL_CONTROLS_STATUS);
+        checkLogicalControlsMessagesReceived(ids.studyId, UPDATE_TYPE_COMPUTATION_PARAMETERS);
     }
 
     @Test

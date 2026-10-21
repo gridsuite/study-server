@@ -105,6 +105,15 @@ public class LogicalControlsRestService extends AbstractComputationRestService {
         return restTemplate.getForObject(baseUri + path, String.class);
     }
 
+    public void invalidateLogicalControlsStatus(List<UUID> resultUuids) {
+        if (!resultUuids.isEmpty()) {
+            String path = UriComponentsBuilder
+                .fromPath(LOGICAL_CONTROLS_URI + DELIMITER + "results/invalidate-status")
+                .queryParam("resultUuid", resultUuids).build().toUriString();
+            restTemplate.put(baseUri + path, Void.class);
+        }
+    }
+
     public void deleteLogicalControlsResults(List<UUID> resultsUuids) {
         deleteCalculationResults(resultsUuids, LOGICAL_CONTROLS_URI + "/results", restTemplate, baseUri);
     }
