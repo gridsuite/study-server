@@ -50,6 +50,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
@@ -229,7 +230,7 @@ class VoltageInitTest {
     private NetworkModificationTreeService networkModificationTreeService;
 
     @MockitoSpyBean
-    private NetworkModificationService networkModificationService;
+    private NetworkModificationRestService networkModificationService;
 
     @Autowired
     private StudyRepository studyRepository;
