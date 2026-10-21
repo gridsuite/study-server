@@ -138,9 +138,6 @@ class StudyControllerRebuildNodeTest {
 
     @Test
     void testUpdateNetworkModificationsNameAndDescription() {
-        UUID studyUuid = UUID.randomUUID();
-        UUID nodeUuid = UUID.randomUUID();
-        UUID modificationUuid = UUID.randomUUID();
         String metadata =
                 "{\"message\":" +
                         "{" +
