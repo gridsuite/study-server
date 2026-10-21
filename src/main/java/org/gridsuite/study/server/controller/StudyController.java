@@ -124,6 +124,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The root network import parameters"),
                            @ApiResponse(responseCode = "404", description = "The root network doesn't exist")})
     public ResponseEntity<Map<String, Object>> getRootNetworkImportParameters(@PathVariable("studyUuid") UUID studyUuid, @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
+        rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         return ResponseEntity.ok().body(rootNetworkService.getImportParameters(rootNetworkUuid));
     }
 
