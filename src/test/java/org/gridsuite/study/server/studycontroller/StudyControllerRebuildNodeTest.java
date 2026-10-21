@@ -18,10 +18,13 @@ import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
@@ -159,5 +162,15 @@ class StudyControllerRebuildNodeTest {
 
         verify(rebuildNodeService, times(1)).updateNetworkModificationsApplicability(studyUuid, nodeUuid, rootNetworkUuid, modificationUuids, userId, true);
         verify(studyService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
+    }
+
+    @Test
+    void testUnshareModificationReference() {
+        ResponseEntity<Void> response = studyController.unshareModificationReference(modificationUuid, studyUuid, nodeUuid, userId);
+
+        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(studyService, times(1)).unshareModificationReference(studyUuid, nodeUuid, modificationUuid, userId);
+        verify(studyService, times(1)).assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        verify(studyService, times(1)).assertIsNodeNotReadOnly(nodeUuid);
     }
 }
