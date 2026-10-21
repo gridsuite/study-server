@@ -656,11 +656,8 @@ public class StudyService {
     }
 
     private void deleteModificationsFromGroup(Pair<UUID, UUID> groupUuidNodeUuid, String userId) {
-        // fetch the references data in order to remove those references from directory-server
-        List<ModificationReference> referencesToBeDeleted = networkModificationService.getModificationReferences(groupUuidNodeUuid.getFirst());
-        removeReferences(referencesToBeDeleted, userId);
-
-        networkModificationService.deleteModifications(groupUuidNodeUuid.getFirst());
+        // network-modification-server unlinks the deleted references from directory-server
+        networkModificationService.deleteModifications(groupUuidNodeUuid.getFirst(), userId);
     }
 
     @Transactional
@@ -1587,20 +1584,11 @@ public class StudyService {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
             }
-            List<ModificationReference> referencesToBeDeleted = networkModificationService.getModificationReferences(modificationsUuids);
-            networkModificationService.deleteModifications(modificationsUuids);
-            // if there are unstashed references modifications in the deleted netmods, those references have to be removed from directory server
-            removeReferences(referencesToBeDeleted, userId);
+            networkModificationService.deleteModifications(modificationsUuids, userId);
         } finally {
             notificationService.emitModificationsDeleted(studyUuid, nodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
-    }
-
-    private void removeReferences(List<ModificationReference> references, String userId) {
-        references.forEach(reference ->
-                directoryService.removeElementReference(reference.referencedId(), reference.modificationUuid(), userId)
-        );
     }
 
     @Transactional
