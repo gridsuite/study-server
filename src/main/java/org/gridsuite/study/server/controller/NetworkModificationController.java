@@ -7,7 +7,7 @@
 package org.gridsuite.study.server.controller;
 
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.service.NetworkModificationService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,9 +20,9 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION)
 public class NetworkModificationController {
-    private final NetworkModificationService networkModificationService;
+    private final NetworkModificationRestService networkModificationService;
 
-    public NetworkModificationController(NetworkModificationService networkModificationService) {
+    public NetworkModificationController(NetworkModificationRestService networkModificationService) {
         this.networkModificationService = networkModificationService;
     }
 
@@ -41,13 +41,6 @@ public class NetworkModificationController {
                                                         @RequestParam(required = false) String temperature,
                                                         @RequestParam(required = false) String shapeFactor) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationService.getLineTypeWithLimits(uuid, area, temperature, shapeFactor));
-    }
-
-    @GetMapping(value = "/network-composite-modifications/network-modifications")
-    public ResponseEntity<String> getNetworkModificationsFromComposite(@RequestParam("uuids") List<UUID> compositeModificationUuids,
-                                                                       @RequestParam(name = "onlyMetadata", defaultValue = "true") boolean onlyMetadata,
-                                                                       @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationService.getNetworkModificationsFromComposite(compositeModificationUuids, onlyMetadata, userId));
     }
 
     @GetMapping(value = "/network-modifications/{uuid}")
@@ -74,10 +67,5 @@ public class NetworkModificationController {
                                                                    @RequestHeader(HEADER_USER_ID) String userId) {
         networkModificationService.updateNetworkModificationsMetadata(networkModificationUuids, metadata, userId);
         return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/containers/references/exists")
-    public ResponseEntity<Boolean> hasModificationReferences(@RequestParam("uuids") List<UUID> containerUuids) {
-        return ResponseEntity.ok().body(networkModificationService.hasModificationReferences(containerUuids));
     }
 }

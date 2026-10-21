@@ -119,6 +119,15 @@ public class StudyController {
         return StringUtils.isEmpty(studyCaseName) ? ResponseEntity.noContent().build() : ResponseEntity.ok().body(studyCaseName);
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/import-parameters", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get the import parameters stored for a root network, used to (re)create its network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The root network import parameters"),
+                           @ApiResponse(responseCode = "404", description = "The root network doesn't exist")})
+    public ResponseEntity<Map<String, Object>> getRootNetworkImportParameters(@PathVariable("studyUuid") UUID studyUuid, @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
+        rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
+        return ResponseEntity.ok().body(rootNetworkService.getImportParameters(rootNetworkUuid));
+    }
+
     @GetMapping(value = "/study_creation_requests")
     @Operation(summary = "Get all study creation requests for a user")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of study creation requests")})
@@ -294,6 +303,20 @@ public class StudyController {
         UUID networkUUID = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         return ResponseEntity.ok().body(new RootNetworkStatusInfos(networkStoreService.doesNetworkExist(networkUUID),
                 rootNetworkService.getRootNetworkLoadStatus(rootNetworkUuid)));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuid}/unshare")
+    @Operation(summary = "Unshare a reference modification and copy the referenced composite in its place")
+    @ApiResponse(responseCode = "200", description = "The reference modification has been replaced by a copy of its referenced composite")
+    public ResponseEntity<Void> unshareModificationReference(
+            @PathVariable("modificationUuid") UUID modificationUuid,
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.unshareModificationReference(studyUuid, nodeUuid, modificationUuid, userId);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", params = {"caseUuid"})
@@ -1333,7 +1356,7 @@ public class StudyController {
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                           @RequestHeader(HEADER_USER_ID) String userId) {
         // unbuildStudyNode only reaches the children of a security node whose loadflow has run
-        NodeActivityType unbuildType = studyService.isSecurityNodeWithLoadflowDone(nodeUuid, rootNetworkUuid)
+        NodeActivityType unbuildType = networkModificationTreeService.isSecurityNodeWithLoadFlowDone(nodeUuid, rootNetworkUuid)
             ? UNBUILD_CHILDREN : UNBUILD;
         nodeActivityRunnerService.runWith(unbuildType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> studyService.unbuildStudyNode(studyUuid, nodeUuid, rootNetworkUuid, userId));
