@@ -656,7 +656,6 @@ public class StudyService {
     }
 
     private void deleteModificationsFromGroup(Pair<UUID, UUID> groupUuidNodeUuid, String userId) {
-        // network-modification-server unlinks the deleted references from directory-server
         networkModificationService.deleteModifications(groupUuidNodeUuid.getFirst(), userId);
     }
 
