@@ -163,10 +163,11 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<NodeInfos> findNodeInfosByModificationGroupUuid(UUID modificationGroupUuid) {
+    public NodeInfos findNodeInfosByModificationGroupUuid(UUID modificationGroupUuid) {
         return networkModificationNodeInfoRepository.findByModificationGroupUuidIn(List.of(modificationGroupUuid)).stream()
                 .findFirst()
-                .map(nodeInfo -> new NodeInfos(nodeInfo.getId(), nodeInfo.getName(), nodeInfo.getNode().getStudy().getId()));
+                .map(nodeInfo -> new NodeInfos(nodeInfo.getId(), nodeInfo.getName(), nodeInfo.getNode().getStudy().getId()))
+                .orElseThrow(() -> new StudyException(NOT_FOUND, "Node infos not found"));
     }
 
     @Transactional(readOnly = true)
