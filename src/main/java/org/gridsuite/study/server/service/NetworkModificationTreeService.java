@@ -1072,48 +1072,6 @@ public class NetworkModificationTreeService {
         return buildInfos;
     }
 
-    private InvalidateNodeInfos invalidateNode(UUID nodeUuid, UUID rootNetworkUuid) {
-        NodeEntity nodeEntity = getNodeEntity(nodeUuid);
-
-        InvalidateNodeInfos invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ALL);
-
-        fillIndexedNodeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos);
-
-        notificationService.emitNodeBuildStatusUpdated(nodeEntity.getStudy().getId(), List.of(nodeUuid), rootNetworkUuid);
-
-        return invalidateNodeInfos;
-    }
-
-    private InvalidateNodeInfos invalidateNodeTree(UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
-        InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
-
-        // Node status before invalidation
-        NodeEntity nodeEntity = getNodeEntity(nodeUuid);
-        boolean isModificationNode = nodeEntity.getType().equals(NodeType.NETWORK_MODIFICATION);
-        boolean isNodeBuilt = doGetNodeBuildStatus(nodeEntity.getIdNode(), rootNetworkUuid).isBuilt();
-        boolean shouldInvalidateIndexedInfos = isNodeBuilt || hasAnyBuiltChildren(nodeEntity, rootNetworkUuid);
-
-        // First node
-        if (isModificationNode && !invalidateTreeParameters.isOnlyChildren()) {
-            invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, invalidateTreeParameters);
-        }
-
-        // Invalidate indexed nodes
-        if (shouldInvalidateIndexedInfos) {
-            fillIndexedNodeTreeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos,
-                    isNodeBuilt && (invalidateTreeParameters.isOnlyChildren() || invalidateTreeParameters.isOnlyChildrenBuildStatus()));
-        }
-
-        // Children
-        invalidateNodeInfos.add(invalidateChildrenNodes(nodeUuid, rootNetworkUuid));
-
-        if (!invalidateNodeInfos.getNodeUuids().isEmpty()) {
-            notificationService.emitNodeBuildStatusUpdated(nodeEntity.getStudy().getId(), invalidateNodeInfos.getNodeUuids().stream().toList(), rootNetworkUuid);
-        }
-
-        return invalidateNodeInfos;
-    }
-
     /** Children are always invalidated in full, whatever was asked of the node itself. */
     private InvalidateNodeInfos invalidateChildrenNodes(UUID nodeUuid, UUID rootNetworkUuid) {
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
@@ -1386,30 +1344,21 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters, boolean skipDeleteVariants) {
-        AtomicReference<Long> startTime = new AtomicReference<>(null);
-        startTime.set(System.nanoTime());
-
-        InvalidateNodeInfos invalidateNodeInfos = invalidateNodeTree(nodeUuid, rootNetworkUuid, invalidateTreeParameters);
-        invalidateNodeInfos.setNetworkUuid(rootNetworkService.getNetworkUuid(rootNetworkUuid));
-        deleteInvalidationInfos(invalidateNodeInfos, skipDeleteVariants);
-
-        if (!isRootNode(nodeUuid)) {
-            emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters.computationsInvalidationMode());
-        }
-
-        if (startTime.get() != null) {
-            LOGGER.trace("unbuild node '{}' of study '{}' : {} seconds", nodeUuid, studyUuid,
-                TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-        }
+    public void invalidateNode(UUID studyUuid, UUID nodeUuid) {
+        rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
+            handleInvalidateNode(studyUuid, nodeUuid, rootNetworkEntity.getId()));
     }
 
     @Transactional
     public void invalidateNode(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
+        handleInvalidateNode(studyUuid, nodeUuid, rootNetworkUuid);
+    }
+
+    private void handleInvalidateNode(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
 
-        InvalidateNodeInfos invalidateNodeInfos = invalidateNode(nodeUuid, rootNetworkUuid);
+        InvalidateNodeInfos invalidateNodeInfos = handleInvalidateNode(nodeUuid, rootNetworkUuid);
         invalidateNodeInfos.setNetworkUuid(rootNetworkService.getNetworkUuid(rootNetworkUuid));
 
         deleteInvalidationInfos(invalidateNodeInfos);
@@ -1419,6 +1368,18 @@ public class NetworkModificationTreeService {
             LOGGER.trace("unbuild node '{}' of study '{}' : {} seconds", nodeUuid, studyUuid,
                 TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         }
+    }
+
+    private InvalidateNodeInfos handleInvalidateNode(UUID nodeUuid, UUID rootNetworkUuid) {
+        NodeEntity nodeEntity = getNodeEntity(nodeUuid);
+
+        InvalidateNodeInfos invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ALL);
+
+        fillIndexedNodeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos);
+
+        notificationService.emitNodeBuildStatusUpdated(nodeEntity.getStudy().getId(), List.of(nodeUuid), rootNetworkUuid);
+
+        return invalidateNodeInfos;
     }
 
     private CompletableFuture<Void> deleteInvalidationInfos(InvalidateNodeInfos invalidateNodeInfos) {
@@ -1450,5 +1411,105 @@ public class NetworkModificationTreeService {
         } else {
             notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_ALL_COMPUTATION_STATUS);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isSecurityNodeWithLoadFlowDone(@NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid) {
+        return testSecurityNodeWithLoadFlowDone(nodeUuid, rootNetworkUuid);
+    }
+
+    private boolean testSecurityNodeWithLoadFlowDone(@NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid) {
+        return isSecurityNode(nodeUuid) && rootNetworkNodeInfoService.isLoadflowDone(nodeUuid, rootNetworkUuid);
+    }
+
+    @Transactional
+    public void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters, boolean skipDeleteVariants) {
+        handleInvalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters, skipDeleteVariants);
+    }
+
+    @Transactional
+    public void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
+        handleInvalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ALL, false);
+    }
+
+    @Transactional
+    public void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
+        rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
+            handleInvalidateNodeTree(studyUuid, nodeUuid, rootNetworkEntity.getId(), invalidateTreeParameters, false));
+    }
+
+    @Transactional
+    public void invalidateNodeTree(UUID studyUuid, UUID nodeUuid) {
+        rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
+            handleInvalidateNodeTree(studyUuid, nodeUuid, rootNetworkEntity.getId(), InvalidateNodeTreeParameters.ALL, false));
+    }
+
+    @Transactional
+    public void invalidateNodeTreeWithLF(UUID studyUuid, UUID nodeUuid, InvalidateNodeTreeParameters.ComputationsInvalidationMode computationsInvalidationMode) {
+        rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
+            handleInvalidateNodeTreeWithLF(studyUuid, nodeUuid, rootNetworkEntity.getId(), computationsInvalidationMode)
+        );
+    }
+
+    @Transactional
+    public void invalidateNodeTreeWithLF(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters.ComputationsInvalidationMode computationsInvalidationMode) {
+        handleInvalidateNodeTreeWithLF(studyUuid, nodeUuid, rootNetworkUuid, computationsInvalidationMode);
+    }
+
+    private void handleInvalidateNodeTreeWithLF(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters.ComputationsInvalidationMode computationsInvalidationMode) {
+        boolean invalidateAll = testSecurityNodeWithLoadFlowDone(nodeUuid, rootNetworkUuid);
+        InvalidateNodeTreeParameters invalidateNodeTreeParameters = InvalidateNodeTreeParameters.builder()
+            .invalidationMode(invalidateAll ? InvalidateNodeTreeParameters.InvalidationMode.ALL : InvalidateNodeTreeParameters.InvalidationMode.ONLY_CHILDREN_BUILD_STATUS)
+            .computationsInvalidationMode(invalidateAll ? InvalidateNodeTreeParameters.ComputationsInvalidationMode.ALL : computationsInvalidationMode)
+            .build();
+        handleInvalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, invalidateNodeTreeParameters, false);
+    }
+
+    private void handleInvalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters, boolean skipDeleteVariants) {
+        AtomicReference<Long> startTime = new AtomicReference<>(null);
+        startTime.set(System.nanoTime());
+
+        InvalidateNodeInfos invalidateNodeInfos = handleInvalidateNodeTree(nodeUuid, rootNetworkUuid, invalidateTreeParameters);
+        invalidateNodeInfos.setNetworkUuid(rootNetworkService.getNetworkUuid(rootNetworkUuid));
+        deleteInvalidationInfos(invalidateNodeInfos, skipDeleteVariants);
+
+        if (!isRootNode(nodeUuid)) {
+            emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters.computationsInvalidationMode());
+        }
+
+        if (startTime.get() != null) {
+            LOGGER.trace("unbuild node '{}' of study '{}' : {} seconds", nodeUuid, studyUuid,
+                TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        }
+    }
+
+    private InvalidateNodeInfos handleInvalidateNodeTree(UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
+        InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
+
+        // Node status before invalidation
+        NodeEntity nodeEntity = getNodeEntity(nodeUuid);
+        boolean isModificationNode = nodeEntity.getType().equals(NodeType.NETWORK_MODIFICATION);
+        boolean isNodeBuilt = doGetNodeBuildStatus(nodeEntity.getIdNode(), rootNetworkUuid).isBuilt();
+        boolean shouldInvalidateIndexedInfos = isNodeBuilt || hasAnyBuiltChildren(nodeEntity, rootNetworkUuid);
+
+        // First node
+        if (isModificationNode && !invalidateTreeParameters.isOnlyChildren()) {
+            invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, invalidateTreeParameters);
+        }
+
+        // Invalidate indexed nodes
+        if (shouldInvalidateIndexedInfos) {
+            fillIndexedNodeTreeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos,
+                isNodeBuilt && (invalidateTreeParameters.isOnlyChildren() || invalidateTreeParameters.isOnlyChildrenBuildStatus()));
+        }
+
+        // Children
+        invalidateNodeInfos.add(invalidateChildrenNodes(nodeUuid, rootNetworkUuid));
+
+        if (!invalidateNodeInfos.getNodeUuids().isEmpty()) {
+            notificationService.emitNodeBuildStatusUpdated(nodeEntity.getStudy().getId(), invalidateNodeInfos.getNodeUuids().stream().toList(), rootNetworkUuid);
+        }
+
+        return invalidateNodeInfos;
     }
 }
