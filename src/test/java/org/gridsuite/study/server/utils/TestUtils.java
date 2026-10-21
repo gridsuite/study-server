@@ -358,6 +358,15 @@ public final class TestUtils {
         return message;
     }
 
+    public static Message<byte[]> receiveNetworkModificationUpdate(OutputDestination output, String destination, long timeout) {
+        Message<byte[]> message = output.receive(timeout, destination);
+        while (message != null && NotificationService.MODIFICATIONS_UPDATING_FINISHED
+                .equals(message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE))) {
+            message = output.receive(timeout, destination);
+        }
+        return message;
+    }
+
     @SuppressWarnings("checkstyle:IllegalCatch")
     public static void assertQueuesEmptyThenClear(List<String> destinations, OutputDestination output) {
         try {
