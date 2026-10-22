@@ -314,7 +314,8 @@ public class StudyController {
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.unshareModificationReference(studyUuid, nodeUuid, modificationUuid, userId);
+        nodeActivityRunnerService.runWith(EDIT_MODIFICATIONS, studyUuid, List.of(nodeUuid),
+            () -> networkModificationService.unshareModificationReference(studyUuid, nodeUuid, modificationUuid, userId));
         return ResponseEntity.ok().build();
     }
 

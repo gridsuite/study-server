@@ -337,6 +337,15 @@ public class NetworkModificationService {
         return networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid);
     }
 
+    public void unshareModificationReference(
+        @NonNull final UUID studyUuid,
+        @NonNull final UUID nodeUuid,
+        @NonNull final UUID modificationUuid,
+        String userId) {
+        networkModificationRestService.unshareModificationReference(modificationUuid, userId);
+        notificationService.emitModificationsUpdated(studyUuid, nodeUuid, Optional.empty(), List.of(modificationUuid));
+    }
+
     @Transactional(readOnly = true)
     public Map<UUID, Set<UUID>> getSecurityNodesToRebuild(UUID studyUuid, UUID node1Uuid, UUID node2Uuid) {
         // if node 1 and 2 are in the same "subtree", rebuild only the highest one - otherwise, rebuild both
@@ -363,5 +372,4 @@ public class NetworkModificationService {
                 "Root network not found"))
         ));
     }
-
 }
