@@ -321,7 +321,10 @@ public class StudyService {
             String userId) {
         // get the modification references of the whole study
         List<ModificationReference> modificationsReference = new ArrayList<>();
-        List<UUID> nodes = networkModificationTreeService.getAllNodes(studyUuid).stream().map(NodeEntity::getIdNode).toList();
+        List<UUID> nodes = networkModificationTreeService.getAllNodes(studyUuid)
+                .stream()
+                .filter(node -> node.getType().equals(NodeType.NETWORK_MODIFICATION))
+                .map(NodeEntity::getIdNode).toList();
         List<UUID> nodesAffected = new ArrayList<>();
         nodes.forEach(nodeUuid -> {
                 UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);

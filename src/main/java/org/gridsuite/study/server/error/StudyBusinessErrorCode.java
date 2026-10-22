@@ -13,6 +13,7 @@ import com.powsybl.ws.commons.error.BusinessErrorCode;
  */
 public enum StudyBusinessErrorCode implements BusinessErrorCode {
     NOT_FOUND("study.notFound"),
+    NODE_NOT_FOUND("study.nodeNotFound"),
     COMPUTATION_RUNNING("study.computationRunning"),
     LOADFLOW_ERROR("study.loadflowError"),
     NOT_ALLOWED("study.notAllowed"),
