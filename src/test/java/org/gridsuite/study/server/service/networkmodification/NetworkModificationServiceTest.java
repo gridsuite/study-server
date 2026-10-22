@@ -284,6 +284,16 @@ class NetworkModificationServiceTest {
         verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.GET), isNull(), any(ParameterizedTypeReference.class));
     }
 
+    @Test
+    void testUpdateNetworkModificationsNameAndDescription() {
+        UUID modificationUuid = UUID.randomUUID();
+        String metadata = "";
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid + "/name-and-description";
+
+        networkModificationService.updateNetworkModificationNameAndDescription(modificationUuid, metadata);
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+    }
+
     private void expectUserIdIsForwarded(String expectedUrl) {
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, USER_ID);
