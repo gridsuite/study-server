@@ -7,20 +7,24 @@
 package org.gridsuite.study.server.studycontroller;
 
 import org.gridsuite.study.server.controller.StudyController;
-import org.gridsuite.study.server.dto.modification.*;
+import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
+import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
-import org.gridsuite.study.server.service.NetworkModificationService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RebuildNodeService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
@@ -31,9 +35,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -55,7 +57,7 @@ class StudyControllerRebuildNodeTest {
     // RebuildNodeService now looks up each modification's real parent composite before delegating
     // to studyService; mock it here too so this delegation-only test doesn't hit the real HTTP client
     @MockitoBean
-    private NetworkModificationService networkModificationService;
+    private NetworkModificationRestService networkModificationService;
 
     @MockitoBean
     private NodeActivityRunnerService nodeActivityService;
@@ -138,11 +140,37 @@ class StudyControllerRebuildNodeTest {
     }
 
     @Test
+    void testUpdateNetworkModificationsNameAndDescription() {
+        String metadata =
+                "{\"message\":" +
+                        "{" +
+                        "\"name\":\"newName\"," +
+                        "\"description\":\"newDescription\"" +
+                        "}" +
+                        "}";
+
+        studyController.updateModificationNameAndDescription(studyUuid, nodeUuid, modificationUuid, metadata);
+
+        verify(studyService, times(1))
+                .updateNetworkModificationNameAndDescription(studyUuid, nodeUuid, modificationUuid, metadata);
+    }
+
+    @Test
     void testUpdateNetworkModificationApplicabilityByRootNetwork() {
         Set<UUID> modificationUuids = Set.of(UUID.randomUUID());
         studyController.updateNetworkModificationsApplicability(studyUuid, rootNetworkUuid, nodeUuid, modificationUuids, true, userId);
 
         verify(rebuildNodeService, times(1)).updateNetworkModificationsApplicability(studyUuid, nodeUuid, rootNetworkUuid, modificationUuids, userId, true);
         verify(studyService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
+    }
+
+    @Test
+    void testUnshareModificationReference() {
+        ResponseEntity<Void> response = studyController.unshareModificationReference(modificationUuid, studyUuid, nodeUuid, userId);
+
+        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(studyService, times(1)).unshareModificationReference(studyUuid, nodeUuid, modificationUuid, userId);
+        verify(studyService, times(1)).assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        verify(studyService, times(1)).assertIsNodeNotReadOnly(nodeUuid);
     }
 }
