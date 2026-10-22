@@ -7,6 +7,7 @@
 package org.gridsuite.study.server;
 
 import org.gridsuite.study.server.dto.ComputationType;
+import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.QuotaState;
 import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.error.StudyException;
@@ -14,6 +15,8 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
@@ -58,6 +61,8 @@ class StudyServiceTest {
     private NotificationService notificationService;
     @MockitoBean
     private RootNetworkService rootNetworkService;
+    @MockitoBean
+    private NodeActivityRunnerService nodeActivityRunnerService;
 
     @AfterEach
     void resetOperationQuotasFlag() {
@@ -278,6 +283,50 @@ class StudyServiceTest {
         studyService.unshareModificationReferences(studyUuid, userId, Map.of(nodeUuid, List.of(modificationUuid)));
 
         // the reference is replaced remotely by a copy of the shared composite, then the front is notified
+        verify(networkModificationService, times(1)).unshareModificationReference(modificationUuid, userId);
+        verify(notificationService, times(1)).emitModificationsUpdated(studyUuid, nodeUuid, Optional.empty(), List.of(modificationUuid));
+    }
+
+    @Test
+    void testUnshareAllReferencesInStudy() {
+        UUID studyUuid = UUID.randomUUID();
+        String userId = "userId";
+
+        doReturn(List.of()).when(networkModificationTreeService).getAllNodes(studyUuid);
+
+        studyService.unshareAllReferencesInStudy(studyUuid, userId);
+
+        verify(networkModificationTreeService, times(1)).getAllNodes(studyUuid);
+    }
+
+    @Test
+    void testUnshareAllReferencesInStudyWithReferences() {
+        UUID studyUuid = UUID.randomUUID();
+        UUID nodeUuid = UUID.randomUUID();
+        UUID modificationUuid = UUID.randomUUID();
+        String userId = "userId";
+
+        NodeEntity nodeEntity = new NodeEntity(nodeUuid, null, NodeType.NETWORK_MODIFICATION, null, false, null, List.of());
+        doReturn(List.of(nodeEntity)).when(networkModificationTreeService).getAllNodes(studyUuid);
+
+        UUID groupUuid = UUID.randomUUID();
+        doReturn(groupUuid).when(networkModificationTreeService).getModificationGroupUuid(nodeUuid);
+
+        ModificationReference modificationReference = new ModificationReference(modificationUuid, UUID.randomUUID(), null);
+        doReturn(List.of(modificationReference)).when(networkModificationService).getModificationReferences(groupUuid);
+
+        // Mock nodeActivityRunnerService to bypass database checks
+        doAnswer(invocation -> {
+            Runnable runnable = invocation.getArgument(3);
+            runnable.run();
+            return null;
+        }).when(nodeActivityRunnerService).runWith(any(), any(), any(), (Runnable)any());
+
+        studyService.unshareAllReferencesInStudy(studyUuid, userId);
+
+        verify(networkModificationTreeService, times(1)).getAllNodes(studyUuid);
+        verify(networkModificationTreeService, times(1)).getModificationGroupUuid(nodeUuid);
+        verify(networkModificationService, times(1)).getModificationReferences(groupUuid);
         verify(networkModificationService, times(1)).unshareModificationReference(modificationUuid, userId);
         verify(notificationService, times(1)).emitModificationsUpdated(studyUuid, nodeUuid, Optional.empty(), List.of(modificationUuid));
     }
