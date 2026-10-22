@@ -10,7 +10,7 @@ import org.gridsuite.study.server.controller.StudyController;
 import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
-import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
+import org.gridsuite.study.server.nodeactivity.NetworkModificationActivityRunnerService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
@@ -50,7 +50,7 @@ class RebuildNodeServiceTest {
     private NetworkModificationRestService networkModificationRestService;
 
     @MockitoSpyBean
-    private NodeActivityRunnerService nodeActivityService;
+    private NetworkModificationActivityRunnerService nodeActivityService;
 
     UUID studyUuid = UUID.randomUUID();
     UUID node1Uuid = UUID.randomUUID();
