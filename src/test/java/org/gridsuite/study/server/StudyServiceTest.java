@@ -16,7 +16,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
-import org.gridsuite.study.server.nodeactivity.NodeActivityType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
@@ -320,7 +319,7 @@ class StudyServiceTest {
             Runnable runnable = invocation.getArgument(3);
             runnable.run();
             return null;
-        }).when(nodeActivityRunnerService).runWith(any(), any(), any(), (Runnable)any());
+        }).when(nodeActivityRunnerService).runWith(any(), any(), any(), (Runnable) any());
 
         studyService.unshareAllReferencesInStudy(studyUuid, userId);
 
