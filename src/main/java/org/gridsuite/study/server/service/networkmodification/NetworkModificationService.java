@@ -169,7 +169,7 @@ public class NetworkModificationService {
             // so changing it requires the right to write on it
             assertCanUpdateSharedModifications(new ArrayList<>(modificationsUuids), userId);
             networkModificationRestService.updateRootNetworkApplicability(new ArrayList<>(modificationsUuids),
-                rootNetworkService.getRootNetworkTag(rootNetworkUuid), applicable);
+                rootNetworkService.getRootNetworkTag(rootNetworkUuid), applicable, userId);
             networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid);
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, nodeUuid, Optional.of(rootNetworkUuid), childrenUuids);

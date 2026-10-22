@@ -2103,7 +2103,7 @@ public class StudyService {
             if (networkModificationResults != null && networkModificationResults.modificationUuids().size() == 1) {
                 List<UUID> createdModificationUuids = List.of(networkModificationResults.modificationUuids().getFirst());
                 rootNetworkTagsToDeactivate.forEach(rootNetworkTag ->
-                    networkModificationRestService.updateRootNetworkApplicability(createdModificationUuids, rootNetworkTag, false));
+                    networkModificationRestService.updateRootNetworkApplicability(createdModificationUuids, rootNetworkTag, false, userId));
                 // The modification was applied only on rootNetworkUuid, so the single result must be attributed to it
                 networkModificationResults.modificationResults().getFirst()
                     .ifPresent(result -> networkModificationTreeService.handleNetworkModificationApplyResult(studyUuid, nodeUuid, rootNetworkUuid, result));

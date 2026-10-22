@@ -139,7 +139,7 @@ class RootNetworkApplicabilityTest {
                 .param("applicable", Boolean.FALSE.toString())
                 .header(USER_ID, USER_ID))
             .andExpect(status().isNotFound());
-        verify(networkModificationRestService, never()).updateRootNetworkApplicability(anyList(), anyString(), anyBoolean());
+        verify(networkModificationRestService, never()).updateRootNetworkApplicability(anyList(), anyString(), anyBoolean(), eq("userId"));
 
         doNothing().when(networkModificationRestService).verifyModifications(firstNode.getModificationGroupUuid(), Set.of(MODIFICATION_1));
 
@@ -149,7 +149,8 @@ class RootNetworkApplicabilityTest {
                 .param("applicable", Boolean.FALSE.toString())
                 .header(USER_ID, USER_ID))
             .andExpect(status().isOk());
-        verify(networkModificationRestService, times(1)).updateRootNetworkApplicability(List.of(MODIFICATION_1), ROOT_NETWORK_TAG_1, false);
+        verify(networkModificationRestService, times(1))
+                .updateRootNetworkApplicability(List.of(MODIFICATION_1), ROOT_NETWORK_TAG_1, false, "userId");
 
         // and so is activating it back
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkUuid, firstNode.getId())
@@ -157,7 +158,8 @@ class RootNetworkApplicabilityTest {
                 .param("applicable", Boolean.TRUE.toString())
                 .header(USER_ID, USER_ID))
             .andExpect(status().isOk());
-        verify(networkModificationRestService, times(1)).updateRootNetworkApplicability(List.of(MODIFICATION_1), ROOT_NETWORK_TAG_1, true);
+        verify(networkModificationRestService, times(1))
+                .updateRootNetworkApplicability(List.of(MODIFICATION_1), ROOT_NETWORK_TAG_1, true, "userId");
     }
 
     @Test
@@ -182,7 +184,7 @@ class RootNetworkApplicabilityTest {
             studyUuid, nodeUuid, rootNetworkUuid, modificationUuids, USER_ID, false));
 
         // the applicability of the shared modification is left untouched
-        verify(networkModificationRestService, never()).updateRootNetworkApplicability(anyList(), anyString(), anyBoolean());
+        verify(networkModificationRestService, never()).updateRootNetworkApplicability(anyList(), anyString(), anyBoolean(), eq("userId"));
     }
 
     @Test
