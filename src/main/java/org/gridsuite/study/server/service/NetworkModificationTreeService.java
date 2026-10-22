@@ -823,9 +823,6 @@ public class NetworkModificationTreeService {
         return getNetworkModificationNodeInfoEntity(nodeUuid).getModificationGroupUuid();
     }
 
-    /**
-     * @return the modification groups of the given node and of all its descendants
-     */
     @Transactional(readOnly = true)
     public List<UUID> getSubtreeModificationGroupUuids(UUID parentNodeUuid) {
         List<UUID> nodeUuids = Stream.concat(Stream.of(parentNodeUuid), getAllChildrenUuids(parentNodeUuid).stream()).toList();
