@@ -35,6 +35,7 @@ import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMargin
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
@@ -184,7 +185,7 @@ class RootNetworkTest {
     @MockitoBean
     private NetworkService networkService;
     @MockitoBean
-    private NetworkModificationService networkModificationService;
+    private NetworkModificationRestService networkModificationService;
     @MockitoBean
     private PccMinRestService pccMinService;
 
@@ -811,6 +812,36 @@ class RootNetworkTest {
         BasicRootNetworkInfos createdRootNetwork = result.stream().filter(rootNetworkMinimalInfos -> rootNetworkMinimalInfos.rootNetworkUuid().equals(rootNetworkUuid)).findFirst().orElseThrow(
                 () -> new Exception("this should be in the results"));
         assertFalse(createdRootNetwork.isCreating());
+    }
+
+    @Test
+    void getRootNetworkImportParameters() throws Exception {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        UUID rootNetworkUuid = UUID.randomUUID();
+        Map<String, Object> importParameters = new HashMap<>();
+        importParameters.put("param1", "value1");
+        importParameters.put("param2", true);
+        importParameters.put("param3", List.of("v1", "v2"));
+        importParameters.put("param4", null);
+        createDummyRootNetwork(studyEntity, RootNetworkInfos.builder()
+            .name(CASE_NAME2)
+            .caseInfos(new CaseInfos(CASE_UUID2, CASE_UUID, CASE_NAME2, CASE_FORMAT2))
+            .networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
+            .reportUuid(REPORT_UUID2)
+            .id(rootNetworkUuid)
+            .tag("rn2")
+            .importParameters(importParameters)
+            .build());
+        studyRepository.save(studyEntity);
+
+        String response = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/import-parameters", studyEntity.getId(), rootNetworkUuid))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        Map<String, Object> result = objectMapper.readValue(response, new TypeReference<>() { });
+        assertEquals(importParameters, result);
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/import-parameters", studyEntity.getId(), UUID.randomUUID()))
+            .andExpect(status().isNotFound());
     }
 
     @Test
