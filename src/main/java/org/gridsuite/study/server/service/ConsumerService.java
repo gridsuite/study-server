@@ -66,7 +66,7 @@ public class ConsumerService {
     private static final String HEADER_EXPORT_UUID = "exportUuid";
     static final String HEADER_ACTION = "action";
     static final String HEADER_GROUP_UUID = "groupUuid";
-
+    private static final String HEADER_ONLY_METADATA = "onlyMetadata";
     private final ObjectMapper objectMapper;
 
     private final NotificationService notificationService;
@@ -892,7 +892,13 @@ public class ConsumerService {
 
     @Bean
     public Consumer<Message<Map<ReferenceType, List<ReferenceAttributes>>>> consumeSharedElementUpdate() {
-        return message -> handleSharedElementUpdate(message.getPayload());
+        return message -> {
+            boolean onlyMetadata = false;
+            if (message.getHeaders().containsKey(HEADER_ONLY_METADATA)) {
+                onlyMetadata = message.getHeaders().get(HEADER_ONLY_METADATA, Boolean.class);
+            }
+            handleSharedElementUpdate(message.getPayload(), onlyMetadata);
+        };
     }
 
     @Bean
@@ -918,14 +924,14 @@ public class ConsumerService {
         }
     }
 
-    private void handleSharedElementUpdate(Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType) {
-        Map<UUID, List<UUID>> modificationUuidsByNode = new HashMap<>();
+    private void handleSharedElementUpdate(Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType, boolean onlyMetadata) {
+        Map<UUID, List<UUID>> modificationUuidsByNodes = new HashMap<>();
         referencesByType.forEach((_, references) -> references.forEach(ref -> {
             UUID nodeId = ref.getReferenceNodeId();
             if (nodeId != null) {
-                modificationUuidsByNode.computeIfAbsent(nodeId, k -> new ArrayList<>()).add(ref.getReferenceId());
+                modificationUuidsByNodes.computeIfAbsent(nodeId, k -> new ArrayList<>()).add(ref.getReferenceId());
             }
         }));
-        modificationUuidsByNode.forEach(studyService::sharedModificationsUpdatedNotification);
+        modificationUuidsByNodes.entrySet().forEach(entry -> studyService.sharedModificationsUpdatedNotification(entry.getKey(), entry.getValue(), onlyMetadata));
     }
 }
