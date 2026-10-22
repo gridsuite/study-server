@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service.networkmodification;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ModificationReference;
+import org.gridsuite.study.server.dto.RootNetworkTagsCheckInfos;
 import org.gridsuite.study.server.dto.SharedModificationsWriteAccess;
 import org.gridsuite.study.server.service.RootNetworkService;
 import org.junit.jupiter.api.BeforeEach;
@@ -265,10 +266,11 @@ class NetworkModificationServiceTest {
         UUID groupUuid = UUID.randomUUID();
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, USER_ID);
+        headers.setContentType(MediaType.APPLICATION_JSON);
 
         networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of("PH1", "PH2"), USER_ID);
-        verify(restTemplate).exchange(NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/root-network-tags/authorized?uuids=" + groupUuid
-                + "&tags=PH1&tags=PH2", HttpMethod.GET, new HttpEntity<>(headers), Void.class);
+        verify(restTemplate).exchange(NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/root-network-tags/authorized", HttpMethod.POST,
+                new HttpEntity<>(new RootNetworkTagsCheckInfos(List.of(groupUuid), List.of("PH1", "PH2")), headers), Void.class);
 
         // there is nothing to check without a tag, or without a container to check it on
         networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of(), USER_ID);
