@@ -275,7 +275,7 @@ class StudyServiceTest {
         UUID modificationUuid = UUID.randomUUID();
         String userId = "userId";
 
-        studyService.unshareModificationReference(studyUuid, nodeUuid, modificationUuid, userId);
+        studyService.unshareModificationReferences(studyUuid, userId, Map.of(nodeUuid, List.of(modificationUuid)));
 
         // the reference is replaced remotely by a copy of the shared composite, then the front is notified
         verify(networkModificationService, times(1)).unshareModificationReference(modificationUuid, userId);
@@ -293,7 +293,7 @@ class StudyServiceTest {
                 .when(networkModificationService).unshareModificationReference(modificationUuid, userId);
 
         assertThrows(RuntimeException.class,
-                () -> studyService.unshareModificationReference(studyUuid, nodeUuid, modificationUuid, userId));
+                () -> studyService.unshareModificationReferences(studyUuid, userId, Map.of(nodeUuid, List.of(modificationUuid))));
 
         verify(notificationService, never()).emitModificationsUpdated(any(), any(), any(), any());
     }
