@@ -13,6 +13,7 @@ import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import com.powsybl.iidm.network.TwoSides;
 import org.gridsuite.filter.utils.EquipmentType;
+import org.gridsuite.study.server.StudyConstants;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
@@ -212,6 +213,13 @@ public class WireMockStubs {
         ).getId();
     }
 
+    public UUID stubNetworkModificationUpdateNameAndDescription(String modificationUuid, String requestBody) {
+        return wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo(URI_NETWORK_MODIFICATION + DELIMITER + modificationUuid + StudyConstants.DELIMITER + "name-and-description"))
+                .withRequestBody(WireMock.equalToJson(requestBody))
+                .willReturn(WireMock.ok())
+        ).getId();
+    }
+
     public UUID stubNetworkModificationPutWithBody(String modificationUuid, String requestBody) {
         return wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo(URI_NETWORK_MODIFICATION + DELIMITER + modificationUuid))
             .withRequestBody(WireMock.equalToJson(requestBody))
@@ -270,6 +278,10 @@ public class WireMockStubs {
         WireMockUtilsCriteria.verifyPostRequest(wireMock, URI_NETWORK_MODIFICATION, false,
             Map.of("groupUuid", WireMock.matching(".*")),
             requestBody);
+    }
+
+    public void verifyNetworkModificationUpdateNameAndDescription(UUID stubId, String modificationUuid, String requestBody) {
+        verifyPutRequest(wireMock, stubId, URI_NETWORK_MODIFICATION + DELIMITER + modificationUuid + StudyConstants.DELIMITER + "name-and-description", false, Map.of(), requestBody);
     }
 
     public void verifyNetworkModificationPut(UUID stubId, String modificationUuid, String requestBody) {
