@@ -1445,4 +1445,28 @@ class StudyTest extends StudyTestBase {
 
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(), directoryUuid, PermissionType.WRITE, false);
     }
+
+    @Test
+    void testUpdateNameAndPermission() throws Exception {
+        UUID studyUuid = createStudyWithStubs(USER_ID_HEADER, CASE_UUID);
+        UUID nodeUuid = getRootNodeUuid(studyUuid);
+
+        UUID modificationUuid = UUID.randomUUID();
+        String metadata =
+                "{\"message\":" +
+                        "{" +
+                        "\"name\":\"newName\"," +
+                        "\"description\":\"newDescription\"" +
+                        "}" +
+                        "}";
+
+        UUID stubId = wireMockStubs.stubNetworkModificationUpdateNameAndDescription(modificationUuid.toString(), metadata);
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuid}/name-and-description",
+                studyUuid, nodeUuid, modificationUuid)
+                .content(metadata))
+                .andExpect(status().isOk());
+
+        wireMockStubs.verifyNetworkModificationUpdateNameAndDescription(stubId, modificationUuid.toString(), metadata);
+        TestUtils.receiveNetworkModificationUpdate(output, studyUpdateDestination, TIMEOUT);
+    }
 }
