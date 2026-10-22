@@ -2001,21 +2001,8 @@ public class StudyService {
         List<CompositeInfos> compositesInfos,
         String userId,
         StudyConstants.CompositeModificationsActionType action) {
-        // CHECK ON SHARED MODIFICATIONS BEFORE INSERTION
-        // Only an INSERT of a composite marked as shared puts a reference to it in the study: the study then uses the
-        // shared composite itself, which is checked, along with its content. Any other composite (COPY, SPLIT, or INSERT
-        // not marked as shared) is copied: the study only gets its content, whose references to shared modifications are
-        // checked, the composite being passed as the container of that content.
         boolean isInsert = action == StudyConstants.CompositeModificationsActionType.INSERT;
-        List<UUID> copiedCompositeUuids = compositesInfos.stream()
-                .filter(composite -> !isInsert || !composite.isShared())
-                .map(CompositeInfos::id)
-                .toList();
-        List<UUID> sharedCompositeUuids = compositesInfos.stream()
-                .filter(composite -> isInsert && composite.isShared())
-                .map(CompositeInfos::id)
-                .toList();
-        assertCanWriteModificationsInStudy(targetStudyUuid, copiedCompositeUuids, List.of(), sharedCompositeUuids, userId);
+        assertCanWriteCompositesInStudy(targetStudyUuid, compositesInfos, isInsert, userId);
         duplicateModificationsOrInsertComposites(
                 targetStudyUuid,
                 targetNodeUuid,
@@ -2028,6 +2015,21 @@ public class StudyService {
                 },
                 userId
         );
+    }
+
+    /**
+     * Only an INSERT of a composite marked as shared puts a reference to it in the study: the study then uses the shared
+     * composite itself, which is checked, along with its content. Any other composite (COPY, SPLIT, or INSERT not marked as
+     * shared) is copied: the study only gets its content, whose references to shared modifications are checked, the
+     * composite being passed as the container of that content.
+     */
+    private void assertCanWriteCompositesInStudy(UUID studyUuid, List<CompositeInfos> compositesInfos, boolean isInsert, String userId) {
+        Map<Boolean, List<UUID>> uuidsByShared = compositesInfos.stream()
+                .collect(Collectors.partitioningBy(composite -> isInsert && composite.isShared(),
+                        Collectors.mapping(CompositeInfos::id, Collectors.toList())));
+        List<UUID> sharedCompositeUuids = uuidsByShared.get(true);
+        List<UUID> copiedCompositeUuids = uuidsByShared.get(false);
+        assertCanWriteModificationsInStudy(studyUuid, copiedCompositeUuids, List.of(), sharedCompositeUuids, userId);
     }
 
     private void createCompositesReferences(List<CompositeInfos> compositesInfos, List<UUID> insertedModificationUuids,
