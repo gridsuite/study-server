@@ -394,7 +394,7 @@ public class NetworkModificationRestService {
         ).getBody();
     }
 
-    public void updateRootNetworkApplicability(List<UUID> modificationsUuids, String rootNetworkTag, boolean applicable) {
+    public void updateRootNetworkApplicability(List<UUID> modificationsUuids, String rootNetworkTag, boolean applicable, String userId) {
         Objects.requireNonNull(modificationsUuids);
         Objects.requireNonNull(rootNetworkTag);
         var path = UriComponentsBuilder
@@ -406,6 +406,7 @@ public class NetworkModificationRestService {
                 .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         restTemplate.exchange(path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
