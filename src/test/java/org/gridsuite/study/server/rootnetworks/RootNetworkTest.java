@@ -436,7 +436,6 @@ class RootNetworkTest {
         // check case expiration has been disabled
         verify(caseService, times(1)).disableCaseExpiration(CASE_UUID2);
 
-        // check the modifications of the study have been given an applicability for the new tag
         verify(networkModificationService, times(1)).addRootNetworkTag(List.of(firstNode.getModificationGroupUuid()), "rn2");
     }
 

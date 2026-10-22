@@ -405,9 +405,6 @@ public class NetworkModificationRestService {
         restTemplate.exchange(path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
-    /**
-     * Adds a root network tag to the applicabilities held by the modifications of the given groups.
-     */
     public void addRootNetworkTag(List<UUID> groupUuids, String newTag) {
         Objects.requireNonNull(newTag);
         if (CollectionUtils.isEmpty(groupUuids)) {
