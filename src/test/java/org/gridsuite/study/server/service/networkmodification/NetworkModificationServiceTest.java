@@ -275,10 +275,13 @@ class NetworkModificationServiceTest {
         verify(restTemplate).exchange(url, HttpMethod.POST, new HttpEntity<>(
                 new RootNetworkTagsCheckInfos(List.of(groupUuid), List.of(), List.of(), List.of("PH1", "PH2")), headers), Void.class);
 
-        // the modifications and the shared modifications are checked too
-        networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of(modificationUuid), List.of(sharedUuid), List.of("PH1"), USER_ID);
+        // the modifications and the shared modifications are checked too, even alone
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of(modificationUuid), List.of(), List.of("PH1"), USER_ID);
         verify(restTemplate).exchange(url, HttpMethod.POST, new HttpEntity<>(
-                new RootNetworkTagsCheckInfos(List.of(), List.of(modificationUuid), List.of(sharedUuid), List.of("PH1")), headers), Void.class);
+                new RootNetworkTagsCheckInfos(List.of(), List.of(modificationUuid), List.of(), List.of("PH1")), headers), Void.class);
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of(), List.of(sharedUuid), List.of("PH1"), USER_ID);
+        verify(restTemplate).exchange(url, HttpMethod.POST, new HttpEntity<>(
+                new RootNetworkTagsCheckInfos(List.of(), List.of(), List.of(sharedUuid), List.of("PH1")), headers), Void.class);
 
         // there is nothing to check without a tag, or without anything to check it on
         networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of(), List.of(), List.of(), USER_ID);

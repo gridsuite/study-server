@@ -896,6 +896,24 @@ class NodeControllerTest extends StudyTestBase {
                 && nodeEntity.getIdNode().equals(duplicatedNodeUuid)
                 && nodeEntity.getParentNode().getIdNode().equals(study2Node2.getId()))
             .count());
+
+        // copy the subtree of node1 and node2 from study 1 under the first node of study 2: all its groups are checked
+        List<UUID> study2NodesBeforeSubtreeCopy = networkModificationTreeService.getAllNodes(study2Uuid).stream().map(NodeEntity::getIdNode).toList();
+        UUID stubDuplicateUuid = wireMockStubs.stubDuplicateModificationGroup();
+        mockMvc.perform(post(STUDIES_URL +
+                    "/{targetStudyUuid}/tree/subtrees?subtreeToCopyParentNodeUuid={parentNodeToCopy}&referenceNodeUuid={referenceNodeUuid}&sourceStudyUuid={sourceStudyUuid}",
+                study2Uuid, modificationNodeUuid, study2ModificationNodeUuid, study1Uuid)
+                .header(USER_ID_HEADER, userId))
+            .andExpect(status().isOk());
+        List<UUID> copiedNodeUuids = networkModificationTreeService.getAllNodes(study2Uuid).stream().map(NodeEntity::getIdNode)
+                .filter(nodeUuid -> !study2NodesBeforeSubtreeCopy.contains(nodeUuid)).toList();
+        assertEquals(3, copiedNodeUuids.size());
+        checkSubtreeCreatedMessageSent(study2Uuid, copiedNodeUuids.getFirst(), study2ModificationNodeUuid);
+        checkElementUpdatedMessageSent(study2Uuid, userId);
+        wireMockStubs.verifyDuplicateModificationGroup(stubDuplicateUuid, 3);
+        wireMockServer.verify(1, WireMock.postRequestedFor(WireMock.urlPathEqualTo(WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL))
+                .withRequestBody(WireMock.matchingJsonPath("$.containerUuids[?(@ == '" + node1.getModificationGroupUuid() + "')]"))
+                .withRequestBody(WireMock.matchingJsonPath("$.containerUuids[?(@ == '" + node2.getModificationGroupUuid() + "')]")));
     }
 
     private UUID duplicateNode(UUID sourceStudyUuid, UUID targetStudyUuid, NetworkModificationNode nodeToCopy, UUID referenceNodeUuid, InsertMode insertMode, boolean checkMessagesForStatusModels,

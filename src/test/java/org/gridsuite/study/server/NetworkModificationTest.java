@@ -2178,6 +2178,29 @@ class NetworkModificationTest {
                 "/v1/elements/" + sharedNetModId + "/references",
                 Map.of(),
                 mapper.writeValueAsString(ReferenceAttributes.createReferenceAttributes(insertedReferenceUuid, studyUuid, nodeUuid1, STUDY_NODE)));
+        // the shared composite is checked itself, the other one only through its content
+        List<String> studyTags = List.of(studyEntity.getFirstRootNetwork().getTag());
+        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL, false, Map.of(),
+                mapper.writeValueAsString(new RootNetworkTagsCheckInfos(List.of(modification1.id()), List.of(), List.of(sharedNetModId), studyTags)));
+
+        // split composites are all checked only through their content, and the study gets no reference to them
+        wireMockServer.stubFor(WireMock.any(urlPathMatching("/v1/network-composite-modifications/groups/.*"))
+                .withQueryParam("action", equalTo("SPLIT"))
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID(), UUID.randomUUID()), List.of(Optional.empty()))))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/composite-modifications?action=SPLIT",
+                        studyUuid, nodeUuid1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(compositesData)
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk());
+        checkUpdateStatusMessagesReceived(studyUuid, nodeUuid1, output);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
+        checkElementUpdatedMessageSent(studyUuid, userId);
+        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, url, false, Map.of("action", equalTo("SPLIT")), expectedBody);
+        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL, false, Map.of(),
+                mapper.writeValueAsString(new RootNetworkTagsCheckInfos(List.of(modification1.id(), sharedNetModId), List.of(), List.of(), studyTags)));
     }
 
     @Test
