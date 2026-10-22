@@ -1158,8 +1158,8 @@ class NetworkModificationTest {
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                         .withBody(mapper.writeValueAsString(stubbedReferences)))
         ).getId();
-        UUID removeReferencesStubId = wireMockServer.stubFor(WireMock.delete(urlPathMatching(
-                "/v1/elements/" + modificationUuid + "/references/.*"))
+        UUID removeReferencesStubId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo(
+                "/v1/elements/" + modificationUuid + "/references"))
                 .willReturn(WireMock.ok())
         ).getId();
 
@@ -1190,12 +1190,14 @@ class NetworkModificationTest {
                 .andExpect(status().isOk());
         WireMockUtils.verifyGetRequest(wireMockServer, referencesStubId, "/v1/references", Map.of("uuids", equalTo(modificationUuid.toString())));
         WireMockUtils.verifyDeleteRequest(wireMockServer, stubId, "/v1/network-modifications", false, Map.of("uuids", equalTo(modificationUuid.toString())));
+        // a single batched call removes every reference of the group, instead of one call per reference
         WireMockUtils.verifyDeleteRequest(
                 wireMockServer,
                 removeReferencesStubId,
-                "/v1/elements/" + modificationUuid + "/references/.*",
-                true,
-                Map.of()
+                "/v1/elements/" + modificationUuid + "/references",
+                false,
+                Map.of(),
+                1
         );
         checkEquipmentDeletingFinishedMessagesReceived(studyUuid, modificationNode.getId());
 
@@ -2175,7 +2177,7 @@ class NetworkModificationTest {
                 wireMockServer,
                 "/v1/elements/" + sharedNetModId + "/references",
                 Map.of(),
-                mapper.writeValueAsString(ReferenceAttributes.createReferenceAttributes(insertedReferenceUuid, studyUuid, nodeUuid1, STUDY_NODE)));
+                mapper.writeValueAsString(List.of(ReferenceAttributes.createReferenceAttributes(insertedReferenceUuid, studyUuid, nodeUuid1, STUDY_NODE))));
     }
 
     @Test
@@ -2263,7 +2265,7 @@ class NetworkModificationTest {
                 wireMockServer,
                 "/v1/elements/" + compositeUuid + "/references",
                 Map.of(),
-                mapper.writeValueAsString(expectedReference));
+                mapper.writeValueAsString(List.of(expectedReference)));
     }
 
     @Test
@@ -2521,14 +2523,14 @@ class NetworkModificationTest {
                 wireMockServer,
                 "/v1/elements/" + sharedComposite1 + "/references",
                 Map.of(),
-                mapper.writeValueAsString(ReferenceAttributes.createReferenceAttributes(copy1, studyUuid, nodeUuid1, STUDY_NODE)));
+                mapper.writeValueAsString(List.of(ReferenceAttributes.createReferenceAttributes(copy1, studyUuid, nodeUuid1, STUDY_NODE))));
 
         // copyChild's reference is nested inside copy2 -> new reference located by (nodeId, copy2)
         WireMockUtilsCriteria.verifyPostRequest(
                 wireMockServer,
                 "/v1/elements/" + sharedComposite2 + "/references",
                 Map.of(),
-                mapper.writeValueAsString(ReferenceAttributes.createReferenceAttributes(copyChild, nodeUuid1, copy2, STUDY_NODE_NETWORK_MODIFICATION)));
+                mapper.writeValueAsString(List.of(ReferenceAttributes.createReferenceAttributes(copyChild, nodeUuid1, copy2, STUDY_NODE_NETWORK_MODIFICATION))));
     }
 
     @Test
@@ -2600,9 +2602,9 @@ class NetworkModificationTest {
 
         // both new references must point to the same new composite copy, type STUDY_NODE_NETWORK_MODIFICATION
         WireMockUtilsCriteria.verifyPostRequest(wireMockServer, "/v1/elements/" + sharedElementUuid1 + "/references", Map.of(),
-                mapper.writeValueAsString(ReferenceAttributes.createReferenceAttributes(copiedChild1, nodeUuid1, copiedComposite, STUDY_NODE_NETWORK_MODIFICATION)));
+                mapper.writeValueAsString(List.of(ReferenceAttributes.createReferenceAttributes(copiedChild1, nodeUuid1, copiedComposite, STUDY_NODE_NETWORK_MODIFICATION))));
         WireMockUtilsCriteria.verifyPostRequest(wireMockServer, "/v1/elements/" + sharedElementUuid2 + "/references", Map.of(),
-                mapper.writeValueAsString(ReferenceAttributes.createReferenceAttributes(copiedChild2, nodeUuid1, copiedComposite, STUDY_NODE_NETWORK_MODIFICATION)));
+                mapper.writeValueAsString(List.of(ReferenceAttributes.createReferenceAttributes(copiedChild2, nodeUuid1, copiedComposite, STUDY_NODE_NETWORK_MODIFICATION))));
     }
 
     @Test
@@ -3569,7 +3571,7 @@ class NetworkModificationTest {
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
         ).getId();
 
-        UUID updateReferencesStubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/elements/" + modification1 + "/references/" + modification1))
+        UUID updateReferencesStubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/elements/" + modification1 + "/references"))
                 .withHeader(USER_ID_HEADER, WireMock.equalTo(userId))
                 .willReturn(WireMock.ok())
         ).getId();
@@ -3597,9 +3599,9 @@ class NetworkModificationTest {
 
         WireMockUtils.verifyGetRequest(wireMockServer, referencesStubId, "/v1/references",
                 Map.of("uuids", WireMock.matching(".*")));
-        WireMockUtils.verifyPutRequest(wireMockServer, updateReferencesStubId, "/v1/elements/" + modification1 + "/references/" + modification1, false,
+        WireMockUtils.verifyPutRequest(wireMockServer, updateReferencesStubId, "/v1/elements/" + modification1 + "/references", false,
                 Map.of(),
-                mapper.writeValueAsString(ReferenceAttributes.createReferenceAttributes(modification1, studyUuid, nodeUuid2, STUDY_NODE)));
+                mapper.writeValueAsString(List.of(ReferenceAttributes.createReferenceAttributes(modification1, studyUuid, nodeUuid2, STUDY_NODE))));
     }
 
     @Test

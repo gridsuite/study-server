@@ -1565,9 +1565,12 @@ public class StudyService {
     }
 
     private void removeReferences(List<ModificationReference> references, String userId) {
-        references.forEach(reference ->
-                directoryService.removeElementReference(reference.referencedId(), reference.modificationUuid(), userId)
-        );
+        references.stream()
+                .collect(Collectors.groupingBy(ModificationReference::referencedId,
+                        Collectors.mapping(ModificationReference::modificationUuid, Collectors.toList())))
+                .forEach((referencedId, referenceUuids) ->
+                        directoryService.removeElementReferences(referencedId, referenceUuids, userId)
+                );
     }
 
     @Transactional
@@ -1883,10 +1886,12 @@ public class StudyService {
 
     private void updateElementsReferences(List<ModificationReference> modificationReferences, UUID rootContainerId, UUID containerId,
                                           ReferenceAttributes.ReferenceType targetReferenceType, String userId) {
-        modificationReferences.forEach(ref -> directoryService.updateElementReference(
-                ref.referencedId(),
-                ReferenceAttributes.createReferenceAttributes(ref.modificationUuid(), rootContainerId, containerId, targetReferenceType), userId)
-        );
+        modificationReferences.stream()
+                .collect(Collectors.groupingBy(ModificationReference::referencedId,
+                        Collectors.mapping(ref -> ReferenceAttributes.createReferenceAttributes(ref.modificationUuid(), rootContainerId, containerId, targetReferenceType),
+                                Collectors.toList())))
+                .forEach((referencedId, referencesAttributes) ->
+                        directoryService.updateElementReferences(referencedId, referencesAttributes, userId));
     }
 
     private void emitNetworkModificationImpactsForAllRootNetworks(List<Optional<NetworkModificationResult>> modificationResults, StudyEntity studyEntity, UUID impactedNode) {
@@ -1993,14 +1998,18 @@ public class StudyService {
 
     private void createCompositesReferences(List<CompositeInfos> compositesInfos, List<UUID> insertedModificationUuids,
                                             UUID studyUuid, UUID nodeUuid, String userId) {
+        Map<UUID, List<ReferenceAttributes>> referencesAttributesByCompositeId = new LinkedHashMap<>();
         for (int i = 0; i < compositesInfos.size(); i++) {
             CompositeInfos composite = compositesInfos.get(i);
             if (!composite.isShared()) {
                 continue;
             }
-            directoryService.createElementReference(composite.id(), ReferenceAttributes.createReferenceAttributes(
-                    insertedModificationUuids.get(i), studyUuid, nodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE), userId);
+            referencesAttributesByCompositeId.computeIfAbsent(composite.id(), k -> new ArrayList<>())
+                    .add(ReferenceAttributes.createReferenceAttributes(
+                            insertedModificationUuids.get(i), studyUuid, nodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE));
         }
+        referencesAttributesByCompositeId.forEach((compositeId, referencesAttributes) ->
+                directoryService.createElementReferences(compositeId, referencesAttributes, userId));
     }
 
     private void duplicateModificationsOrInsertComposites(
