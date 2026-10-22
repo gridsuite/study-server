@@ -756,8 +756,7 @@ public class NetworkModificationRestService {
     }
 
     /**
-     * Asserts that the shared modifications the user cannot write on, among the ones the given containers point to, are
-     * all associated with the given root network tags. Throws a forbidden error when they are not.
+     * Throws forbidden when the unwritable shared modifications involved miss some of the tags.
      */
     public void assertRootNetworkTagsAllowed(List<UUID> containerUuids, List<String> rootNetworkTags, String userId) {
         if (rootNetworkTags.isEmpty() || containerUuids.isEmpty()) {
