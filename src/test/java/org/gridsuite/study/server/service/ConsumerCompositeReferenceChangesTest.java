@@ -39,7 +39,7 @@ import static org.mockito.Mockito.*;
  */
 @SpringBootTest
 @DisableElasticsearch
-class ConsumerServiceCompositeReferenceTest {
+class ConsumerCompositeReferenceChangesTest {
 
     @MockitoBean
     private NotificationService notificationService;

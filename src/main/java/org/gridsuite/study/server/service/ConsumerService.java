@@ -903,14 +903,14 @@ public class ConsumerService {
 
     @Bean
     public Consumer<Message<List<ModificationReference>>> consumeCompositeReferenceChanges() {
-        return this::handleCompositeReference;
+        return this::handleCompositeReferenceChanges;
     }
 
     /**
      * Keeps the references registered on the shared elements in directory-server in sync with the modification-references
      * network-modification-server created, moved or deleted in the group of a node.
      */
-    void handleCompositeReference(Message<List<ModificationReference>> message) {
+    void handleCompositeReferenceChanges(Message<List<ModificationReference>> message) {
         ElementReferenceAction action = ElementReferenceAction.valueOf(String.valueOf(message.getHeaders().get(HEADER_ACTION)));
         UUID groupUuid = UUID.fromString(String.valueOf(message.getHeaders().get(HEADER_GROUP_UUID)));
         String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
