@@ -1650,7 +1650,7 @@ public class StudyService {
             // so changing it requires the right to write on it
             assertCanUpdateSharedModifications(new ArrayList<>(modificationsUuids), userId);
             networkModificationRestService.updateRootNetworkApplicability(new ArrayList<>(modificationsUuids),
-                    rootNetworkService.getRootNetworkTag(rootNetworkUuid), applicable);
+                    rootNetworkService.getRootNetworkTag(rootNetworkUuid), applicable, userId);
             networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid);
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, nodeUuid, Optional.of(rootNetworkUuid), childrenUuids);
@@ -2441,7 +2441,7 @@ public class StudyService {
             if (networkModificationResults != null && networkModificationResults.modificationUuids().size() == 1) {
                 List<UUID> createdModificationUuids = List.of(networkModificationResults.modificationUuids().getFirst());
                 rootNetworkTagsToDeactivate.forEach(rootNetworkTag ->
-                    networkModificationRestService.updateRootNetworkApplicability(createdModificationUuids, rootNetworkTag, false));
+                    networkModificationRestService.updateRootNetworkApplicability(createdModificationUuids, rootNetworkTag, false, userId));
                 // The modification was applied only on rootNetworkUuid, so the single result must be attributed to it
                 networkModificationResults.modificationResults().getFirst()
                     .ifPresent(result -> emitNetworkModificationImpacts(studyUuid, nodeUuid, rootNetworkUuid, result));
