@@ -38,6 +38,7 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModifi
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
@@ -84,6 +85,7 @@ import static org.gridsuite.study.server.StudyConstants.BUS_ID_TO_ICC_VALUES;
 import static org.gridsuite.study.server.StudyConstants.CURRENT_LIMIT_VIOLATIONS_INFOS;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNSHARE_MODIFICATIONS;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -124,6 +126,7 @@ public class StudyService {
     private final RootNetworkService rootNetworkService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final DirectoryService directoryService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
 
     private final ComputationParametersService computationParametersService;
     private final LoadFlowRestService loadflowRestService;
@@ -166,40 +169,41 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-        StudyRepository studyRepository,
-        StudyCreationRequestRepository studyCreationRequestRepository,
-        NetworkService networkStoreService,
-        NetworkModificationRestService networkModificationRestService,
-        ReportService reportService,
-        UserAdminService userAdminService,
-        StudyInfosService studyInfosService,
-        EquipmentInfosService equipmentInfosService,
-        NetworkModificationTreeService networkModificationTreeService,
-        ObjectMapper objectMapper,
-        StudyServerExecutionService studyServerExecutionService,
-        NotificationService notificationService,
-        LoadFlowRestService loadflowRestService,
-        LoadFlowService loadFlowService,
-        ShortCircuitRestService shortCircuitService,
-        SingleLineDiagramService singleLineDiagramService,
-        NetworkConversionService networkConversionService,
-        GeoDataService geoDataService,
-        NetworkMapService networkMapService,
-        SecurityAnalysisRestService securityAnalysisRestService,
-        ActionsService actionsService,
-        CaseService caseService,
-        DynamicMappingService dynamicMappingService,
-        VoltageInitRestService voltageInitService,
-        DynamicSimulationEventService dynamicSimulationEventService,
-        StudyConfigService studyConfigService,
-        NadConfigService nadConfigService,
-        FilterService filterService,
-        @Lazy StudyService studyService,
-        RootNetworkService rootNetworkService,
-        RootNetworkNodeInfoService rootNetworkNodeInfoService,
-        DirectoryService directoryService,
-        ComputationParametersService computationParametersService,
-        WorkspaceService workspaceService, NodeRepository nodeRepository) {
+            StudyRepository studyRepository,
+            StudyCreationRequestRepository studyCreationRequestRepository,
+            NetworkService networkStoreService,
+            NetworkModificationRestService networkModificationRestService,
+            ReportService reportService,
+            UserAdminService userAdminService,
+            StudyInfosService studyInfosService,
+            EquipmentInfosService equipmentInfosService,
+            NetworkModificationTreeService networkModificationTreeService,
+            ObjectMapper objectMapper,
+            StudyServerExecutionService studyServerExecutionService,
+            NotificationService notificationService,
+            LoadFlowRestService loadflowRestService,
+            LoadFlowService loadFlowService,
+            ShortCircuitRestService shortCircuitService,
+            SingleLineDiagramService singleLineDiagramService,
+            NetworkConversionService networkConversionService,
+            GeoDataService geoDataService,
+            NetworkMapService networkMapService,
+            SecurityAnalysisRestService securityAnalysisRestService,
+            ActionsService actionsService,
+            CaseService caseService,
+            DynamicMappingService dynamicMappingService,
+            VoltageInitRestService voltageInitService,
+            DynamicSimulationEventService dynamicSimulationEventService,
+            StudyConfigService studyConfigService,
+            NadConfigService nadConfigService,
+            FilterService filterService,
+            @Lazy StudyService studyService,
+            RootNetworkService rootNetworkService,
+            RootNetworkNodeInfoService rootNetworkNodeInfoService,
+            DirectoryService directoryService,
+            ComputationParametersService computationParametersService,
+            WorkspaceService workspaceService, NodeRepository nodeRepository,
+            NodeActivityRunnerService nodeActivityRunnerService) {
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
@@ -235,6 +239,7 @@ public class StudyService {
         this.computationParametersService = computationParametersService;
         this.workspaceService = workspaceService;
         this.nodeRepository = nodeRepository;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
     }
 
     private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid) {
@@ -307,13 +312,39 @@ public class StudyService {
         }
     }
 
-    public void unshareModificationReference(
+    public void unshareAllReferencesInStudy(
             @NonNull final UUID studyUuid,
-            @NonNull final UUID nodeUuid,
-            @NonNull final UUID modificationUuid,
             String userId) {
-        networkModificationRestService.unshareModificationReference(modificationUuid, userId);
-        notificationService.emitModificationsUpdated(studyUuid, nodeUuid, Optional.empty(), List.of(modificationUuid));
+        // get the modification references of the whole study
+        // TODO : may be improved after integration of 5387 ticket
+        List<UUID> nodes = networkModificationTreeService.getAllNodes(studyUuid)
+                .stream()
+                .filter(node -> node.getType().equals(NodeType.NETWORK_MODIFICATION))
+                .map(NodeEntity::getIdNode).toList();
+        Map<UUID, List<UUID>> referencesAffectedByNode = new HashMap<>();
+        nodes.forEach(nodeUuid -> {
+                UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+                List<UUID> modificationReferences = networkModificationRestService.getModificationReferences(groupUuid)
+                        .stream().map(ModificationReference::modificationUuid).toList();
+                if (!modificationReferences.isEmpty()) {
+                    referencesAffectedByNode.put(nodeUuid, modificationReferences);
+                }
+            }
+        );
+
+        nodeActivityRunnerService.runWith(UNSHARE_MODIFICATIONS, studyUuid, referencesAffectedByNode.keySet().stream().toList(),
+                () -> unshareModificationReferences(studyUuid, userId, referencesAffectedByNode));
+    }
+
+    public void unshareModificationReferences(@NonNull UUID studyUuid, String userId, Map<UUID, List<UUID>> referencesAffectedByNode) {
+        referencesAffectedByNode.forEach((nodeUuid, modificationReferenceUuids) -> {
+                modificationReferenceUuids.forEach(modificationReferenceUuid -> {
+                    networkModificationRestService.unshareModificationReference(modificationReferenceUuid, userId);
+                });
+                notificationService.emitModificationsUpdated(studyUuid, nodeUuid, Optional.empty(), modificationReferenceUuids);
+            }
+        );
+        // notificationService.emitNodesChanged(studyUuid, referencesAffectedByNode.keySet()); // TODO : probablement pas utile, mais tester pour icone "partagé" ajoutée par Maissa en 5387
     }
 
     @Transactional
