@@ -390,7 +390,7 @@ public final class TestUtils {
     public static final String CONTAINERS_REFERENCE_MODIFICATIONS_URL_PATH = "/v1/containers/reference-modifications";
 
     private static void removeModificationReferenceHoldersRequests(WireMockServer wireMockServer) {
-        wireMockServer.removeServeEventsMatching(WireMock.getRequestedFor(WireMock.urlPathEqualTo(CONTAINERS_REFERENCE_MODIFICATIONS_URL_PATH)).build());
+        wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathEqualTo(CONTAINERS_REFERENCE_MODIFICATIONS_URL_PATH)).build());
     }
 
     public static void assertWiremockServerRequestsEmptyThenShutdown(WireMockServer wireMockServer) throws UncheckedInterruptedException {

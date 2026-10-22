@@ -296,9 +296,9 @@ class NetworkModificationTreeTest {
 
                 if (path.matches("/v1/results.*") && request.getMethod().equals("DELETE")) {
                     return new MockResponse(HttpStatus.OK.value());
-                } else if (path.startsWith("/v1/containers/reference-modifications?") && request.getMethod().equals("GET")) {
+                } else if ("/v1/containers/reference-modifications".equals(path) && request.getMethod().equals("POST")) {
                     // only the nodes of MODIFICATION_GROUP_UUID_2 hold shared modifications
-                    List<UUID> containersWithReferenceModifications = path.contains(MODIFICATION_GROUP_UUID_2.toString()) ? List.of(MODIFICATION_GROUP_UUID_2) : List.of();
+                    List<UUID> containersWithReferenceModifications = request.getBody().readUtf8().contains(MODIFICATION_GROUP_UUID_2.toString()) ? List.of(MODIFICATION_GROUP_UUID_2) : List.of();
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE),
                         objectMapper.writeValueAsString(containersWithReferenceModifications));
                 } else if (path.matches("/v1/references\\?uuids=.*") && request.getMethod().equals("GET")) {

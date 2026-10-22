@@ -757,13 +757,15 @@ public class NetworkModificationRestService {
         if (containerUuids.isEmpty()) {
             return Set.of();
         }
+        // the uuids go in the body as a large tree would exceed the url length limit
         String path = UriComponentsBuilder.fromPath(CONTAINERS + DELIMITER + "reference-modifications")
-                .queryParam(UUIDS, containerUuids)
                 .build().toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
         List<UUID> containersWithReferenceModifications = restTemplate.exchange(
                 getNetworkModificationServerURI(false) + path,
-                HttpMethod.GET,
-                null,
+                HttpMethod.POST,
+                new HttpEntity<>(containerUuids, headers),
                 new ParameterizedTypeReference<List<UUID>>() { }
         ).getBody();
         return containersWithReferenceModifications == null ? Set.of() : new HashSet<>(containersWithReferenceModifications);

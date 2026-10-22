@@ -521,7 +521,22 @@ public class NetworkModificationTreeService {
         });
     }
 
-    public void completeReferencedModificationsInfos(AbstractNode tree) {
+    public RootNode getStudyTreeWithReferencesInfos(UUID studyId, UUID rootNetworkUuid) {
+        return completeReferencedModificationsInfos(self.getStudyTree(studyId, rootNetworkUuid));
+    }
+
+    public AbstractNode getStudySubtreeWithReferencesInfos(UUID studyId, UUID parentNodeUuid, UUID rootNetworkUuid) {
+        return completeReferencedModificationsInfos(self.getStudySubtree(studyId, parentNodeUuid, rootNetworkUuid));
+    }
+
+    public AbstractNode getNodeWithReferencesInfos(UUID nodeId, UUID rootNetworkUuid) {
+        return completeReferencedModificationsInfos(self.getNode(nodeId, rootNetworkUuid));
+    }
+
+    private <T extends AbstractNode> T completeReferencedModificationsInfos(T tree) {
+        if (tree == null) {
+            return null;
+        }
         List<AbstractNode> nodes = new ArrayList<>();
         collectNodes(tree, nodes);
         List<NetworkModificationNode> modificationNodes = nodes.stream()
@@ -533,9 +548,10 @@ public class NetworkModificationTreeService {
             groupsWithReferences = networkModificationService.getContainersWithModificationReferences(
                     modificationNodes.stream().map(NetworkModificationNode::getModificationGroupUuid).filter(Objects::nonNull).toList());
         } catch (RestClientException e) {
-            return;
+            return tree;
         }
         modificationNodes.forEach(node -> node.setHasReferencedModifications(groupsWithReferences.contains(node.getModificationGroupUuid())));
+        return tree;
     }
 
     private static void collectNodes(AbstractNode node, List<AbstractNode> nodes) {

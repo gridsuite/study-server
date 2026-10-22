@@ -1252,10 +1252,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
     public ResponseEntity<RootNode> getNetworkModificationTree(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                                @Parameter(description = "root network uuid") @RequestParam(value = "rootNetworkUuid", required = false) UUID rootNetworkUuid) {
-        RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid, rootNetworkUuid);
-        if (rootNode != null) {
-            networkModificationTreeService.completeReferencedModificationsInfos(rootNode);
-        }
+        RootNode rootNode = networkModificationTreeService.getStudyTreeWithReferencesInfos(studyUuid, rootNetworkUuid);
         return rootNode != null ?
             ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNode)
             : ResponseEntity.notFound().build();
@@ -1277,10 +1274,7 @@ public class StudyController {
     public ResponseEntity<NetworkModificationNode> getNetworkModificationSubtree(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                                  @Parameter(description = "parent node uuid") @RequestParam(value = "parentNodeUuid") UUID parentNodeUuid,
                                                                  @Parameter(description = "root network uuid") @RequestParam(value = "rootNetworkUuid", required = false) UUID rootNetworkUuid) {
-        NetworkModificationNode parentNode = (NetworkModificationNode) networkModificationTreeService.getStudySubtree(studyUuid, parentNodeUuid, rootNetworkUuid);
-        if (parentNode != null) {
-            networkModificationTreeService.completeReferencedModificationsInfos(parentNode);
-        }
+        NetworkModificationNode parentNode = (NetworkModificationNode) networkModificationTreeService.getStudySubtreeWithReferencesInfos(studyUuid, parentNodeUuid, rootNetworkUuid);
         return parentNode != null ?
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(parentNode)
                 : ResponseEntity.notFound().build();
@@ -1319,10 +1313,7 @@ public class StudyController {
     public ResponseEntity<AbstractNode> getNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                 @Parameter(description = "node uuid") @PathVariable("id") UUID nodeId,
                                                 @Parameter(description = "root network uuid") @RequestParam(value = "rootNetworkUuid", required = false) UUID rootNetworkUuid) {
-        AbstractNode node = networkModificationTreeService.getNode(nodeId, rootNetworkUuid);
-        if (node != null) {
-            networkModificationTreeService.completeReferencedModificationsInfos(node);
-        }
+        AbstractNode node = networkModificationTreeService.getNodeWithReferencesInfos(nodeId, rootNetworkUuid);
         return node != null ?
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(node)
                 : ResponseEntity.notFound().build();
