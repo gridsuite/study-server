@@ -14,6 +14,7 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.RootNetworkTagsCheckInfos;
 import org.gridsuite.study.server.dto.SharedModificationsWriteAccess;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
@@ -764,14 +765,10 @@ public class NetworkModificationRestService {
         if (rootNetworkTags.isEmpty() || containerUuids.isEmpty() && modificationUuids.isEmpty() && sharedUuids.isEmpty()) {
             return;
         }
-        String path = UriComponentsBuilder.fromPath(CONTAINERS + DELIMITER + "root-network-tags/authorized")
-                .queryParam("containerUuids", containerUuids)
-                .queryParam("modificationUuids", modificationUuids)
-                .queryParam("sharedUuids", sharedUuids)
-                .queryParam("tags", rootNetworkTags)
-                .build().toUriString();
-
-        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, userIdEntity(userId), Void.class);
+        restTemplate.exchange(getNetworkModificationServerURI(false) + CONTAINERS + DELIMITER + "root-network-tags/authorized",
+                HttpMethod.POST,
+                userIdEntity(userId, new RootNetworkTagsCheckInfos(containerUuids, modificationUuids, sharedUuids, rootNetworkTags)),
+                Void.class);
     }
 
     /**

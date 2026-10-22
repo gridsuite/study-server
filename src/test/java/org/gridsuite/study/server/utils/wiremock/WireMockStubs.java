@@ -173,7 +173,7 @@ public class WireMockStubs {
     }
 
     public UUID stubRootNetworkTagsAllowed() {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(ROOT_NETWORK_TAGS_AUTHORIZED_URL))
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(ROOT_NETWORK_TAGS_AUTHORIZED_URL))
             .willReturn(WireMock.ok())
         ).getId();
     }

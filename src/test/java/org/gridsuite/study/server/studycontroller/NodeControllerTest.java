@@ -656,7 +656,7 @@ class NodeControllerTest extends StudyTestBase {
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node3.getId(), rootNetworkUuid).getGlobalBuildStatus());
 
         // copies within the study are not checked against its shared modifications
-        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL, Map.of(), 0);
+        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL, Map.of(), 0);
     }
 
     @Test
@@ -767,7 +767,7 @@ class NodeControllerTest extends StudyTestBase {
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockStubs.verifyDuplicateModificationGroup(stubDuplicateUuid, 3);
         // copies within the study are not checked against its shared modifications
-        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL, Map.of(), 0);
+        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL, Map.of(), 0);
 
         Map<UUID, AbstractNode> allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
         networkModificationTreeService.getAllChildrenUuids(node4.getId()).forEach(childUuid ->
@@ -886,8 +886,8 @@ class NodeControllerTest extends StudyTestBase {
 
         // duplicate the node1 from study 1 after node2 from study 2
         UUID duplicatedNodeUuid = duplicateNode(study1Uuid, study2Uuid, node1, study2Node2.getId(), InsertMode.AFTER, true, userId);
-        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL,
-                Map.of("containerUuids", WireMock.equalTo(node1.getModificationGroupUuid().toString())), 1);
+        wireMockServer.verify(1, WireMock.postRequestedFor(WireMock.urlPathEqualTo(WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL))
+                .withRequestBody(WireMock.matchingJsonPath("$.containerUuids[0]", WireMock.equalTo(node1.getModificationGroupUuid().toString()))));
 
         //node2 should now have 1 child
         allNodes = networkModificationTreeService.getAllNodes(study2Uuid);

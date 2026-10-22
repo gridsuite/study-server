@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service.networkmodification;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ModificationReference;
+import org.gridsuite.study.server.dto.RootNetworkTagsCheckInfos;
 import org.gridsuite.study.server.dto.SharedModificationsWriteAccess;
 import org.gridsuite.study.server.service.RootNetworkService;
 import org.junit.jupiter.api.BeforeEach;
@@ -265,17 +266,19 @@ class NetworkModificationServiceTest {
         UUID groupUuid = UUID.randomUUID();
         UUID modificationUuid = UUID.randomUUID();
         UUID sharedUuid = UUID.randomUUID();
+        String url = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/root-network-tags/authorized";
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, USER_ID);
+        headers.setContentType(MediaType.APPLICATION_JSON);
 
         networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of(), List.of(), List.of("PH1", "PH2"), USER_ID);
-        verify(restTemplate).exchange(NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/root-network-tags/authorized?containerUuids=" + groupUuid
-                + "&modificationUuids&sharedUuids&tags=PH1&tags=PH2", HttpMethod.GET, new HttpEntity<>(headers), Void.class);
+        verify(restTemplate).exchange(url, HttpMethod.POST, new HttpEntity<>(
+                new RootNetworkTagsCheckInfos(List.of(groupUuid), List.of(), List.of(), List.of("PH1", "PH2")), headers), Void.class);
 
-        // the modifications and the shared modifications are checked too, an empty list is sent by its name only
+        // the modifications and the shared modifications are checked too
         networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of(modificationUuid), List.of(sharedUuid), List.of("PH1"), USER_ID);
-        verify(restTemplate).exchange(NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/root-network-tags/authorized?containerUuids&modificationUuids=" + modificationUuid
-                + "&sharedUuids=" + sharedUuid + "&tags=PH1", HttpMethod.GET, new HttpEntity<>(headers), Void.class);
+        verify(restTemplate).exchange(url, HttpMethod.POST, new HttpEntity<>(
+                new RootNetworkTagsCheckInfos(List.of(), List.of(modificationUuid), List.of(sharedUuid), List.of("PH1")), headers), Void.class);
 
         // there is nothing to check without a tag, or without anything to check it on
         networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of(), List.of(), List.of(), USER_ID);

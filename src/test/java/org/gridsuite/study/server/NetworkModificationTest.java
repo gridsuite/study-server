@@ -2370,7 +2370,7 @@ class NetworkModificationTest {
                 .businessErrorCode("modification.rootNetworkTagsForbiddenByShared")
                 .businessErrorValues(Map.of("allowedTags", "A, B", "allowedTagsCount", 2))
                 .build());
-        UUID forbiddenStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL))
+        UUID forbiddenStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo(WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL))
                 .atPriority(1)
                 .willReturn(WireMock.forbidden().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE).withBody(forbiddenBody)))
                 .getId();
@@ -2384,8 +2384,9 @@ class NetworkModificationTest {
             .andExpect(jsonPath("$.businessErrorCode").value("modification.rootNetworkTagsForbiddenByShared"))
             .andExpect(jsonPath("$.businessErrorValues.allowedTags").value("A, B"));
 
-        WireMockUtils.verifyGetRequest(wireMockServer, forbiddenStubId, WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL,
-                Map.of("modificationUuids", WireMock.equalTo(modificationUuid.toString()), "tags", WireMock.equalTo(studyEntity.getFirstRootNetwork().getTag())));
+        WireMockUtils.verifyPostRequest(wireMockServer, forbiddenStubId, WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL, false, Map.of(),
+                mapper.writeValueAsString(new RootNetworkTagsCheckInfos(List.of(), List.of(modificationUuid), List.of(),
+                        List.of(studyEntity.getFirstRootNetwork().getTag()))));
     }
 
     @Test
