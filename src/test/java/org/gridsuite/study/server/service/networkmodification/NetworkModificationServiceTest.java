@@ -20,6 +20,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -252,11 +253,11 @@ class NetworkModificationServiceTest {
         UUID studyUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/" + sourceGroupUuid + "/duplicate"
                 + "?groupUuid=" + groupUuid + "&nodeContainerUuid=" + nodeUuid + "&studyRootContainerUuid=" + studyUuid
-                + "&rootNetworkTags=PH1&rootNetworkTags=PH2";
+                + "&rootNetworkTags=PH1&rootNetworkTags=A%26B%2BC";
 
-        networkModificationService.duplicateModificationsGroup(sourceGroupUuid, groupUuid, nodeUuid, studyUuid, List.of("PH1", "PH2"), "userId");
+        networkModificationService.duplicateModificationsGroup(sourceGroupUuid, groupUuid, nodeUuid, studyUuid, List.of("PH1", "A&B+C"), "userId");
 
-        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.POST), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+        verify(restTemplate).exchange(eq(URI.create(expectedUrl)), eq(HttpMethod.POST), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
     }
 
     @Test

@@ -593,20 +593,22 @@ public class NetworkModificationRestService {
     public void duplicateModificationsGroup(UUID sourceGroupUuid, UUID groupUuid, UUID newNodeUuid, UUID studyUuid, List<String> rootNetworkTags, String userId) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(sourceGroupUuid);
-        var path = UriComponentsBuilder.fromPath("groups/{uuid}/duplicate")
+        var uri = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + "groups/" + sourceGroupUuid + "/duplicate")
                 .queryParam(QUERY_PARAM_GROUP_UUID, groupUuid)
                 .queryParam(QUERY_PARAM_NODE_CONTAINER_UUID, newNodeUuid)
                 .queryParam(QUERY_PARAM_STUDY_ROOT_CONTAINER_UUID, studyUuid)
-                .queryParam(QUERY_PARAM_ROOT_NETWORK_TAGS, rootNetworkTags)
-                .buildAndExpand(sourceGroupUuid)
-                .toUriString();
+                .queryParam(QUERY_PARAM_ROOT_NETWORK_TAGS, Collections.nCopies(rootNetworkTags.size(), "{rootNetworkTag}"))
+                .encode()
+                .buildAndExpand(rootNetworkTags.toArray())
+                .toUri();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set(HEADER_USER_ID, userId);
 
         restTemplate.exchange(
-            getNetworkModificationServerURI(false) + path,
+            uri,
             HttpMethod.POST,
             new HttpEntity<>(headers),
             Void.class
