@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.controller;
 
-import org.gridsuite.study.server.service.NetworkModificationService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,9 +20,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -36,7 +34,7 @@ class NetworkModificationControllerTest {
     private static final String RESPONSE = "{\"name\":\"modification\"}";
 
     @Mock
-    private NetworkModificationService networkModificationService;
+    private NetworkModificationRestService networkModificationService;
 
     private MockMvc mockMvc;
 

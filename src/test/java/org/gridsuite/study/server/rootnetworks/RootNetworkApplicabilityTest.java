@@ -21,6 +21,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
@@ -101,7 +102,7 @@ class RootNetworkApplicabilityTest {
     private OutputDestination output;
 
     @MockitoBean
-    private NetworkModificationService networkModificationService;
+    private NetworkModificationRestService networkModificationService;
     @MockitoBean
     private DirectoryService directoryService;
     @MockitoBean
@@ -135,7 +136,7 @@ class RootNetworkApplicabilityTest {
                 .param("applicable", Boolean.FALSE.toString())
                 .header(USER_ID, USER_ID))
             .andExpect(status().isNotFound());
-        verify(networkModificationService, never()).updateRootNetworkApplicability(anyList(), anyString(), anyBoolean());
+        verify(networkModificationService, never()).updateRootNetworkApplicability(anyList(), anyString(), anyBoolean(), eq("userId"));
 
         doNothing().when(networkModificationService).verifyModifications(firstNode.getModificationGroupUuid(), Set.of(MODIFICATION_1));
 
@@ -145,7 +146,8 @@ class RootNetworkApplicabilityTest {
                 .param("applicable", Boolean.FALSE.toString())
                 .header(USER_ID, USER_ID))
             .andExpect(status().isOk());
-        verify(networkModificationService, times(1)).updateRootNetworkApplicability(List.of(MODIFICATION_1), ROOT_NETWORK_TAG_1, false);
+        verify(networkModificationService, times(1))
+                .updateRootNetworkApplicability(List.of(MODIFICATION_1), ROOT_NETWORK_TAG_1, false, "userId");
 
         // and so is activating it back
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkUuid, firstNode.getId())
@@ -153,7 +155,8 @@ class RootNetworkApplicabilityTest {
                 .param("applicable", Boolean.TRUE.toString())
                 .header(USER_ID, USER_ID))
             .andExpect(status().isOk());
-        verify(networkModificationService, times(1)).updateRootNetworkApplicability(List.of(MODIFICATION_1), ROOT_NETWORK_TAG_1, true);
+        verify(networkModificationService, times(1))
+                .updateRootNetworkApplicability(List.of(MODIFICATION_1), ROOT_NETWORK_TAG_1, true, "userId");
     }
 
     @Test
@@ -178,7 +181,7 @@ class RootNetworkApplicabilityTest {
             studyUuid, nodeUuid, rootNetworkUuid, modificationUuids, USER_ID, false));
 
         // the applicability of the shared modification is left untouched
-        verify(networkModificationService, never()).updateRootNetworkApplicability(anyList(), anyString(), anyBoolean());
+        verify(networkModificationService, never()).updateRootNetworkApplicability(anyList(), anyString(), anyBoolean(), eq("userId"));
     }
 
     @Test
