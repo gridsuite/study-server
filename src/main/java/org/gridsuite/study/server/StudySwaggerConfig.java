@@ -7,15 +7,27 @@
 package org.gridsuite.study.server;
 
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.info.Info;
+import org.gridsuite.study.server.utils.annotations.ExternalContract;
+import org.springdoc.core.customizers.OperationCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.method.HandlerMethod;
+
+import java.util.List;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 @Configuration
 public class StudySwaggerConfig {
+
+    /**
+     * OpenAPI extension key under which the consumers of an {@link ExternalContract}-annotated
+     * endpoint are exposed in the generated OpenAPI document.
+     */
+    public static final String X_EXTERNAL_CONSUMERS_EXTENSION = "x-external-consumers";
 
     @Bean
     public OpenAPI createOpenApi() {
@@ -24,5 +36,20 @@ public class StudySwaggerConfig {
                         .title("Study API")
                         .description("This is the documentation of the Study REST API")
                         .version(StudyApi.API_VERSION));
+    }
+
+    /**
+     * Surfaces endpoints annotated with {@link ExternalContract} in the generated OpenAPI document,
+     * so that external consumers (and the {@code ExternalContractTest}) can identify them.
+     */
+    @Bean
+    public OperationCustomizer externalContractOperationCustomizer() {
+        return (Operation operation, HandlerMethod handlerMethod) -> {
+            ExternalContract externalContract = handlerMethod.getMethodAnnotation(ExternalContract.class);
+            if (externalContract != null) {
+                operation.addExtension(X_EXTERNAL_CONSUMERS_EXTENSION, List.of(externalContract.consumers()));
+            }
+            return operation;
+        };
     }
 }
