@@ -57,6 +57,11 @@ public class NetworkModificationService {
         this.directoryService = directoryService;
     }
 
+    public void updateNetworkModificationNameAndDescription(UUID studyUuid, UUID nodeUuid, UUID networkModificationUuid, String metadata) {
+        networkModificationRestService.updateNetworkModificationNameAndDescription(networkModificationUuid, metadata);
+        notificationService.emitModificationsUpdated(studyUuid, nodeUuid, List.of(networkModificationUuid));
+    }
+
     @Transactional
     public void createNetworkModification(UUID studyUuid, UUID nodeUuid, String modificationAttributes, String userId) {
         handleCreateNetworkModification(studyUuid, nodeUuid, modificationAttributes, userId);

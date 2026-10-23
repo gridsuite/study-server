@@ -358,6 +358,15 @@ public final class TestUtils {
         return message;
     }
 
+    public static Message<byte[]> receiveNetworkModificationUpdate(OutputDestination output, String destination, long timeout) {
+        Message<byte[]> message = output.receive(timeout, destination);
+        while (message != null && NotificationService.MODIFICATIONS_UPDATING_FINISHED
+                .equals(message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE))) {
+            message = output.receive(timeout, destination);
+        }
+        return message;
+    }
+
     @SuppressWarnings("checkstyle:IllegalCatch")
     public static void assertQueuesEmptyThenClear(List<String> destinations, OutputDestination output) {
         try {
@@ -378,8 +387,15 @@ public final class TestUtils {
         }
     }
 
+    public static final String CONTAINERS_REFERENCE_MODIFICATIONS_URL_PATH = "/v1/containers/reference-modifications";
+
+    private static void removeModificationReferenceHoldersRequests(WireMockServer wireMockServer) {
+        wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathEqualTo(CONTAINERS_REFERENCE_MODIFICATIONS_URL_PATH)).build());
+    }
+
     public static void assertWiremockServerRequestsEmptyThenShutdown(WireMockServer wireMockServer) throws UncheckedInterruptedException {
         try {
+            removeModificationReferenceHoldersRequests(wireMockServer);
             wireMockServer.checkForUnmatchedRequests(); // requests no matched ? (it returns an exception if a request was not matched by wireMock, but does not complain if it was not verified by 'verify')
             // Remove quota operation consume/release requests that are auto-stubbed and do not need explicit verification
             wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_CONSUME_URL_PATTERN)).build());
@@ -395,6 +411,7 @@ public final class TestUtils {
 
     public static void assertWiremockServerRequestsEmptyThenClear(WireMockServer wireMockServer) throws UncheckedInterruptedException {
         try {
+            removeModificationReferenceHoldersRequests(wireMockServer);
             wireMockServer.checkForUnmatchedRequests();
             // Remove quota operation consume/release requests that are auto-stubbed and do not need explicit verification
             wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_CONSUME_URL_PATTERN)).build());
