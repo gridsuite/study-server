@@ -199,6 +199,17 @@ class NetworkModificationServiceTest {
     }
 
     @Test
+    void testDeleteModificationReferences() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/" + groupUuid + "/references";
+
+        networkModificationService.deleteModificationReferences(groupUuid, "userId");
+
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.DELETE),
+                argThat((HttpEntity<?> entity) -> "userId".equals(entity.getHeaders().getFirst(HEADER_USER_ID))), eq(Void.class));
+    }
+
+    @Test
     void testRenameRootNetworkTag() {
         UUID firstGroupUuid = UUID.randomUUID();
         UUID secondGroupUuid = UUID.randomUUID();
