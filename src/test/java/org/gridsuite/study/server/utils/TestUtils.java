@@ -339,7 +339,6 @@ public final class TestUtils {
             invocation.getArgument(invocation.getArguments().length - 1, Supplier.class).get();
 
         doAnswer(runIt).when(nodeActivityService).runWith(any(), any(), any(), anyList(), any(Runnable.class));
-        //doAnswer(runIt).when(nodeActivityService).runWith(any(), any(), anyList(), any(Runnable.class));
         doAnswer(supplyIt).when(nodeActivityService).runWith(any(), any(), any(), anyList(), any(Supplier.class));
         doAnswer(supplyIt).when(nodeActivityService).runWith(any(), any(), anyList(), any(Supplier.class));
     }
