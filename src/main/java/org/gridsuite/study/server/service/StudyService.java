@@ -1449,15 +1449,6 @@ public class StudyService {
     }
 
     @Transactional
-    public void sharedModificationsUpdatedNotification(UUID nodeUuid, List<UUID> networkModificationUuids, boolean onlyMetadata) {
-        UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
-        if (!onlyMetadata) {
-            networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid);
-        }
-        notificationService.emitSharedModificationsUpdated(studyUuid, nodeUuid, networkModificationUuids);
-    }
-
-    @Transactional
     public void deleteNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
         assertIsStudyExist(studyUuid);
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
