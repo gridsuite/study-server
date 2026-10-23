@@ -199,27 +199,23 @@ public class NetworkModificationRestService {
         return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, Integer.class).getBody();
     }
 
-    public void deleteModifications(UUID groupUUid, String userId) {
+    public void deleteModificationsByGroup(UUID groupUUid, String userId) {
         Objects.requireNonNull(groupUUid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .buildAndExpand(groupUUid)
             .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.DELETE, new HttpEntity<>(headers), Void.class);
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.DELETE, userIdEntity(userId), Void.class);
     }
 
-    public void deleteModifications(List<UUID> modificationsUuids, String userId) {
+    public void deleteModificationsByUuids(List<UUID> modificationsUuids, String userId) {
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
                 .queryParam(UUIDS, modificationsUuids)
                 .buildAndExpand()
                 .toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        restTemplate.exchange(path, HttpMethod.DELETE, new HttpEntity<>(headers), Void.class);
+        restTemplate.exchange(path, HttpMethod.DELETE, userIdEntity(userId), Void.class);
     }
 
     public NetworkModificationsResult createModification(UUID groupUuid,
