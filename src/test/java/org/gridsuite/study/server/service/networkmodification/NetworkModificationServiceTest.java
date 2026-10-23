@@ -20,6 +20,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -243,6 +244,21 @@ class NetworkModificationServiceTest {
     }
 
     @Test
+    void testDuplicateModificationsGroupAssociatesTheRootNetworkTags() {
+        UUID sourceGroupUuid = UUID.randomUUID();
+        UUID groupUuid = UUID.randomUUID();
+        UUID nodeUuid = UUID.randomUUID();
+        UUID studyUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/" + sourceGroupUuid + "/duplicate"
+                + "?groupUuid=" + groupUuid + "&nodeContainerUuid=" + nodeUuid + "&studyRootContainerUuid=" + studyUuid
+                + "&rootNetworkTags=PH1&rootNetworkTags=A%26B%2BC";
+
+        networkModificationService.duplicateModificationsGroup(sourceGroupUuid, groupUuid, nodeUuid, studyUuid, List.of("PH1", "A&B+C"), "userId");
+
+        verify(restTemplate).exchange(eq(URI.create(expectedUrl)), eq(HttpMethod.POST), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+    }
+
+    @Test
     void testAssertReferencedModificationsAreWritable() {
         UUID groupUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/references/authorized?uuids=" + groupUuid;
@@ -267,6 +283,19 @@ class NetworkModificationServiceTest {
 
         networkModificationService.hasModificationReferences(List.of(modificationUuid));
         verify(restTemplate).getForObject(eq(expectedUrl), eq(Boolean.class));
+    }
+
+    @Test
+    void testGetContainersWithModificationReferences() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/reference-modifications";
+        when(restTemplate.exchange(eq(expectedUrl), eq(HttpMethod.POST), argThat((HttpEntity<?> entity) -> List.of(groupUuid).equals(entity.getBody())), any(ParameterizedTypeReference.class)))
+            .thenReturn(ResponseEntity.ok(List.of(groupUuid)));
+
+        assertThat(networkModificationService.getContainersWithModificationReferences(List.of(groupUuid))).containsExactly(groupUuid);
+        // there is nothing to ask without a container
+        assertThat(networkModificationService.getContainersWithModificationReferences(List.of())).isEmpty();
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.POST), any(HttpEntity.class), any(ParameterizedTypeReference.class));
     }
 
     @Test
