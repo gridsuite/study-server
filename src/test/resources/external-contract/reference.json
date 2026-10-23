@@ -1,0 +1,117 @@
+{
+  "GET /v1/studies/{studyUuid}" : {
+    "consumers" : [ "imagrid" ],
+    "parameters" : [ {
+      "name" : "studyUuid",
+      "in" : "path",
+      "required" : true,
+      "schema" : {
+        "type" : "string"
+      }
+    } ],
+    "responses" : {
+      "200" : {
+        "*/*" : {
+          "refName" : "CreatedStudyBasicInfos",
+          "type" : "object",
+          "properties" : [ "id", "monoRoot", "uniqueId", "userId" ]
+        }
+      },
+      "404" : {
+        "*/*" : {
+          "refName" : "CreatedStudyBasicInfos",
+          "type" : "object",
+          "properties" : [ "id", "monoRoot", "uniqueId", "userId" ]
+        }
+      }
+    }
+  },
+  "POST /v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}" : {
+    "consumers" : [ "imagrid" ],
+    "parameters" : [ {
+      "name" : "compression",
+      "in" : "query",
+      "required" : false,
+      "schema" : {
+        "type" : "string"
+      }
+    }, {
+      "name" : "description",
+      "in" : "query",
+      "required" : false,
+      "schema" : {
+        "type" : "string"
+      }
+    }, {
+      "name" : "exportToGridExplore",
+      "in" : "query",
+      "required" : false,
+      "schema" : {
+        "type" : "boolean"
+      }
+    }, {
+      "name" : "fileName",
+      "in" : "query",
+      "required" : true,
+      "schema" : {
+        "type" : "string"
+      }
+    }, {
+      "name" : "format",
+      "in" : "path",
+      "required" : true,
+      "schema" : {
+        "type" : "string"
+      }
+    }, {
+      "name" : "formatParameters",
+      "in" : "query",
+      "required" : false,
+      "schema" : {
+        "type" : "string"
+      }
+    }, {
+      "name" : "nodeUuid",
+      "in" : "path",
+      "required" : true,
+      "schema" : {
+        "type" : "string"
+      }
+    }, {
+      "name" : "parentDirectoryUuid",
+      "in" : "query",
+      "required" : false,
+      "schema" : {
+        "type" : "string"
+      }
+    }, {
+      "name" : "rootNetworkUuid",
+      "in" : "path",
+      "required" : true,
+      "schema" : {
+        "type" : "string"
+      }
+    }, {
+      "name" : "studyUuid",
+      "in" : "path",
+      "required" : true,
+      "schema" : {
+        "type" : "string"
+      }
+    }, {
+      "name" : "userId",
+      "in" : "header",
+      "required" : true,
+      "schema" : {
+        "type" : "string"
+      }
+    } ],
+    "responses" : {
+      "200" : {
+        "*/*" : {
+          "type" : "string"
+        }
+      }
+    }
+  }
+}
