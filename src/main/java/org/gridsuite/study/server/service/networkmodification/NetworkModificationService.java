@@ -57,6 +57,11 @@ public class NetworkModificationService {
         this.directoryService = directoryService;
     }
 
+    public void updateNetworkModificationNameAndDescription(UUID studyUuid, UUID nodeUuid, UUID networkModificationUuid, String metadata) {
+        networkModificationRestService.updateNetworkModificationNameAndDescription(networkModificationUuid, metadata);
+        notificationService.emitModificationsUpdated(studyUuid, nodeUuid, List.of(networkModificationUuid));
+    }
+
     @Transactional
     public void createNetworkModification(UUID studyUuid, UUID nodeUuid, String modificationAttributes, String userId) {
         handleCreateNetworkModification(studyUuid, nodeUuid, modificationAttributes, userId);
@@ -79,11 +84,13 @@ public class NetworkModificationService {
     }
 
     @Transactional
-    public void sharedModificationsUpdatedNotification(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull List<UUID> networkModificationUuids) {
+    public void sharedModificationsUpdatedNotification(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull List<UUID> networkModificationUuids, boolean onlyMetada) {
         if (networkModificationUuids.isEmpty()) {
             return;
         }
-        networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid);
+        if (!onlyMetada) {
+            networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid);
+        }
         notificationService.emitSharedModificationsUpdated(studyUuid, nodeUuid, networkModificationUuids);
     }
 

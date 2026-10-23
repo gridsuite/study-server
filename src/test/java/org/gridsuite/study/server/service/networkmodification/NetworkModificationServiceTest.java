@@ -271,6 +271,29 @@ class NetworkModificationServiceTest {
         verify(restTemplate).getForObject(eq(expectedUrl), eq(Boolean.class));
     }
 
+    @Test
+    void testGetContainersWithModificationReferences() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/reference-modifications";
+        when(restTemplate.exchange(eq(expectedUrl), eq(HttpMethod.POST), argThat((HttpEntity<?> entity) -> List.of(groupUuid).equals(entity.getBody())), any(ParameterizedTypeReference.class)))
+            .thenReturn(ResponseEntity.ok(List.of(groupUuid)));
+
+        assertThat(networkModificationService.getContainersWithModificationReferences(List.of(groupUuid))).containsExactly(groupUuid);
+        // there is nothing to ask without a container
+        assertThat(networkModificationService.getContainersWithModificationReferences(List.of())).isEmpty();
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.POST), any(HttpEntity.class), any(ParameterizedTypeReference.class));
+    }
+
+    @Test
+    void testUpdateNetworkModificationsNameAndDescription() {
+        UUID modificationUuid = UUID.randomUUID();
+        String metadata = "";
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid + "/name-and-description";
+
+        networkModificationService.updateNetworkModificationNameAndDescription(modificationUuid, metadata);
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+    }
+
     private void expectUserIdIsForwarded(String expectedUrl) {
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, USER_ID);

@@ -298,6 +298,14 @@ public class NetworkModificationRestService {
         restTemplate.exchange(path, HttpMethod.PUT, userIdEntity(userId, metadata), Void.class);
     }
 
+    public void updateNetworkModificationNameAndDescription(UUID networkModificationUuid, String metadata) {
+        String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + DELIMITER + networkModificationUuid.toString() + DELIMITER + "name-and-description")
+                .build().toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, new HttpEntity<>(metadata, headers), Void.class);
+    }
+
     public void restoreModifications(UUID groupUUid, List<UUID> modificationsUuids, UUID studyUuid, UUID nodeUuid, String userId) {
         Objects.requireNonNull(groupUUid);
         Objects.requireNonNull(modificationsUuids);
@@ -535,7 +543,8 @@ public class NetworkModificationRestService {
      * @return the reference modification left in place of the composite modification, either in the group of the node
      * or in a parent composite
      */
-    public ModificationReference extractCompositeModificationToShare(@NonNull UUID groupUuid, @NonNull UUID modificationUuid, @NonNull String name) {
+    public ModificationReference extractCompositeModificationToShare(@NonNull UUID groupUuid, @NonNull UUID modificationUuid, @NonNull String name, String description) {
+
         String path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + "{modificationUuid}" + DELIMITER + "share")
                 .queryParam(QUERY_PARAM_NAME, name)
                 .queryParam(QUERY_PARAM_GROUP_UUID, groupUuid)
@@ -545,7 +554,7 @@ public class NetworkModificationRestService {
         return restTemplate.exchange(
                 getNetworkModificationServerURI(false) + path,
                 HttpMethod.POST,
-                null,
+                new HttpEntity<>(description),
                 ModificationReference.class
         ).getBody();
     }
@@ -742,6 +751,24 @@ public class NetworkModificationRestService {
                 .queryParam(UUIDS, containerUuids)
                 .build().toUriString();
         return Boolean.TRUE.equals(restTemplate.getForObject(getNetworkModificationServerURI(false) + path, Boolean.class));
+    }
+
+    public Set<UUID> getContainersWithModificationReferences(List<UUID> containerUuids) {
+        if (containerUuids.isEmpty()) {
+            return Set.of();
+        }
+        // the uuids go in the body as a large tree would exceed the url length limit
+        String path = UriComponentsBuilder.fromPath(CONTAINERS + DELIMITER + "reference-modifications")
+                .build().toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        List<UUID> containersWithReferenceModifications = restTemplate.exchange(
+                getNetworkModificationServerURI(false) + path,
+                HttpMethod.POST,
+                new HttpEntity<>(containerUuids, headers),
+                new ParameterizedTypeReference<List<UUID>>() { }
+        ).getBody();
+        return containersWithReferenceModifications == null ? Set.of() : new HashSet<>(containersWithReferenceModifications);
     }
 
     /**

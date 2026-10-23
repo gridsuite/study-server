@@ -66,6 +66,7 @@ public class ConsumerService {
     private static final String HEADER_WITH_RATIO_TAP_CHANGERS = "withRatioTapChangers";
     private static final String HEADER_ERROR_MESSAGE = "errorMessage";
     private static final String HEADER_EXPORT_UUID = "exportUuid";
+    private static final String HEADER_ONLY_METADATA = "onlyMetadata";
 
     private final ObjectMapper objectMapper;
 
@@ -895,21 +896,27 @@ public class ConsumerService {
 
     @Bean
     public Consumer<Message<Map<ReferenceType, List<ReferenceAttributes>>>> consumeSharedElementUpdate() {
-        return message -> handleSharedElementUpdate(message.getPayload());
+        return message -> {
+            boolean onlyMetadata = false;
+            if (message.getHeaders().containsKey(HEADER_ONLY_METADATA)) {
+                onlyMetadata = message.getHeaders().get(HEADER_ONLY_METADATA, Boolean.class);
+            }
+            handleSharedElementUpdate(message.getPayload(), onlyMetadata);
+        };
     }
 
-    private void handleSharedElementUpdate(Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType) {
-        Map<UUID, List<UUID>> modificationUuidsByNode = new HashMap<>();
+    private void handleSharedElementUpdate(Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType, boolean onlyMetadata) {
+        Map<UUID, List<UUID>> modificationUuidsByNodes = new HashMap<>();
         referencesByType.forEach((_, references) -> references.forEach(ref -> {
             UUID nodeId = ref.getReferenceNodeId();
             if (nodeId != null) {
-                modificationUuidsByNode.computeIfAbsent(nodeId, k -> new ArrayList<>()).add(ref.getReferenceId());
+                modificationUuidsByNodes.computeIfAbsent(nodeId, k -> new ArrayList<>()).add(ref.getReferenceId());
             }
         }));
-        modificationUuidsByNode.entrySet().forEach(entry -> {
+        modificationUuidsByNodes.entrySet().forEach(entry -> {
             UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(entry.getKey());
             nodeActivityRunnerService.runBatchWith(EDIT_MODIFICATIONS, studyUuid, List.of(entry.getKey()),
-                () -> networkModificationService.sharedModificationsUpdatedNotification(studyUuid, entry.getKey(), entry.getValue())
+                () -> networkModificationService.sharedModificationsUpdatedNotification(studyUuid, entry.getKey(), entry.getValue(), onlyMetadata)
             );
         });
     }

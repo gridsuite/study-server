@@ -98,8 +98,8 @@ class ConsumerServiceSharedElementUpdateTest {
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(
                 List.of(createStudyNodeReference(modificationUuid, nodeUuid)), List.of()));
 
-        verify(networkModificationService, times(1)).sharedModificationsUpdatedNotification(any(), any(), anyList());
-        verify(networkModificationService).sharedModificationsUpdatedNotification(studyUuid, nodeUuid, List.of(modificationUuid));
+        verify(networkModificationService, times(1)).sharedModificationsUpdatedNotification(any(), any(), anyList(), anyBoolean());
+        verify(networkModificationService).sharedModificationsUpdatedNotification(studyUuid, nodeUuid, List.of(modificationUuid), false);
     }
 
     @Test
@@ -110,8 +110,8 @@ class ConsumerServiceSharedElementUpdateTest {
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(
                 List.of(), List.of(createCompositeReference(compositeModificationUuid, nodeUuid))));
 
-        verify(networkModificationService, times(1)).sharedModificationsUpdatedNotification(any(), any(), anyList());
-        verify(networkModificationService).sharedModificationsUpdatedNotification(studyUuid, nodeUuid, List.of(compositeModificationUuid));
+        verify(networkModificationService, times(1)).sharedModificationsUpdatedNotification(any(), any(), anyList(), anyBoolean());
+        verify(networkModificationService).sharedModificationsUpdatedNotification(studyUuid, nodeUuid, List.of(compositeModificationUuid), false);
     }
 
     @Test
@@ -124,8 +124,8 @@ class ConsumerServiceSharedElementUpdateTest {
                 List.of(createStudyNodeReference(directModificationUuid, nodeUuid)),
                 List.of(createCompositeReference(compositeModificationUuid, nodeUuid))));
 
-        verify(networkModificationService, times(1)).sharedModificationsUpdatedNotification(any(), any(), anyList());
-        verify(networkModificationService).sharedModificationsUpdatedNotification(studyUuid, nodeUuid, List.of(directModificationUuid, compositeModificationUuid));
+        verify(networkModificationService, times(1)).sharedModificationsUpdatedNotification(any(), any(), anyList(), anyBoolean());
+        verify(networkModificationService).sharedModificationsUpdatedNotification(studyUuid, nodeUuid, List.of(directModificationUuid, compositeModificationUuid), false);
     }
 
     @Test
@@ -139,16 +139,16 @@ class ConsumerServiceSharedElementUpdateTest {
             List.of(createStudyNodeReference(directModificationUuid, node1Uuid)),
             List.of(createCompositeReference(compositeModificationUuid, node2Uuid))));
 
-        verify(networkModificationService, times(2)).sharedModificationsUpdatedNotification(any(), any(), anyList());
-        verify(networkModificationService, times(1)).sharedModificationsUpdatedNotification(studyUuid, node1Uuid, List.of(directModificationUuid));
-        verify(networkModificationService, times(1)).sharedModificationsUpdatedNotification(studyUuid, node2Uuid, List.of(compositeModificationUuid));
+        verify(networkModificationService, times(2)).sharedModificationsUpdatedNotification(any(), any(), anyList(), anyBoolean());
+        verify(networkModificationService, times(1)).sharedModificationsUpdatedNotification(studyUuid, node1Uuid, List.of(directModificationUuid), false);
+        verify(networkModificationService, times(1)).sharedModificationsUpdatedNotification(studyUuid, node2Uuid, List.of(compositeModificationUuid), false);
     }
 
     @Test
     void testNoSharedCompositeUpdated() {
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(List.of(), List.of()));
 
-        verify(networkModificationService, never()).sharedModificationsUpdatedNotification(any(), any(), anyList());
+        verify(networkModificationService, never()).sharedModificationsUpdatedNotification(any(), any(), anyList(), anyBoolean());
         verifyNoMoreInteractions(networkModificationRestService, networkModificationTreeService);
     }
 
