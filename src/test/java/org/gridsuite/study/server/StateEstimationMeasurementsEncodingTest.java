@@ -41,7 +41,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -106,7 +105,7 @@ class StateEstimationMeasurementsEncodingTest {
     private UUID nodeUuid;
 
     @BeforeEach
-    void setUp(MockWebServer server) throws Exception {
+    void setUp(MockWebServer server) {
         stateEstimationRestService.setBaseUri(server.url("").toString().replaceAll("/$", ""));
     }
 
@@ -252,7 +251,7 @@ class StateEstimationMeasurementsEncodingTest {
     }
 
     @Test
-    void slowStateEstimationServerIsGatewayTimeoutWithTheApplicationHttpClient(MockWebServer server) throws IOException {
+    void slowStateEstimationServerIsGatewayTimeoutWithTheApplicationHttpClient(MockWebServer server) {
         StateEstimationRestService withTimeout = new StateEstimationRestService(
             remoteServicesProperties, objectMapper, new RestTemplateBuilder().readTimeout(Duration.ofMillis(300)).build());
         withTimeout.setBaseUri(server.url("").toString().replaceAll("/$", ""));
