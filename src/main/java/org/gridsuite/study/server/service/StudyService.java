@@ -1522,9 +1522,11 @@ public class StudyService {
     }
 
     @Transactional
-    public void sharedModificationsUpdatedNotification(UUID nodeUuid, List<UUID> networkModificationUuids) {
+    public void sharedModificationsUpdatedNotification(UUID nodeUuid, List<UUID> networkModificationUuids, boolean onlyMetadata) {
         UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
-        networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid);
+        if (!onlyMetadata) {
+            networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid);
+        }
         notificationService.emitSharedModificationsUpdated(studyUuid, nodeUuid, networkModificationUuids);
     }
 
@@ -1602,6 +1604,11 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
+    public void updateNetworkModificationNameAndDescription(UUID studyUuid, UUID nodeUuid, UUID networkModificationUuid, String metadata) {
+        networkModificationRestService.updateNetworkModificationNameAndDescription(networkModificationUuid, metadata);
+        notificationService.emitModificationsUpdated(studyUuid, nodeUuid, List.of(networkModificationUuid));
+    }
+
     /**
      * A shared modification holds the applicabilities used by every study referencing it: only a user allowed to write
      * on the shared element may change them.
@@ -1628,7 +1635,7 @@ public class StudyService {
             // so changing it requires the right to write on it
             assertCanUpdateSharedModifications(new ArrayList<>(modificationsUuids), userId);
             networkModificationRestService.updateRootNetworkApplicability(new ArrayList<>(modificationsUuids),
-                    rootNetworkService.getRootNetworkTag(rootNetworkUuid), applicable);
+                    rootNetworkService.getRootNetworkTag(rootNetworkUuid), applicable, userId);
             networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid);
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, nodeUuid, Optional.of(rootNetworkUuid), childrenUuids);
@@ -1950,9 +1957,10 @@ public class StudyService {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         try {
             // the applied modifications are left unchanged : the node does not need to be rebuilt
-            ModificationReference newReference = networkModificationRestService.extractCompositeModificationToShare(groupUuid, modificationUuid, name);
+            ModificationReference newReference = networkModificationRestService.extractCompositeModificationToShare(groupUuid, modificationUuid, name, description);
             // the composite modification keeps its uuid when extracted, so it is shared under that same uuid
-            directoryService.createElement(parentDirectoryUuid, description, modificationUuid, name, DirectoryService.MODIFICATION, userId);
+            // description is null as it is provided by the referenced modification
+            directoryService.createElement(parentDirectoryUuid, null, modificationUuid, name, DirectoryService.MODIFICATION, userId);
             // extraction replaced the local composite by a new reference modification, in the node group or in a parent
             // composite: register it on the shared element
             directoryService.createElementsReferences(List.of(newReference), studyUuid, nodeUuid, userId);
@@ -2419,7 +2427,7 @@ public class StudyService {
             if (networkModificationResults != null && networkModificationResults.modificationUuids().size() == 1) {
                 List<UUID> createdModificationUuids = List.of(networkModificationResults.modificationUuids().getFirst());
                 rootNetworkTagsToDeactivate.forEach(rootNetworkTag ->
-                    networkModificationRestService.updateRootNetworkApplicability(createdModificationUuids, rootNetworkTag, false));
+                    networkModificationRestService.updateRootNetworkApplicability(createdModificationUuids, rootNetworkTag, false, userId));
                 // The modification was applied only on rootNetworkUuid, so the single result must be attributed to it
                 networkModificationResults.modificationResults().getFirst()
                     .ifPresent(result -> emitNetworkModificationImpacts(studyUuid, nodeUuid, rootNetworkUuid, result));
