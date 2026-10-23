@@ -250,7 +250,8 @@ public class NetworkModificationTreeService {
         );
 
         // Then we create the modification group and recreate references
-        networkModificationService.duplicateModificationsGroup(modificationGroupUuid, newGroupUuid, node.getId(), studyUuid, userId);
+        networkModificationService.duplicateModificationsGroup(modificationGroupUuid, newGroupUuid, node.getId(), studyUuid,
+            rootNetworkService.getStudyRootNetworkTags(studyUuid), userId);
 
         return node.getId();
     }
@@ -600,7 +601,8 @@ public class NetworkModificationTreeService {
 
             nextParentId = duplicateNode(newStudyEntity, nodeParentId, model, InsertMode.CHILD).getId();
 
-            networkModificationService.duplicateModificationsGroup(modificationGroupToDuplicateId, newModificationGroupId, nextParentId, newStudyEntity.getId(), userId);
+            networkModificationService.duplicateModificationsGroup(modificationGroupToDuplicateId, newModificationGroupId, nextParentId, newStudyEntity.getId(),
+                rootNetworkService.getStudyRootNetworkTags(newStudyEntity.getId()), userId);
         } else {
             // when cloning studyTree, we don't clone root node
             // if cloning the whole study, the root node is previously created
