@@ -28,6 +28,7 @@ import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParamet
 import org.gridsuite.study.server.service.StudyServerExecutionService;
 import org.gridsuite.study.server.utils.assertions.Assertions;
 import org.gridsuite.study.server.utils.wiremock.UserAdminServerStubs;
+import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.junit.platform.commons.util.StringUtils;
 import org.mockito.stubbing.Answer;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
@@ -400,6 +401,8 @@ public final class TestUtils {
             // Remove quota operation consume/release requests that are auto-stubbed and do not need explicit verification
             wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_CONSUME_URL_PATTERN)).build());
             wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_RELEASE_URL_PATTERN)).build());
+            // Remove the root network tags checks on the shared modifications, auto-stubbed as well
+            wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathEqualTo(WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL)).build());
             var requests = wireMockServer.findAll(WireMock.anyRequestedFor(WireMock.anyUrl()));
             assertEquals(0, requests.size(), "Unverified WireMock requests found:\n" + requests.stream()
                 .map(r -> "URL: " + r.getUrl() + ", Method: " + r.getMethod() + ", Body: " + r.getBodyAsString() + ", Params: " + r.getQueryParams())
@@ -416,6 +419,8 @@ public final class TestUtils {
             // Remove quota operation consume/release requests that are auto-stubbed and do not need explicit verification
             wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_CONSUME_URL_PATTERN)).build());
             wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_RELEASE_URL_PATTERN)).build());
+            // Remove the root network tags checks on the shared modifications, auto-stubbed as well
+            wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathEqualTo(WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL)).build());
             assertEquals(0, wireMockServer.findAll(WireMock.anyRequestedFor(WireMock.anyUrl())).size());
         } finally {
             wireMockServer.resetAll();
