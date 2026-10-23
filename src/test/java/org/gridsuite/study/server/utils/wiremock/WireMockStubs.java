@@ -241,21 +241,16 @@ public class WireMockStubs {
         ).getId();
     }
 
-    public UUID stubNetworkModificationDeleteGroup() {
-        return wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + ".*"))
+    public UUID stubRecreateElementReferences() {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + "/.*/references"))
             .willReturn(WireMock.ok())
         ).getId();
     }
 
-    public UUID stubGetAllReferencesDataFromGroup() {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_CONTAINERS + DELIMITER + ".*/references"))
-                .willReturn(WireMock.ok()
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .withBody("[]"))).getId();
-    }
-
-    public void verifyGetReferencesDataFromGroup(UUID getReferencesUuid) {
-        verifyGetRequest(wireMock, getReferencesUuid, URI_NETWORK_MODIFICATION_CONTAINERS + DELIMITER + ".*/references", true, Map.of(), 1);
+    public UUID stubNetworkModificationDeleteGroup() {
+        return wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + ".*"))
+            .willReturn(WireMock.ok())
+        ).getId();
     }
 
     public UUID stubNetworkModificationDeleteIndex() {
@@ -290,6 +285,10 @@ public class WireMockStubs {
 
     public void verifyDuplicateModificationGroup(UUID stubId, int nbRequests) {
         verifyPostRequest(wireMock, stubId, URI_NETWORK_MODIFICATION_GROUPS + "/.*/duplicate", true, Map.of("groupUuid", WireMock.matching(".*")), nbRequests);
+    }
+
+    public void verifyRecreateElementReferences(UUID stubId, int nbRequests) {
+        verifyPostRequest(wireMock, stubId, URI_NETWORK_MODIFICATION_GROUPS + "/.*/references", true, Map.of(), nbRequests);
     }
 
     public void verifyNetworkModificationDeleteGroup(UUID stubId) {

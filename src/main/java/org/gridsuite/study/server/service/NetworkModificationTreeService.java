@@ -165,6 +165,14 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
+    public NodeInfos findNodeInfosByModificationGroupUuid(UUID modificationGroupUuid) {
+        return networkModificationNodeInfoRepository.findByModificationGroupUuidIn(List.of(modificationGroupUuid)).stream()
+                .findFirst()
+                .map(nodeInfo -> new NodeInfos(nodeInfo.getId(), nodeInfo.getName(), nodeInfo.getNode().getStudy().getId()))
+                .orElseThrow(() -> new StudyException(NOT_FOUND, "Node infos not found"));
+    }
+
+    @Transactional(readOnly = true)
     public List<NodeInfos> getNodesInfos(List<UUID> nodeUuids) {
         // unknown node uuids are simply absent from the result
         return networkModificationNodeInfoRepository.findAllByIdInWithNode(nodeUuids).stream()
@@ -249,8 +257,9 @@ public class NetworkModificationTreeService {
                 insertMode
         );
 
-        // Then we create the modification group and recreate references
-        networkModificationService.duplicateModificationsGroup(modificationGroupUuid, newGroupUuid, node.getId(), studyUuid, userId);
+        // Then we create the modification group, and recreate its references once the node is committed
+        networkModificationService.duplicateModificationsGroup(modificationGroupUuid, newGroupUuid, userId);
+        networkModificationService.recreateReferences(newGroupUuid, userId);
 
         return node.getId();
     }
@@ -600,7 +609,8 @@ public class NetworkModificationTreeService {
 
             nextParentId = duplicateNode(newStudyEntity, nodeParentId, model, InsertMode.CHILD).getId();
 
-            networkModificationService.duplicateModificationsGroup(modificationGroupToDuplicateId, newModificationGroupId, nextParentId, newStudyEntity.getId(), userId);
+            networkModificationService.duplicateModificationsGroup(modificationGroupToDuplicateId, newModificationGroupId, userId);
+            networkModificationService.recreateReferences(newModificationGroupId, userId);
         } else {
             // when cloning studyTree, we don't clone root node
             // if cloning the whole study, the root node is previously created

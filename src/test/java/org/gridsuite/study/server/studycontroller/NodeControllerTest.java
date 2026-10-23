@@ -747,6 +747,7 @@ class NodeControllerTest extends StudyTestBase {
                 .stream().map(NodeEntity::getIdNode)
                 .toList();
         UUID stubDuplicateUuid = wireMockStubs.stubDuplicateModificationGroup();
+        UUID stubRecreateReferencesUuid = wireMockStubs.stubRecreateElementReferences();
 
         mockMvc.perform(post(STUDIES_URL +
                     "/{study1Uuid}/tree/subtrees?subtreeToCopyParentNodeUuid={parentNodeToCopy}&referenceNodeUuid={referenceNodeUuid}&sourceStudyUuid={sourceStudyUuid}",
@@ -761,6 +762,7 @@ class NodeControllerTest extends StudyTestBase {
         checkSubtreeCreatedMessageSent(study1Uuid, nodesAfterDuplication.get(0), node4.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockStubs.verifyDuplicateModificationGroup(stubDuplicateUuid, 3);
+        wireMockStubs.verifyRecreateElementReferences(stubRecreateReferencesUuid, 3);
 
         Map<UUID, AbstractNode> allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
         networkModificationTreeService.getAllChildrenUuids(node4.getId()).forEach(childUuid ->
@@ -895,6 +897,7 @@ class NodeControllerTest extends StudyTestBase {
         UUID stubGetCountUuid = wireMockStubs.stubNetworkModificationCountGet(nodeToCopy.getModificationGroupUuid().toString(),
             EMPTY_MODIFICATION_GROUP_UUID.equals(nodeToCopy.getModificationGroupUuid()) ? 0 : 1);
         UUID stubDuplicateUuid = wireMockStubs.stubDuplicateModificationGroup();
+        UUID stubRecreateReferencesUuid = wireMockStubs.stubRecreateElementReferences();
         if (sourceStudyUuid.equals(targetStudyUuid)) {
             //if source and target are the same no need to pass sourceStudy param
             mockMvc.perform(post(STUDIES_URL +
@@ -923,6 +926,7 @@ class NodeControllerTest extends StudyTestBase {
 
         wireMockStubs.verifyNetworkModificationCountsGet(stubGetCountUuid, nodeToCopy.getModificationGroupUuid().toString());
         wireMockStubs.verifyDuplicateModificationGroup(stubDuplicateUuid, 1);
+        wireMockStubs.verifyRecreateElementReferences(stubRecreateReferencesUuid, 1);
 
         return nodesAfterDuplication.get(0);
     }
