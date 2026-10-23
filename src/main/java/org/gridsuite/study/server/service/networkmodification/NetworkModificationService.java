@@ -78,6 +78,15 @@ public class NetworkModificationService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
+    @Transactional
+    public void sharedModificationsUpdatedNotification(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull List<UUID> networkModificationUuids) {
+        if (networkModificationUuids.isEmpty()) {
+            return;
+        }
+        networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid);
+        notificationService.emitSharedModificationsUpdated(studyUuid, nodeUuid, networkModificationUuids);
+    }
+
     private void handleCreateNetworkModification(UUID studyUuid, UUID nodeUuid, String createModificationAttributes, String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         try {

@@ -48,6 +48,7 @@ import java.util.function.Consumer;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.BUILD;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_MODIFICATIONS;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -905,6 +906,11 @@ public class ConsumerService {
                 modificationUuidsByNode.computeIfAbsent(nodeId, k -> new ArrayList<>()).add(ref.getReferenceId());
             }
         }));
-        modificationUuidsByNode.forEach(studyService::sharedModificationsUpdatedNotification);
+        modificationUuidsByNode.entrySet().forEach(entry -> {
+            UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(entry.getKey());
+            nodeActivityRunnerService.runBatchWith(EDIT_MODIFICATIONS, studyUuid, List.of(entry.getKey()),
+                () -> networkModificationService.sharedModificationsUpdatedNotification(studyUuid, entry.getKey(), entry.getValue())
+            );
+        });
     }
 }
