@@ -1150,7 +1150,10 @@ class NetworkModificationTest {
         String userId = "userId";
 
         UUID modificationUuid = UUID.randomUUID();
-        UUID stubId = wireMockServer.stubFor(WireMock.delete(urlPathMatching("/v1/network-modifications")).willReturn(WireMock.ok())).getId();
+        // the user is forwarded for network-modification-server to unlink the deleted references
+        UUID stubId = wireMockServer.stubFor(WireMock.delete(urlPathMatching("/v1/network-modifications"))
+                .withHeader(USER_ID_HEADER, equalTo(userId))
+                .willReturn(WireMock.ok())).getId();
 
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyUuid = studyEntity.getId();

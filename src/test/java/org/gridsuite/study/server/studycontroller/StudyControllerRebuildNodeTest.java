@@ -140,6 +140,22 @@ class StudyControllerRebuildNodeTest {
     }
 
     @Test
+    void testUpdateNetworkModificationsNameAndDescription() {
+        String metadata =
+                "{\"message\":" +
+                        "{" +
+                        "\"name\":\"newName\"," +
+                        "\"description\":\"newDescription\"" +
+                        "}" +
+                        "}";
+
+        studyController.updateModificationNameAndDescription(studyUuid, nodeUuid, modificationUuid, metadata);
+
+        verify(studyService, times(1))
+                .updateNetworkModificationNameAndDescription(studyUuid, nodeUuid, modificationUuid, metadata);
+    }
+
+    @Test
     void testUpdateNetworkModificationApplicabilityByRootNetwork() {
         Set<UUID> modificationUuids = Set.of(UUID.randomUUID());
         studyController.updateNetworkModificationsApplicability(studyUuid, rootNetworkUuid, nodeUuid, modificationUuids, true, userId);
