@@ -150,7 +150,8 @@ public class StudyService {
         VOLTAGE_INITIALIZATION("VoltageInit"),
         STATE_ESTIMATION("StateEstimation"),
         PCC_MIN("PccMin"),
-        ASYMMETRICAL_LOAD("AsymmetricalLoad");
+        ASYMMETRICAL_LOAD("AsymmetricalLoad"),
+        LOGICAL_CONTROLS("LogicalControls");
 
         public final String reportKey;
 
@@ -2748,6 +2749,7 @@ public class StudyService {
         allComputationStatus.put(SECURITY_ANALYSIS, rootNetworkNodeInfoService.getSecurityAnalysisStatus(nodeUuid, rootNetworkUuid));
         allComputationStatus.put(PCC_MIN, rootNetworkNodeInfoService.getPccMinStatus(nodeUuid, rootNetworkUuid));
         allComputationStatus.put(ASYMMETRICAL_LOAD, rootNetworkNodeInfoService.getAsymmetricalLoadStatus(nodeUuid, rootNetworkUuid));
+        allComputationStatus.put(LOGICAL_CONTROLS, rootNetworkNodeInfoService.getLogicalControlsStatus(nodeUuid, rootNetworkUuid));
         allComputationStatus.put(DYNAMIC_MARGIN_CALCULATION, rootNetworkNodeInfoService.getDynamicMarginCalculationStatus(nodeUuid, rootNetworkUuid));
         allComputationStatus.put(DYNAMIC_SECURITY_ANALYSIS, rootNetworkNodeInfoService.getDynamicSecurityAnalysisStatus(nodeUuid, rootNetworkUuid));
         allComputationStatus.put(DYNAMIC_SIMULATION, rootNetworkNodeInfoService.getDynamicSimulationStatus(nodeUuid, rootNetworkUuid));

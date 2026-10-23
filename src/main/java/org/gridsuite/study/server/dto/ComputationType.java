@@ -41,7 +41,11 @@ public enum ComputationType {
     ASYMMETRICAL_LOAD("Asymmetrical load", "asymmetricalLoadResultUuid",
             NotificationService.UPDATE_TYPE_ASYMMETRICAL_LOAD_STATUS,
             NotificationService.UPDATE_TYPE_ASYMMETRICAL_LOAD_RESULT,
-            NotificationService.UPDATE_TYPE_ASYMMETRICAL_LOAD_FAILED);
+            NotificationService.UPDATE_TYPE_ASYMMETRICAL_LOAD_FAILED),
+    LOGICAL_CONTROLS("Logical controls", "logicalControlsResultUuid",
+            NotificationService.UPDATE_TYPE_LOGICAL_CONTROLS_STATUS,
+            NotificationService.UPDATE_TYPE_LOGICAL_CONTROLS_RESULT,
+            NotificationService.UPDATE_TYPE_LOGICAL_CONTROLS_FAILED);
 
     private final String label; // used for logs
     private final String resultUuidLabel;
