@@ -87,7 +87,7 @@ class StudyControllerRebuildNodeTest {
         studyController.createNetworkModification(studyUuid, nodeUuid, "modificationBody", userId);
 
         verify(networkModificationService, times(1)).createNetworkModification(studyUuid, nodeUuid, "modificationBody", userId);
-        verify(networkModificationService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), eq(userId));
+        verify(networkModificationService, times(1)).buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId);
     }
 
     @Test
