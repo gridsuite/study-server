@@ -257,7 +257,7 @@ class StudyServiceTest {
         doReturn(studyUuid).when(networkModificationTreeService).getStudyUuidForNodeId(nodeUuid);
         doNothing().when(networkModificationTreeService).invalidateNodeTree(any(), any());
 
-        studyService.sharedModificationsUpdatedNotification(nodeUuid, networkModificationUuids);
+        studyService.sharedModificationsUpdatedNotification(nodeUuid, networkModificationUuids, false);
 
         verify(networkModificationTreeService, times(1)).invalidateNodeTree(studyUuid, nodeUuid);
 
