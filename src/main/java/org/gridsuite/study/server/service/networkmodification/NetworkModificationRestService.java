@@ -300,6 +300,14 @@ public class NetworkModificationRestService {
         restTemplate.exchange(path, HttpMethod.PUT, userIdEntity(userId, metadata), Void.class);
     }
 
+    public void updateNetworkModificationNameAndDescription(UUID networkModificationUuid, String metadata) {
+        String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + DELIMITER + networkModificationUuid.toString() + DELIMITER + "name-and-description")
+                .build().toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, new HttpEntity<>(metadata, headers), Void.class);
+    }
+
     public void restoreModifications(UUID groupUUid, List<UUID> modificationsUuids, UUID studyUuid, UUID nodeUuid, String userId) {
         Objects.requireNonNull(groupUUid);
         Objects.requireNonNull(modificationsUuids);
@@ -388,7 +396,7 @@ public class NetworkModificationRestService {
         ).getBody();
     }
 
-    public void updateRootNetworkApplicability(List<UUID> modificationsUuids, String rootNetworkTag, boolean applicable) {
+    public void updateRootNetworkApplicability(List<UUID> modificationsUuids, String rootNetworkTag, boolean applicable, String userId) {
         Objects.requireNonNull(modificationsUuids);
         Objects.requireNonNull(rootNetworkTag);
         var path = UriComponentsBuilder
@@ -400,6 +408,7 @@ public class NetworkModificationRestService {
                 .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         restTemplate.exchange(path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
@@ -556,7 +565,8 @@ public class NetworkModificationRestService {
      * @return the reference modification left in place of the composite modification, either in the group of the node
      * or in a parent composite
      */
-    public ModificationReference extractCompositeModificationToShare(@NonNull UUID groupUuid, @NonNull UUID modificationUuid, @NonNull String name) {
+    public ModificationReference extractCompositeModificationToShare(@NonNull UUID groupUuid, @NonNull UUID modificationUuid, @NonNull String name, String description) {
+
         String path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + "{modificationUuid}" + DELIMITER + "share")
                 .queryParam(QUERY_PARAM_NAME, name)
                 .queryParam(QUERY_PARAM_GROUP_UUID, groupUuid)
@@ -566,7 +576,7 @@ public class NetworkModificationRestService {
         return restTemplate.exchange(
                 getNetworkModificationServerURI(false) + path,
                 HttpMethod.POST,
-                null,
+                new HttpEntity<>(description),
                 ModificationReference.class
         ).getBody();
     }
