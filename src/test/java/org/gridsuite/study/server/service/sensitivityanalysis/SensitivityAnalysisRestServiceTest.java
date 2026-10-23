@@ -73,4 +73,13 @@ class SensitivityAnalysisRestServiceTest {
         assertThat(captor.getValue().getBody()).isEqualTo(parameters);
         assertThat(captor.getValue().getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
     }
+
+    @Test
+    void testResetParameters() {
+        UUID parameterUuid = UUID.randomUUID();
+
+        sensitivityAnalysisRestService.resetSensitivityAnalysisParameters(parameterUuid);
+
+        verify(restTemplate).put(BASE_URI + "/" + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid + "/reset", null);
+    }
 }
