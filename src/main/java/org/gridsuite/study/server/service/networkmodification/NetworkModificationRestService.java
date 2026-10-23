@@ -753,6 +753,24 @@ public class NetworkModificationRestService {
         return Boolean.TRUE.equals(restTemplate.getForObject(getNetworkModificationServerURI(false) + path, Boolean.class));
     }
 
+    public Set<UUID> getContainersWithModificationReferences(List<UUID> containerUuids) {
+        if (containerUuids.isEmpty()) {
+            return Set.of();
+        }
+        // the uuids go in the body as a large tree would exceed the url length limit
+        String path = UriComponentsBuilder.fromPath(CONTAINERS + DELIMITER + "reference-modifications")
+                .build().toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        List<UUID> containersWithReferenceModifications = restTemplate.exchange(
+                getNetworkModificationServerURI(false) + path,
+                HttpMethod.POST,
+                new HttpEntity<>(containerUuids, headers),
+                new ParameterizedTypeReference<List<UUID>>() { }
+        ).getBody();
+        return containersWithReferenceModifications == null ? Set.of() : new HashSet<>(containersWithReferenceModifications);
+    }
+
     /**
      * Asserts that the user may write on every shared modification the given containers point to, directly or through
      * other shared modifications. Throws when they cannot.
