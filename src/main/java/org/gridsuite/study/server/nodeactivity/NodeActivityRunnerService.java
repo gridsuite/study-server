@@ -10,53 +10,18 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 /**
  * @author Ayoub Labidi <ayoub.labidi_externe at rte-france.com>
  */
 @Service
-public class NodeActivityRunnerService {
-
-    private final NodeActivityService nodeActivityService;
+public class NodeActivityRunnerService extends AbstractNodeActivityRunnerService {
 
     public NodeActivityRunnerService(NodeActivityService nodeActivityService) {
-        this.nodeActivityService = nodeActivityService;
-    }
-
-    public void runWith(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid,
-                        List<UUID> nodeUuids, Runnable action) {
-        runWith(type, studyUuid, rootNetworkUuid, nodeUuids, asSupplier(action));
+        super(nodeActivityService);
     }
 
     public void runWith(NodeActivityType type, UUID studyUuid, List<UUID> nodeUuids, Runnable action) {
         runWith(type, studyUuid, null, nodeUuids, action);
-    }
-
-    public <T> T runWith(NodeActivityType type, UUID studyUuid, List<UUID> nodeUuids, Supplier<T> action) {
-        return runWith(type, studyUuid, null, nodeUuids, action);
-    }
-
-    public <T> T runWith(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid,
-                         List<UUID> nodeUuids, Supplier<T> action) {
-        UUID activityRootNetworkUuid = type.affectsAllRootNetworks() ? null : rootNetworkUuid;
-        nodeActivityService.addNodeActivities(type, studyUuid, activityRootNetworkUuid, nodeUuids);
-        boolean succeeded = false;
-        try {
-            T result = action.get();
-            succeeded = true;
-            return result;
-        } finally {
-            if (!succeeded || type.isSynchronous()) {
-                nodeActivityService.removeActivities(studyUuid, activityRootNetworkUuid, nodeUuids);
-            }
-        }
-    }
-
-    private static <T> Supplier<T> asSupplier(Runnable action) {
-        return () -> {
-            action.run();
-            return null;
-        };
     }
 }

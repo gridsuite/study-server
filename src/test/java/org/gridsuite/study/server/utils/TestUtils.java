@@ -19,7 +19,7 @@ import org.gridsuite.study.server.dto.Report;
 import org.gridsuite.study.server.error.StudyBusinessErrorCode;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
-import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
+import org.gridsuite.study.server.nodeactivity.AbstractNodeActivityRunnerService;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
@@ -331,7 +331,7 @@ public final class TestUtils {
      * activity insert would otherwise fail on its foreign keys. The rules themselves are covered by
      * NodeActivityRulesTest.
      */
-    public static void bypassNodeActivities(NodeActivityRunnerService nodeActivityService) {
+    public static void bypassNodeActivities(AbstractNodeActivityRunnerService nodeActivityService) {
         Answer<Object> runIt = invocation -> {
             invocation.getArgument(invocation.getArguments().length - 1, Runnable.class).run();
             return null;
@@ -340,7 +340,6 @@ public final class TestUtils {
             invocation.getArgument(invocation.getArguments().length - 1, Supplier.class).get();
 
         doAnswer(runIt).when(nodeActivityService).runWith(any(), any(), any(), anyList(), any(Runnable.class));
-        doAnswer(runIt).when(nodeActivityService).runWith(any(), any(), anyList(), any(Runnable.class));
         doAnswer(supplyIt).when(nodeActivityService).runWith(any(), any(), any(), anyList(), any(Supplier.class));
         doAnswer(supplyIt).when(nodeActivityService).runWith(any(), any(), anyList(), any(Supplier.class));
     }
