@@ -41,6 +41,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -281,20 +282,20 @@ class RootNetworkApplicabilityTest {
         updateRootNetwork(studyEntity.getId(), rootNetworkUuid, ROOT_NETWORK_TAG_2);
 
         ArgumentCaptor<List<UUID>> groupUuidsCaptor = ArgumentCaptor.captor();
-        verify(networkModificationRestService, times(1)).renameRootNetworkTag(groupUuidsCaptor.capture(), eq(ROOT_NETWORK_TAG_1), eq(ROOT_NETWORK_TAG_2));
+        verify(networkModificationRestService, times(1)).renameRootNetworkTag(groupUuidsCaptor.capture(), eq(ROOT_NETWORK_TAG_1), eq(ROOT_NETWORK_TAG_2), eq(USER_ID));
         assertEquals(Set.of(firstNode.getModificationGroupUuid(), secondNode.getModificationGroupUuid()), Set.copyOf(groupUuidsCaptor.getValue()));
 
         // an update carrying no tag at all leaves it as it was, so it is not a rename
         updateRootNetwork(studyEntity.getId(), rootNetworkUuid, null);
-        verify(networkModificationRestService, times(1)).renameRootNetworkTag(any(), any(), any());
+        verify(networkModificationRestService, times(1)).renameRootNetworkTag(any(), any(), any(), any());
 
         // and neither is an update carrying the tag the root network already has
         updateRootNetwork(studyEntity.getId(), rootNetworkUuid, ROOT_NETWORK_TAG_2);
-        verify(networkModificationRestService, times(1)).renameRootNetworkTag(any(), any(), any());
+        verify(networkModificationRestService, times(1)).renameRootNetworkTag(any(), any(), any(), any());
     }
 
     @Test
-    void testRenamingARootNetworkTagNeedsWritePermissionOnTheSharedModifications() throws Exception {
+    void testRenamingARootNetworkTagNeedsTheSharedModificationsTheUserCannotWriteOnToBeAssociatedWithIt() throws Exception {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
         UUID rootNetworkUuid = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).getFirst().rootNetworkUuid();
@@ -302,9 +303,9 @@ class RootNetworkApplicabilityTest {
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
         NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
 
-        // the study points to a shared modification the user is not allowed to write on
+        // the study points to a shared modification the user is not allowed to write on, and not associated with the new tag
         doThrow(HttpClientErrorException.create(HttpStatus.FORBIDDEN, "Forbidden", null, null, null))
-            .when(networkModificationRestService).assertReferencedModificationsAreWritable(List.of(firstNode.getModificationGroupUuid()), USER_ID);
+            .when(networkModificationRestService).assertRootNetworkTagsAllowed(List.of(firstNode.getModificationGroupUuid()), List.of(ROOT_NETWORK_TAG_2), USER_ID);
 
         UUID studyUuid = studyEntity.getId();
         RootNetworkInfos renamingTagInfos = RootNetworkInfos.builder().id(rootNetworkUuid).tag(ROOT_NETWORK_TAG_2).build();
@@ -312,33 +313,35 @@ class RootNetworkApplicabilityTest {
 
         // neither the tag nor the applicabilities are touched
         assertEquals(ROOT_NETWORK_TAG_1, rootNetworkService.getRootNetworkTag(rootNetworkUuid));
-        verify(networkModificationRestService, never()).renameRootNetworkTag(any(), any(), any());
+        verify(networkModificationRestService, never()).renameRootNetworkTag(any(), any(), any(), any());
 
         // an update keeping the tag is no rename, so it needs no permission
         updateRootNetwork(studyUuid, rootNetworkUuid, ROOT_NETWORK_TAG_1);
-        verify(networkModificationRestService, times(1)).assertReferencedModificationsAreWritable(any(), any());
+        verify(networkModificationRestService, times(1)).assertRootNetworkTagsAllowed(any(), any(), any());
     }
 
     @Test
-    void testHasSharedModifications() throws Exception {
+    void testGetSharedModificationsWriteAccess() throws Exception {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
         UUID studyUuid = studyEntity.getId();
 
         // a study with no modification node contains no shared modification, and the server is not even asked
-        assertFalse(hasSharedModifications(studyUuid));
-        verify(networkModificationRestService, never()).hasModificationReferences(any());
+        assertEquals(SharedModificationsWriteAccess.NO_SHARED_MODIFICATION, getSharedModificationsWriteAccess(studyUuid));
+        verify(networkModificationRestService, never()).getReferencedModificationsWriteAccess(any(), any());
 
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
         NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
-        doReturn(true).when(networkModificationRestService).hasModificationReferences(List.of(firstNode.getModificationGroupUuid()));
+        doReturn(SharedModificationsWriteAccess.NONE_WRITABLE).when(networkModificationRestService)
+            .getReferencedModificationsWriteAccess(List.of(firstNode.getModificationGroupUuid()), USER_ID);
 
-        assertTrue(hasSharedModifications(studyUuid));
+        assertEquals(SharedModificationsWriteAccess.NONE_WRITABLE, getSharedModificationsWriteAccess(studyUuid));
     }
 
-    private boolean hasSharedModifications(UUID studyUuid) throws Exception {
-        return Boolean.parseBoolean(mockMvc.perform(get("/v1/studies/{studyUuid}/network-modifications/references/exists", studyUuid))
-            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+    private SharedModificationsWriteAccess getSharedModificationsWriteAccess(UUID studyUuid) throws Exception {
+        return objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/network-modifications/references/write-access", studyUuid)
+                .header(HEADER_USER_ID, USER_ID))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(), SharedModificationsWriteAccess.class);
     }
 
     @Test
