@@ -19,7 +19,7 @@ import org.gridsuite.study.server.dto.Report;
 import org.gridsuite.study.server.error.StudyBusinessErrorCode;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
-import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
+import org.gridsuite.study.server.nodeactivity.AbstractNodeActivityRunnerService;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
@@ -28,6 +28,7 @@ import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParamet
 import org.gridsuite.study.server.service.StudyServerExecutionService;
 import org.gridsuite.study.server.utils.assertions.Assertions;
 import org.gridsuite.study.server.utils.wiremock.UserAdminServerStubs;
+import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.junit.platform.commons.util.StringUtils;
 import org.mockito.stubbing.Answer;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
@@ -330,7 +331,7 @@ public final class TestUtils {
      * activity insert would otherwise fail on its foreign keys. The rules themselves are covered by
      * NodeActivityRulesTest.
      */
-    public static void bypassNodeActivities(NodeActivityRunnerService nodeActivityService) {
+    public static void bypassNodeActivities(AbstractNodeActivityRunnerService nodeActivityService) {
         Answer<Object> runIt = invocation -> {
             invocation.getArgument(invocation.getArguments().length - 1, Runnable.class).run();
             return null;
@@ -339,7 +340,6 @@ public final class TestUtils {
             invocation.getArgument(invocation.getArguments().length - 1, Supplier.class).get();
 
         doAnswer(runIt).when(nodeActivityService).runWith(any(), any(), any(), anyList(), any(Runnable.class));
-        doAnswer(runIt).when(nodeActivityService).runWith(any(), any(), anyList(), any(Runnable.class));
         doAnswer(supplyIt).when(nodeActivityService).runWith(any(), any(), any(), anyList(), any(Supplier.class));
         doAnswer(supplyIt).when(nodeActivityService).runWith(any(), any(), anyList(), any(Supplier.class));
     }
@@ -400,6 +400,8 @@ public final class TestUtils {
             // Remove quota operation consume/release requests that are auto-stubbed and do not need explicit verification
             wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_CONSUME_URL_PATTERN)).build());
             wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_RELEASE_URL_PATTERN)).build());
+            // Remove the root network tags checks on the shared modifications, auto-stubbed as well
+            wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathEqualTo(WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL)).build());
             var requests = wireMockServer.findAll(WireMock.anyRequestedFor(WireMock.anyUrl()));
             assertEquals(0, requests.size(), "Unverified WireMock requests found:\n" + requests.stream()
                 .map(r -> "URL: " + r.getUrl() + ", Method: " + r.getMethod() + ", Body: " + r.getBodyAsString() + ", Params: " + r.getQueryParams())
@@ -416,6 +418,8 @@ public final class TestUtils {
             // Remove quota operation consume/release requests that are auto-stubbed and do not need explicit verification
             wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_CONSUME_URL_PATTERN)).build());
             wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_RELEASE_URL_PATTERN)).build());
+            // Remove the root network tags checks on the shared modifications, auto-stubbed as well
+            wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathEqualTo(WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL)).build());
             assertEquals(0, wireMockServer.findAll(WireMock.anyRequestedFor(WireMock.anyUrl())).size());
         } finally {
             wireMockServer.resetAll();

@@ -9,12 +9,16 @@ package org.gridsuite.study.server;
 import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.ReferenceAttributes;
 import org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType;
-import org.gridsuite.study.server.dto.modification.*;
+import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
+import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.DirectoryService;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
@@ -48,14 +52,13 @@ class NetworkModificationReferencingInfosUpdateTest {
     @MockitoBean
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @MockitoBean
-    private NetworkModificationRestService networkModificationService;
+    private NetworkModificationRestService networkModificationRestService;
     @MockitoBean
     private DirectoryService directoryService;
     @MockitoBean
     NotificationService notificationService;
-
     @MockitoSpyBean
-    private StudyService studyService;
+    private NetworkModificationService networkModificationService;
 
     private final UUID node1Uuid = UUID.randomUUID();
     private final UUID node2Uuid = UUID.randomUUID();
@@ -80,7 +83,7 @@ class NetworkModificationReferencingInfosUpdateTest {
         when(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(any(UUID.class), any(UUID.class), any(UUID.class)))
             .thenReturn(new ModificationApplicationContext(UUID.randomUUID(), "variantId", UUID.randomUUID(), UUID.randomUUID(), "networkRootTag"));
 
-        when(networkModificationService.getModificationReferences(List.of(modificationReferenceToMoveUuid))).thenReturn(List.of(modificationReference));
+        when(networkModificationRestService.getModificationReferences(List.of(modificationReferenceToMoveUuid))).thenReturn(List.of(modificationReference));
 
         when(networkModificationTreeService.getModificationGroupUuid(node1Uuid)).thenReturn(group1Uuid);
         when(networkModificationTreeService.getModificationGroupUuid(node2Uuid)).thenReturn(group2Uuid);
@@ -119,7 +122,7 @@ class NetworkModificationReferencingInfosUpdateTest {
         reset(directoryService);
 
         ModificationMoveInfos modificationMoveInfos = new ModificationMoveInfos(modificationReferenceToMoveUuid, sourceCompositeUuid, targetCompositeUuid, null);
-        studyService.moveNetworkModifications(studyUuid, originNodeUuid, targetNodeUuid, List.of(modificationMoveInfos), isTargetInDifferentNodeTree, userId);
+        networkModificationService.moveNetworkModifications(studyUuid, originNodeUuid, targetNodeUuid, List.of(modificationMoveInfos), isTargetInDifferentNodeTree, userId);
 
         ArgumentCaptor<ReferenceAttributes> referenceAttributesCaptor = ArgumentCaptor.forClass(ReferenceAttributes.class);
         ArgumentCaptor<UUID> sharedModificationUuidCaptor = ArgumentCaptor.forClass(UUID.class);

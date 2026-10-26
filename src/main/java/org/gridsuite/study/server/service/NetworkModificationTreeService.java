@@ -11,7 +11,9 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
 import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
+import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
@@ -19,6 +21,7 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
@@ -258,7 +261,8 @@ public class NetworkModificationTreeService {
         );
 
         // Then we create the modification group, and recreate its references once the node is committed
-        networkModificationService.duplicateModificationsGroup(modificationGroupUuid, newGroupUuid, userId);
+        networkModificationService.duplicateModificationsGroup(modificationGroupUuid, newGroupUuid,
+            rootNetworkService.getStudyRootNetworkTags(studyUuid), userId);
         networkModificationService.recreateReferences(newGroupUuid, userId);
 
         return node.getId();
@@ -342,6 +346,13 @@ public class NetworkModificationTreeService {
     @Transactional(readOnly = true)
     public UUID getStudyUuidForNodeId(UUID id) {
         return getNodeEntity(id).getStudy().getId();
+    }
+
+    @Transactional(readOnly = true)
+    public void assertStudyContainsNode(UUID studyUuid, UUID nodeUuid) {
+        if (!getNodeEntity(nodeUuid).getStudy().getId().equals(studyUuid)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
     }
 
     private void stashNode(UUID nodeId, boolean stashChildren, List<UUID> stashedNodes, boolean firstIteration, String userId) {
@@ -609,7 +620,8 @@ public class NetworkModificationTreeService {
 
             nextParentId = duplicateNode(newStudyEntity, nodeParentId, model, InsertMode.CHILD).getId();
 
-            networkModificationService.duplicateModificationsGroup(modificationGroupToDuplicateId, newModificationGroupId, userId);
+            networkModificationService.duplicateModificationsGroup(modificationGroupToDuplicateId, newModificationGroupId,
+                rootNetworkService.getStudyRootNetworkTags(newStudyEntity.getId()), userId);
             networkModificationService.recreateReferences(newModificationGroupId, userId);
         } else {
             // when cloning studyTree, we don't clone root node
@@ -1560,5 +1572,34 @@ public class NetworkModificationTreeService {
         }
 
         return invalidateNodeInfos;
+    }
+
+    @Transactional
+    public void handleNetworkModificationApplyResult(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, NetworkModificationResult networkModificationResult) {
+        doUpdateNodeBuildStatus(nodeUuid, rootNetworkUuid,
+            NodeBuildStatus.from(networkModificationResult.getLastGroupApplicationStatus(), networkModificationResult.getApplicationStatus()));
+
+        sendImpactNotifications(studyUuid, nodeUuid, rootNetworkUuid, networkModificationResult);
+    }
+
+    private void sendImpactNotifications(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, NetworkModificationResult networkModificationResult) {
+        Set<org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos> deletionsInfos =
+            networkModificationResult.getNetworkImpacts().stream()
+                .filter(impact -> impact.isSimple() && ((SimpleElementImpact) impact).isDeletion())
+                .map(impact -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(((SimpleElementImpact) impact).getElementId(), impact.getElementType().name()))
+                .collect(Collectors.toSet());
+
+        Set<String> impactedElementTypes = networkModificationResult.getNetworkImpacts().stream()
+            .filter(impact -> impact.isCollection())
+            .map(impact -> impact.getElementType().name())
+            .collect(Collectors.toSet());
+
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_STUDY,
+            NetworkImpactsInfos.builder()
+                .deletedEquipments(deletionsInfos)
+                .impactedSubstationsIds(networkModificationResult.getImpactedSubstationsIds())
+                .impactedElementTypes(impactedElementTypes)
+                .build()
+        );
     }
 }
