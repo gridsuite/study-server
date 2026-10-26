@@ -600,22 +600,25 @@ public class NetworkModificationRestService {
         ).getBody();
     }
 
-    public void duplicateModificationsGroup(UUID sourceGroupUuid, UUID groupUuid, UUID newNodeUuid, UUID studyUuid, String userId) {
+    public void duplicateModificationsGroup(UUID sourceGroupUuid, UUID groupUuid, UUID newNodeUuid, UUID studyUuid, List<String> rootNetworkTags, String userId) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(sourceGroupUuid);
-        var path = UriComponentsBuilder.fromPath("groups/{uuid}/duplicate")
+        var uri = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + "groups/" + sourceGroupUuid + "/duplicate")
                 .queryParam(QUERY_PARAM_GROUP_UUID, groupUuid)
                 .queryParam(QUERY_PARAM_NODE_CONTAINER_UUID, newNodeUuid)
                 .queryParam(QUERY_PARAM_STUDY_ROOT_CONTAINER_UUID, studyUuid)
-                .buildAndExpand(sourceGroupUuid)
-                .toUriString();
+                .queryParam(QUERY_PARAM_ROOT_NETWORK_TAGS, Collections.nCopies(rootNetworkTags.size(), "{rootNetworkTag}"))
+                .encode()
+                .buildAndExpand(rootNetworkTags.toArray())
+                .toUri();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set(HEADER_USER_ID, userId);
 
         restTemplate.exchange(
-            getNetworkModificationServerURI(false) + path,
+            uri,
             HttpMethod.POST,
             new HttpEntity<>(headers),
             Void.class
@@ -751,6 +754,24 @@ public class NetworkModificationRestService {
                 .queryParam(UUIDS, containerUuids)
                 .build().toUriString();
         return Boolean.TRUE.equals(restTemplate.getForObject(getNetworkModificationServerURI(false) + path, Boolean.class));
+    }
+
+    public Set<UUID> getContainersWithModificationReferences(List<UUID> containerUuids) {
+        if (containerUuids.isEmpty()) {
+            return Set.of();
+        }
+        // the uuids go in the body as a large tree would exceed the url length limit
+        String path = UriComponentsBuilder.fromPath(CONTAINERS + DELIMITER + "reference-modifications")
+                .build().toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        List<UUID> containersWithReferenceModifications = restTemplate.exchange(
+                getNetworkModificationServerURI(false) + path,
+                HttpMethod.POST,
+                new HttpEntity<>(containerUuids, headers),
+                new ParameterizedTypeReference<List<UUID>>() { }
+        ).getBody();
+        return containersWithReferenceModifications == null ? Set.of() : new HashSet<>(containersWithReferenceModifications);
     }
 
     /**

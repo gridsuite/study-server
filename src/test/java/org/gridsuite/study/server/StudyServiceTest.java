@@ -23,6 +23,7 @@ import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -50,12 +51,14 @@ class StudyServiceTest {
     private NodeRepository nodeRepository;
     @Autowired
     private StudyService studyService;
+    @Autowired
+    private NetworkModificationService networkModificationService;
     @MockitoBean
     private UserAdminService userAdminService;
     @MockitoSpyBean
     private NetworkModificationTreeService networkModificationTreeService;
     @MockitoBean
-    private NetworkModificationRestService networkModificationService;
+    private NetworkModificationRestService networkModificationRestService;
     @MockitoBean
     private NotificationService notificationService;
     @MockitoBean
@@ -99,7 +102,7 @@ class StudyServiceTest {
         mockNodeBuild(node2.getIdNode(), rootNetworkUuid);
         mockNodeBuild(node3.getIdNode(), rootNetworkUuid);
 
-        studyService.buildNodes(studyUuid,
+        networkModificationService.buildNodes(studyUuid,
             studyService.getFirstLevelChildrenToBuild(studyUuid, node1.getIdNode(), rootNetworkUuid, userId),
             rootNetworkUuid, userId);
 
@@ -139,13 +142,13 @@ class StudyServiceTest {
         doReturn(Map.of(QuotaType.BUILD, new QuotaState(0, 10))).when(userAdminService).getUserQuotaState(userId);
         doReturn(10L).when(networkModificationTreeService).countBuiltNodes(studyUuid, rootNetworkUuid);
 
-        studyService.buildNodes(studyUuid,
+        networkModificationService.buildNodes(studyUuid,
             studyService.getFirstLevelChildrenToBuild(studyUuid, node1.getIdNode(), rootNetworkUuid, userId),
             rootNetworkUuid, userId);
 
-        verify(networkModificationService, times(0)).buildNode(eq(node2.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
-        verify(networkModificationService, times(0)).buildNode(eq(node3.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
-        verify(networkModificationService, times(0)).buildNode(eq(node4.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
+        verify(networkModificationRestService, times(0)).buildNode(eq(node2.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
+        verify(networkModificationRestService, times(0)).buildNode(eq(node3.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
+        verify(networkModificationRestService, times(0)).buildNode(eq(node4.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
 
         verify(userAdminService, times(1)).getUserQuotaState(userId);
         verify(networkModificationTreeService, times(1)).countBuiltNodes(studyUuid, rootNetworkUuid);
@@ -180,7 +183,7 @@ class StudyServiceTest {
 
         mockNodeBuild(node2.getIdNode(), rootNetworkUuid);
 
-        studyService.buildNodes(studyUuid,
+        networkModificationService.buildNodes(studyUuid,
             studyService.getFirstLevelChildrenToBuild(studyUuid, node1.getIdNode(), rootNetworkUuid, userId),
             rootNetworkUuid, userId);
 
@@ -279,10 +282,11 @@ class StudyServiceTest {
         UUID modificationUuid = UUID.randomUUID();
         String userId = "userId";
 
-        studyService.unshareModificationReferences(studyUuid, userId, Map.of(nodeUuid, List.of(modificationUuid)));
+        // studyService.unshareModificationReferences(studyUuid, userId, Map.of(nodeUuid, List.of(modificationUuid)));
+        networkModificationService.unshareModificationReference(studyUuid, nodeUuid, modificationUuid, userId);
 
         // the reference is replaced remotely by a copy of the shared composite, then the front is notified
-        verify(networkModificationService, times(1)).unshareModificationReference(modificationUuid, userId);
+        verify(networkModificationRestService, times(1)).unshareModificationReference(modificationUuid, userId);
         verify(notificationService, times(1)).emitModificationsUpdated(studyUuid, nodeUuid, Optional.empty(), List.of(modificationUuid));
     }
 
@@ -338,10 +342,11 @@ class StudyServiceTest {
         String userId = "userId";
 
         doThrow(new RuntimeException("network modification server error"))
-                .when(networkModificationService).unshareModificationReference(modificationUuid, userId);
+                .when(networkModificationRestService).unshareModificationReference(modificationUuid, userId);
 
         assertThrows(RuntimeException.class,
-                () -> studyService.unshareModificationReferences(studyUuid, userId, Map.of(nodeUuid, List.of(modificationUuid))));
+                // () -> studyService.unshareModificationReferences(studyUuid, userId, Map.of(nodeUuid, List.of(modificationUuid))));
+                () -> networkModificationService.unshareModificationReference(studyUuid, nodeUuid, modificationUuid, userId));
 
         verify(notificationService, never()).emitModificationsUpdated(any(), any(), any(), any());
     }
