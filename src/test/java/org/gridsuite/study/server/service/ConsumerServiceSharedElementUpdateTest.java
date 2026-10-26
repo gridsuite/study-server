@@ -33,9 +33,7 @@ import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE;
 import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.times;
 
 /**
  * @author Souissi Maissa <souissi.maissa at rte-france.com>
@@ -98,8 +96,8 @@ class ConsumerServiceSharedElementUpdateTest {
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(
                 List.of(createStudyNodeReference(modificationUuid, nodeUuid)), List.of()));
 
-        verify(networkModificationService, times(1)).sharedModificationsUpdatedNotification(any(), any(), anyList(), anyBoolean());
-        verify(networkModificationService).sharedModificationsUpdatedNotification(studyUuid, nodeUuid, List.of(modificationUuid), false);
+        verify(networkModificationTreeService, times(1)).invalidateNodeTree(any(), any());
+        verify(networkModificationTreeService).invalidateNodeTree(studyUuid, nodeUuid);
     }
 
     @Test
@@ -110,8 +108,8 @@ class ConsumerServiceSharedElementUpdateTest {
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(
                 List.of(), List.of(createCompositeReference(compositeModificationUuid, nodeUuid))));
 
-        verify(networkModificationService, times(1)).sharedModificationsUpdatedNotification(any(), any(), anyList(), anyBoolean());
-        verify(networkModificationService).sharedModificationsUpdatedNotification(studyUuid, nodeUuid, List.of(compositeModificationUuid), false);
+        verify(networkModificationTreeService, times(1)).invalidateNodeTree(any(), any());
+        verify(networkModificationTreeService).invalidateNodeTree(studyUuid, nodeUuid);
     }
 
     @Test
@@ -124,8 +122,8 @@ class ConsumerServiceSharedElementUpdateTest {
                 List.of(createStudyNodeReference(directModificationUuid, nodeUuid)),
                 List.of(createCompositeReference(compositeModificationUuid, nodeUuid))));
 
-        verify(networkModificationService, times(1)).sharedModificationsUpdatedNotification(any(), any(), anyList(), anyBoolean());
-        verify(networkModificationService).sharedModificationsUpdatedNotification(studyUuid, nodeUuid, List.of(directModificationUuid, compositeModificationUuid), false);
+        verify(networkModificationTreeService, times(1)).invalidateNodeTree(any(), any());
+        verify(networkModificationTreeService).invalidateNodeTree(studyUuid, nodeUuid);
     }
 
     @Test
@@ -139,16 +137,16 @@ class ConsumerServiceSharedElementUpdateTest {
             List.of(createStudyNodeReference(directModificationUuid, node1Uuid)),
             List.of(createCompositeReference(compositeModificationUuid, node2Uuid))));
 
-        verify(networkModificationService, times(2)).sharedModificationsUpdatedNotification(any(), any(), anyList(), anyBoolean());
-        verify(networkModificationService, times(1)).sharedModificationsUpdatedNotification(studyUuid, node1Uuid, List.of(directModificationUuid), false);
-        verify(networkModificationService, times(1)).sharedModificationsUpdatedNotification(studyUuid, node2Uuid, List.of(compositeModificationUuid), false);
+        verify(networkModificationTreeService, times(2)).invalidateNodeTree(any(), any());
+        verify(networkModificationTreeService, times(1)).invalidateNodeTree(studyUuid, node1Uuid);
+        verify(networkModificationTreeService, times(1)).invalidateNodeTree(studyUuid, node2Uuid);
     }
 
     @Test
     void testNoSharedCompositeUpdated() {
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(List.of(), List.of()));
 
-        verify(networkModificationService, never()).sharedModificationsUpdatedNotification(any(), any(), anyList(), anyBoolean());
+        verify(networkModificationTreeService, never()).invalidateNodeTree(any(), any());
         verifyNoMoreInteractions(networkModificationRestService, networkModificationTreeService);
     }
 

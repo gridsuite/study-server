@@ -24,8 +24,4 @@ public class NodeActivityRunnerService extends AbstractNodeActivityRunnerService
     public void runWith(NodeActivityType type, UUID studyUuid, List<UUID> nodeUuids, Runnable action) {
         runWith(type, studyUuid, null, nodeUuids, action);
     }
-
-    public void runBatchWith(NodeActivityType type, UUID studyUuid, List<UUID> nodeUuids, Runnable action) {
-        runWith(type, studyUuid, null, nodeUuids, action);
-    }
 }

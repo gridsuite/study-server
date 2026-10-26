@@ -25,6 +25,7 @@ import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.nodeactivity.NetworkModificationActivityRunnerService;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.nodeactivity.NodeActivityService;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -48,7 +49,6 @@ import java.util.function.Consumer;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.BUILD;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_MODIFICATIONS;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -83,6 +83,7 @@ public class ConsumerService {
     private final UserAdminService userAdminService;
     private final LoadFlowService loadFlowService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
+    private final NetworkModificationActivityRunnerService networkModificationActivityRunnerService;
     private final NodeActivityService nodeActivityService;
     private final WorkspaceService workspaceService;
     private final NetworkModificationService networkModificationService;
@@ -104,6 +105,7 @@ public class ConsumerService {
                            UserAdminService userAdminService,
                            LoadFlowService loadFlowService,
                            NodeActivityRunnerService nodeActivityRunnerService,
+                           NetworkModificationActivityRunnerService networkModificationActivityRunnerService,
                            NodeActivityService nodeActivityService,
                            WorkspaceService workspaceService,
                            NetworkModificationService networkModificationService) {
@@ -122,6 +124,7 @@ public class ConsumerService {
         this.loadFlowService = loadFlowService;
         this.nodeActivityService = nodeActivityService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
+        this.networkModificationActivityRunnerService = networkModificationActivityRunnerService;
         this.workspaceService = workspaceService;
         this.networkModificationService = networkModificationService;
     }
@@ -913,11 +916,19 @@ public class ConsumerService {
                 modificationUuidsByNodes.computeIfAbsent(nodeId, k -> new ArrayList<>()).add(ref.getReferenceId());
             }
         }));
-        modificationUuidsByNodes.entrySet().forEach(entry -> {
-            UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(entry.getKey());
-            nodeActivityRunnerService.runBatchWith(EDIT_MODIFICATIONS, studyUuid, List.of(entry.getKey()),
-                () -> networkModificationService.sharedModificationsUpdatedNotification(studyUuid, entry.getKey(), entry.getValue(), onlyMetadata)
-            );
-        });
+        modificationUuidsByNodes.entrySet().forEach(entry ->
+            handleSharedModificationsUpdate(entry.getKey(), entry.getValue(), onlyMetadata)
+        );
+    }
+
+    private void handleSharedModificationsUpdate(UUID nodeUuid, List<UUID> networkModificationUuids, boolean onlyMetada) {
+        if (networkModificationUuids.isEmpty()) {
+            return;
+        }
+        UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
+        if (!onlyMetada) {
+            networkModificationActivityRunnerService.runInvalidateNodeTreeBatch(studyUuid, nodeUuid, true);
+        }
+        notificationService.emitSharedModificationsUpdated(studyUuid, nodeUuid, networkModificationUuids);
     }
 }

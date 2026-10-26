@@ -31,7 +31,7 @@ public abstract class AbstractNodeActivityRunnerService {
 
     public <T> T runWith(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids, Supplier<T> action) {
         UUID activityRootNetworkUuid = type.affectsAllRootNetworks() ? null : rootNetworkUuid;
-        nodeActivityService.addNodeActivities(type, studyUuid, activityRootNetworkUuid, nodeUuids);
+        addNodeActivities(type, studyUuid, activityRootNetworkUuid, nodeUuids);
         boolean succeeded = false;
         try {
             T result = action.get();
@@ -39,9 +39,17 @@ public abstract class AbstractNodeActivityRunnerService {
             return result;
         } finally {
             if (!succeeded || type.isSynchronous()) {
-                nodeActivityService.removeActivities(studyUuid, activityRootNetworkUuid, nodeUuids);
+                removeActivities(studyUuid, activityRootNetworkUuid, nodeUuids);
             }
         }
+    }
+
+    public void addNodeActivities(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
+        nodeActivityService.addNodeActivities(type, studyUuid, rootNetworkUuid, nodeUuids);
+    }
+
+    public void removeActivities(UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
+        nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, nodeUuids);
     }
 
     protected static <T> Supplier<T> asSupplier(Runnable action) {
