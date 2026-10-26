@@ -353,7 +353,6 @@ public class NetworkModificationService {
             @NonNull final UUID studyUuid,
             String userId) {
         // get the modification references of the whole study
-        // TODO : may be improved after integration of 5387 ticket
         List<UUID> nodes = networkModificationTreeService.getAllNodes(studyUuid)
                 .stream()
                 .filter(node -> node.getType().equals(NodeType.NETWORK_MODIFICATION))
@@ -381,7 +380,6 @@ public class NetworkModificationService {
                 notificationService.emitModificationsUpdated(studyUuid, nodeUuid, Optional.empty(), modificationReferenceUuids);
             }
         );
-        // notificationService.emitNodesChanged(studyUuid, referencesAffectedByNode.keySet()); // TODO : probablement pas utile, mais tester pour icone "partagé" ajoutée par Maissa en 5387
     }
 
     @Transactional(readOnly = true)
