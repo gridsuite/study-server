@@ -14,6 +14,9 @@ import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.service.DirectoryService;
@@ -30,6 +33,7 @@ import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_ALLOWED;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNSHARE_MODIFICATIONS;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com>
@@ -42,19 +46,22 @@ public class NetworkModificationService {
     private final NetworkModificationRestService networkModificationRestService;
     private final NotificationService notificationService;
     private final DirectoryService directoryService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
 
     public NetworkModificationService(NetworkModificationTreeService networkModificationTreeService,
                                       RootNetworkService rootNetworkService,
                                       RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                       NetworkModificationRestService networkModificationRestService,
                                       NotificationService notificationService,
-                                      DirectoryService directoryService) {
+                                      DirectoryService directoryService,
+                                      NodeActivityRunnerService nodeActivityRunnerService) {
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkService = rootNetworkService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.networkModificationRestService = networkModificationRestService;
         this.notificationService = notificationService;
         this.directoryService = directoryService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
     }
 
     public void updateNetworkModificationNameAndDescription(UUID studyUuid, UUID nodeUuid, UUID networkModificationUuid, String metadata) {
@@ -342,13 +349,39 @@ public class NetworkModificationService {
         return networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid);
     }
 
-    public void unshareModificationReference(
-        @NonNull final UUID studyUuid,
-        @NonNull final UUID nodeUuid,
-        @NonNull final UUID modificationUuid,
-        String userId) {
-        networkModificationRestService.unshareModificationReference(modificationUuid, userId);
-        notificationService.emitModificationsUpdated(studyUuid, nodeUuid, Optional.empty(), List.of(modificationUuid));
+    public void unshareAllReferencesInStudy(
+            @NonNull final UUID studyUuid,
+            String userId) {
+        // get the modification references of the whole study
+        // TODO : may be improved after integration of 5387 ticket
+        List<UUID> nodes = networkModificationTreeService.getAllNodes(studyUuid)
+                .stream()
+                .filter(node -> node.getType().equals(NodeType.NETWORK_MODIFICATION))
+                .map(NodeEntity::getIdNode).toList();
+        Map<UUID, List<UUID>> referencesAffectedByNode = new HashMap<>();
+        nodes.forEach(nodeUuid -> {
+                UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+                List<UUID> modificationReferences = networkModificationRestService.getModificationReferences(groupUuid)
+                        .stream().map(ModificationReference::modificationUuid).toList();
+                if (!modificationReferences.isEmpty()) {
+                    referencesAffectedByNode.put(nodeUuid, modificationReferences);
+                }
+            }
+        );
+
+        nodeActivityRunnerService.runWith(UNSHARE_MODIFICATIONS, studyUuid, referencesAffectedByNode.keySet().stream().toList(),
+                () -> unshareModificationReferences(studyUuid, referencesAffectedByNode, userId));
+    }
+
+    public void unshareModificationReferences(@NonNull UUID studyUuid, Map<UUID, List<UUID>> referencesAffectedByNode, String userId) {
+        referencesAffectedByNode.forEach((nodeUuid, modificationReferenceUuids) -> {
+                modificationReferenceUuids.forEach(modificationReferenceUuid ->
+                    networkModificationRestService.unshareModificationReference(modificationReferenceUuid, userId)
+                );
+                notificationService.emitModificationsUpdated(studyUuid, nodeUuid, Optional.empty(), modificationReferenceUuids);
+            }
+        );
+        // notificationService.emitNodesChanged(studyUuid, referencesAffectedByNode.keySet()); // TODO : probablement pas utile, mais tester pour icone "partagé" ajoutée par Maissa en 5387
     }
 
     @Transactional(readOnly = true)

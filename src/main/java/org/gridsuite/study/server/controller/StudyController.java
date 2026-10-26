@@ -314,8 +314,7 @@ public class StudyController {
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        networkModificationActivityRunnerService.runWith(studyUuid, nodeUuid, userId,
-            () -> networkModificationService.unshareModificationReference(studyUuid, nodeUuid, modificationUuid, userId));
+        networkModificationService.unshareModificationReferences(studyUuid, Map.of(nodeUuid, List.of(modificationUuid)), userId);
         return ResponseEntity.ok().build();
     }
 
@@ -325,7 +324,7 @@ public class StudyController {
     public ResponseEntity<Void> unshareAllReferencesInStudy(
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.unshareAllReferencesInStudy(studyUuid, userId);
+        networkModificationService.unshareAllReferencesInStudy(studyUuid, userId);
         return ResponseEntity.ok().build();
     }
 

@@ -282,8 +282,7 @@ class StudyServiceTest {
         UUID modificationUuid = UUID.randomUUID();
         String userId = "userId";
 
-        // studyService.unshareModificationReferences(studyUuid, userId, Map.of(nodeUuid, List.of(modificationUuid)));
-        networkModificationService.unshareModificationReference(studyUuid, nodeUuid, modificationUuid, userId);
+        networkModificationService.unshareModificationReferences(studyUuid, Map.of(nodeUuid, List.of(modificationUuid)), userId);
 
         // the reference is replaced remotely by a copy of the shared composite, then the front is notified
         verify(networkModificationRestService, times(1)).unshareModificationReference(modificationUuid, userId);
@@ -297,7 +296,7 @@ class StudyServiceTest {
 
         doReturn(List.of()).when(networkModificationTreeService).getAllNodes(studyUuid);
 
-        studyService.unshareAllReferencesInStudy(studyUuid, userId);
+        networkModificationService.unshareAllReferencesInStudy(studyUuid, userId);
 
         verify(networkModificationTreeService, times(1)).getAllNodes(studyUuid);
     }
@@ -316,7 +315,7 @@ class StudyServiceTest {
         doReturn(groupUuid).when(networkModificationTreeService).getModificationGroupUuid(nodeUuid);
 
         ModificationReference modificationReference = new ModificationReference(modificationUuid, UUID.randomUUID(), null);
-        doReturn(List.of(modificationReference)).when(networkModificationService).getModificationReferences(groupUuid);
+        doReturn(List.of(modificationReference)).when(networkModificationRestService).getModificationReferences(groupUuid);
 
         // Mock nodeActivityRunnerService to bypass database checks
         doAnswer(invocation -> {
@@ -325,12 +324,11 @@ class StudyServiceTest {
             return null;
         }).when(nodeActivityRunnerService).runWith(any(), any(), any(), (Runnable) any());
 
-        studyService.unshareAllReferencesInStudy(studyUuid, userId);
+        networkModificationService.unshareAllReferencesInStudy(studyUuid, userId);
 
         verify(networkModificationTreeService, times(1)).getAllNodes(studyUuid);
         verify(networkModificationTreeService, times(1)).getModificationGroupUuid(nodeUuid);
-        verify(networkModificationService, times(1)).getModificationReferences(groupUuid);
-        verify(networkModificationService, times(1)).unshareModificationReference(modificationUuid, userId);
+        verify(networkModificationRestService, times(1)).getModificationReferences(groupUuid);
         verify(notificationService, times(1)).emitModificationsUpdated(studyUuid, nodeUuid, Optional.empty(), List.of(modificationUuid));
     }
 
@@ -346,9 +344,8 @@ class StudyServiceTest {
 
         assertThrows(RuntimeException.class,
                 // () -> studyService.unshareModificationReferences(studyUuid, userId, Map.of(nodeUuid, List.of(modificationUuid))));
-                () -> networkModificationService.unshareModificationReference(studyUuid, nodeUuid, modificationUuid, userId));
+                () -> networkModificationService.unshareModificationReferences(studyUuid, Map.of(nodeUuid, List.of(modificationUuid)), userId));
 
         verify(notificationService, never()).emitModificationsUpdated(any(), any(), any(), any());
     }
-
 }
