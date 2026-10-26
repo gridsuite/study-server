@@ -356,7 +356,9 @@ public class NetworkModificationService {
         List<UUID> nodes = networkModificationTreeService.getAllNodes(studyUuid)
                 .stream()
                 .filter(node -> node.getType().equals(NodeType.NETWORK_MODIFICATION))
-                .map(NodeEntity::getIdNode).toList();
+                .map(NodeEntity::getIdNode)
+                .filter(idNode -> !networkModificationTreeService.isReadOnly(idNode))
+                .toList();
         Map<UUID, List<UUID>> referencesAffectedByNode = new HashMap<>();
         nodes.forEach(nodeUuid -> {
                 UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
