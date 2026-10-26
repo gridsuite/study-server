@@ -126,9 +126,9 @@ class NetworkModificationServiceTest {
     @Test
     void testUnshareModificationReference() {
         UUID modificationReferenceUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationReferenceUuid + "/unshare";
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/unshare?uuids=" + modificationReferenceUuid;
 
-        networkModificationService.unshareModificationReference(modificationReferenceUuid, USER_ID);
+        networkModificationService.unshareModificationReferences(List.of(modificationReferenceUuid), USER_ID);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

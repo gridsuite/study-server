@@ -357,7 +357,6 @@ public class NetworkModificationService {
                 .stream()
                 .filter(node -> node.getType().equals(NodeType.NETWORK_MODIFICATION))
                 .map(NodeEntity::getIdNode)
-                .filter(idNode -> !Boolean.TRUE.equals(networkModificationTreeService.isReadOnly(idNode)))
                 .toList();
         Map<UUID, List<UUID>> referencesAffectedByNode = new HashMap<>();
         nodes.forEach(nodeUuid -> {
@@ -376,13 +375,10 @@ public class NetworkModificationService {
 
     public void unshareModificationReferences(@NonNull UUID studyUuid, Map<UUID, List<UUID>> referencesAffectedByNode, String userId) {
         referencesAffectedByNode.forEach((nodeUuid, modificationReferenceUuids) -> {
-                modificationReferenceUuids.forEach(modificationReferenceUuid ->
-                    networkModificationRestService.unshareModificationReference(modificationReferenceUuid, userId)
-                );
-                notificationService.emitSharedModificationsUpdated(studyUuid, nodeUuid, modificationReferenceUuids);
+                networkModificationRestService.unshareModificationReferences(modificationReferenceUuids, userId);
+                notificationService.emitModificationsUpdated(studyUuid, nodeUuid, modificationReferenceUuids);
             }
         );
-        notificationService.emitNodesChanged(studyUuid, referencesAffectedByNode.keySet());
     }
 
     @Transactional(readOnly = true)

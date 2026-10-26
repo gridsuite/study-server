@@ -35,7 +35,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAX_OPERATION_TYPE_EXCEEDED;
@@ -285,8 +284,8 @@ class StudyServiceTest {
         networkModificationService.unshareModificationReferences(studyUuid, Map.of(nodeUuid, List.of(modificationUuid)), userId);
 
         // the reference is replaced remotely by a copy of the shared composite, then the front is notified
-        verify(networkModificationRestService, times(1)).unshareModificationReference(modificationUuid, userId);
-        verify(notificationService, times(1)).emitModificationsUpdated(studyUuid, nodeUuid, Optional.empty(), List.of(modificationUuid));
+        verify(networkModificationRestService, times(1)).unshareModificationReferences(List.of(modificationUuid), userId);
+        verify(notificationService, times(1)).emitModificationsUpdated(studyUuid, nodeUuid, List.of(modificationUuid));
     }
 
     @Test
@@ -329,7 +328,7 @@ class StudyServiceTest {
         verify(networkModificationTreeService, times(1)).getAllNodes(studyUuid);
         verify(networkModificationTreeService, times(1)).getModificationGroupUuid(nodeUuid);
         verify(networkModificationRestService, times(1)).getModificationReferences(groupUuid);
-        verify(notificationService, times(1)).emitModificationsUpdated(studyUuid, nodeUuid, Optional.empty(), List.of(modificationUuid));
+        verify(notificationService, times(1)).emitModificationsUpdated(studyUuid, nodeUuid, List.of(modificationUuid));
     }
 
     @Test
@@ -340,10 +339,9 @@ class StudyServiceTest {
         String userId = "userId";
 
         doThrow(new RuntimeException("network modification server error"))
-                .when(networkModificationRestService).unshareModificationReference(modificationUuid, userId);
+                .when(networkModificationRestService).unshareModificationReferences(List.of(modificationUuid), userId);
 
         assertThrows(RuntimeException.class,
-                // () -> studyService.unshareModificationReferences(studyUuid, userId, Map.of(nodeUuid, List.of(modificationUuid))));
                 () -> networkModificationService.unshareModificationReferences(studyUuid, Map.of(nodeUuid, List.of(modificationUuid)), userId));
 
         verify(notificationService, never()).emitModificationsUpdated(any(), any(), any(), any());
