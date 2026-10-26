@@ -22,6 +22,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
@@ -92,6 +93,8 @@ class RootNetworkApplicabilityTest {
     @Autowired
     private StudyService studyService;
     @Autowired
+    private NetworkModificationService networkModificationService;
+    @Autowired
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Autowired
     private RootNetworkService rootNetworkService;
@@ -103,7 +106,7 @@ class RootNetworkApplicabilityTest {
     private OutputDestination output;
 
     @MockitoBean
-    private NetworkModificationRestService networkModificationService;
+    private NetworkModificationRestService networkModificationRestService;
     @MockitoBean
     private DirectoryService directoryService;
     @MockitoBean
@@ -131,15 +134,15 @@ class RootNetworkApplicabilityTest {
 
         // an unknown modification returns 404 and does not update anything
         UUID invalidModificationUuid = UUID.randomUUID();
-        doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND)).when(networkModificationService).verifyModifications(firstNode.getModificationGroupUuid(), Set.of(invalidModificationUuid));
+        doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND)).when(networkModificationRestService).verifyModifications(firstNode.getModificationGroupUuid(), Set.of(invalidModificationUuid));
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkUuid, firstNode.getId())
                 .param("uuids", invalidModificationUuid.toString())
                 .param("applicable", Boolean.FALSE.toString())
                 .header(USER_ID, USER_ID))
             .andExpect(status().isNotFound());
-        verify(networkModificationService, never()).updateRootNetworkApplicability(anyList(), anyString(), anyBoolean(), eq("userId"));
+        verify(networkModificationRestService, never()).updateRootNetworkApplicability(anyList(), anyString(), anyBoolean(), eq("userId"));
 
-        doNothing().when(networkModificationService).verifyModifications(firstNode.getModificationGroupUuid(), Set.of(MODIFICATION_1));
+        doNothing().when(networkModificationRestService).verifyModifications(firstNode.getModificationGroupUuid(), Set.of(MODIFICATION_1));
 
         // deactivating the modification on that root network is forwarded with its tag
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkUuid, firstNode.getId())
@@ -147,7 +150,7 @@ class RootNetworkApplicabilityTest {
                 .param("applicable", Boolean.FALSE.toString())
                 .header(USER_ID, USER_ID))
             .andExpect(status().isOk());
-        verify(networkModificationService, times(1))
+        verify(networkModificationRestService, times(1))
                 .updateRootNetworkApplicability(List.of(MODIFICATION_1), ROOT_NETWORK_TAG_1, false, "userId");
 
         // and so is activating it back
@@ -156,7 +159,7 @@ class RootNetworkApplicabilityTest {
                 .param("applicable", Boolean.TRUE.toString())
                 .header(USER_ID, USER_ID))
             .andExpect(status().isOk());
-        verify(networkModificationService, times(1))
+        verify(networkModificationRestService, times(1))
                 .updateRootNetworkApplicability(List.of(MODIFICATION_1), ROOT_NETWORK_TAG_1, true, "userId");
     }
 
@@ -171,18 +174,18 @@ class RootNetworkApplicabilityTest {
 
         // the modification is a reference to a shared modification the user is not allowed to write on
         UUID sharedModificationUuid = UUID.randomUUID();
-        doReturn(List.of(new ModificationReference(MODIFICATION_1, sharedModificationUuid, null))).when(networkModificationService).getModificationReferences(List.of(MODIFICATION_1));
+        doReturn(List.of(new ModificationReference(MODIFICATION_1, sharedModificationUuid, null))).when(networkModificationRestService).getModificationReferences(List.of(MODIFICATION_1));
         doThrow(HttpClientErrorException.create(HttpStatus.FORBIDDEN, "Forbidden", null, null, null))
             .when(directoryService).checkPermission(List.of(sharedModificationUuid), null, USER_ID, PermissionType.WRITE, false);
 
         UUID studyUuid = studyEntity.getId();
         UUID nodeUuid = firstNode.getId();
         Set<UUID> modificationUuids = Set.of(MODIFICATION_1);
-        assertThrows(HttpClientErrorException.class, () -> studyService.updateNetworkModificationsApplicabilityInRootNetwork(
+        assertThrows(HttpClientErrorException.class, () -> networkModificationService.updateNetworkModificationsApplicabilityInRootNetwork(
             studyUuid, nodeUuid, rootNetworkUuid, modificationUuids, USER_ID, false));
 
         // the applicability of the shared modification is left untouched
-        verify(networkModificationService, never()).updateRootNetworkApplicability(anyList(), anyString(), anyBoolean(), eq("userId"));
+        verify(networkModificationRestService, never()).updateRootNetworkApplicability(anyList(), anyString(), anyBoolean(), eq("userId"));
     }
 
     @Test
@@ -200,7 +203,7 @@ class RootNetworkApplicabilityTest {
         networkModificationTreeService.buildNode(studyEntity.getId(), secondNode.getId(), rootNetworkUuid, "userId", null);
 
         ArgumentCaptor<BuildInfos> buildInfosCaptor = ArgumentCaptor.captor();
-        verify(networkModificationService).buildNode(any(UUID.class), any(UUID.class), buildInfosCaptor.capture(), isNull());
+        verify(networkModificationRestService).buildNode(any(UUID.class), any(UUID.class), buildInfosCaptor.capture(), isNull());
         assertEquals(ROOT_NETWORK_TAG_1, buildInfosCaptor.getValue().getRootNetworkTag());
     }
 
@@ -230,7 +233,7 @@ class RootNetworkApplicabilityTest {
         networkModificationTreeService.buildNode(studyEntity.getId(), firstNode.getId(), rootNetworkEntity.getId(), USER_ID, null);
 
         ArgumentCaptor<BuildInfos> buildInfosCaptor = ArgumentCaptor.captor();
-        verify(networkModificationService).buildNode(any(UUID.class), any(UUID.class), buildInfosCaptor.capture(), isNull());
+        verify(networkModificationRestService).buildNode(any(UUID.class), any(UUID.class), buildInfosCaptor.capture(), isNull());
         assertNull(buildInfosCaptor.getValue().getRootNetworkTag());
         // whereas the modifications written are associated with the real tag, for the study to turn multi root network later
         assertEquals(rootNetworkEntity.getTag(),
@@ -279,16 +282,16 @@ class RootNetworkApplicabilityTest {
         updateRootNetwork(studyEntity.getId(), rootNetworkUuid, ROOT_NETWORK_TAG_2);
 
         ArgumentCaptor<List<UUID>> groupUuidsCaptor = ArgumentCaptor.captor();
-        verify(networkModificationService, times(1)).renameRootNetworkTag(groupUuidsCaptor.capture(), eq(ROOT_NETWORK_TAG_1), eq(ROOT_NETWORK_TAG_2), eq(USER_ID));
+        verify(networkModificationRestService, times(1)).renameRootNetworkTag(groupUuidsCaptor.capture(), eq(ROOT_NETWORK_TAG_1), eq(ROOT_NETWORK_TAG_2), eq(USER_ID));
         assertEquals(Set.of(firstNode.getModificationGroupUuid(), secondNode.getModificationGroupUuid()), Set.copyOf(groupUuidsCaptor.getValue()));
 
         // an update carrying no tag at all leaves it as it was, so it is not a rename
         updateRootNetwork(studyEntity.getId(), rootNetworkUuid, null);
-        verify(networkModificationService, times(1)).renameRootNetworkTag(any(), any(), any(), any());
+        verify(networkModificationRestService, times(1)).renameRootNetworkTag(any(), any(), any(), any());
 
         // and neither is an update carrying the tag the root network already has
         updateRootNetwork(studyEntity.getId(), rootNetworkUuid, ROOT_NETWORK_TAG_2);
-        verify(networkModificationService, times(1)).renameRootNetworkTag(any(), any(), any(), any());
+        verify(networkModificationRestService, times(1)).renameRootNetworkTag(any(), any(), any(), any());
     }
 
     @Test
@@ -302,7 +305,7 @@ class RootNetworkApplicabilityTest {
 
         // the study points to a shared modification the user is not allowed to write on, and not associated with the new tag
         doThrow(HttpClientErrorException.create(HttpStatus.FORBIDDEN, "Forbidden", null, null, null))
-            .when(networkModificationService).assertRootNetworkTagsAllowed(List.of(firstNode.getModificationGroupUuid()), List.of(), List.of(), List.of(ROOT_NETWORK_TAG_2), USER_ID);
+            .when(networkModificationRestService).assertRootNetworkTagsAllowed(List.of(firstNode.getModificationGroupUuid()), List.of(), List.of(), List.of(ROOT_NETWORK_TAG_2), USER_ID);
 
         UUID studyUuid = studyEntity.getId();
         RootNetworkInfos renamingTagInfos = RootNetworkInfos.builder().id(rootNetworkUuid).tag(ROOT_NETWORK_TAG_2).build();
@@ -310,11 +313,11 @@ class RootNetworkApplicabilityTest {
 
         // neither the tag nor the applicabilities are touched
         assertEquals(ROOT_NETWORK_TAG_1, rootNetworkService.getRootNetworkTag(rootNetworkUuid));
-        verify(networkModificationService, never()).renameRootNetworkTag(any(), any(), any(), any());
+        verify(networkModificationRestService, never()).renameRootNetworkTag(any(), any(), any(), any());
 
         // an update keeping the tag is no rename, so it needs no permission
         updateRootNetwork(studyUuid, rootNetworkUuid, ROOT_NETWORK_TAG_1);
-        verify(networkModificationService, times(1)).assertRootNetworkTagsAllowed(any(), any(), any(), any(), any());
+        verify(networkModificationRestService, times(1)).assertRootNetworkTagsAllowed(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -325,11 +328,11 @@ class RootNetworkApplicabilityTest {
 
         // a study with no modification node contains no shared modification, and the server is not even asked
         assertEquals(SharedModificationsWriteAccess.NO_SHARED_MODIFICATION, getSharedModificationsWriteAccess(studyUuid));
-        verify(networkModificationService, never()).getReferencedModificationsWriteAccess(any(), any());
+        verify(networkModificationRestService, never()).getReferencedModificationsWriteAccess(any(), any());
 
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
         NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
-        doReturn(SharedModificationsWriteAccess.NONE_WRITABLE).when(networkModificationService)
+        doReturn(SharedModificationsWriteAccess.NONE_WRITABLE).when(networkModificationRestService)
             .getReferencedModificationsWriteAccess(List.of(firstNode.getModificationGroupUuid()), USER_ID);
 
         assertEquals(SharedModificationsWriteAccess.NONE_WRITABLE, getSharedModificationsWriteAccess(studyUuid));
@@ -360,7 +363,7 @@ class RootNetworkApplicabilityTest {
 
         studyService.deleteRootNetworks(studyEntity.getId(), List.of(deletedRootNetworkUuid), USER_ID);
 
-        verify(networkModificationService, times(1)).deleteRootNetworkTags(List.of(firstNode.getModificationGroupUuid()), List.of(ROOT_NETWORK_TAG_2));
+        verify(networkModificationRestService, times(1)).deleteRootNetworkTags(List.of(firstNode.getModificationGroupUuid()), List.of(ROOT_NETWORK_TAG_2));
     }
 
     private void updateRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String tag) throws Exception {
