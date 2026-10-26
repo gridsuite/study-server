@@ -14,6 +14,8 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.RootNetworkTagsCheckInfos;
+import org.gridsuite.study.server.dto.SharedModificationsWriteAccess;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
 import org.gridsuite.study.server.service.RootNetworkService;
@@ -436,7 +438,7 @@ public class NetworkModificationRestService {
     /**
      * Renames a root network tag in the applicabilities held by the modifications of the given groups.
      */
-    public void renameRootNetworkTag(List<UUID> groupUuids, String oldTag, String newTag) {
+    public void renameRootNetworkTag(List<UUID> groupUuids, String oldTag, String newTag, String userId) {
         Objects.requireNonNull(oldTag);
         Objects.requireNonNull(newTag);
         if (CollectionUtils.isEmpty(groupUuids)) {
@@ -453,6 +455,7 @@ public class NetworkModificationRestService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HEADER_USER_ID, userId);
 
         restTemplate.exchange(uri, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
@@ -796,19 +799,23 @@ public class NetworkModificationRestService {
         return containersWithReferenceModifications == null ? Set.of() : new HashSet<>(containersWithReferenceModifications);
     }
 
-    /**
-     * Asserts that the user may write on every shared modification the given containers point to, directly or through
-     * other shared modifications. Throws when they cannot.
-     */
-    public void assertReferencedModificationsAreWritable(List<UUID> containerUuids, String userId) {
-        if (containerUuids.isEmpty()) {
-            return;
-        }
-        String path = UriComponentsBuilder.fromPath(CONTAINERS + DELIMITER + "references/authorized")
+    public SharedModificationsWriteAccess getReferencedModificationsWriteAccess(List<UUID> containerUuids, String userId) {
+        String path = UriComponentsBuilder.fromPath(CONTAINERS + DELIMITER + "references/write-access")
                 .queryParam(UUIDS, containerUuids)
                 .build().toUriString();
+        return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET,
+                userIdEntity(userId), SharedModificationsWriteAccess.class).getBody();
+    }
 
-        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, userIdEntity(userId), Void.class);
+    /**
+     * Throws forbidden when the unwritable shared modifications involved miss some of the tags.
+     */
+    public void assertRootNetworkTagsAllowed(List<UUID> containerUuids, List<String> rootNetworkTags, String userId) {
+        if (rootNetworkTags.isEmpty() || containerUuids.isEmpty()) {
+            return;
+        }
+        restTemplate.exchange(getNetworkModificationServerURI(false) + CONTAINERS + DELIMITER + "root-network-tags/authorized",
+                HttpMethod.POST, userIdEntity(userId, new RootNetworkTagsCheckInfos(containerUuids, rootNetworkTags)), Void.class);
     }
 
     /**
