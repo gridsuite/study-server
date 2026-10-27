@@ -6,18 +6,14 @@
  */
 package org.gridsuite.study.server.nodeactivity;
 
-import org.gridsuite.study.server.error.StudyException;
-import org.gridsuite.study.server.repository.nodeactivity.BatchActionRepository;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.Supplier;
-import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.BUILD;
@@ -28,20 +24,14 @@ import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_MODI
  */
 @Service
 public class NetworkModificationActivityRunnerService extends AbstractNodeActivityRunnerService {
-    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
 
     private final NetworkModificationService networkModificationService;
-    private final NetworkModificationTreeService networkModificationTreeService;
-    private final BatchActionRepository batchActionRepository;
 
-    public NetworkModificationActivityRunnerService(NodeActivityService nodeActivityService,
-                                                    NetworkModificationService networkModificationService,
-                                                    NetworkModificationTreeService networkModificationTreeService,
-                                                    BatchActionRepository batchActionRepository) {
-        super(nodeActivityService);
+    public NetworkModificationActivityRunnerService(BatchActionRunnerService batchActionRunnerService,
+                                                    NodeActivityService nodeActivityService,
+                                                    NetworkModificationService networkModificationService) {
+        super(batchActionRunnerService, nodeActivityService);
         this.networkModificationService = networkModificationService;
-        this.networkModificationTreeService = networkModificationTreeService;
-        this.batchActionRepository = batchActionRepository;
     }
 
     public <T> T runWith(UUID studyUuid, UUID nodeUuid, String userId, Runnable action) {
@@ -76,54 +66,5 @@ public class NetworkModificationActivityRunnerService extends AbstractNodeActivi
                 }
             })
         );
-    }
-
-    public boolean runInvalidateNodeTreeBatch(UUID studyUuid, UUID nodeUuid, boolean newBatch) {
-        try {
-            runWith(EDIT_MODIFICATIONS, studyUuid, null, List.of(nodeUuid),
-                () -> networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid));
-        } catch (StudyException e) {
-            if (!e.isNodeActivityConflict()) {
-                throw e;
-            }
-            if (newBatch) {
-                batchActionRepository.save(new BatchActionEntity(nodeUuid, studyUuid, BatchActionType.INVALIDATE_NODE_TREE, Instant.now()));
-            }
-            return false;
-        }
-        return true;
-    }
-
-    @Override
-    public void removeActivities(UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
-        super.removeActivities(studyUuid, rootNetworkUuid, nodeUuids);
-
-        runMostRecentBatch();
-    }
-
-    private void runMostRecentBatch() {
-        // Get most recent batch
-        // TODO use a query with oldest instant
-        BatchActionEntity mostRecentBatch = batchActionRepository.findAll().stream()
-            .max(Comparator.comparing(BatchActionEntity::getCreatedAt))
-            .orElse(null);
-        if (mostRecentBatch == null) {
-            return;
-        }
-
-        // Run batch
-        boolean runOk = false;
-        switch (mostRecentBatch.getType()) {
-            case INVALIDATE_NODE_TREE:
-                runOk = runInvalidateNodeTreeBatch(mostRecentBatch.getStudyId(), mostRecentBatch.getNodeId(), false);
-                break;
-            default:
-                LOGGER.error("Unsupported batch node action type : {}", mostRecentBatch.getType());
-        }
-
-        // Remove batch
-        if (runOk) {
-            batchActionRepository.deleteById(mostRecentBatch.getId());
-        }
     }
 }

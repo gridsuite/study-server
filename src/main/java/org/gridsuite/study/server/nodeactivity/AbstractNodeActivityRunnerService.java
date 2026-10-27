@@ -6,6 +6,9 @@
  */
 package org.gridsuite.study.server.nodeactivity;
 
+import lombok.NonNull;
+
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -15,9 +18,11 @@ import java.util.function.Supplier;
  */
 public abstract class AbstractNodeActivityRunnerService {
 
+    private final BatchActionRunnerService batchActionRunnerService;
     protected final NodeActivityService nodeActivityService;
 
-    protected AbstractNodeActivityRunnerService(NodeActivityService nodeActivityService) {
+    protected AbstractNodeActivityRunnerService(BatchActionRunnerService batchActionRunnerService, NodeActivityService nodeActivityService) {
+        this.batchActionRunnerService = batchActionRunnerService;
         this.nodeActivityService = nodeActivityService;
     }
 
@@ -50,6 +55,8 @@ public abstract class AbstractNodeActivityRunnerService {
 
     public void removeActivities(UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
         nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, nodeUuids);
+
+        batchActionRunnerService.runNextAction(this);
     }
 
     protected static <T> Supplier<T> asSupplier(Runnable action) {
@@ -57,5 +64,9 @@ public abstract class AbstractNodeActivityRunnerService {
             action.run();
             return null;
         };
+    }
+
+    public void runBatchAction(@NonNull BatchActionType type, @NonNull UUID studyId, @NonNull UUID nodeId) {
+        batchActionRunnerService.runAction(this, new BatchActionEntity(nodeId, studyId, type, Instant.now()), true);
     }
 }

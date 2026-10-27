@@ -55,9 +55,6 @@ public class NodeActivityEntity {
     @Column(name = "started_at", nullable = false, columnDefinition = "timestamptz")
     private Instant startedAt;
 
-    @Column(name = "batch", nullable = false)
-    private boolean batch = false;
-
     public static NodeActivityEntity from(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);

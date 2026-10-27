@@ -8,11 +8,13 @@ package org.gridsuite.study.server.repository.nodeactivity;
 
 import org.gridsuite.study.server.nodeactivity.BatchActionEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.UUID;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
+@Repository
 public interface BatchActionRepository extends JpaRepository<BatchActionEntity, UUID> {
 }

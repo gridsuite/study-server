@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.dto.ReferenceAttributes;
+import org.gridsuite.study.server.nodeactivity.BatchActionType;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.nodeactivity.NodeActivityService;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -86,6 +87,18 @@ class ConsumerServiceSharedElementUpdateTest {
     void setup() {
         consumeSharedElementUpdate = consumerService.consumeSharedElementUpdate();
         when(networkModificationTreeService.getStudyUuidForNodeId(any(UUID.class))).thenReturn(studyUuid);
+    }
+
+    @Test
+    void testBatchAction() {
+        UUID nodeUuid = UUID.randomUUID();
+        UUID modificationUuid = UUID.randomUUID();
+
+        consumeSharedElementUpdate.accept(sharedElementUpdateMessage(
+            List.of(createStudyNodeReference(modificationUuid, nodeUuid)), List.of()));
+
+        verify(nodeActivityRunnerService, times(1)).runBatchAction(BatchActionType.INVALIDATE_NODE_TREE, studyUuid, nodeUuid);
+        verify(notificationService).emitSharedModificationsUpdated(studyUuid, nodeUuid, List.of(modificationUuid));
     }
 
     @Test
