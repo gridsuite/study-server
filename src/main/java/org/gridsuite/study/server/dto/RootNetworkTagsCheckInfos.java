@@ -12,5 +12,6 @@ import java.util.UUID;
 /**
  * Modifications to check against root network tags.
  */
-public record RootNetworkTagsCheckInfos(List<UUID> containerUuids, List<String> tags) {
+public record RootNetworkTagsCheckInfos(List<UUID> containerUuids, List<UUID> modificationUuids, List<UUID> sharedUuids,
+                                        List<String> tags) {
 }

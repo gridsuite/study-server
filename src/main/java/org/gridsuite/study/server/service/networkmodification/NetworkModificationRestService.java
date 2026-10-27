@@ -789,12 +789,15 @@ public class NetworkModificationRestService {
     /**
      * Throws forbidden when the unwritable shared modifications involved miss some of the tags.
      */
-    public void assertRootNetworkTagsAllowed(List<UUID> containerUuids, List<String> rootNetworkTags, String userId) {
-        if (rootNetworkTags.isEmpty() || containerUuids.isEmpty()) {
+    public void assertRootNetworkTagsAllowed(List<UUID> containerUuids, List<UUID> modificationUuids, List<UUID> sharedUuids,
+                                             List<String> rootNetworkTags, String userId) {
+        if (rootNetworkTags.isEmpty() || containerUuids.isEmpty() && modificationUuids.isEmpty() && sharedUuids.isEmpty()) {
             return;
         }
         restTemplate.exchange(getNetworkModificationServerURI(false) + CONTAINERS + DELIMITER + "root-network-tags/authorized",
-                HttpMethod.POST, userIdEntity(userId, new RootNetworkTagsCheckInfos(containerUuids, rootNetworkTags)), Void.class);
+                HttpMethod.POST,
+                userIdEntity(userId, new RootNetworkTagsCheckInfos(containerUuids, modificationUuids, sharedUuids, rootNetworkTags)),
+                Void.class);
     }
 
     /**
