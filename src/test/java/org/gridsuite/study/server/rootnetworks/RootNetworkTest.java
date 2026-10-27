@@ -387,11 +387,13 @@ class RootNetworkTest {
     }
 
     @Test
-    void testCreateRootNetworkConsumer() throws Exception {
+    void testCreateRootNetwork() throws Exception {
         // create study with first root network
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         UUID studyUuid = studyEntity.getId();
         studyRepository.save(studyEntity);
+        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
+        NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
 
         UUID newRootNetworkUuid = UUID.randomUUID();
 
@@ -433,6 +435,8 @@ class RootNetworkTest {
 
         // check case expiration has been disabled
         verify(caseService, times(1)).disableCaseExpiration(CASE_UUID2);
+
+        verify(networkModificationService, times(1)).addRootNetworkTag(List.of(firstNode.getModificationGroupUuid()), "rn2");
     }
 
     private void createAndConsumeMessageCaseImport(UUID studyUuid, RootNetworkInfos rootNetworkInfos, CaseImportAction caseImportAction) throws Exception {
