@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAX_OPERATION_TYPE_EXCEEDED;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNSHARE_MODIFICATIONS;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
@@ -293,11 +294,14 @@ class StudyServiceTest {
         UUID studyUuid = UUID.randomUUID();
         String userId = "userId";
 
-        doReturn(List.of()).when(networkModificationTreeService).getAllNodes(studyUuid);
+        doReturn(List.of()).when(networkModificationTreeService).getAllNotStashedNetworkModificationNodes(studyUuid);
 
         networkModificationService.unshareAllReferencesInStudy(studyUuid, userId);
 
-        verify(networkModificationTreeService, times(1)).getAllNodes(studyUuid);
+        verify(networkModificationTreeService, times(1)).getAllNotStashedNetworkModificationNodes(studyUuid);
+        verify(nodeActivityRunnerService, never()).runWith(any(), any(), any(), (Runnable) any());
+        verify(networkModificationRestService, never()).unshareModificationReferences(any(), any());
+        verify(notificationService, never()).emitModificationsUpdated(any(), any(), any());
     }
 
     @Test
@@ -307,11 +311,17 @@ class StudyServiceTest {
         UUID modificationUuid = UUID.randomUUID();
         String userId = "userId";
 
-        NodeEntity nodeEntity = new NodeEntity(nodeUuid, null, NodeType.NETWORK_MODIFICATION, null, false, null, List.of());
-        doReturn(List.of(nodeEntity)).when(networkModificationTreeService).getAllNodes(studyUuid);
+        UUID nodeWithoutReferenceUuid = UUID.randomUUID();
+        doReturn(List.of(
+                new NodeEntity(nodeUuid, null, NodeType.NETWORK_MODIFICATION, null, false, null, List.of()),
+                new NodeEntity(nodeWithoutReferenceUuid, null, NodeType.NETWORK_MODIFICATION, null, false, null, List.of())
+        )).when(networkModificationTreeService).getAllNotStashedNetworkModificationNodes(studyUuid);
 
         UUID groupUuid = UUID.randomUUID();
         doReturn(groupUuid).when(networkModificationTreeService).getModificationGroupUuid(nodeUuid);
+        UUID groupWithoutReferenceUuid = UUID.randomUUID();
+        doReturn(groupWithoutReferenceUuid).when(networkModificationTreeService).getModificationGroupUuid(nodeWithoutReferenceUuid);
+        doReturn(List.of()).when(networkModificationRestService).getModificationReferences(groupWithoutReferenceUuid);
 
         ModificationReference modificationReference = new ModificationReference(modificationUuid, UUID.randomUUID(), null);
         doReturn(List.of(modificationReference)).when(networkModificationRestService).getModificationReferences(groupUuid);
@@ -325,10 +335,14 @@ class StudyServiceTest {
 
         networkModificationService.unshareAllReferencesInStudy(studyUuid, userId);
 
-        verify(networkModificationTreeService, times(1)).getAllNodes(studyUuid);
+        verify(networkModificationTreeService, times(1)).getAllNotStashedNetworkModificationNodes(studyUuid);
         verify(networkModificationTreeService, times(1)).getModificationGroupUuid(nodeUuid);
         verify(networkModificationRestService, times(1)).getModificationReferences(groupUuid);
+        // only the node having references is held by the activity
+        verify(nodeActivityRunnerService, times(1)).runWith(eq(UNSHARE_MODIFICATIONS), eq(studyUuid), eq(List.of(nodeUuid)), (Runnable) any());
+        verify(networkModificationRestService, times(1)).unshareModificationReferences(List.of(modificationUuid), userId);
         verify(notificationService, times(1)).emitModificationsUpdated(studyUuid, nodeUuid, List.of(modificationUuid));
+        verify(notificationService, never()).emitModificationsUpdated(eq(studyUuid), eq(nodeWithoutReferenceUuid), any());
     }
 
     @Test
@@ -344,6 +358,6 @@ class StudyServiceTest {
         assertThrows(RuntimeException.class,
                 () -> networkModificationService.unshareModificationReferences(studyUuid, Map.of(nodeUuid, List.of(modificationUuid)), userId));
 
-        verify(notificationService, never()).emitModificationsUpdated(any(), any(), any(), any());
+        verify(notificationService, never()).emitModificationsUpdated(any(), any(), any());
     }
 }

@@ -999,6 +999,10 @@ public class NetworkModificationTreeService {
         return nodesRepository.findAllByStudyId(studyUuid);
     }
 
+    public List<NodeEntity> getAllNotStashedNetworkModificationNodes(UUID studyUuid) {
+        return nodesRepository.findAllByStudyIdAndTypeAndStashed(studyUuid, NodeType.NETWORK_MODIFICATION, false);
+    }
+
     /**
      * Gets or generates a modification report UUID for a node.
      * <p>

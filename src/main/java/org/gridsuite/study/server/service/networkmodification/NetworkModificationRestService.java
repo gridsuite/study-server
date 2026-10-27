@@ -150,12 +150,8 @@ public class NetworkModificationRestService {
     }
 
     public void unshareModificationReferences(List<UUID> modificationReferenceUuids, String userId) {
-        String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + "/unshare")
-                .queryParam(UUIDS, modificationReferenceUuids).build().toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set(HEADER_USER_ID, userId);
-        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
+        String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + "/unshare").build().toUriString();
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, userIdEntity(userId, modificationReferenceUuids), Void.class);
     }
 
     public void updateNetworkModificationsMetadata(List<UUID> networkModificationUuids, String metadata, String userId) {

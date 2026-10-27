@@ -15,7 +15,6 @@ import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
@@ -352,33 +351,32 @@ public class NetworkModificationService {
     public void unshareAllReferencesInStudy(
             @NonNull final UUID studyUuid,
             String userId) {
-        // get the modification references of the whole study sorted by their node
-        List<UUID> nodes = networkModificationTreeService.getAllNodes(studyUuid)
-                .stream()
-                .filter(node -> node.getType().equals(NodeType.NETWORK_MODIFICATION))
-                .map(NodeEntity::getIdNode)
-                .toList();
+        // get the modification references of the whole study grouped by their node
         Map<UUID, List<UUID>> referencesAffectedByNode = new HashMap<>();
-        nodes.forEach(nodeUuid -> {
-                UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-                List<UUID> modificationReferences = networkModificationRestService.getModificationReferences(groupUuid)
-                        .stream().map(ModificationReference::modificationUuid).toList();
-                if (!modificationReferences.isEmpty()) {
-                    referencesAffectedByNode.put(nodeUuid, modificationReferences);
-                }
-            }
-        );
+        networkModificationTreeService.getAllNotStashedNetworkModificationNodes(studyUuid).stream()
+                .map(NodeEntity::getIdNode)
+                .forEach(nodeUuid -> {
+                    UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+                    List<UUID> modificationReferences = networkModificationRestService.getModificationReferences(groupUuid)
+                            .stream().map(ModificationReference::modificationUuid).toList();
+                    if (!modificationReferences.isEmpty()) {
+                        referencesAffectedByNode.put(nodeUuid, modificationReferences);
+                    }
+                });
+        if (referencesAffectedByNode.isEmpty()) {
+            return;
+        }
 
-        nodeActivityRunnerService.runWith(UNSHARE_MODIFICATIONS, studyUuid, referencesAffectedByNode.keySet().stream().toList(),
+        nodeActivityRunnerService.runWith(UNSHARE_MODIFICATIONS, studyUuid, new ArrayList<>(referencesAffectedByNode.keySet()),
                 () -> unshareModificationReferences(studyUuid, referencesAffectedByNode, userId));
     }
 
     public void unshareModificationReferences(@NonNull UUID studyUuid, Map<UUID, List<UUID>> referencesAffectedByNode, String userId) {
-        referencesAffectedByNode.forEach((nodeUuid, modificationReferenceUuids) -> {
-                networkModificationRestService.unshareModificationReferences(modificationReferenceUuids, userId);
-                notificationService.emitModificationsUpdated(studyUuid, nodeUuid, modificationReferenceUuids);
-            }
-        );
+        // a single remote call for all the references, then every affected node is notified
+        List<UUID> allModificationReferenceUuids = referencesAffectedByNode.values().stream().flatMap(List::stream).toList();
+        networkModificationRestService.unshareModificationReferences(allModificationReferenceUuids, userId);
+        referencesAffectedByNode.forEach((nodeUuid, modificationReferenceUuids) ->
+                notificationService.emitModificationsUpdated(studyUuid, nodeUuid, modificationReferenceUuids));
     }
 
     @Transactional(readOnly = true)
