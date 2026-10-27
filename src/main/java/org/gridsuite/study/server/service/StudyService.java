@@ -379,6 +379,7 @@ public class StudyService {
                 studyEntity.setMonoRoot(false);
                 invalidatePreviousRootNetworkNodeTree(studyEntity);
             }
+            networkModificationRestService.addRootNetworkTag(getStudyModificationGroupUuids(studyUuid), rootNetworkInfos.getTag());
         } else {
             rootNetworkService.deleteRootNetworks(studyEntity, List.of(rootNetworkInfos));
         }
