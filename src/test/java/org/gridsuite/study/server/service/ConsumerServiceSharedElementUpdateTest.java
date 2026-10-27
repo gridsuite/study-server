@@ -34,6 +34,7 @@ import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE;
 import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_MODIFICATIONS;
 import static org.mockito.Mockito.*;
 
 /**
@@ -81,7 +82,7 @@ class ConsumerServiceSharedElementUpdateTest {
 
     private Consumer<Message<Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>>>> consumeSharedElementUpdate;
 
-    private UUID studyUuid = UUID.randomUUID();
+    private final UUID studyUuid = UUID.randomUUID();
 
     @BeforeEach
     void setup() {
@@ -153,6 +154,25 @@ class ConsumerServiceSharedElementUpdateTest {
         verify(networkModificationTreeService, times(2)).invalidateNodeTree(any(), any());
         verify(networkModificationTreeService, times(1)).invalidateNodeTree(studyUuid, node1Uuid);
         verify(networkModificationTreeService, times(1)).invalidateNodeTree(studyUuid, node2Uuid);
+    }
+
+    @Test
+    void testNotificationWithFailure() {
+        UUID failingNodeUuid = UUID.randomUUID();
+        UUID nodeUuid = UUID.randomUUID();
+        UUID failingModificationUuid = UUID.randomUUID();
+        UUID modificationUuid = UUID.randomUUID();
+
+        doThrow(new RuntimeException("node notification failure"))
+            .when(nodeActivityRunnerService).runWith(eq(EDIT_MODIFICATIONS), eq(studyUuid), eq(null), eq(List.of(failingNodeUuid)), any(Runnable.class));
+
+        consumeSharedElementUpdate.accept(sharedElementUpdateMessage(
+            List.of(createStudyNodeReference(failingModificationUuid, failingNodeUuid)),
+            List.of(createCompositeReference(modificationUuid, nodeUuid))));
+
+        verify(nodeActivityRunnerService, times(2)).runBatchAction(any(), any(), any());
+        verify(networkModificationTreeService, times(1)).invalidateNodeTree(any(), any());
+        verify(networkModificationTreeService).invalidateNodeTree(studyUuid, nodeUuid);
     }
 
     @Test

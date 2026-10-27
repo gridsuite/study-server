@@ -909,8 +909,13 @@ public class ConsumerService {
                 modificationUuidsByNodes.computeIfAbsent(nodeId, k -> new ArrayList<>()).add(ref.getReferenceId());
             }
         }));
-        modificationUuidsByNodes.entrySet().forEach(entry ->
-            handleSharedModificationsUpdate(entry.getKey(), entry.getValue(), onlyMetadata)
+        modificationUuidsByNodes.entrySet().forEach(entry -> {
+                try {
+                    handleSharedModificationsUpdate(entry.getKey(), entry.getValue(), onlyMetadata);
+                } catch (Exception e) {
+                    LOGGER.error(String.format("Could not handle shared modifications update for node %s", entry.getKey()), e);
+                }
+            }
         );
     }
 
