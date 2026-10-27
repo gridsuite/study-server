@@ -6,6 +6,8 @@
  */
 package org.gridsuite.study.server.studycontroller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.controller.StudyController;
 import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
@@ -43,6 +45,10 @@ import static org.mockito.Mockito.*;
 @SpringBootTest
 @DisableElasticsearch
 class StudyControllerRebuildNodeTest {
+
+    @Autowired
+    protected ObjectMapper mapper;
+
     @MockitoBean
     private NetworkModificationService networkModificationService;
 
@@ -141,19 +147,13 @@ class StudyControllerRebuildNodeTest {
     }
 
     @Test
-    void testUpdateNetworkModificationsNameAndDescription() {
-        String metadata =
-                "{\"message\":" +
-                        "{" +
-                        "\"name\":\"newName\"," +
-                        "\"description\":\"newDescription\"" +
-                        "}" +
-                        "}";
-
-        studyController.updateModificationNameAndDescription(studyUuid, nodeUuid, modificationUuid, metadata);
+    void testUpdateNetworkModificationsNameAndDescription() throws JsonProcessingException {
+        Map<String, Map<String, String>> metadataMap = Map.of("message", Map.of("name", "newName", "description", "newDescription"));
+        String metadata = mapper.writeValueAsString(metadataMap);
+        studyController.updateModificationNameAndDescription(studyUuid, nodeUuid, modificationUuid, metadata, userId);
 
         verify(networkModificationService, times(1))
-                .updateNetworkModificationNameAndDescription(studyUuid, nodeUuid, modificationUuid, metadata);
+                .updateNetworkModificationNameAndDescription(studyUuid, nodeUuid, modificationUuid, metadata, userId);
     }
 
     @Test
