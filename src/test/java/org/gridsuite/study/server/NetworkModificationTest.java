@@ -49,6 +49,7 @@ import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurit
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
@@ -112,6 +113,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -220,8 +222,11 @@ class NetworkModificationTest {
     @MockitoSpyBean
     private NetworkModificationTreeService networkModificationTreeService;
 
+    @MockitoSpyBean
+    private NetworkModificationService networkModificationService;
+
     @Autowired
-    private NetworkModificationRestService networkModificationService;
+    private NetworkModificationRestService networkModificationRestService;
 
     @Autowired
     private DirectoryService directoryService;
@@ -334,9 +339,10 @@ class NetworkModificationTest {
         dynamicSimulationRestService.setBaseUri(baseUrl);
         dynamicSecurityAnalysisRestService.setBaseUri(baseUrl);
 
-        networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
+        networkModificationRestService.setNetworkModificationServerBaseUri(baseUrl);
         directoryService.setDirectoryServerServerBaseUri(baseUrl);
         userAdminService.setUserAdminServerBaseUri(baseUrl);
+        wireMockStubs.stubRootNetworkTagsAllowed();
 
         buildOkStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_STRING + "/build"))
             .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", DEFAULT_BUILD_RESULT, "destination", "build.result"))
@@ -624,7 +630,7 @@ class NetworkModificationTest {
          */
 
         // just test asserts
-        doNothing().when(studyService).buildNode(any(), any(), any(), any());
+        doNothing().when(networkModificationService).buildNode(any(), any(), any(), any());
 
         // Build all nodes is ok
         testBuildAsserts(studyNameUserIdUuid, rootNetworkUuid,
@@ -2176,6 +2182,29 @@ class NetworkModificationTest {
                 "/v1/elements/" + sharedNetModId + "/references",
                 Map.of(),
                 mapper.writeValueAsString(ReferenceAttributes.createReferenceAttributes(insertedReferenceUuid, studyUuid, nodeUuid1, STUDY_NODE)));
+        // the shared composite is checked itself, the other one only through its content
+        List<String> studyTags = List.of(studyEntity.getFirstRootNetwork().getTag());
+        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL, false, Map.of(),
+                mapper.writeValueAsString(new RootNetworkTagsCheckInfos(List.of(modification1.id()), List.of(), List.of(sharedNetModId), studyTags)));
+
+        // split composites are all checked only through their content, and the study gets no reference to them
+        wireMockServer.stubFor(WireMock.any(urlPathMatching("/v1/network-composite-modifications/groups/.*"))
+                .withQueryParam("action", equalTo("SPLIT"))
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID(), UUID.randomUUID()), List.of(Optional.empty()))))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/composite-modifications?action=SPLIT",
+                        studyUuid, nodeUuid1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(compositesData)
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk());
+        checkUpdateStatusMessagesReceived(studyUuid, nodeUuid1, output);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
+        checkElementUpdatedMessageSent(studyUuid, userId);
+        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, url, false, Map.of("action", equalTo("SPLIT")), expectedBody);
+        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL, false, Map.of(),
+                mapper.writeValueAsString(new RootNetworkTagsCheckInfos(List.of(modification1.id(), sharedNetModId), List.of(), List.of(), studyTags)));
     }
 
     @Test
@@ -2354,6 +2383,37 @@ class NetworkModificationTest {
                 Map.of(QUERY_PARAM_NODE_CONTAINER_UUID, WireMock.equalTo(nodeUuid1.toString())),
                 1
         );
+    }
+
+    @Test
+    void testPasteForbiddenByASharedModificationNotAssociatedWithTheRootNetworkTags() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyUuid = studyEntity.getId();
+        UUID nodeUuid = createNetworkModificationNode(studyUuid, getRootNode(studyUuid).getId(), UUID.randomUUID(), VARIANT_ID, "New node 1", "userId").getId();
+        UUID modificationUuid = UUID.randomUUID();
+        String forbiddenBody = mapper.writeValueAsString(PowsyblWsProblemDetail.builder(HttpStatus.FORBIDDEN)
+                .server("network-modification-server")
+                .detail("forbidden")
+                .businessErrorCode("modification.rootNetworkTagsForbiddenByShared")
+                .businessErrorValues(Map.of("allowedTags", "A, B", "allowedTagsCount", 2))
+                .build());
+        UUID forbiddenStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo(WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL))
+                .atPriority(1)
+                .willReturn(WireMock.forbidden().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE).withBody(forbiddenBody)))
+                .getId();
+
+        // the error tells the user the tags they may use, and nothing is copied
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}", studyUuid, nodeUuid)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(List.of(new ModificationCopyInfos(modificationUuid, null))))
+                .header(USER_ID_HEADER, "userId"))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.businessErrorCode").value("modification.rootNetworkTagsForbiddenByShared"))
+            .andExpect(jsonPath("$.businessErrorValues.allowedTags").value("A, B"));
+
+        WireMockUtils.verifyPostRequest(wireMockServer, forbiddenStubId, WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL, false, Map.of(),
+                mapper.writeValueAsString(new RootNetworkTagsCheckInfos(List.of(), List.of(modificationUuid), List.of(),
+                        List.of(studyEntity.getFirstRootNetwork().getTag()))));
     }
 
     @Test

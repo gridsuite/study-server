@@ -1447,26 +1447,23 @@ class StudyTest extends StudyTestBase {
     }
 
     @Test
-    void testUpdateNameAndPermission() throws Exception {
+    void testUpdateNameAndDescription() throws Exception {
         UUID studyUuid = createStudyWithStubs(USER_ID_HEADER, CASE_UUID);
         UUID nodeUuid = getRootNodeUuid(studyUuid);
 
         UUID modificationUuid = UUID.randomUUID();
-        String metadata =
-                "{\"message\":" +
-                        "{" +
-                        "\"name\":\"newName\"," +
-                        "\"description\":\"newDescription\"" +
-                        "}" +
-                        "}";
+        Map<String, Map<String, String>> metadata = Map.of(
+                "message", Map.of("name", "newName", "description", "newDescription"));
+        String metadataJson = mapper.writeValueAsString(metadata);
 
-        UUID stubId = wireMockStubs.stubNetworkModificationUpdateNameAndDescription(modificationUuid.toString(), metadata);
+        UUID stubId = wireMockStubs.stubNetworkModificationUpdateNameAndDescription(modificationUuid.toString(), metadataJson);
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuid}/name-and-description",
                 studyUuid, nodeUuid, modificationUuid)
-                .content(metadata))
+                .content(metadataJson)
+                .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
 
-        wireMockStubs.verifyNetworkModificationUpdateNameAndDescription(stubId, modificationUuid.toString(), metadata);
+        wireMockStubs.verifyNetworkModificationUpdateNameAndDescription(stubId, modificationUuid.toString(), metadataJson);
         TestUtils.receiveNetworkModificationUpdate(output, studyUpdateDestination, TIMEOUT);
     }
 }
