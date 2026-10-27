@@ -651,6 +651,10 @@ public class NetworkModificationRestService {
     }
 
     public void deleteStashedModificationsFromGroups(List<UUID> groupUuids, String userId) {
+        deleteStashedModificationsFromGroups(groupUuids, true, userId);
+    }
+
+    public void deleteStashedModificationsFromGroups(List<UUID> groupUuids, boolean removeElementReferences, String userId) {
         Objects.requireNonNull(groupUuids);
         if (groupUuids.isEmpty()) {
             return;
@@ -659,8 +663,11 @@ public class NetworkModificationRestService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set(HEADER_USER_ID, userId);
         HttpEntity<String> httpEntity = new HttpEntity<>(toJson(groupUuids), headers);
-        var path = UriComponentsBuilder.fromPath(GROUPS + "/stashed-modifications")
-                .toUriString();
+        var uriBuilder = UriComponentsBuilder.fromPath(GROUPS + "/stashed-modifications");
+        if (!removeElementReferences) {
+            uriBuilder.queryParam("removeElementReferences", false);
+        }
+        var path = uriBuilder.toUriString();
 
         restTemplate.exchange(getNetworkModificationServerURI(false) + path,
                 HttpMethod.DELETE,

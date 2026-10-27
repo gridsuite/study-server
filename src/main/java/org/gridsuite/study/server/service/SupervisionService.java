@@ -456,7 +456,8 @@ public class SupervisionService {
         List<UUID> notStashedModificationGroupUuids = networkModificationNodeInfos.stream()
                 .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
                 .toList();
-        networkModificationService.deleteStashedModificationsFromGroups(notStashedModificationGroupUuids, SUPERVISION_USER);
+        // the links of the remaining reference modifications to their shared modifications are kept
+        networkModificationService.deleteStashedModificationsFromGroups(notStashedModificationGroupUuids, false, SUPERVISION_USER);
 
         // remove stashed nodes and their modifications
         studyService.deleteNodes(studyId, stashedNodes.stream().map(NodeEntity::getIdNode).toList(), true, SUPERVISION_USER, false);

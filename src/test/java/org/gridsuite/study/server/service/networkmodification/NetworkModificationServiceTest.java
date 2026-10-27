@@ -166,6 +166,19 @@ class NetworkModificationServiceTest {
     }
 
     @Test
+    void testDeleteStashedModificationsGroupsKeepingElementReferences() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/stashed-modifications?removeElementReferences=false";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HEADER_USER_ID, USER_ID);
+        networkModificationService.deleteStashedModificationsFromGroups(List.of(groupUuid), false, USER_ID);
+        HttpEntity<String> httpEntity = new HttpEntity<>("[\"" + groupUuid + "\"]", headers);
+        verify(restTemplate).exchange(expectedUrl, HttpMethod.DELETE, httpEntity, new ParameterizedTypeReference<Map<UUID, UUID>>() { });
+    }
+
+    @Test
     void testGetReferences() {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
