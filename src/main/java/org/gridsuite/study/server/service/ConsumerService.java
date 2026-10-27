@@ -917,7 +917,7 @@ public class ConsumerService {
             try {
                 studyService.sharedModificationsUpdatedNotification(nodeUuid, modificationUuids, onlyMetadata);
             } catch (Exception e) {
-                LOGGER.error("Could not handle shared modifications update for node {}", nodeUuid, e);
+                LOGGER.error(String.format("Could not handle shared modifications update for node %s", nodeUuid), e);
             }
         });
     }
