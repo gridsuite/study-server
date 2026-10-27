@@ -980,11 +980,12 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(libraries);
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network-modifications/references/exists")
-    @Operation(summary = "Whether the study contains a shared modification, including nested in its composites")
-    @ApiResponse(responseCode = "200", description = "true if at least one shared modification is found")
-    public ResponseEntity<Boolean> hasSharedModifications(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.hasSharedModifications(studyUuid));
+    @GetMapping(value = "/studies/{studyUuid}/network-modifications/references/write-access")
+    @Operation(summary = "Whether the study contains shared modifications, including nested in its composites, and, if so, whether the user can write on all, some or none of them")
+    @ApiResponse(responseCode = "200", description = "The write access on the shared modifications was returned")
+    public ResponseEntity<SharedModificationsWriteAccess> getSharedModificationsWriteAccess(@PathVariable("studyUuid") UUID studyUuid,
+                                                                                            @RequestHeader(HEADER_USER_ID) String userId) {
+        return ResponseEntity.ok().body(studyService.getSharedModificationsWriteAccess(studyUuid, userId));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", produces = MediaType.TEXT_PLAIN_VALUE)
@@ -1098,8 +1099,9 @@ public class StudyController {
     public ResponseEntity<Void> updateModificationNameAndDescription(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                      @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                      @PathVariable UUID modificationUuid,
-                                                                     @RequestBody String metadata) {
-        networkModificationService.updateNetworkModificationNameAndDescription(studyUuid, nodeUuid, modificationUuid, metadata);
+                                                                     @RequestBody String metadata,
+                                                                     @RequestHeader(HEADER_USER_ID) String userId) {
+        networkModificationService.updateNetworkModificationNameAndDescription(studyUuid, nodeUuid, modificationUuid, metadata, userId);
         return ResponseEntity.ok().build();
     }
 

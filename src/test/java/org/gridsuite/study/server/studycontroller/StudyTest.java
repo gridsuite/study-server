@@ -1441,7 +1441,7 @@ class StudyTest extends StudyTestBase {
     }
 
     @Test
-    void testUpdateNameAndPermission() throws Exception {
+    void testUpdateNameAndDescription() throws Exception {
         UUID studyUuid = createStudyWithStubs(USER_ID_HEADER, CASE_UUID);
         UUID nodeUuid = getRootNodeUuid(studyUuid);
 
@@ -1453,7 +1453,8 @@ class StudyTest extends StudyTestBase {
         UUID stubId = wireMockStubs.stubNetworkModificationUpdateNameAndDescription(modificationUuid.toString(), metadataJson);
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuid}/name-and-description",
                 studyUuid, nodeUuid, modificationUuid)
-                .content(metadataJson))
+                .content(metadataJson)
+                .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
 
         wireMockStubs.verifyNetworkModificationUpdateNameAndDescription(stubId, modificationUuid.toString(), metadataJson);
