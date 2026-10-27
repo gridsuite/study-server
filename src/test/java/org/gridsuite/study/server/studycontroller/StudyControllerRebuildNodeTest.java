@@ -177,7 +177,7 @@ class StudyControllerRebuildNodeTest {
 
     @Test
     void testUnshareAllReferencesInStudy() {
-        ResponseEntity<Void> response = studyController.unshareAllReferencesInStudy(studyUuid, userId);
+        ResponseEntity<Void> response = studyController.unshareAllModificationReferences(studyUuid, userId);
 
         Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(studyService, times(1)).assertIsStudyExist(studyUuid);

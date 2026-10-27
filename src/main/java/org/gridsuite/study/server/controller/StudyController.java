@@ -322,7 +322,7 @@ public class StudyController {
     @PutMapping(value = "/studies/{studyUuid}/unshare")
     @Operation(summary = "Unshare all the reference modifications and copy the referenced composites in their place")
     @ApiResponse(responseCode = "200", description = "All the reference modifications from the study have been replaced by copies of their referenced composites")
-    public ResponseEntity<Void> unshareAllReferencesInStudy(
+    public ResponseEntity<Void> unshareAllModificationReferences(
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyExist(studyUuid);
