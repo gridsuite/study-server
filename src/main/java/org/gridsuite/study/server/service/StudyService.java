@@ -335,6 +335,9 @@ public class StudyService {
     @Transactional
     public RootNetworkRequestInfos createRootNetworkRequest(UUID studyUuid, RootNetworkInfos rootNetworkInfos, String userId) {
         rootNetworkService.assertCanCreateRootNetwork(studyUuid, rootNetworkInfos.getName(), rootNetworkInfos.getTag());
+        if (rootNetworkInfos.getTag() != null) {
+            assertCanAddRootNetworkTag(studyUuid, rootNetworkInfos.getTag(), userId);
+        }
         StudyEntity studyEntity = getStudy(studyUuid);
 
         rootNetworkInfos.setId(UUID.randomUUID());
@@ -391,33 +394,53 @@ public class StudyService {
         networkModificationTreeService.invalidateNodeTree(studyEntity.getId(), rootNodeUuid, studyEntity.getFirstRootNetwork().getId());
     }
 
-    private void updateRootNetworkBasicInfos(UUID studyUuid, RootNetworkInfos rootNetworkInfos, boolean updateCase) {
+    private void updateRootNetworkBasicInfos(UUID studyUuid, RootNetworkInfos rootNetworkInfos, boolean updateCase, String userId) {
         String previousTag = rootNetworkService.getRootNetworkTag(rootNetworkInfos.getId());
         rootNetworkService.updateRootNetwork(rootNetworkInfos, updateCase);
         // the entity says what the tag really became, unlike the DTO
         String newTag = rootNetworkService.getRootNetworkTag(rootNetworkInfos.getId());
-        renameRootNetworkTagInApplicabilities(studyUuid, previousTag, newTag);
+        renameRootNetworkTagInApplicabilities(studyUuid, previousTag, newTag, userId);
         postRootNetworkUpdate(studyUuid, rootNetworkInfos.getId(), updateCase);
     }
 
-    private void renameRootNetworkTagInApplicabilities(UUID studyUuid, String previousTag, String newTag) {
+    private void renameRootNetworkTagInApplicabilities(UUID studyUuid, String previousTag, String newTag, String userId) {
         if (previousTag == null || previousTag.equals(newTag)) {
             return;
         }
-        networkModificationRestService.renameRootNetworkTag(getStudyModificationGroupUuids(studyUuid), previousTag, newTag);
+        networkModificationRestService.renameRootNetworkTag(getStudyModificationGroupUuids(studyUuid), previousTag, newTag, userId);
     }
 
     /**
-     * Renaming a tag rewrites the applicabilities the shared modifications of the study contain for every study
-     * referencing them: only a user allowed to write on all of them may do it.
+     * A root network tag of a study must be associated with all its shared modifications: the ones the user cannot
+     * write on, which they cannot associate with a new tag, must already be.
      */
-    private void assertCanRenameRootNetworkTag(UUID studyUuid, String userId) {
-        networkModificationRestService.assertReferencedModificationsAreWritable(getStudyModificationGroupUuids(studyUuid), userId);
+    private void assertCanAddRootNetworkTag(UUID studyUuid, String newTag, String userId) {
+        networkModificationRestService.assertRootNetworkTagsAllowed(getStudyModificationGroupUuids(studyUuid), List.of(), List.of(), List.of(newTag), userId);
     }
 
-    public boolean hasSharedModifications(UUID studyUuid) {
+    /**
+     * Modifications written into a study must be associated with all its root network tags, including the shared
+     * modifications they point to: the ones the user cannot write on, which they cannot associate with a new tag, must
+     * already be.
+     *
+     * @param containerUuids groups or composites whose content is written into the study: only the shared modifications
+     *                       their content refers to are checked, not the containers themselves
+     * @param modificationUuids modifications written into the study: the shared modifications they and their content
+     *                          refer to are checked
+     * @param sharedUuids shared modifications the study is given a reference to: they are checked themselves, along
+     *                    with the shared modifications their content refers to
+     */
+    private void assertCanWriteModificationsInStudy(UUID studyUuid, List<UUID> containerUuids, List<UUID> modificationUuids,
+                                                    List<UUID> sharedUuids, String userId) {
+        networkModificationRestService.assertRootNetworkTagsAllowed(containerUuids, modificationUuids, sharedUuids,
+                rootNetworkService.getStudyRootNetworkTags(studyUuid), userId);
+    }
+
+    public SharedModificationsWriteAccess getSharedModificationsWriteAccess(UUID studyUuid, String userId) {
         List<UUID> groupUuids = getStudyModificationGroupUuids(studyUuid);
-        return !groupUuids.isEmpty() && networkModificationRestService.hasModificationReferences(groupUuids);
+        return groupUuids.isEmpty()
+                ? SharedModificationsWriteAccess.NO_SHARED_MODIFICATION
+                : networkModificationRestService.getReferencedModificationsWriteAccess(groupUuids, userId);
     }
 
     private List<UUID> getStudyModificationGroupUuids(UUID studyUuid) {
@@ -431,7 +454,7 @@ public class StudyService {
         rootNetworkService.assertCanModifyRootNetwork(studyUuid, rootNetworkInfos.getId(), rootNetworkInfos.getName(), rootNetworkInfos.getTag());
         String newTag = rootNetworkInfos.getTag();
         if (newTag != null && !newTag.equals(rootNetworkService.getRootNetworkTag(rootNetworkInfos.getId()))) {
-            assertCanRenameRootNetworkTag(studyUuid, userId);
+            assertCanAddRootNetworkTag(studyUuid, newTag, userId);
         }
         StudyEntity studyEntity = getStudy(studyUuid);
 
@@ -439,7 +462,7 @@ public class StudyService {
             RootNetworkRequestEntity requestEntity = rootNetworkService.insertModificationRequest(studyEntity.getId(), rootNetworkInfos, userId);
             updateRootNetworkCaseInfos(studyEntity.getId(), rootNetworkInfos, userId, requestEntity);
         } else {
-            updateRootNetworkBasicInfos(studyEntity.getId(), rootNetworkInfos, false);
+            updateRootNetworkBasicInfos(studyEntity.getId(), rootNetworkInfos, false, userId);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
     }
@@ -458,7 +481,7 @@ public class StudyService {
     @Transactional
     public void modifyRootNetwork(UUID studyUuid, RootNetworkInfos rootNetworkInfos, String userId) {
         invalidateStudyRootNetwork(studyUuid, rootNetworkInfos.getId(), userId, true);
-        updateRootNetworkBasicInfos(studyUuid, rootNetworkInfos, true);
+        updateRootNetworkBasicInfos(studyUuid, rootNetworkInfos, true, userId);
     }
 
     private void postRootNetworkUpdate(UUID studyUuid, UUID rootNetworkUuid, boolean updateCase) {
@@ -1368,6 +1391,10 @@ public class StudyService {
     @Transactional
     public void duplicateStudyNode(UUID sourceStudyUuid, UUID targetStudyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
         assertDuplicateStudyNode(sourceStudyUuid, targetStudyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode);
+        if (!sourceStudyUuid.equals(targetStudyUuid)) {
+            assertCanWriteModificationsInStudy(targetStudyUuid, List.of(networkModificationTreeService.getModificationGroupUuid(nodeToCopyUuid)),
+                    List.of(), List.of(), userId);
+        }
 
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode, userId);
         boolean invalidateBuild = networkModificationTreeService.hasModifications(nodeToCopyUuid, false);
@@ -1410,6 +1437,10 @@ public class StudyService {
     @Transactional
     public void duplicateStudySubtree(UUID sourceStudyUuid, UUID targetStudyUuid, UUID parentNodeToCopyUuid, UUID referenceNodeUuid, String userId) {
         assertDuplicateStudySubtree(sourceStudyUuid, targetStudyUuid, parentNodeToCopyUuid, referenceNodeUuid);
+        if (!sourceStudyUuid.equals(targetStudyUuid)) {
+            assertCanWriteModificationsInStudy(targetStudyUuid, networkModificationTreeService.getSubtreeModificationGroupUuids(parentNodeToCopyUuid),
+                    List.of(), List.of(), userId);
+        }
         AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(sourceStudyUuid, parentNodeToCopyUuid, null);
         StudyEntity studyEntity = getStudy(targetStudyUuid);
         UUID duplicatedNodeUuid = networkModificationTreeService.cloneStudyTree(studySubTree, referenceNodeUuid, studyEntity, userId);
@@ -1624,6 +1655,7 @@ public class StudyService {
         UUID targetNodeUuid,
         List<UUID> modificationsUuids,
         String userId) {
+        assertCanWriteModificationsInStudy(targetStudyUuid, List.of(), modificationsUuids, List.of(), userId);
         duplicateModificationsOrInsertComposites(targetStudyUuid, targetNodeUuid,
             (groupUuid, modificationApplicationContexts) -> {
                 NetworkModificationsResult result = networkModificationRestService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts), userId);
@@ -1676,18 +1708,33 @@ public class StudyService {
         List<CompositeInfos> compositesInfos,
         String userId,
         StudyConstants.CompositeModificationsActionType action) {
+        boolean isInsert = action == StudyConstants.CompositeModificationsActionType.INSERT;
+        assertCanWriteCompositesInStudy(targetStudyUuid, compositesInfos, isInsert, userId);
         duplicateModificationsOrInsertComposites(
                 targetStudyUuid,
                 targetNodeUuid,
                 (groupUuid, modificationApplicationContexts) -> {
                     NetworkModificationsResult result = networkModificationRestService.insertCompositeModifications(groupUuid, action, Pair.of(compositesInfos, modificationApplicationContexts));
-                    if (action == StudyConstants.CompositeModificationsActionType.INSERT) {
+                    if (isInsert) {
                         createCompositesReferences(compositesInfos, result.modificationUuids(), targetStudyUuid, targetNodeUuid, userId);
                     }
                     return result;
                 },
                 userId
         );
+    }
+
+    /**
+     * Only an INSERT of a composite marked as shared gives the study a reference to it: the shared composite is checked
+     * itself. Any other composite is copied: only its content is checked, the composite being passed as its container.
+     */
+    private void assertCanWriteCompositesInStudy(UUID studyUuid, List<CompositeInfos> compositesInfos, boolean isInsert, String userId) {
+        Map<Boolean, List<UUID>> uuidsByShared = compositesInfos.stream()
+                .collect(Collectors.partitioningBy(composite -> isInsert && composite.isShared(),
+                        Collectors.mapping(CompositeInfos::id, Collectors.toList())));
+        List<UUID> sharedCompositeUuids = uuidsByShared.get(true);
+        List<UUID> copiedCompositeUuids = uuidsByShared.get(false);
+        assertCanWriteModificationsInStudy(studyUuid, copiedCompositeUuids, List.of(), sharedCompositeUuids, userId);
     }
 
     private void createCompositesReferences(List<CompositeInfos> compositesInfos, List<UUID> insertedModificationUuids,
