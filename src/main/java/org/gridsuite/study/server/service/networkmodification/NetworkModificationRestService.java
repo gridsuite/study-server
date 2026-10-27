@@ -300,10 +300,11 @@ public class NetworkModificationRestService {
         restTemplate.exchange(path, HttpMethod.PUT, userIdEntity(userId, metadata), Void.class);
     }
 
-    public void updateNetworkModificationNameAndDescription(UUID networkModificationUuid, String metadata) {
+    public void updateNetworkModificationNameAndDescription(UUID networkModificationUuid, String metadata, String userId) {
         String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + DELIMITER + networkModificationUuid.toString() + DELIMITER + "name-and-description")
                 .build().toUriString();
         HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
         restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, new HttpEntity<>(metadata, headers), Void.class);
     }

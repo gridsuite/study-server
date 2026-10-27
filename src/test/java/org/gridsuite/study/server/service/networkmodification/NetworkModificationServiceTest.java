@@ -332,7 +332,7 @@ class NetworkModificationServiceTest {
         String metadata = "";
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid + "/name-and-description";
 
-        networkModificationService.updateNetworkModificationNameAndDescription(modificationUuid, metadata);
+        networkModificationService.updateNetworkModificationNameAndDescription(modificationUuid, metadata, USER_ID);
         verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
     }
 

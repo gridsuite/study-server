@@ -1099,8 +1099,9 @@ public class StudyController {
     public ResponseEntity<Void> updateModificationNameAndDescription(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                      @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                      @PathVariable UUID modificationUuid,
-                                                                     @RequestBody String metadata) {
-        networkModificationService.updateNetworkModificationNameAndDescription(studyUuid, nodeUuid, modificationUuid, metadata);
+                                                                     @RequestBody String metadata,
+                                                                     @RequestHeader(HEADER_USER_ID) String userId) {
+        networkModificationService.updateNetworkModificationNameAndDescription(studyUuid, nodeUuid, modificationUuid, metadata, userId);
         return ResponseEntity.ok().build();
     }
 
