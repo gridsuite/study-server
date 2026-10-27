@@ -281,17 +281,28 @@ class NetworkModificationServiceTest {
     @Test
     void testAssertRootNetworkTagsAllowed() {
         UUID groupUuid = UUID.randomUUID();
+        UUID modificationUuid = UUID.randomUUID();
+        UUID sharedUuid = UUID.randomUUID();
+        String url = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/root-network-tags/authorized";
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, USER_ID);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of("PH1", "PH2"), USER_ID);
-        verify(restTemplate).exchange(NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/root-network-tags/authorized", HttpMethod.POST,
-                new HttpEntity<>(new RootNetworkTagsCheckInfos(List.of(groupUuid), List.of("PH1", "PH2")), headers), Void.class);
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of(), List.of(), List.of("PH1", "PH2"), USER_ID);
+        verify(restTemplate).exchange(url, HttpMethod.POST, new HttpEntity<>(
+                new RootNetworkTagsCheckInfos(List.of(groupUuid), List.of(), List.of(), List.of("PH1", "PH2")), headers), Void.class);
 
-        // there is nothing to check without a tag, or without a container to check it on
-        networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of(), USER_ID);
-        networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of("PH1"), USER_ID);
+        // the modifications and the shared modifications are checked too, even alone
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of(modificationUuid), List.of(), List.of("PH1"), USER_ID);
+        verify(restTemplate).exchange(url, HttpMethod.POST, new HttpEntity<>(
+                new RootNetworkTagsCheckInfos(List.of(), List.of(modificationUuid), List.of(), List.of("PH1")), headers), Void.class);
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of(), List.of(sharedUuid), List.of("PH1"), USER_ID);
+        verify(restTemplate).exchange(url, HttpMethod.POST, new HttpEntity<>(
+                new RootNetworkTagsCheckInfos(List.of(), List.of(), List.of(sharedUuid), List.of("PH1")), headers), Void.class);
+
+        // there is nothing to check without a tag, or without anything to check it on
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of(), List.of(), List.of(), USER_ID);
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of(), List.of(), List.of("PH1"), USER_ID);
 
         verifyNoMoreInteractions(restTemplate);
     }
@@ -337,7 +348,7 @@ class NetworkModificationServiceTest {
         String metadata = "";
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid + "/name-and-description";
 
-        networkModificationService.updateNetworkModificationNameAndDescription(modificationUuid, metadata);
+        networkModificationService.updateNetworkModificationNameAndDescription(modificationUuid, metadata, USER_ID);
         verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
     }
 
