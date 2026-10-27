@@ -31,11 +31,4 @@ public class DirectoryController {
                                               @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(directoryService.getElements(ids, elementTypes, strictMode, userId));
     }
-
-    @RequestMapping(method = RequestMethod.HEAD, value = "/directories/{directoryUuid}/elements/{elementName}/types/{type}")
-    public ResponseEntity<Void> elementExists(@PathVariable UUID directoryUuid,
-                                              @PathVariable String elementName,
-                                              @PathVariable String type) {
-        return directoryService.elementExists(directoryUuid, elementName, type) ? ResponseEntity.ok().build() : ResponseEntity.noContent().build();
-    }
 }
