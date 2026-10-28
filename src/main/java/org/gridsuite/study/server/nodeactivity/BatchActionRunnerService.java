@@ -14,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.Comparator;
 import java.util.List;
 
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_MODIFICATIONS;
@@ -37,10 +36,7 @@ public class BatchActionRunnerService {
 
     public void runLastAction(AbstractNodeActivityRunnerService activityRunner) {
         // Get most recent batch
-        // TODO use a query with oldest instant
-        BatchActionEntity mostRecentBatch = batchActionRepository.findAll().stream()
-            .max(Comparator.comparing(BatchActionEntity::getCreatedAt))
-            .orElse(null);
+        BatchActionEntity mostRecentBatch = batchActionRepository.findFirstByOrderByCreatedAtDesc().orElse(null);
         if (mostRecentBatch == null) {
             return;
         }
@@ -49,13 +45,7 @@ public class BatchActionRunnerService {
         batchActionRepository.deleteById(mostRecentBatch.getId());
 
         // Run batch
-        switch (mostRecentBatch.getType()) {
-            case INVALIDATE_NODE_TREE:
-                runAction(activityRunner, mostRecentBatch);
-                break;
-            default:
-                LOGGER.error("Unsupported batch node action type : {}", mostRecentBatch.getType());
-        }
+        runAction(activityRunner, mostRecentBatch);
     }
 
     public void runAction(@NonNull AbstractNodeActivityRunnerService activityRunner, @NonNull BatchActionEntity batchAction) {

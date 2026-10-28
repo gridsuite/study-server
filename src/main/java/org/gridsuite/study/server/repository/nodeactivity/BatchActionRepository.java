@@ -10,6 +10,7 @@ import org.gridsuite.study.server.nodeactivity.BatchActionEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -17,4 +18,5 @@ import java.util.UUID;
  */
 @Repository
 public interface BatchActionRepository extends JpaRepository<BatchActionEntity, UUID> {
+    Optional<BatchActionEntity> findFirstByOrderByCreatedAtDesc();
 }
