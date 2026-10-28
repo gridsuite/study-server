@@ -44,8 +44,8 @@ public class SupervisionController {
 
     private final RestClient restClient;
 
-    public SupervisionController(SupervisionService supervisionService, StudyService studyService, RootNetworkService rootNetworkService, EquipmentInfosService equipmentInfosService, RestClient
-            restClient) {
+    public SupervisionController(SupervisionService supervisionService, StudyService studyService, RootNetworkService rootNetworkService,
+                                 EquipmentInfosService equipmentInfosService, RestClient restClient) {
         this.supervisionService = supervisionService;
         this.studyService = studyService;
         this.rootNetworkService = rootNetworkService;
@@ -169,6 +169,15 @@ public class SupervisionController {
         studyService.getExistingBasicRootNetworkInfos(studyUuid).forEach(
                 rootNetwork -> studyService.reindexRootNetwork(studyUuid, rootNetwork.rootNetworkUuid())
         );
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/modification-references/recreate")
+    @Operation(summary = "Recreate modification references for a study")
+    @ApiResponse(responseCode = "200", description = "Modification references recreated")
+    public ResponseEntity<Void> recreateStudyModificationReferences(@PathVariable("studyUuid") UUID studyUuid,
+                                                                    @RequestHeader("userId") String userId) {
+        supervisionService.recreateStudyModificationReferences(studyUuid, userId);
         return ResponseEntity.ok().build();
     }
 

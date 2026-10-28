@@ -106,6 +106,9 @@ class SupervisionControllerTest {
     @MockitoSpyBean
     private StudyService studyService;
 
+    @MockitoSpyBean
+    private SupervisionService supervisionService;
+
     @Autowired
     private RestClient restClient;
 
@@ -385,6 +388,17 @@ class SupervisionControllerTest {
         // While invalidating the root network set to UNLOADING so doUnbuildNodeTree
         // noneMatch(UNLOADING) check never holds and no element.update notification is emitted
         TestUtils.assertQueuesEmptyThenClear(List.of(ELEMENT_UPDATE_DESTINATION), output);
+    }
+
+    @Test
+    void testRecreateStudyModificationReferences() throws Exception {
+        doNothing().when(supervisionService).recreateStudyModificationReferences(STUDY_UUID, "userId");
+
+        mockMvc.perform(post("/v1/supervision/studies/{studyUuid}/modification-references/recreate", STUDY_UUID)
+                        .header("userId", "userId"))
+                .andExpect(status().isOk());
+
+        verify(supervisionService).recreateStudyModificationReferences(STUDY_UUID, "userId");
     }
 
     @Test

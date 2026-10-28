@@ -10,6 +10,8 @@ import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -21,7 +23,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -40,8 +45,35 @@ class SupervisionServiceTest {
     @MockitoBean
     IndexOperations indexOperations;
 
+    @MockitoBean
+    NetworkModificationTreeService networkModificationTreeService;
+
+    @MockitoBean
+    NetworkModificationRestService networkModificationService;
+
     @Autowired
     SupervisionService supervisionService;
+
+    @Test
+    void recreateStudyModificationReferencesOnlyForGroupsWithReferences() {
+        UUID studyUuid = UUID.randomUUID();
+        UUID groupWithReferences = UUID.randomUUID();
+        UUID groupWithoutReferences = UUID.randomUUID();
+        List<UUID> modificationGroupUuids = List.of(groupWithReferences, groupWithoutReferences);
+        String userId = "userId";
+
+        when(networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid)).thenReturn(List.of(
+                NetworkModificationNodeInfoEntity.builder().modificationGroupUuid(groupWithReferences).build(),
+                NetworkModificationNodeInfoEntity.builder().modificationGroupUuid(groupWithoutReferences).build()));
+        when(networkModificationService.getContainersWithModificationReferences(modificationGroupUuids))
+                .thenReturn(Set.of(groupWithReferences));
+
+        supervisionService.recreateStudyModificationReferences(studyUuid, userId);
+
+        verify(networkModificationService).getContainersWithModificationReferences(modificationGroupUuids);
+        verify(networkModificationService).recreateReferences(groupWithReferences, userId);
+        verify(networkModificationService, never()).recreateReferences(groupWithoutReferences, userId);
+    }
 
     @Test
     void recreateStudyIndicesThrowsExceptionWhenDeleteFails() {
