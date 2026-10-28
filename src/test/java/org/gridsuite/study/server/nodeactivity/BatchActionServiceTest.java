@@ -14,11 +14,13 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.nodeactivity.BatchActionRepository;
 import org.gridsuite.study.server.repository.nodeactivity.NodeActivityRepository;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -30,8 +32,8 @@ import java.util.UUID;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNBUILD;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com>
@@ -52,10 +54,15 @@ class BatchActionServiceTest {
     private TestUtils studyTestUtils;
 
     @MockitoSpyBean
+    private BatchActionRunnerService batchActionRunnerService;
+
+    @MockitoSpyBean
     private NetworkModificationTreeService networkModificationTreeService;
 
     @MockitoBean
     private NotificationService notificationService;
+    @MockitoBean
+    private NetworkService networkService;
 
     private UUID studyUuid;
     private UUID nodeUuid;
@@ -104,6 +111,29 @@ class BatchActionServiceTest {
         // Activity on node does block the batch
         nodeActivityRunnerService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
         verify(networkModificationTreeService, times(1)).invalidateNodeTree(studyUuid, nodeUuid);
+        assertEquals(0, batchActionRepository.count());
+    }
+
+    @Test
+    void testRunBatchActionOrdered() {
+        nodeActivityRunnerService.addNodeActivities(UNBUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid));
+        nodeActivityRunnerService.addNodeActivities(UNBUILD, studyUuid, rootNetworkUuid, List.of(otherNodeUuid));
+
+        nodeActivityRunnerService.runBatchAction(BatchActionType.INVALIDATE_NODE_TREE, studyUuid, nodeUuid);
+        nodeActivityRunnerService.runBatchAction(BatchActionType.INVALIDATE_NODE_TREE, studyUuid, otherNodeUuid);
+        assertEquals(2, batchActionRepository.count());
+
+        // Run the batch on other node (last batch) : failed
+        reset(batchActionRunnerService);
+        ArgumentCaptor<BatchActionEntity> infosCaptor = ArgumentCaptor.forClass(BatchActionEntity.class);
+        nodeActivityRunnerService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
+        assertEquals(2, batchActionRepository.count());
+        verify(batchActionRunnerService, times(1)).runAction(any(), infosCaptor.capture());
+        assertEquals(otherNodeUuid, infosCaptor.getValue().getNodeId());
+
+        // Run the batch on other node (last batch) : success
+        // Then run the batch on the first node : success
+        nodeActivityRunnerService.removeActivities(studyUuid, rootNetworkUuid, List.of(otherNodeUuid));
         assertEquals(0, batchActionRepository.count());
     }
 

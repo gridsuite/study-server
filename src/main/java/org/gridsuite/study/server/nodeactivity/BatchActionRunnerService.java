@@ -35,7 +35,7 @@ public class BatchActionRunnerService {
         this.batchActionRepository = batchActionRepository;
     }
 
-    public void runNextAction(AbstractNodeActivityRunnerService activityRunner) {
+    public void runLastAction(AbstractNodeActivityRunnerService activityRunner) {
         // Get most recent batch
         // TODO use a query with oldest instant
         BatchActionEntity mostRecentBatch = batchActionRepository.findAll().stream()
