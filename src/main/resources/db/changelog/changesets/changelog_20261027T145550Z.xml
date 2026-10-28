@@ -5,7 +5,7 @@
             <column name="node_id" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="batch_node_actionPK"/>
             </column>
-            <column name="created_at" type="TIMESTAMP">
+            <column name="created_at" type="timestamptz">
                 <constraints nullable="false"/>
             </column>
             <column name="study_id" type="UUID">
