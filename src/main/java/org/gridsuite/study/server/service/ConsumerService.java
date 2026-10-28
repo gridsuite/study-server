@@ -915,6 +915,7 @@ public class ConsumerService {
      * network-modification-server created, moved or deleted in the group of a node.
      */
     void handleCompositeReferenceChanges(Message<List<ModificationReference>> message) {
+        LOGGER.info("Received composite reference changes message with headers: {}", message.getHeaders());
         ElementReferenceAction action = ElementReferenceAction.valueOf(String.valueOf(message.getHeaders().get(HEADER_ACTION)));
         UUID groupUuid = UUID.fromString(String.valueOf(message.getHeaders().get(HEADER_GROUP_UUID)));
         String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
