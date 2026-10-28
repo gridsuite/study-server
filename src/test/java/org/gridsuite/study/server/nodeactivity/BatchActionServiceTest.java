@@ -59,6 +59,7 @@ class BatchActionServiceTest {
 
     private UUID studyUuid;
     private UUID nodeUuid;
+    private UUID otherNodeUuid;
     private UUID rootNetworkUuid;
 
     @BeforeEach
@@ -82,7 +83,6 @@ class BatchActionServiceTest {
     @Test
     void testRunBatchActionImmediate() {
         nodeActivityRunnerService.runBatchAction(BatchActionType.INVALIDATE_NODE_TREE, studyUuid, nodeUuid);
-
         verify(networkModificationTreeService, times(1)).invalidateNodeTree(studyUuid, nodeUuid);
         assertEquals(0, batchActionRepository.count());
     }
@@ -90,13 +90,19 @@ class BatchActionServiceTest {
     @Test
     void testRunBatchActionDeferred() {
         nodeActivityRunnerService.addNodeActivities(UNBUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid));
-        nodeActivityRunnerService.runBatchAction(BatchActionType.INVALIDATE_NODE_TREE, studyUuid, nodeUuid);
+        nodeActivityRunnerService.addNodeActivities(UNBUILD, studyUuid, rootNetworkUuid, List.of(otherNodeUuid));
 
+        nodeActivityRunnerService.runBatchAction(BatchActionType.INVALIDATE_NODE_TREE, studyUuid, nodeUuid);
         verify(networkModificationTreeService, times(0)).invalidateNodeTree(studyUuid, nodeUuid);
         assertEquals(1, batchActionRepository.count());
 
-        nodeActivityRunnerService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
+        // Activity on other node does not block the batch
+        nodeActivityRunnerService.removeActivities(studyUuid, rootNetworkUuid, List.of(otherNodeUuid));
+        verify(networkModificationTreeService, times(0)).invalidateNodeTree(studyUuid, nodeUuid);
+        assertEquals(1, batchActionRepository.count());
 
+        // Activity on node does block the batch
+        nodeActivityRunnerService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
         verify(networkModificationTreeService, times(1)).invalidateNodeTree(studyUuid, nodeUuid);
         assertEquals(0, batchActionRepository.count());
     }
@@ -108,5 +114,6 @@ class BatchActionServiceTest {
 
         NodeEntity rootNodeEntity = networkModificationTreeService.createRoot(studyEntity);
         nodeUuid = networkModificationTreeService.createNode(studyEntity, rootNodeEntity.getIdNode(), createModificationNodeInfo("node"), InsertMode.AFTER, null).getId();
+        otherNodeUuid = networkModificationTreeService.createNode(studyEntity, rootNodeEntity.getIdNode(), createModificationNodeInfo("otherNode"), InsertMode.AFTER, null).getId();
     }
 }
