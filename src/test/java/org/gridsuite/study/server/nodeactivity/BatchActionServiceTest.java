@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.nodeactivity;
 
+import org.gridsuite.study.server.dto.DeleteNodeInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -26,6 +27,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -81,8 +83,7 @@ class BatchActionServiceTest {
     }
 
     private void cleanDB() {
-        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
-        studyRepository.deleteAll();
+        deleteStudy();
         nodeActivityRepository.deleteAll();
         batchActionRepository.deleteAll();
     }
@@ -137,6 +138,21 @@ class BatchActionServiceTest {
         assertEquals(0, batchActionRepository.count());
     }
 
+    @Test
+    void testDeleteBatchActionWithDBForeignKeys() {
+        batchActionRepository.save(new BatchActionEntity(nodeUuid, studyUuid, BatchActionType.INVALIDATE_NODE_TREE, Instant.now()));
+        batchActionRepository.save(new BatchActionEntity(otherNodeUuid, studyUuid, BatchActionType.INVALIDATE_NODE_TREE, Instant.now()));
+        assertEquals(2, batchActionRepository.count());
+
+        networkModificationTreeService.doDeleteNode(nodeUuid, false, new DeleteNodeInfos());
+        List<BatchActionEntity> all = batchActionRepository.findAll();
+        assertEquals(1, all.size());
+        assertEquals(otherNodeUuid, all.getFirst().getNodeId());
+
+        deleteStudy();
+        assertEquals(0, batchActionRepository.count());
+    }
+
     private void createStudy() {
         StudyEntity studyEntity = TestUtils.createDummyStudy(UUID.randomUUID(), UUID.randomUUID(), "case_name", "case_format", UUID.randomUUID());
         studyUuid = studyRepository.save(studyEntity).getId();
@@ -145,5 +161,10 @@ class BatchActionServiceTest {
         NodeEntity rootNodeEntity = networkModificationTreeService.createRoot(studyEntity);
         nodeUuid = networkModificationTreeService.createNode(studyEntity, rootNodeEntity.getIdNode(), createModificationNodeInfo("node"), InsertMode.AFTER, null).getId();
         otherNodeUuid = networkModificationTreeService.createNode(studyEntity, rootNodeEntity.getIdNode(), createModificationNodeInfo("otherNode"), InsertMode.AFTER, null).getId();
+    }
+
+    private void deleteStudy() {
+        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
+        studyRepository.deleteAll();
     }
 }

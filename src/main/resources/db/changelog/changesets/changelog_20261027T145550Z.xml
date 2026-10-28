@@ -18,5 +18,11 @@
         <createIndex indexName="batch_action_study_id_idx" tableName="batch_node_action">
             <column name="study_id"/>
         </createIndex>
+        <addForeignKeyConstraint baseTableName="batch_node_action" baseColumnNames="study_id"
+                                 constraintName="batch_node_action_study_fk"
+                                 referencedTableName="study" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="batch_node_action" baseColumnNames="node_id"
+                                 constraintName="batch_node_action_node_fk"
+                                 referencedTableName="node" referencedColumnNames="id_node" onDelete="CASCADE"/>
     </changeSet>
 </databaseChangeLog>
