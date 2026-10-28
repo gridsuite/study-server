@@ -45,35 +45,28 @@ public class BatchActionRunnerService {
             return;
         }
 
+        // Delete batch in DB (automatically saved if run failed)
+        batchActionRepository.deleteById(mostRecentBatch.getId());
+
         // Run batch
-        boolean runOk = false;
         switch (mostRecentBatch.getType()) {
             case INVALIDATE_NODE_TREE:
-                runOk = runAction(activityRunner, mostRecentBatch, false);
+                runAction(activityRunner, mostRecentBatch);
                 break;
             default:
                 LOGGER.error("Unsupported batch node action type : {}", mostRecentBatch.getType());
         }
-
-        // Remove batch
-        if (runOk) {
-            batchActionRepository.deleteById(mostRecentBatch.getId());
-        }
     }
 
-    public boolean runAction(AbstractNodeActivityRunnerService activityRunner, @NonNull BatchActionEntity batchAction, @NonNull boolean newBatch) {
+    public void runAction(@NonNull AbstractNodeActivityRunnerService activityRunner, @NonNull BatchActionEntity batchAction) {
         try {
             runAction(batchAction, activityRunner);
         } catch (StudyException e) {
             if (!e.isNodeActivityConflict()) {
                 throw e;
             }
-            if (newBatch) {
-                batchActionRepository.save(batchAction);
-            }
-            return false;
+            batchActionRepository.save(batchAction);
         }
-        return true;
     }
 
     private void runAction(BatchActionEntity batchAction, AbstractNodeActivityRunnerService activityRunner) {

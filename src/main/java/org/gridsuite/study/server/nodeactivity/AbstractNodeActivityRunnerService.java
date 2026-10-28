@@ -67,6 +67,6 @@ public abstract class AbstractNodeActivityRunnerService {
     }
 
     public void runBatchAction(@NonNull BatchActionType type, @NonNull UUID studyId, @NonNull UUID nodeId) {
-        batchActionRunnerService.runAction(this, new BatchActionEntity(nodeId, studyId, type, Instant.now()), true);
+        batchActionRunnerService.runAction(this, new BatchActionEntity(nodeId, studyId, type, Instant.now()));
     }
 }

@@ -7,12 +7,10 @@
 package org.gridsuite.study.server.nodeactivity;
 
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.nodeactivity.BatchActionRepository;
 import org.gridsuite.study.server.repository.nodeactivity.NodeActivityRepository;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
@@ -29,10 +27,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import java.util.List;
 import java.util.UUID;
 
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNBUILD;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com>
@@ -49,6 +48,9 @@ class BatchActionServiceTest {
     @Autowired
     private NodeActivityRunnerService nodeActivityRunnerService;
 
+    @Autowired
+    private TestUtils studyTestUtils;
+
     @MockitoSpyBean
     private NetworkModificationTreeService networkModificationTreeService;
 
@@ -57,6 +59,7 @@ class BatchActionServiceTest {
 
     private UUID studyUuid;
     private UUID nodeUuid;
+    private UUID rootNetworkUuid;
 
     @BeforeEach
     void setUp() {
@@ -81,18 +84,27 @@ class BatchActionServiceTest {
         nodeActivityRunnerService.runBatchAction(BatchActionType.INVALIDATE_NODE_TREE, studyUuid, nodeUuid);
 
         verify(networkModificationTreeService, times(1)).invalidateNodeTree(studyUuid, nodeUuid);
-
         assertEquals(0, batchActionRepository.count());
     }
 
     @Test
     void testRunBatchActionDeferred() {
+        nodeActivityRunnerService.addNodeActivities(UNBUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid));
+        nodeActivityRunnerService.runBatchAction(BatchActionType.INVALIDATE_NODE_TREE, studyUuid, nodeUuid);
 
+        verify(networkModificationTreeService, times(0)).invalidateNodeTree(studyUuid, nodeUuid);
+        assertEquals(1, batchActionRepository.count());
+
+        nodeActivityRunnerService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
+
+        verify(networkModificationTreeService, times(1)).invalidateNodeTree(studyUuid, nodeUuid);
+        assertEquals(0, batchActionRepository.count());
     }
 
     private void createStudy() {
         StudyEntity studyEntity = TestUtils.createDummyStudy(UUID.randomUUID(), UUID.randomUUID(), "case_name", "case_format", UUID.randomUUID());
         studyUuid = studyRepository.save(studyEntity).getId();
+        rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
 
         NodeEntity rootNodeEntity = networkModificationTreeService.createRoot(studyEntity);
         nodeUuid = networkModificationTreeService.createNode(studyEntity, rootNodeEntity.getIdNode(), createModificationNodeInfo("node"), InsertMode.AFTER, null).getId();
