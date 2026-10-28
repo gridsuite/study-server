@@ -63,8 +63,8 @@ public class NetworkModificationService {
         this.nodeActivityRunnerService = nodeActivityRunnerService;
     }
 
-    public void updateNetworkModificationNameAndDescription(UUID studyUuid, UUID nodeUuid, UUID networkModificationUuid, String metadata) {
-        networkModificationRestService.updateNetworkModificationNameAndDescription(networkModificationUuid, metadata);
+    public void updateNetworkModificationNameAndDescription(UUID studyUuid, UUID nodeUuid, UUID networkModificationUuid, String metadata, String userId) {
+        networkModificationRestService.updateNetworkModificationNameAndDescription(networkModificationUuid, metadata, userId);
         notificationService.emitModificationsUpdated(studyUuid, nodeUuid, List.of(networkModificationUuid));
     }
 

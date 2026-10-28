@@ -44,6 +44,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 
@@ -869,6 +870,14 @@ public class NetworkModificationTreeService {
     @Transactional(readOnly = true)
     public UUID getModificationGroupUuid(UUID nodeUuid) {
         return getNetworkModificationNodeInfoEntity(nodeUuid).getModificationGroupUuid();
+    }
+
+    @Transactional(readOnly = true)
+    public List<UUID> getSubtreeModificationGroupUuids(UUID parentNodeUuid) {
+        List<UUID> nodeUuids = Stream.concat(Stream.of(parentNodeUuid), getAllChildrenUuids(parentNodeUuid).stream()).toList();
+        return networkModificationNodeInfoRepository.findAllByIdIn(nodeUuids).stream()
+                .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
+                .toList();
     }
 
     @Transactional(readOnly = true)
