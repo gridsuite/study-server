@@ -66,6 +66,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
+import static org.gridsuite.study.server.service.SupervisionService.SUPERVISION_USER;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.gridsuite.study.server.utils.TestUtils.synchronizeStudyServerExecutionService;
 import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyPostRequest;
@@ -583,7 +584,7 @@ class RootNetworkTest {
         verify(stateEstimationService, times(1)).deleteStateEstimationResults(List.of(STATE_ESTIMATION_RESULT_UUID));
         verify(pccMinService, times(1)).deletePccMinResults(List.of(PCC_MIN_RESULT_UUID));
         verify(sensitivityAnalysisService, times(1)).deleteSensitivityAnalysisResults(List.of(SENSITIVITY_ANALYSIS_RESULT_UUID));
-        verify(voltageInitService, times(1)).deleteVoltageInitResults(List.of(VOLTAGE_INIT_RESULT_UUID));
+        verify(voltageInitService, times(1)).deleteVoltageInitResults(List.of(VOLTAGE_INIT_RESULT_UUID), SUPERVISION_USER);
     }
 
     @Test
