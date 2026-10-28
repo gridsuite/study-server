@@ -214,6 +214,18 @@ class NetworkModificationServiceTest {
     }
 
     @Test
+    void testRecreateReferences() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/" + groupUuid + "/references";
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, USER_ID);
+
+        networkModificationService.recreateReferences(groupUuid, USER_ID);
+
+        verify(restTemplate).exchange(expectedUrl, HttpMethod.POST, new HttpEntity<>(headers), Void.class);
+    }
+
+    @Test
     void testAddRootNetworkTag() {
         UUID groupUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"

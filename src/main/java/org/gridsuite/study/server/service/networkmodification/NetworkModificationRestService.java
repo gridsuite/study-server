@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
 import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.StudyConstants.CompositeModificationsActionType;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.NodeReceiver;
@@ -687,20 +688,19 @@ public class NetworkModificationRestService {
                 new ParameterizedTypeReference<Map<UUID, UUID>>() { });
     }
 
-    public void restoreElementReferences(UUID groupUUid, UUID studyUuid, UUID newNodeUuid, String userId) {
-        Objects.requireNonNull(groupUUid);
+    /**
+     * Asks network-modification-server to recreate the references of the group.
+     */
+    public void recreateReferences(UUID groupUuid, String userId) {
+        Objects.requireNonNull(groupUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + "/references")
-                .queryParam(QUERY_PARAM_NODE_CONTAINER_UUID, newNodeUuid)
-                .queryParam(QUERY_PARAM_STUDY_ROOT_CONTAINER_UUID, studyUuid)
-                .buildAndExpand(groupUUid)
+                .buildAndExpand(groupUuid)
                 .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set(HEADER_USER_ID, userId);
 
-        HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
-        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, httpEntity, Void.class);
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.POST, new HttpEntity<>(headers), Void.class);
     }
 
     public void verifyModifications(UUID groupUuid, Set<UUID> modificationUuids) {
