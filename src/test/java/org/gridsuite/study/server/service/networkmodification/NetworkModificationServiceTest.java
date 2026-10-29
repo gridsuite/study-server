@@ -139,19 +139,6 @@ class NetworkModificationServiceTest {
     }
 
     @Test
-    void testDeleteModificationsGroups() {
-        UUID firstUuid = UUID.randomUUID();
-        UUID secondUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        networkModificationService.deleteModificationsGroups(List.of(firstUuid, secondUuid));
-        HttpEntity<String> httpEntity = new HttpEntity<>("[\"" + firstUuid + "\",\"" + secondUuid + "\"]", headers);
-        verify(restTemplate).exchange(expectedUrl, HttpMethod.DELETE, httpEntity, new ParameterizedTypeReference<Map<UUID, UUID>>() { });
-    }
-
-    @Test
     void testDeleteStashedModificationsGroups() {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
@@ -211,6 +198,17 @@ class NetworkModificationServiceTest {
                 .thenReturn(ResponseEntity.ok(expected));
 
         assertThat(networkModificationService.getModificationReferences(groupUuid)).isEqualTo(expected);
+    }
+
+    @Test
+    void testDeleteModificationReferences() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/" + groupUuid + "/references";
+
+        networkModificationService.deleteModificationReferences(groupUuid, "userId");
+
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.DELETE),
+                argThat((HttpEntity<?> entity) -> "userId".equals(entity.getHeaders().getFirst(HEADER_USER_ID))), eq(Void.class));
     }
 
     @Test
