@@ -33,6 +33,7 @@ public class StudyExceptionHandler extends AbstractBusinessExceptionHandler<Stud
     protected HttpStatus mapStatus(StudyBusinessErrorCode studyBusinessErrorCode) {
         return switch (studyBusinessErrorCode) {
             case NOT_FOUND,
+                 NODE_NOT_FOUND,
                  NO_VOLTAGE_INIT_RESULTS_FOR_NODE
                 -> HttpStatus.NOT_FOUND;
             case COMPUTATION_RUNNING,
