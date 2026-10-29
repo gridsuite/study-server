@@ -117,7 +117,7 @@
             </dependency>
 
             <!-- imports -->
-            <dependency>
+             <dependency>
                 <groupId>org.gridsuite</groupId>
                 <artifactId>gridsuite-dependencies</artifactId>
                 <version>${gridsuite-dependencies.version}</version>
