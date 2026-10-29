@@ -916,13 +916,13 @@ public class ConsumerService {
      * network-modification-server created, moved or deleted in the group of a node.
      */
     void handleNetworkModificationReferenceChanges(Message<List<ModificationReference>> message) {
-        ElementReferenceAction action = ElementReferenceAction.valueOf(String.valueOf(message.getHeaders().get(HEADER_ACTION)));
+        ElementSharedLinkAction action = ElementSharedLinkAction.valueOf(String.valueOf(message.getHeaders().get(HEADER_ACTION)));
         UUID groupUuid = UUID.fromString(String.valueOf(message.getHeaders().get(HEADER_GROUP_UUID)));
         String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
         List<ModificationReference> references = message.getPayload();
 
         NodeInfos nodeInfos = networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid);
-        if (action == ElementReferenceAction.CREATE) {
+        if (action == ElementSharedLinkAction.CREATE) {
             directoryService.createElementsSharedLinks(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), userId);
         }
     }

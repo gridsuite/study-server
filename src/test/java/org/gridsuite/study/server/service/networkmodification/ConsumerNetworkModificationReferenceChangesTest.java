@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.service.networkmodification;
 
-import org.gridsuite.study.server.dto.ElementReferenceAction;
+import org.gridsuite.study.server.dto.ElementSharedLinkAction;
 import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.NodeInfos;
 import org.gridsuite.study.server.error.StudyException;
@@ -106,7 +106,7 @@ class ConsumerNetworkModificationReferenceChangesTest {
         when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid))
                 .thenReturn(new NodeInfos(nodeUuid, "node", studyUuid));
 
-        consumeNetworkModificationReferenceChanges.accept(compositeReferenceMessage(ElementReferenceAction.CREATE));
+        consumeNetworkModificationReferenceChanges.accept(compositeReferenceMessage(ElementSharedLinkAction.CREATE));
 
         verify(directoryService).createElementsSharedLinks(references, studyUuid, nodeUuid, USER_ID);
         verifyNoMoreInteractions(directoryService);
@@ -117,12 +117,12 @@ class ConsumerNetworkModificationReferenceChangesTest {
         when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid))
                 .thenThrow(new StudyException(NOT_FOUND, "Node infos not found"));
 
-        Message<List<ModificationReference>> message = compositeReferenceMessage(ElementReferenceAction.CREATE);
+        Message<List<ModificationReference>> message = compositeReferenceMessage(ElementSharedLinkAction.CREATE);
         assertThrows(StudyException.class, () -> consumeNetworkModificationReferenceChanges.accept(message));
         verifyNoInteractions(directoryService);
     }
 
-    private Message<List<ModificationReference>> compositeReferenceMessage(ElementReferenceAction action) {
+    private Message<List<ModificationReference>> compositeReferenceMessage(ElementSharedLinkAction action) {
         // headers are received as strings from the broker
         return MessageBuilder.withPayload(references)
                 .setHeader(HEADER_ACTION, action.name())
