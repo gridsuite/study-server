@@ -47,7 +47,7 @@ import static org.mockito.Mockito.*;
  */
 @SpringBootTest
 @DisableElasticsearch
-class ConsumerCompositeReferenceChangesTest {
+class ConsumerNetworkModificationReferenceChangesTest {
 
     private static final String HEADER_ACTION = "action";
     private static final String HEADER_GROUP_UUID = "groupUuid";
@@ -86,7 +86,7 @@ class ConsumerCompositeReferenceChangesTest {
     @Autowired
     private ConsumerService consumerService;
 
-    private Consumer<Message<List<ModificationReference>>> consumeCompositeReferenceChanges;
+    private Consumer<Message<List<ModificationReference>>> consumeNetworkModificationReferenceChanges;
 
     private static final String USER_ID = "userId";
     private final UUID groupUuid = UUID.randomUUID();
@@ -98,7 +98,7 @@ class ConsumerCompositeReferenceChangesTest {
 
     @BeforeEach
     void setup() {
-        consumeCompositeReferenceChanges = consumerService.consumeCompositeReferenceChanges();
+        consumeNetworkModificationReferenceChanges = consumerService.consumeNetworkModificationReferenceChanges();
     }
 
     @Test
@@ -106,9 +106,9 @@ class ConsumerCompositeReferenceChangesTest {
         when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid))
                 .thenReturn(new NodeInfos(nodeUuid, "node", studyUuid));
 
-        consumeCompositeReferenceChanges.accept(compositeReferenceMessage(ElementReferenceAction.CREATE));
+        consumeNetworkModificationReferenceChanges.accept(compositeReferenceMessage(ElementReferenceAction.CREATE));
 
-        verify(directoryService).createElementsReferences(references, studyUuid, nodeUuid, USER_ID);
+        verify(directoryService).createElementsSharedLinks(references, studyUuid, nodeUuid, USER_ID);
         verifyNoMoreInteractions(directoryService);
     }
 
@@ -118,7 +118,7 @@ class ConsumerCompositeReferenceChangesTest {
                 .thenThrow(new StudyException(NOT_FOUND, "Node infos not found"));
 
         Message<List<ModificationReference>> message = compositeReferenceMessage(ElementReferenceAction.CREATE);
-        assertThrows(StudyException.class, () -> consumeCompositeReferenceChanges.accept(message));
+        assertThrows(StudyException.class, () -> consumeNetworkModificationReferenceChanges.accept(message));
         verifyNoInteractions(directoryService);
     }
 

@@ -907,15 +907,15 @@ public class ConsumerService {
     }
 
     @Bean
-    public Consumer<Message<List<ModificationReference>>> consumeCompositeReferenceChanges() {
-        return this::handleCompositeReferenceChanges;
+    public Consumer<Message<List<ModificationReference>>> consumeNetworkModificationReferenceChanges() {
+        return this::handleNetworkModificationReferenceChanges;
     }
 
     /**
      * Keeps the references registered on the shared elements in directory-server in sync with the modification-references
      * network-modification-server created, moved or deleted in the group of a node.
      */
-    void handleCompositeReferenceChanges(Message<List<ModificationReference>> message) {
+    void handleNetworkModificationReferenceChanges(Message<List<ModificationReference>> message) {
         ElementReferenceAction action = ElementReferenceAction.valueOf(String.valueOf(message.getHeaders().get(HEADER_ACTION)));
         UUID groupUuid = UUID.fromString(String.valueOf(message.getHeaders().get(HEADER_GROUP_UUID)));
         String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
@@ -923,7 +923,7 @@ public class ConsumerService {
 
         NodeInfos nodeInfos = networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid);
         if (action == ElementReferenceAction.CREATE) {
-            directoryService.createElementsReferences(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), userId);
+            directoryService.createElementsSharedLinks(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), userId);
         }
     }
 

@@ -109,7 +109,7 @@ public class DirectoryService {
         return response.getStatusCode() == HttpStatus.OK;
     }
 
-    public void createElementsReferences(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, String userId) {
+    public void createElementsSharedLinks(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, String userId) {
         references.forEach(ref -> {
             boolean insideComposite = ref.containerId() != null;
             ReferenceAttributes referenceAttributes = ReferenceAttributes.createReferenceAttributes(
@@ -118,11 +118,11 @@ public class DirectoryService {
                     insideComposite ? ref.containerId() : nodeUuid,
                     insideComposite ? ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION
                             : ReferenceAttributes.ReferenceType.STUDY_NODE);
-            createElementReference(ref.referencedId(), referenceAttributes, userId);
+            createElementSharedLink(ref.referencedId(), referenceAttributes, userId);
         });
     }
 
-    public void createElementReference(@NonNull UUID elementUuid, @NonNull ReferenceAttributes referenceAttributes, String userId) {
+    public void createElementSharedLink(@NonNull UUID elementUuid, @NonNull ReferenceAttributes referenceAttributes, String userId) {
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -196,7 +196,7 @@ public class DirectoryService {
      * @param referenceAttributes new attributes of the modification-reference
      * @param userId id of the user who moves the reference
      */
-    public void updateElementReference(@NonNull UUID elementUuid, @NonNull ReferenceAttributes referenceAttributes, String userId) {
+    public void updateElementSharedLinks(@NonNull UUID elementUuid, @NonNull ReferenceAttributes referenceAttributes, String userId) {
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);

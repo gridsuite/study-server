@@ -959,7 +959,7 @@ public class NetworkModificationTreeService {
             NodeEntity newNode = nodesRepository.save(nodeToRestore);
             // restore the references pointing from directory server to netmod-server
             List<ModificationReference> modificationsReferences = networkModificationService.getModificationReferences(getModificationGroupUuid(newNode.getIdNode()));
-            directoryService.createElementsReferences(modificationsReferences, studyId, newNode.getIdNode(), userId);
+            directoryService.createElementsSharedLinks(modificationsReferences, studyId, newNode.getIdNode(), userId);
             if (hasChildren(nodeId)) {
                 restoreNodeChildren(studyId, nodeId);
                 notificationService.emitSubtreeInserted(studyId, nodeId, anchorNodeId);
