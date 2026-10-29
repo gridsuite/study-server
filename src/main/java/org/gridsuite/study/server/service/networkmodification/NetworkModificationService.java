@@ -142,7 +142,7 @@ public class NetworkModificationService {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationRestService.restoreModifications(groupId, modificationsUuids, studyUuid, nodeUuid, userId);
+            networkModificationRestService.restoreModifications(groupId, modificationsUuids, userId);
             networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid);
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
