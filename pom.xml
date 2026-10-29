@@ -48,13 +48,14 @@
         <checkstyle.version>13.8.0</checkstyle.version>
         <maven.jib.version>3.5.1</maven.jib.version>
         <jib.from.image>powsybl/java:4.0.0</jib.from.image>
-        <gridsuite-dependencies.version>51.1.0</gridsuite-dependencies.version>
+        <gridsuite-dependencies.version>51.2.0-SNAPSHOT</gridsuite-dependencies.version>
         <liquibase-hibernate-package>org.gridsuite.study.server</liquibase-hibernate-package>
         <mockwebserver3.version>5.0.0-alpha.14</mockwebserver3.version>
         <db-util.version>1.0.5</db-util.version>
         <sonar.organization>gridsuite</sonar.organization>
         <sonar.projectKey>org.gridsuite:study-server</sonar.projectKey>
         <sonar.coverage.exclusions>**/migration/**/*</sonar.coverage.exclusions>
+        <network-store.version>1.53.0-SNAPSHOT</network-store.version>
     </properties>
 
     <build>
@@ -98,6 +99,23 @@
                 <scope>import</scope>
             </dependency>
 
+            <!-- TODO REMOVE ONCE NETWORK STORE RELEASE INCLUDING POWSYBL CORE 7.4 IS OUT -->
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-network-store-client</artifactId>
+                <version>${network-store.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-network-store-iidm-impl</artifactId>
+                <version>${network-store.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-network-store-model</artifactId>
+                <version>${network-store.version}</version>
+            </dependency>
+
             <!-- imports -->
             <dependency>
                 <groupId>org.gridsuite</groupId>
@@ -118,7 +136,7 @@
 
     <dependencies>
         <!-- Compilation dependencies -->
-         <dependency>
+        <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-commons</artifactId>
         </dependency>
