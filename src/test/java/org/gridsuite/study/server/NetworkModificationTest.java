@@ -1156,20 +1156,10 @@ class NetworkModificationTest {
         String userId = "userId";
 
         UUID modificationUuid = UUID.randomUUID();
-        // stubs the checks and updates of referenced modifications
-        List<ModificationReference> stubbedReferences = List.of(new ModificationReference(modificationUuid, modificationUuid, null));
-        UUID referencesStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/references"))
-                .withQueryParam("uuids", equalTo(modificationUuid.toString()))
-                .willReturn(WireMock.ok()
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .withBody(mapper.writeValueAsString(stubbedReferences)))
-        ).getId();
-        UUID removeReferencesStubId = wireMockServer.stubFor(WireMock.delete(urlPathMatching(
-                "/v1/elements/" + modificationUuid + "/references/.*"))
-                .willReturn(WireMock.ok())
-        ).getId();
-
-        UUID stubId = wireMockServer.stubFor(WireMock.delete(urlPathMatching("/v1/network-modifications")).willReturn(WireMock.ok())).getId();
+        // the user is forwarded for network-modification-server to unlink the deleted references
+        UUID stubId = wireMockServer.stubFor(WireMock.delete(urlPathMatching("/v1/network-modifications"))
+                .withHeader(USER_ID_HEADER, equalTo(userId))
+                .willReturn(WireMock.ok())).getId();
 
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyUuid = studyEntity.getId();
@@ -1194,15 +1184,7 @@ class NetworkModificationTest {
                         .queryParam("uuids", modificationUuid.toString())
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
-        WireMockUtils.verifyGetRequest(wireMockServer, referencesStubId, "/v1/references", Map.of("uuids", equalTo(modificationUuid.toString())));
         WireMockUtils.verifyDeleteRequest(wireMockServer, stubId, "/v1/network-modifications", false, Map.of("uuids", equalTo(modificationUuid.toString())));
-        WireMockUtils.verifyDeleteRequest(
-                wireMockServer,
-                removeReferencesStubId,
-                "/v1/elements/" + modificationUuid + "/references/.*",
-                true,
-                Map.of()
-        );
         checkEquipmentDeletingFinishedMessagesReceived(studyUuid, modificationNode.getId());
 
         stubId = wireMockServer.stubFor(WireMock.delete(urlPathMatching("/v1/network-modifications.*"))
@@ -1212,7 +1194,6 @@ class NetworkModificationTest {
                 .queryParam("uuids", modificationUuid.toString())
                 .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isInternalServerError());
-        WireMockUtils.verifyGetRequest(wireMockServer, referencesStubId, "/v1/references", Map.of("uuids", equalTo(modificationUuid.toString())));
         WireMockUtils.verifyDeleteRequest(wireMockServer, stubId, "/v1/network-modifications", false, Map.of("uuids", equalTo(modificationUuid.toString())));
         checkEquipmentDeletingFinishedMessagesReceived(studyUuid, modificationNode.getId());
     }
