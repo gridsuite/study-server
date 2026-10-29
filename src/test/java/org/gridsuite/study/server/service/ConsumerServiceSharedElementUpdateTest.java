@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.dto.ReferenceAttributes;
+import org.gridsuite.study.server.nodeactivity.BatchActionType;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.nodeactivity.NodeActivityService;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -14,6 +15,7 @@ import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +24,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import java.util.EnumMap;
 import java.util.List;
@@ -31,9 +34,8 @@ import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE;
 import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION;
-import static org.mockito.ArgumentMatchers.anyList;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_MODIFICATIONS;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.times;
 
 /**
  * @author Souissi Maissa <souissi.maissa at rte-france.com>
@@ -53,7 +55,9 @@ class ConsumerServiceSharedElementUpdateTest {
     @MockitoBean
     private NetworkModificationTreeService networkModificationTreeService;
     @MockitoBean
-    private NetworkModificationRestService networkModificationService;
+    private NetworkModificationService networkModificationService;
+    @MockitoBean
+    private NetworkModificationRestService networkModificationRestService;
     @MockitoBean
     private StudyConfigService studyConfigService;
     @MockitoBean
@@ -68,7 +72,7 @@ class ConsumerServiceSharedElementUpdateTest {
     private UserAdminService userAdminService;
     @MockitoBean
     private LoadFlowService loadFlowService;
-    @MockitoBean
+    @MockitoSpyBean
     private NodeActivityRunnerService nodeActivityRunnerService;
     @MockitoBean
     private NodeActivityService nodeActivityService;
@@ -78,9 +82,24 @@ class ConsumerServiceSharedElementUpdateTest {
 
     private Consumer<Message<Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>>>> consumeSharedElementUpdate;
 
+    private final UUID studyUuid = UUID.randomUUID();
+
     @BeforeEach
     void setup() {
         consumeSharedElementUpdate = consumerService.consumeSharedElementUpdate();
+        when(networkModificationTreeService.getStudyUuidForNodeId(any(UUID.class))).thenReturn(studyUuid);
+    }
+
+    @Test
+    void testBatchAction() {
+        UUID nodeUuid = UUID.randomUUID();
+        UUID modificationUuid = UUID.randomUUID();
+
+        consumeSharedElementUpdate.accept(sharedElementUpdateMessage(
+            List.of(createStudyNodeReference(modificationUuid, nodeUuid)), List.of()));
+
+        verify(nodeActivityRunnerService, times(1)).runBatchAction(BatchActionType.INVALIDATE_NODE_TREE, studyUuid, nodeUuid);
+        verify(notificationService).emitSharedModificationsUpdated(studyUuid, nodeUuid, List.of(modificationUuid));
     }
 
     @Test
@@ -91,8 +110,8 @@ class ConsumerServiceSharedElementUpdateTest {
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(
                 List.of(createStudyNodeReference(modificationUuid, nodeUuid)), List.of()));
 
-        verify(studyService, times(1)).sharedModificationsUpdatedNotification(any(), anyList(), anyBoolean());
-        verify(studyService).sharedModificationsUpdatedNotification(nodeUuid, List.of(modificationUuid), false);
+        verify(networkModificationTreeService, times(1)).invalidateNodeTree(any(), any());
+        verify(networkModificationTreeService).invalidateNodeTree(studyUuid, nodeUuid);
     }
 
     @Test
@@ -103,8 +122,8 @@ class ConsumerServiceSharedElementUpdateTest {
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(
                 List.of(), List.of(createCompositeReference(compositeModificationUuid, nodeUuid))));
 
-        verify(studyService, times(1)).sharedModificationsUpdatedNotification(any(), anyList(), anyBoolean());
-        verify(studyService).sharedModificationsUpdatedNotification(nodeUuid, List.of(compositeModificationUuid), false);
+        verify(networkModificationTreeService, times(1)).invalidateNodeTree(any(), any());
+        verify(networkModificationTreeService).invalidateNodeTree(studyUuid, nodeUuid);
     }
 
     @Test
@@ -117,8 +136,8 @@ class ConsumerServiceSharedElementUpdateTest {
                 List.of(createStudyNodeReference(directModificationUuid, nodeUuid)),
                 List.of(createCompositeReference(compositeModificationUuid, nodeUuid))));
 
-        verify(studyService, times(1)).sharedModificationsUpdatedNotification(any(), anyList(), anyBoolean());
-        verify(studyService, times(1)).sharedModificationsUpdatedNotification(nodeUuid, List.of(directModificationUuid, compositeModificationUuid), false);
+        verify(networkModificationTreeService, times(1)).invalidateNodeTree(any(), any());
+        verify(networkModificationTreeService).invalidateNodeTree(studyUuid, nodeUuid);
     }
 
     @Test
@@ -132,36 +151,36 @@ class ConsumerServiceSharedElementUpdateTest {
             List.of(createStudyNodeReference(directModificationUuid, node1Uuid)),
             List.of(createCompositeReference(compositeModificationUuid, node2Uuid))));
 
-        verify(studyService, times(2)).sharedModificationsUpdatedNotification(any(), anyList(), anyBoolean());
-        verify(studyService, times(1)).sharedModificationsUpdatedNotification(node1Uuid, List.of(directModificationUuid), false);
-        verify(studyService, times(1)).sharedModificationsUpdatedNotification(node2Uuid, List.of(compositeModificationUuid), false);
+        verify(networkModificationTreeService, times(2)).invalidateNodeTree(any(), any());
+        verify(networkModificationTreeService, times(1)).invalidateNodeTree(studyUuid, node1Uuid);
+        verify(networkModificationTreeService, times(1)).invalidateNodeTree(studyUuid, node2Uuid);
     }
 
     @Test
-    void testFailureOnOneNodeDoesNotPreventOtherNodesNotification() {
+    void testNotificationWithFailure() {
         UUID failingNodeUuid = UUID.randomUUID();
         UUID nodeUuid = UUID.randomUUID();
         UUID failingModificationUuid = UUID.randomUUID();
         UUID modificationUuid = UUID.randomUUID();
 
         doThrow(new RuntimeException("node notification failure"))
-            .when(studyService).sharedModificationsUpdatedNotification(eq(failingNodeUuid), anyList(), anyBoolean());
+            .when(nodeActivityRunnerService).runWith(eq(EDIT_MODIFICATIONS), eq(studyUuid), eq(null), eq(List.of(failingNodeUuid)), any(Runnable.class));
 
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(
             List.of(createStudyNodeReference(failingModificationUuid, failingNodeUuid)),
             List.of(createCompositeReference(modificationUuid, nodeUuid))));
 
-        verify(studyService, times(2)).sharedModificationsUpdatedNotification(any(), anyList(), anyBoolean());
-        verify(studyService, times(1)).sharedModificationsUpdatedNotification(failingNodeUuid, List.of(failingModificationUuid), false);
-        verify(studyService, times(1)).sharedModificationsUpdatedNotification(nodeUuid, List.of(modificationUuid), false);
+        verify(nodeActivityRunnerService, times(2)).runBatchAction(any(), any(), any());
+        verify(networkModificationTreeService, times(1)).invalidateNodeTree(any(), any());
+        verify(networkModificationTreeService).invalidateNodeTree(studyUuid, nodeUuid);
     }
 
     @Test
     void testNoSharedCompositeUpdated() {
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(List.of(), List.of()));
 
-        verify(studyService, never()).sharedModificationsUpdatedNotification(any(), anyList(), anyBoolean());
-        verifyNoMoreInteractions(networkModificationService, networkModificationTreeService);
+        verify(networkModificationTreeService, never()).invalidateNodeTree(any(), any());
+        verifyNoMoreInteractions(networkModificationRestService, networkModificationTreeService);
     }
 
     private static ReferenceAttributes createStudyNodeReference(UUID modificationUuid, UUID nodeUuid) {
