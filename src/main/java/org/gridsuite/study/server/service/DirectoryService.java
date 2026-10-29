@@ -189,7 +189,7 @@ public class DirectoryService {
     }
 
     /**
-     * update a modification-reference in directory server so it points to a new container after a move.
+     * update a element shared link in directory server so it points to a new container after a move.
      * the row to update is identified by {@code elementUuid} (the referenced shared element) and
      * {@code referenceUuid} (the modification-reference itself); {@code referenceAttributes} carries the new location.
      * @param elementUuid uuid of the referenced shared element in the directory-server

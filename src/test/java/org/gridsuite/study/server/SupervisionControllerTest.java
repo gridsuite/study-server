@@ -394,7 +394,7 @@ class SupervisionControllerTest {
     void testRecreateNetworkModificationSharedLink() throws Exception {
         doNothing().when(supervisionService).recreateNetworkModificationSharedLink(STUDY_UUID, "userId");
 
-        mockMvc.perform(post("/v1/supervision/studies/{studyUuid}/modification-references/recreate", STUDY_UUID)
+        mockMvc.perform(post("/v1/supervision/studies/{studyUuid}/network-modification-shared-links/recreate", STUDY_UUID)
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 

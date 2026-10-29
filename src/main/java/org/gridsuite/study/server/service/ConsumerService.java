@@ -912,8 +912,8 @@ public class ConsumerService {
     }
 
     /**
-     * Keeps the references registered on the shared elements in directory-server in sync with the modification-references
-     * network-modification-server created, moved or deleted in the group of a node.
+     * Keeps the shared links registered on the elements in directory-server in sync with the network-modification-references
+     * created in the group of a node.
      */
     void handleNetworkModificationReferenceChanges(Message<List<ModificationReference>> message) {
         ElementSharedLinkAction action = ElementSharedLinkAction.valueOf(String.valueOf(message.getHeaders().get(HEADER_ACTION)));

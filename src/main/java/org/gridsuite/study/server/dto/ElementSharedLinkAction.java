@@ -7,7 +7,7 @@
 package org.gridsuite.study.server.dto;
 
 /**
- * What happened to the modification-references of a notification received from the network-modification.reference destination.
+ * What happened to the network-modification shared links of a notification received from the network-modification.reference destination.
  *
  * @author Maissa Souissi <maissa.souissi at rte-france.com>
  */
