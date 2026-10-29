@@ -66,6 +66,8 @@ public class ConsumerService {
     private static final String HEADER_ERROR_MESSAGE = "errorMessage";
     private static final String HEADER_EXPORT_UUID = "exportUuid";
     private static final String HEADER_ONLY_METADATA = "onlyMetadata";
+    private static final String HEADER_ACTION = "action";
+    private static final String HEADER_GROUP_UUID = "groupUuid";
 
     private final ObjectMapper objectMapper;
 
@@ -902,6 +904,27 @@ public class ConsumerService {
             }
             handleSharedElementUpdate(message.getPayload(), onlyMetadata);
         };
+    }
+
+    @Bean
+    public Consumer<Message<List<ModificationReference>>> consumeCompositeReferenceChanges() {
+        return this::handleCompositeReferenceChanges;
+    }
+
+    /**
+     * Keeps the references registered on the shared elements in directory-server in sync with the modification-references
+     * network-modification-server created, moved or deleted in the group of a node.
+     */
+    void handleCompositeReferenceChanges(Message<List<ModificationReference>> message) {
+        ElementReferenceAction action = ElementReferenceAction.valueOf(String.valueOf(message.getHeaders().get(HEADER_ACTION)));
+        UUID groupUuid = UUID.fromString(String.valueOf(message.getHeaders().get(HEADER_GROUP_UUID)));
+        String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
+        List<ModificationReference> references = message.getPayload();
+
+        NodeInfos nodeInfos = networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid);
+        if (action == ElementReferenceAction.CREATE) {
+            directoryService.createElementsReferences(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), userId);
+        }
     }
 
     private void handleSharedElementUpdate(Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType, boolean onlyMetadata) {

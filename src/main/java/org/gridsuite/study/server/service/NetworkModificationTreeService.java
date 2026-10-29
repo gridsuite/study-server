@@ -169,6 +169,14 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
+    public NodeInfos findNodeInfosByModificationGroupUuid(UUID modificationGroupUuid) {
+        return networkModificationNodeInfoRepository.findByModificationGroupUuidIn(List.of(modificationGroupUuid)).stream()
+                .findFirst()
+                .map(nodeInfo -> new NodeInfos(nodeInfo.getId(), nodeInfo.getName(), nodeInfo.getNode().getStudy().getId()))
+                .orElseThrow(() -> new StudyException(NOT_FOUND, "Node infos not found"));
+    }
+
+    @Transactional(readOnly = true)
     public List<NodeInfos> getNodesInfos(List<UUID> nodeUuids) {
         // unknown node uuids are simply absent from the result
         return networkModificationNodeInfoRepository.findAllByIdInWithNode(nodeUuids).stream()
