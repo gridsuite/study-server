@@ -709,7 +709,7 @@ public class NetworkModificationTreeService {
     }
 
     public NetworkModificationNodeInfoEntity getNetworkModificationNodeInfoEntity(UUID nodeId) {
-        return networkModificationNodeInfoRepository.findById(nodeId).orElseThrow(() -> new StudyException(NOT_FOUND, "Node not found"));
+        return networkModificationNodeInfoRepository.findById(nodeId).orElseThrow(() -> new StudyException(NODE_NOT_FOUND, "Node not found"));
     }
 
     private AbstractNodeInfoEntity getNodeInfoEntity(UUID nodeUuid) {
@@ -1001,6 +1001,10 @@ public class NetworkModificationTreeService {
 
     public List<NodeEntity> getAllNodes(UUID studyUuid) {
         return nodesRepository.findAllByStudyId(studyUuid);
+    }
+
+    public List<NodeEntity> getAllNotStashedNetworkModificationNodes(UUID studyUuid) {
+        return nodesRepository.findAllByStudyIdAndTypeAndStashed(studyUuid, NodeType.NETWORK_MODIFICATION, false);
     }
 
     /**
