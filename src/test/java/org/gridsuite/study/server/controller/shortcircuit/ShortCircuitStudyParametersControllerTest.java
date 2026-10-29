@@ -46,8 +46,6 @@ class ShortCircuitStudyParametersControllerTest {
     @Test
     void testSetShortCircuitParameters() throws Exception {
         UUID studyUuid = UUID.randomUUID();
-        when(shortCircuitService.setShortCircuitParameters(studyUuid, PARAMETERS, USER_ID)).thenReturn(false);
-
         mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
                 .header(HEADER_USER_ID, USER_ID)
                 .content(PARAMETERS)
@@ -59,17 +57,29 @@ class ShortCircuitStudyParametersControllerTest {
     }
 
     @Test
-    void testSetShortCircuitParametersReturnsNoContent() throws Exception {
+    void testResetShortCircuitParameters() throws Exception {
         UUID studyUuid = UUID.randomUUID();
-        when(shortCircuitService.setShortCircuitParameters(studyUuid, null, USER_ID)).thenReturn(true);
+        when(shortCircuitService.resetShortCircuitParameters(studyUuid, USER_ID)).thenReturn(false);
 
-        mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
-                .header(HEADER_USER_ID, USER_ID)
-                .contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid)
+                .header(HEADER_USER_ID, USER_ID))
+            .andExpect(status().isOk())
+            .andExpect(content().string(""));
+
+        verify(shortCircuitService).resetShortCircuitParameters(studyUuid, USER_ID);
+    }
+
+    @Test
+    void testResetShortCircuitParametersReturnsNoContent() throws Exception {
+        UUID studyUuid = UUID.randomUUID();
+        when(shortCircuitService.resetShortCircuitParameters(studyUuid, USER_ID)).thenReturn(true);
+
+        mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid)
+                .header(HEADER_USER_ID, USER_ID))
             .andExpect(status().isNoContent())
             .andExpect(content().string(""));
 
-        verify(shortCircuitService).setShortCircuitParameters(studyUuid, null, USER_ID);
+        verify(shortCircuitService).resetShortCircuitParameters(studyUuid, USER_ID);
     }
 
     @Test

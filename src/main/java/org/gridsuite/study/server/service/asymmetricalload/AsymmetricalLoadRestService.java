@@ -25,7 +25,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
-import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -203,7 +202,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
         return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public void updateAsymmetricalLoadParameters(UUID parametersUuid, @Nullable String parameters) {
+    public void updateAsymmetricalLoadParameters(UUID parametersUuid, String parameters) {
         var uriBuilder = UriComponentsBuilder.fromPath(PARAMETER_URI);
         String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
 
@@ -212,6 +211,12 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
         restTemplate.put(baseUri + path, httpEntity);
+    }
+
+    public void resetAsymmetricalLoadParameters(UUID parametersUuid) {
+        var uriBuilder = UriComponentsBuilder.fromPath(PARAMETER_URI);
+        String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
+        restTemplate.put(baseUri + path, null);
     }
 
     public UUID getAsymmetricalLoadParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {

@@ -58,7 +58,6 @@ class SecurityAnalysisStudyParametersControllerTest {
     @Test
     void testSetSecurityAnalysisParametersValues() throws Exception {
         UUID studyUuid = UUID.randomUUID();
-        when(securityAnalysisService.setSecurityAnalysisParametersValues(studyUuid, PARAMETERS, USER_ID)).thenReturn(false);
 
         mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
                 .header(HEADER_USER_ID, USER_ID)
@@ -71,15 +70,28 @@ class SecurityAnalysisStudyParametersControllerTest {
     }
 
     @Test
-    void testSetSecurityAnalysisParametersValuesReturnsNoContent() throws Exception {
+    void testResetSecurityAnalysisParametersValuesReturnsNoContent() throws Exception {
         UUID studyUuid = UUID.randomUUID();
-        when(securityAnalysisService.setSecurityAnalysisParametersValues(studyUuid, null, USER_ID)).thenReturn(true);
+        when(securityAnalysisService.resetSecurityAnalysisParametersValues(studyUuid, USER_ID)).thenReturn(true);
 
-        mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
+        mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid)
                 .header(HEADER_USER_ID, USER_ID))
             .andExpect(status().isNoContent())
             .andExpect(content().string(""));
 
-        verify(securityAnalysisService).setSecurityAnalysisParametersValues(studyUuid, null, USER_ID);
+        verify(securityAnalysisService).resetSecurityAnalysisParametersValues(studyUuid, USER_ID);
+    }
+
+    @Test
+    void testResetSecurityAnalysisParametersValues() throws Exception {
+        UUID studyUuid = UUID.randomUUID();
+        when(securityAnalysisService.resetSecurityAnalysisParametersValues(studyUuid, USER_ID)).thenReturn(false);
+
+        mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid)
+                .header(HEADER_USER_ID, USER_ID))
+            .andExpect(status().isOk())
+            .andExpect(content().string(""));
+
+        verify(securityAnalysisService).resetSecurityAnalysisParametersValues(studyUuid, USER_ID);
     }
 }

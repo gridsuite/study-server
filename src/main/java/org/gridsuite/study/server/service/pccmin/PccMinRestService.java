@@ -22,7 +22,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
-import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -48,6 +47,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
     private static final String PCC_MIN_URI = DELIMITER + PCC_MIN_API_VERSION;
     private static final String PARAMETERS_URI = PCC_MIN_URI + DELIMITER + PATH_PARAM_PARAMETERS;
     private static final String PARAMETER_URI = PARAMETERS_URI + DELIMITER + PARAMETER_UUID;
+    private static final String RESET_PARAMETER_URI = PARAMETERS_URI + DELIMITER + PARAMETER_UUID + DELIMITER + "reset";
 
     private final ObjectMapper objectMapper;
 
@@ -189,7 +189,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
         return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public void updatePccMinParameters(UUID parametersUuid, @Nullable String parameters) {
+    public void updatePccMinParameters(UUID parametersUuid, String parameters) {
         var uriBuilder = UriComponentsBuilder.fromPath(PARAMETER_URI);
         String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
 
@@ -198,6 +198,12 @@ public class PccMinRestService extends AbstractComputationRestService implements
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
         restTemplate.put(baseUri + path, httpEntity);
+    }
+
+    public void resetPccMinParameters(UUID parametersUuid) {
+        var uriBuilder = UriComponentsBuilder.fromPath(RESET_PARAMETER_URI);
+        String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
+        restTemplate.put(baseUri + path, null);
     }
 
     public UUID getPccMinParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {

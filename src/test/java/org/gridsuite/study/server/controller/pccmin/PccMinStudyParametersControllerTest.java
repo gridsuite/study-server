@@ -58,7 +58,6 @@ class PccMinStudyParametersControllerTest {
     @Test
     void testSetPccMinParameters() throws Exception {
         UUID studyUuid = UUID.randomUUID();
-        when(pccMinService.setPccMinParameters(studyUuid, PARAMETERS, USER_ID)).thenReturn(false);
 
         mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
                 .header(HEADER_USER_ID, USER_ID)
@@ -71,15 +70,28 @@ class PccMinStudyParametersControllerTest {
     }
 
     @Test
-    void testSetPccMinParametersReturnsNoContent() throws Exception {
+    void testResetPccMinParameters() throws Exception {
         UUID studyUuid = UUID.randomUUID();
-        when(pccMinService.setPccMinParameters(studyUuid, null, USER_ID)).thenReturn(true);
+        when(pccMinService.resetPccMinParameters(studyUuid, USER_ID)).thenReturn(false);
 
-        mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
+        mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid)
+                .header(HEADER_USER_ID, USER_ID))
+            .andExpect(status().isOk())
+            .andExpect(content().string(""));
+
+        verify(pccMinService).resetPccMinParameters(studyUuid, USER_ID);
+    }
+
+    @Test
+    void testResetPccMinParametersReturnsNoContent() throws Exception {
+        UUID studyUuid = UUID.randomUUID();
+        when(pccMinService.resetPccMinParameters(studyUuid, USER_ID)).thenReturn(true);
+
+        mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid)
                 .header(HEADER_USER_ID, USER_ID))
             .andExpect(status().isNoContent())
             .andExpect(content().string(""));
 
-        verify(pccMinService).setPccMinParameters(studyUuid, null, USER_ID);
+        verify(pccMinService).resetPccMinParameters(studyUuid, USER_ID);
     }
 }

@@ -212,8 +212,8 @@ class StateEstimationTest {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/parameters/" + WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING)) {
                     return new MockResponse(404);
-                } else if (path.matches("/v1/parameters")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(STATE_ESTIMATION_ERROR_RESULT_UUID));
+                } else if (path.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID + "/reset") && "PUT".equals(method)) {
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID)) {
                     if ("GET".equals(method)) {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), estimParametersJson);
@@ -225,6 +225,8 @@ class StateEstimationTest {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(STATE_ESTIMATION_PARAMETERS_UUID));
                 } else if (path.matches("/v1/parameters/default") && "POST".equals(method)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(STATE_ESTIMATION_PARAMETERS_UUID));
+                } else if (path.matches("/v1/users/.*/profile") && "GET".equals(method)) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "{}");
                 } else if (path.matches("/v1/users/.*/quota/.*") && "POST".equals(method)) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/logical-controls\\?variantId=.*") && "POST".equals(method)) {
@@ -442,6 +444,10 @@ class StateEstimationTest {
         createOrUpdateParametersAndDoChecks(ids2.studyId, estimParametersJson, "userId", HttpStatus.OK);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING)));
 
+        //reset state estimation parameters to default ones
+        resetParametersAndDoChecks(ids2.studyId, "userId");
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING + "/reset")));
+
         // insert a study with a wrong state estimation parameters uuid
         StudyNodeIds ids3 = createStudyAndNode(VARIANT_ID, "node 3", UUID.fromString(WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING));
 
@@ -452,6 +458,16 @@ class StateEstimationTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING)));
     }
 
+    @Test
+    void testResetStateEstimationParametersWithNoExistingParameters(final MockWebServer server) throws Exception {
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
+
+        resetParametersAndDoChecks(ids.studyId, "userId");
+
+        assertEquals(STATE_ESTIMATION_PARAMETERS_UUID, studyRepository.findById(ids.studyId).orElseThrow().getStateEstimationParametersUuid());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/default")));
+    }
+
     private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/state-estimation/parameters", studyNameUserIdUuid)
@@ -460,6 +476,19 @@ class StateEstimationTest {
                     .content(parameters))
             .andExpect(status().is(status.value()));
 
+        checkParametersChangedMessagesReceived(studyNameUserIdUuid);
+    }
+
+    private void resetParametersAndDoChecks(UUID studyNameUserIdUuid, String userId) throws Exception {
+        mockMvc.perform(
+                post("/v1/studies/{studyUuid}/state-estimation/parameters/reset", studyNameUserIdUuid)
+                    .header("userId", userId))
+            .andExpect(status().isOk());
+
+        checkParametersChangedMessagesReceived(studyNameUserIdUuid);
+    }
+
+    private void checkParametersChangedMessagesReceived(UUID studyNameUserIdUuid) {
         Message<byte[]> stateEstimationStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(studyNameUserIdUuid, stateEstimationStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS, stateEstimationStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
