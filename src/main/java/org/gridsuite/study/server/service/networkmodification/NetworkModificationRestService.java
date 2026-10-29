@@ -290,15 +290,13 @@ public class NetworkModificationRestService {
         restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, new HttpEntity<>(metadata, headers), Void.class);
     }
 
-    public void restoreModifications(UUID groupUUid, List<UUID> modificationsUuids, UUID studyUuid, UUID nodeUuid, String userId) {
+    public void restoreModifications(UUID groupUUid, List<UUID> modificationsUuids, String userId) {
         Objects.requireNonNull(groupUUid);
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
                 .queryParam(UUIDS, modificationsUuids)
                 .queryParam(GROUP_UUID, groupUUid)
-                .queryParam(QUERY_PARAM_STUDY_ROOT_CONTAINER_UUID, studyUuid)
-                .queryParam(QUERY_PARAM_NODE_CONTAINER_UUID, nodeUuid)
                 .queryParam(QUERY_PARAM_STASHED, false)
                 .buildAndExpand()
                 .toUriString();
@@ -669,20 +667,16 @@ public class NetworkModificationRestService {
                 new ParameterizedTypeReference<Map<UUID, UUID>>() { });
     }
 
-    public void restoreElementReferences(UUID groupUUid, UUID studyUuid, UUID newNodeUuid, String userId) {
-        Objects.requireNonNull(groupUUid);
+    public void deleteModificationReferences(UUID groupUuid, String userId) {
+        Objects.requireNonNull(groupUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + "/references")
-                .queryParam(QUERY_PARAM_NODE_CONTAINER_UUID, newNodeUuid)
-                .queryParam(QUERY_PARAM_STUDY_ROOT_CONTAINER_UUID, studyUuid)
-                .buildAndExpand(groupUUid)
+                .buildAndExpand(groupUuid)
                 .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set(HEADER_USER_ID, userId);
 
-        HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
-        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, httpEntity, Void.class);
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.DELETE, new HttpEntity<>(headers), Void.class);
     }
 
     public void verifyModifications(UUID groupUuid, Set<UUID> modificationUuids) {
