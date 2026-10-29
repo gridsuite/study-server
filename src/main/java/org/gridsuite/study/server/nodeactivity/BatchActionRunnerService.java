@@ -34,28 +34,29 @@ public class BatchActionRunnerService {
         this.batchActionRepository = batchActionRepository;
     }
 
-    public void runLastAction(AbstractNodeActivityRunnerService activityRunner) {
+    public void runLastPendingAction(AbstractNodeActivityRunnerService activityRunner) {
         // Get most recent batch
-        BatchActionEntity mostRecentBatch = batchActionRepository.findFirstByOrderByCreatedAtDesc().orElse(null);
-        if (mostRecentBatch == null) {
+        BatchActionEntity pendingAction = batchActionRepository.findFirstByOrderByCreatedAtDesc().orElse(null);
+        if (pendingAction == null) {
             return;
         }
 
         // Delete batch in DB (automatically saved if run failed)
-        batchActionRepository.deleteById(mostRecentBatch.getId());
+        batchActionRepository.deleteById(pendingAction.getId());
 
         // Run batch
-        runAction(activityRunner, mostRecentBatch);
+        runAction(activityRunner, pendingAction);
     }
 
     public void runAction(@NonNull AbstractNodeActivityRunnerService activityRunner, @NonNull BatchActionEntity batchAction) {
         try {
             runAction(batchAction, activityRunner);
-        } catch (StudyException e) {
-            if (!e.isNodeActivityConflict()) {
-                throw e;
+        } catch (Exception e) {
+            if (e instanceof StudyException && ((StudyException) e).isNodeActivityConflict()) {
+                batchActionRepository.save(batchAction);
+                return;
             }
-            batchActionRepository.save(batchAction);
+            LOGGER.error("Failed to run batch action", e);
         }
     }
 

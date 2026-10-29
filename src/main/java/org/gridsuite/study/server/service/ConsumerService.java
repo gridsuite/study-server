@@ -143,6 +143,8 @@ public class ConsumerService {
         Optional<RerunLoadFlowInfos> rerunLoadFlowInfos = getRerunLoadFlowInfos(message);
         UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
 
+        studyService.handleBuildSuccess(studyUuid, nodeUuid, rootNetworkUuid, message.getPayload());
+
         if (rerunLoadFlowInfos.isPresent()) {
             RerunLoadFlowInfos workflowInfos = rerunLoadFlowInfos.get();
             loadFlowService.sendLoadflowRequestWorflow(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid(),
@@ -151,8 +153,6 @@ public class ConsumerService {
             // a rerun's loadflow removes the activity when its own result arrives
             nodeActivityRunnerService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
         }
-
-        studyService.handleBuildSuccess(studyUuid, nodeUuid, rootNetworkUuid, message.getPayload());
     }
 
     private Optional<RerunLoadFlowInfos> getRerunLoadFlowInfos(Message<?> message) throws JsonProcessingException {

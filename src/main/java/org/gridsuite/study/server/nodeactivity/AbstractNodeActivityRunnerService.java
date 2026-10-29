@@ -56,7 +56,7 @@ public abstract class AbstractNodeActivityRunnerService {
     public void removeActivities(UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
         nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, nodeUuids);
 
-        batchActionRunnerService.runLastAction(this);
+        batchActionRunnerService.runLastPendingAction(this);
     }
 
     protected static <T> Supplier<T> asSupplier(Runnable action) {
