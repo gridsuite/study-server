@@ -11,19 +11,26 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.stateestimation.StateEstimationService;
 import org.gridsuite.study.server.utils.QuotaRunner;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_FILTERS;
+import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_GLOBAL_FILTERS;
+import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_SORT;
 import static org.gridsuite.study.server.dto.ComputationType.STATE_ESTIMATION;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
@@ -74,6 +81,27 @@ public class StateEstimationController {
                                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         String result = rootNetworkNodeInfoService.getStateEstimationResult(nodeUuid, rootNetworkUuid);
         return result != null ? ResponseEntity.ok().body(result) :
+                ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/measurements", produces = APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get the state estimation measurements of a study node, restricted by global filters only")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation measurements"),
+        @ApiResponse(responseCode = "204", description = "No state estimation has been done yet"),
+        @ApiResponse(responseCode = "400", description = "Invalid global filters, or column filters/sort supplied"),
+        @ApiResponse(responseCode = "404", description = "The study, root network, node or state estimation has not been found")})
+    public ResponseEntity<String> getStateEstimationMeasurements(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                 @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                 @Parameter(description = "Global filters, as one JSON object")
+                                                                 @RequestParam(name = QUERY_PARAM_GLOBAL_FILTERS, required = false) String globalFilters,
+                                                                 @Parameter(hidden = true) HttpServletRequest request) {
+        if (request.getParameterMap().containsKey(QUERY_PARAM_FILTERS) || request.getParameterMap().containsKey(QUERY_PARAM_SORT)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only global filters are supported on state estimation measurements");
+        }
+        studyService.assertIsRootNetworkAndNodeInStudy(studyUuid, rootNetworkUuid, nodeUuid);
+        String measurements = stateEstimationService.getStateEstimationMeasurements(nodeUuid, rootNetworkUuid, globalFilters);
+        return measurements != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(measurements) :
                 ResponseEntity.noContent().build();
     }
 
