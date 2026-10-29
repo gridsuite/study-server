@@ -200,41 +200,23 @@ public class NetworkModificationRestService {
         return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, Integer.class).getBody();
     }
 
-    public void deleteModifications(UUID groupUUid) {
+    public void deleteModificationsByGroup(UUID groupUUid, String userId) {
         Objects.requireNonNull(groupUUid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .buildAndExpand(groupUUid)
             .toUriString();
 
-        restTemplate.delete(getNetworkModificationServerURI(false) + path);
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.DELETE, userIdEntity(userId), Void.class);
     }
 
-    public void deleteModificationsGroups(List<UUID> groupUuids) {
-        Objects.requireNonNull(groupUuids);
-        if (groupUuids.isEmpty()) {
-            return;
-        }
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(toJson(groupUuids), headers);
-        var path = UriComponentsBuilder.fromPath(GROUPS)
-                .toUriString();
-
-        restTemplate.exchange(getNetworkModificationServerURI(false) + path,
-                HttpMethod.DELETE,
-                httpEntity,
-                new ParameterizedTypeReference<Map<UUID, UUID>>() { });
-    }
-
-    public void deleteModifications(UUID groupUuid, List<UUID> modificationsUuids) {
-        Objects.requireNonNull(groupUuid);
+    public void deleteModificationsByUuids(List<UUID> modificationsUuids, String userId) {
+        Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
                 .queryParam(UUIDS, modificationsUuids)
-                .queryParam(GROUP_UUID, groupUuid)
                 .buildAndExpand()
                 .toUriString();
-        restTemplate.delete(path);
+        restTemplate.exchange(path, HttpMethod.DELETE, userIdEntity(userId), Void.class);
     }
 
     public NetworkModificationsResult createModification(UUID groupUuid,

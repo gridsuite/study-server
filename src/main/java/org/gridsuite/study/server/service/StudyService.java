@@ -670,19 +670,11 @@ public class StudyService {
             // delete all distant resources linked to nodes
             studyServerExecutionService.runAsync(() -> deleteStudyInfos.getModificationGroupUuidsNodeUuids().stream()
                     .filter(Objects::nonNull)
-                    .forEach(groupUuidNodeUuid -> deleteModificationsFromGroup(groupUuidNodeUuid, userId)));
+                    .forEach(groupUuidNodeUuid -> networkModificationRestService.deleteModificationsByGroup(groupUuidNodeUuid.getFirst(), userId)));
 
             LOGGER.trace("Delete study '{}' : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
 
         }
-    }
-
-    private void deleteModificationsFromGroup(Pair<UUID, UUID> groupUuidNodeUuid, String userId) {
-        // fetch the references data in order to remove those references from directory-server
-        List<ModificationReference> referencesToBeDeleted = networkModificationRestService.getModificationReferences(groupUuidNodeUuid.getFirst());
-        removeReferences(referencesToBeDeleted, userId);
-
-        networkModificationRestService.deleteModifications(groupUuidNodeUuid.getFirst());
     }
 
     @Transactional
@@ -1497,22 +1489,11 @@ public class StudyService {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
             }
-            UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-
-            List<ModificationReference> referencesToBeDeleted = networkModificationRestService.getModificationReferences(modificationsUuids);
-            networkModificationRestService.deleteModifications(groupId, modificationsUuids);
-            // if there are unstashed references modifications in the deleted netmods, those references have to be removed from directory server
-            removeReferences(referencesToBeDeleted, userId);
+            networkModificationRestService.deleteModificationsByUuids(modificationsUuids, userId);
         } finally {
             notificationService.emitModificationsDeleted(studyUuid, nodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
-    }
-
-    private void removeReferences(List<ModificationReference> references, String userId) {
-        references.forEach(reference ->
-                directoryService.removeElementReference(reference.referencedId(), reference.modificationUuid(), userId)
-        );
     }
 
     private void removeNodesFromAliases(UUID studyUuid, List<UUID> nodeIds, boolean removeChildren) {
@@ -1568,7 +1549,7 @@ public class StudyService {
                 .mapToObj(index -> Pair.of(modificationGroupUuids.get(index), removedNodeUuids.get(index)))
                 .toList();
         futures.add(studyServerExecutionService.runAsync(() -> modificationGroupUuidsNodeUuids.forEach(
-                groupUuidNodeUuid -> deleteModificationsFromGroup(groupUuidNodeUuid, userId))
+                groupUuidNodeUuid -> networkModificationRestService.deleteModificationsByGroup(groupUuidNodeUuid.getFirst(), userId))
         ));
         futures.add(studyServerExecutionService.runAsync(() -> deleteNodeInfos.getRemovedNodeUuids().forEach(dynamicSimulationEventService::deleteEventsByNodeId)));
         futures.addAll(rootNetworkNodeInfoService.getRemoteDeletions(deleteNodeInfos));

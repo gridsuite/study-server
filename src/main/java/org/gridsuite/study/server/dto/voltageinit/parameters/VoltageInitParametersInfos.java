@@ -44,4 +44,12 @@ public class VoltageInitParametersInfos {
     double shuntCompensatorActivationThreshold;
 
     boolean updateBusVoltage;
+
+    private double penaltyInvestReaPos;
+
+    private double penaltyInvestReaNeg;
+
+    private double penaltyActivePower;
+
+    private double penaltyUnitsReactive;
 }
