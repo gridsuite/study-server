@@ -106,6 +106,9 @@ public class RootNetworkNodeInfoEntity {
     @Column(name = "asymmetricalLoadResultUuid")
     private UUID asymmetricalLoadResultUuid;
 
+    @Column(name = "logicalControlsResultUuid")
+    private UUID logicalControlsResultUuid;
+
     @Embedded
     @AttributeOverrides(value = {
         @AttributeOverride(name = "localBuildStatus", column = @Column(name = "localBuildStatus", nullable = false)),
@@ -129,6 +132,7 @@ public class RootNetworkNodeInfoEntity {
             .stateEstimationResultUuid(stateEstimationResultUuid)
             .pccMinResultUuid(pccMinResultUuid)
             .asymmetricalLoadResultUuid(asymmetricalLoadResultUuid)
+            .logicalControlsResultUuid(logicalControlsResultUuid)
             .sensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid)
             .voltageInitResultUuid(voltageInitResultUuid)
             .shortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid)

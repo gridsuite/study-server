@@ -11,6 +11,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
+import org.gridsuite.study.server.service.logicalcontrols.LogicalControlsRestService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,6 +54,8 @@ class StateEstimationServiceTest {
     @Mock
     private StateEstimationRestService stateEstimationRestService;
     @Mock
+    private LogicalControlsRestService logicalControlsRestService;
+    @Mock
     private UserAdminService userAdminService;
 
     private StateEstimationService stateEstimationService;
@@ -60,7 +63,7 @@ class StateEstimationServiceTest {
     @BeforeEach
     void setUp() {
         stateEstimationService = new StateEstimationService(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService,
-            networkModificationTreeService, rootNetworkService, stateEstimationRestService, userAdminService, new ObjectMapper());
+            networkModificationTreeService, rootNetworkService, stateEstimationRestService, logicalControlsRestService, userAdminService, new ObjectMapper());
     }
 
     @Test

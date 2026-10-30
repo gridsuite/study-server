@@ -16,6 +16,7 @@ spring:
       consumeStateEstimationResult;consumeStateEstimationRunning;consumeStateEstimationDebug;consumeStateEstimationStopped;consumeStateEstimationFailed;\
       consumePccMinResult;consumePccMinRunning;consumePccMinStopped;consumePccMinFailed;\
       consumeAsymmetricalLoadResult;consumeAsymmetricalLoadRunning;consumeAsymmetricalLoadStopped;consumeAsymmetricalLoadFailed;\
+      consumeLogicalControlsResult;consumeLogicalControlsRunning;consumeLogicalControlsStopped;consumeLogicalControlsFailed;\
       consumeNetworkExportFinished;\
       consumeSharedElementUpdate"
     stream:
@@ -211,6 +212,18 @@ spring:
           group: studyPccMinStoppedGroup
         consumeAsymmetricalLoadFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}asymmetricalload.run.dlx
+          group: dlq
+        consumeLogicalControlsResult-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}logicalcontrols.result
+          group: studyLogicalControlsResultGroup
+        consumeLogicalControlsRunning-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}logicalcontrols.running
+          group: studyLogicalControlsResultGroup
+        consumeLogicalControlsStopped-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}logicalcontrols.stopped
+          group: studyLogicalControlsStoppedGroup
+        consumeLogicalControlsFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}logicalcontrols.run.dlx
           group: dlq
         consumeCaseImportSucceeded-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.succeeded
