@@ -14,6 +14,8 @@ import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.service.DirectoryService;
@@ -30,6 +32,7 @@ import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_ALLOWED;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNSHARE_MODIFICATIONS;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com>
@@ -42,23 +45,26 @@ public class NetworkModificationService {
     private final NetworkModificationRestService networkModificationRestService;
     private final NotificationService notificationService;
     private final DirectoryService directoryService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
 
     public NetworkModificationService(NetworkModificationTreeService networkModificationTreeService,
                                       RootNetworkService rootNetworkService,
                                       RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                       NetworkModificationRestService networkModificationRestService,
                                       NotificationService notificationService,
-                                      DirectoryService directoryService) {
+                                      DirectoryService directoryService,
+                                      NodeActivityRunnerService nodeActivityRunnerService) {
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkService = rootNetworkService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.networkModificationRestService = networkModificationRestService;
         this.notificationService = notificationService;
         this.directoryService = directoryService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
     }
 
-    public void updateNetworkModificationNameAndDescription(UUID studyUuid, UUID nodeUuid, UUID networkModificationUuid, String metadata) {
-        networkModificationRestService.updateNetworkModificationNameAndDescription(networkModificationUuid, metadata);
+    public void updateNetworkModificationNameAndDescription(UUID studyUuid, UUID nodeUuid, UUID networkModificationUuid, String metadata, String userId) {
+        networkModificationRestService.updateNetworkModificationNameAndDescription(networkModificationUuid, metadata, userId);
         notificationService.emitModificationsUpdated(studyUuid, nodeUuid, List.of(networkModificationUuid));
     }
 
@@ -342,13 +348,35 @@ public class NetworkModificationService {
         return networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid);
     }
 
-    public void unshareModificationReference(
-        @NonNull final UUID studyUuid,
-        @NonNull final UUID nodeUuid,
-        @NonNull final UUID modificationUuid,
-        String userId) {
-        networkModificationRestService.unshareModificationReference(modificationUuid, userId);
-        notificationService.emitModificationsUpdated(studyUuid, nodeUuid, Optional.empty(), List.of(modificationUuid));
+    public void unshareAllReferencesInStudy(
+            @NonNull final UUID studyUuid,
+            String userId) {
+        // get the modification references of the whole study grouped by their node
+        Map<UUID, List<UUID>> referencesAffectedByNode = new HashMap<>();
+        networkModificationTreeService.getAllNotStashedNetworkModificationNodes(studyUuid).stream()
+                .map(NodeEntity::getIdNode)
+                .forEach(nodeUuid -> {
+                    UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+                    List<UUID> modificationReferences = networkModificationRestService.getModificationReferences(groupUuid)
+                            .stream().map(ModificationReference::modificationUuid).toList();
+                    if (!modificationReferences.isEmpty()) {
+                        referencesAffectedByNode.put(nodeUuid, modificationReferences);
+                    }
+                });
+        if (referencesAffectedByNode.isEmpty()) {
+            return;
+        }
+
+        nodeActivityRunnerService.runWith(UNSHARE_MODIFICATIONS, studyUuid, new ArrayList<>(referencesAffectedByNode.keySet()),
+                () -> unshareModificationReferences(studyUuid, referencesAffectedByNode, userId));
+    }
+
+    public void unshareModificationReferences(@NonNull UUID studyUuid, Map<UUID, List<UUID>> referencesAffectedByNode, String userId) {
+        // a single remote call for all the references, then every affected node is notified
+        List<UUID> allModificationReferenceUuids = referencesAffectedByNode.values().stream().flatMap(List::stream).toList();
+        networkModificationRestService.unshareModificationReferences(allModificationReferenceUuids, userId);
+        referencesAffectedByNode.forEach((nodeUuid, modificationReferenceUuids) ->
+                notificationService.emitModificationsUpdated(studyUuid, nodeUuid, modificationReferenceUuids));
     }
 
     @Transactional(readOnly = true)

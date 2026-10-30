@@ -107,7 +107,7 @@ public class SupervisionService {
 
     private final NetworkModificationRestService networkModificationService;
 
-    private static final String SUPERVISION_USER = "Supervision";
+    public static final String SUPERVISION_USER = "Supervision";
 
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService, LoadFlowService loadFlowService,
@@ -354,7 +354,7 @@ public class SupervisionService {
             });
             reportService.deleteReports(reportsToDelete);
         }
-        voltageInitService.deleteAllVoltageInitResults();
+        voltageInitService.deleteAllVoltageInitResults(SUPERVISION_USER);
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.VOLTAGE_INITIALIZATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }

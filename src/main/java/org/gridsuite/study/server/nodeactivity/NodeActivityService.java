@@ -44,7 +44,8 @@ public class NodeActivityService {
     }
 
     @Transactional
-    public void addNodeActivities(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
+    // Package access
+    void addNodeActivities(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
         doAddActivities(type, studyUuid, rootNetworkUuid, nodeUuids);
     }
 
@@ -115,7 +116,8 @@ public class NodeActivityService {
     }
 
     @Transactional
-    public void removeActivities(UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
+    // Package access
+    void removeActivities(UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
         doRemoveActivities(studyUuid, rootNetworkUuid, nodeUuids);
     }
 

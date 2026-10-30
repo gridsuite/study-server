@@ -27,8 +27,10 @@ public class NetworkModificationActivityRunnerService extends AbstractNodeActivi
 
     private final NetworkModificationService networkModificationService;
 
-    public NetworkModificationActivityRunnerService(NodeActivityService nodeActivityService, NetworkModificationService networkModificationService) {
-        super(nodeActivityService);
+    public NetworkModificationActivityRunnerService(BatchActionRunnerService batchActionRunnerService,
+                                                    NodeActivityService nodeActivityService,
+                                                    NetworkModificationService networkModificationService) {
+        super(batchActionRunnerService, nodeActivityService);
         this.networkModificationService = networkModificationService;
     }
 

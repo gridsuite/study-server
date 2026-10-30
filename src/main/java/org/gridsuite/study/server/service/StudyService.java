@@ -379,6 +379,7 @@ public class StudyService {
                 studyEntity.setMonoRoot(false);
                 invalidatePreviousRootNetworkNodeTree(studyEntity);
             }
+            networkModificationRestService.addRootNetworkTag(getStudyModificationGroupUuids(studyUuid), rootNetworkInfos.getTag());
         } else {
             rootNetworkService.deleteRootNetworks(studyEntity, List.of(rootNetworkInfos));
         }
@@ -415,7 +416,25 @@ public class StudyService {
      * write on, which they cannot associate with a new tag, must already be.
      */
     private void assertCanAddRootNetworkTag(UUID studyUuid, String newTag, String userId) {
-        networkModificationRestService.assertRootNetworkTagsAllowed(getStudyModificationGroupUuids(studyUuid), List.of(newTag), userId);
+        networkModificationRestService.assertRootNetworkTagsAllowed(getStudyModificationGroupUuids(studyUuid), List.of(), List.of(), List.of(newTag), userId);
+    }
+
+    /**
+     * Modifications written into a study must be associated with all its root network tags, including the shared
+     * modifications they point to: the ones the user cannot write on, which they cannot associate with a new tag, must
+     * already be.
+     *
+     * @param containerUuids groups or composites whose content is written into the study: only the shared modifications
+     *                       their content refers to are checked, not the containers themselves
+     * @param modificationUuids modifications written into the study: the shared modifications they and their content
+     *                          refer to are checked
+     * @param sharedUuids shared modifications the study is given a reference to: they are checked themselves, along
+     *                    with the shared modifications their content refers to
+     */
+    private void assertCanWriteModificationsInStudy(UUID studyUuid, List<UUID> containerUuids, List<UUID> modificationUuids,
+                                                    List<UUID> sharedUuids, String userId) {
+        networkModificationRestService.assertRootNetworkTagsAllowed(containerUuids, modificationUuids, sharedUuids,
+                rootNetworkService.getStudyRootNetworkTags(studyUuid), userId);
     }
 
     public SharedModificationsWriteAccess getSharedModificationsWriteAccess(UUID studyUuid, String userId) {
@@ -651,15 +670,11 @@ public class StudyService {
             // delete all distant resources linked to nodes
             studyServerExecutionService.runAsync(() -> deleteStudyInfos.getModificationGroupUuidsNodeUuids().stream()
                     .filter(Objects::nonNull)
-                    .forEach(groupUuidNodeUuid -> deleteModificationsFromGroup(groupUuidNodeUuid, userId)));
+                    .forEach(groupUuidNodeUuid -> networkModificationRestService.deleteModificationsByGroup(groupUuidNodeUuid.getFirst(), userId)));
 
             LOGGER.trace("Delete study '{}' : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
 
         }
-    }
-
-    private void deleteModificationsFromGroup(Pair<UUID, UUID> groupUuidNodeUuid, String userId) {
-        networkModificationRestService.deleteModifications(groupUuidNodeUuid.getFirst(), userId);
     }
 
     @Transactional
@@ -1369,6 +1384,10 @@ public class StudyService {
     @Transactional
     public void duplicateStudyNode(UUID sourceStudyUuid, UUID targetStudyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
         assertDuplicateStudyNode(sourceStudyUuid, targetStudyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode);
+        if (!sourceStudyUuid.equals(targetStudyUuid)) {
+            assertCanWriteModificationsInStudy(targetStudyUuid, List.of(networkModificationTreeService.getModificationGroupUuid(nodeToCopyUuid)),
+                    List.of(), List.of(), userId);
+        }
 
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode, userId);
         boolean invalidateBuild = networkModificationTreeService.hasModifications(nodeToCopyUuid, false);
@@ -1411,6 +1430,10 @@ public class StudyService {
     @Transactional
     public void duplicateStudySubtree(UUID sourceStudyUuid, UUID targetStudyUuid, UUID parentNodeToCopyUuid, UUID referenceNodeUuid, String userId) {
         assertDuplicateStudySubtree(sourceStudyUuid, targetStudyUuid, parentNodeToCopyUuid, referenceNodeUuid);
+        if (!sourceStudyUuid.equals(targetStudyUuid)) {
+            assertCanWriteModificationsInStudy(targetStudyUuid, networkModificationTreeService.getSubtreeModificationGroupUuids(parentNodeToCopyUuid),
+                    List.of(), List.of(), userId);
+        }
         AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(sourceStudyUuid, parentNodeToCopyUuid, null);
         StudyEntity studyEntity = getStudy(targetStudyUuid);
         UUID duplicatedNodeUuid = networkModificationTreeService.cloneStudyTree(studySubTree, referenceNodeUuid, studyEntity, userId);
@@ -1450,15 +1473,6 @@ public class StudyService {
     }
 
     @Transactional
-    public void sharedModificationsUpdatedNotification(UUID nodeUuid, List<UUID> networkModificationUuids, boolean onlyMetadata) {
-        UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
-        if (!onlyMetadata) {
-            networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid);
-        }
-        notificationService.emitSharedModificationsUpdated(studyUuid, nodeUuid, networkModificationUuids);
-    }
-
-    @Transactional
     public void deleteNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
         assertIsStudyExist(studyUuid);
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
@@ -1466,9 +1480,8 @@ public class StudyService {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
             }
-            UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             // the references of the deleted modifications are removed from directory-server through the DELETE notification network-modification-server emits
-            networkModificationRestService.deleteModifications(groupId, modificationsUuids, userId);
+            networkModificationRestService.deleteModificationsByUuids(modificationsUuids, userId);
         } finally {
             notificationService.emitModificationsDeleted(studyUuid, nodeUuid, childrenUuids);
         }
@@ -1528,7 +1541,7 @@ public class StudyService {
                 .mapToObj(index -> Pair.of(modificationGroupUuids.get(index), removedNodeUuids.get(index)))
                 .toList();
         futures.add(studyServerExecutionService.runAsync(() -> modificationGroupUuidsNodeUuids.forEach(
-                groupUuidNodeUuid -> deleteModificationsFromGroup(groupUuidNodeUuid, userId))
+                groupUuidNodeUuid -> networkModificationRestService.deleteModificationsByGroup(groupUuidNodeUuid.getFirst(), userId))
         ));
         futures.add(studyServerExecutionService.runAsync(() -> deleteNodeInfos.getRemovedNodeUuids().forEach(dynamicSimulationEventService::deleteEventsByNodeId)));
         futures.addAll(rootNetworkNodeInfoService.getRemoteDeletions(deleteNodeInfos));
@@ -1573,7 +1586,7 @@ public class StudyService {
 
     public void restoreNodes(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId, String userId) {
         networkModificationTreeService.assertIsRootOrConstructionNode(anchorNodeId);
-        networkModificationTreeService.restoreNode(studyId, nodeIds, anchorNodeId, userId);
+        networkModificationTreeService.restoreNode(studyId, nodeIds, anchorNodeId);
         notificationService.emitElementUpdated(studyId, userId);
     }
 
@@ -1625,6 +1638,7 @@ public class StudyService {
         UUID targetNodeUuid,
         List<UUID> modificationsUuids,
         String userId) {
+        assertCanWriteModificationsInStudy(targetStudyUuid, List.of(), modificationsUuids, List.of(), userId);
         duplicateModificationsOrInsertComposites(targetStudyUuid, targetNodeUuid,
             (groupUuid, modificationApplicationContexts) -> {
                 NetworkModificationsResult result = networkModificationRestService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts), userId);
@@ -1677,18 +1691,33 @@ public class StudyService {
         List<CompositeInfos> compositesInfos,
         String userId,
         StudyConstants.CompositeModificationsActionType action) {
+        boolean isInsert = action == StudyConstants.CompositeModificationsActionType.INSERT;
+        assertCanWriteCompositesInStudy(targetStudyUuid, compositesInfos, isInsert, userId);
         duplicateModificationsOrInsertComposites(
                 targetStudyUuid,
                 targetNodeUuid,
                 (groupUuid, modificationApplicationContexts) -> {
                     NetworkModificationsResult result = networkModificationRestService.insertCompositeModifications(groupUuid, action, Pair.of(compositesInfos, modificationApplicationContexts));
-                    if (action == StudyConstants.CompositeModificationsActionType.INSERT) {
+                    if (isInsert) {
                         createCompositesReferences(compositesInfos, result.modificationUuids(), targetStudyUuid, targetNodeUuid, userId);
                     }
                     return result;
                 },
                 userId
         );
+    }
+
+    /**
+     * Only an INSERT of a composite marked as shared gives the study a reference to it: the shared composite is checked
+     * itself. Any other composite is copied: only its content is checked, the composite being passed as its container.
+     */
+    private void assertCanWriteCompositesInStudy(UUID studyUuid, List<CompositeInfos> compositesInfos, boolean isInsert, String userId) {
+        Map<Boolean, List<UUID>> uuidsByShared = compositesInfos.stream()
+                .collect(Collectors.partitioningBy(composite -> isInsert && composite.isShared(),
+                        Collectors.mapping(CompositeInfos::id, Collectors.toList())));
+        List<UUID> sharedCompositeUuids = uuidsByShared.get(true);
+        List<UUID> copiedCompositeUuids = uuidsByShared.get(false);
+        assertCanWriteModificationsInStudy(studyUuid, copiedCompositeUuids, List.of(), sharedCompositeUuids, userId);
     }
 
     private void createCompositesReferences(List<CompositeInfos> compositesInfos, List<UUID> insertedModificationUuids,

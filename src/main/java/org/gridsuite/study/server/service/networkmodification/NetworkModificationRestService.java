@@ -60,6 +60,8 @@ public class NetworkModificationRestService {
     private static final String QUERY_PARAM_ROOT_NETWORK_TAG = "rootNetworkTag";
     private static final String QUERY_PARAM_GROUP_UUIDS = "groupUuids";
     private static final String QUERY_PARAM_ROOT_NETWORK_TAGS = "rootNetworkTags";
+    private static final String QUERY_PARAM_OLD_TAG = "oldTag";
+    private static final String QUERY_PARAM_NEW_TAG = "newTag";
     private static final String ROOT_NETWORK_TAG_PATH = "root-network-tag";
     private static final String PARAM_USER_INPUT = "userInput";
 
@@ -149,12 +151,9 @@ public class NetworkModificationRestService {
         restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, new HttpEntity<>(modificationInfos, headers), Void.class);
     }
 
-    public void unshareModificationReference(UUID modificationReferenceUuid, String userId) {
-        String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + "/{uuid}/unshare").buildAndExpand(modificationReferenceUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set(HEADER_USER_ID, userId);
-        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
+    public void unshareModificationReferences(List<UUID> modificationReferenceUuids, String userId) {
+        String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + "/unshare").build().toUriString();
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, userIdEntity(userId, modificationReferenceUuids), Void.class);
     }
 
     public void updateNetworkModificationsMetadata(List<UUID> networkModificationUuids, String metadata, String userId) {
@@ -199,45 +198,23 @@ public class NetworkModificationRestService {
         return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, Integer.class).getBody();
     }
 
-    public void deleteModifications(UUID groupUUid, String userId) {
+    public void deleteModificationsByGroup(UUID groupUUid, String userId) {
         Objects.requireNonNull(groupUUid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .buildAndExpand(groupUUid)
             .toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
 
-        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.DELETE, new HttpEntity<>(headers), Void.class);
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.DELETE, userIdEntity(userId), Void.class);
     }
 
-    public void deleteModificationsGroups(List<UUID> groupUuids) {
-        Objects.requireNonNull(groupUuids);
-        if (groupUuids.isEmpty()) {
-            return;
-        }
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(toJson(groupUuids), headers);
-        var path = UriComponentsBuilder.fromPath(GROUPS)
-                .toUriString();
-
-        restTemplate.exchange(getNetworkModificationServerURI(false) + path,
-                HttpMethod.DELETE,
-                httpEntity,
-                new ParameterizedTypeReference<Map<UUID, UUID>>() { });
-    }
-
-    public void deleteModifications(UUID groupUuid, List<UUID> modificationsUuids, String userId) {
-        Objects.requireNonNull(groupUuid);
+    public void deleteModificationsByUuids(List<UUID> modificationsUuids, String userId) {
+        Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
                 .queryParam(UUIDS, modificationsUuids)
-                .queryParam(GROUP_UUID, groupUuid)
                 .buildAndExpand()
                 .toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        restTemplate.exchange(path, HttpMethod.DELETE, new HttpEntity<>(headers), Void.class);
+        restTemplate.exchange(path, HttpMethod.DELETE, userIdEntity(userId), Void.class);
     }
 
     public NetworkModificationsResult createModification(UUID groupUuid,
@@ -302,10 +279,11 @@ public class NetworkModificationRestService {
         restTemplate.exchange(path, HttpMethod.PUT, userIdEntity(userId, metadata), Void.class);
     }
 
-    public void updateNetworkModificationNameAndDescription(UUID networkModificationUuid, String metadata) {
+    public void updateNetworkModificationNameAndDescription(UUID networkModificationUuid, String metadata, String userId) {
         String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + DELIMITER + networkModificationUuid.toString() + DELIMITER + "name-and-description")
                 .build().toUriString();
         HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
         restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, new HttpEntity<>(metadata, headers), Void.class);
     }
@@ -414,6 +392,25 @@ public class NetworkModificationRestService {
         restTemplate.exchange(path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
+    public void addRootNetworkTag(List<UUID> groupUuids, String newTag) {
+        Objects.requireNonNull(newTag);
+        if (CollectionUtils.isEmpty(groupUuids)) {
+            return;
+        }
+        var uri = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + ROOT_NETWORK_TAG_PATH)
+                .queryParam(QUERY_PARAM_GROUP_UUIDS, groupUuids)
+                .queryParam(QUERY_PARAM_NEW_TAG, "{newTag}")
+                .encode()
+                .buildAndExpand(newTag)
+                .toUri();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        restTemplate.exchange(uri, HttpMethod.POST, new HttpEntity<>(headers), Void.class);
+    }
+
     /**
      * Renames a root network tag in the applicabilities held by the modifications of the given groups.
      */
@@ -423,19 +420,20 @@ public class NetworkModificationRestService {
         if (CollectionUtils.isEmpty(groupUuids)) {
             return;
         }
-        var path = UriComponentsBuilder
+        var uri = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + ROOT_NETWORK_TAG_PATH)
                 .queryParam(QUERY_PARAM_GROUP_UUIDS, groupUuids)
-                .queryParam("oldTag", oldTag)
-                .queryParam("newTag", newTag)
-                .buildAndExpand()
-                .toUriString();
+                .queryParam(QUERY_PARAM_OLD_TAG, "{oldTag}")
+                .queryParam(QUERY_PARAM_NEW_TAG, "{newTag}")
+                .encode()
+                .buildAndExpand(oldTag, newTag)
+                .toUri();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set(HEADER_USER_ID, userId);
 
-        restTemplate.exchange(path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
+        restTemplate.exchange(uri, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
     /**
@@ -679,6 +677,18 @@ public class NetworkModificationRestService {
         restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.POST, new HttpEntity<>(headers), Void.class);
     }
 
+    public void deleteModificationReferences(UUID groupUuid, String userId) {
+        Objects.requireNonNull(groupUuid);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + "/references")
+                .buildAndExpand(groupUuid)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.DELETE, new HttpEntity<>(headers), Void.class);
+    }
+
     public void verifyModifications(UUID groupUuid, Set<UUID> modificationUuids) {
         var path = UriComponentsBuilder.fromPath(CONTAINER_PATH + DELIMITER + NETWORK_MODIFICATIONS_PATH + DELIMITER + "verify")
             .queryParam("uuids", modificationUuids)
@@ -784,12 +794,15 @@ public class NetworkModificationRestService {
     /**
      * Throws forbidden when the unwritable shared modifications involved miss some of the tags.
      */
-    public void assertRootNetworkTagsAllowed(List<UUID> containerUuids, List<String> rootNetworkTags, String userId) {
-        if (rootNetworkTags.isEmpty() || containerUuids.isEmpty()) {
+    public void assertRootNetworkTagsAllowed(List<UUID> containerUuids, List<UUID> modificationUuids, List<UUID> sharedUuids,
+                                             List<String> rootNetworkTags, String userId) {
+        if (rootNetworkTags.isEmpty() || containerUuids.isEmpty() && modificationUuids.isEmpty() && sharedUuids.isEmpty()) {
             return;
         }
         restTemplate.exchange(getNetworkModificationServerURI(false) + CONTAINERS + DELIMITER + "root-network-tags/authorized",
-                HttpMethod.POST, userIdEntity(userId, new RootNetworkTagsCheckInfos(containerUuids, rootNetworkTags)), Void.class);
+                HttpMethod.POST,
+                userIdEntity(userId, new RootNetworkTagsCheckInfos(containerUuids, modificationUuids, sharedUuids, rootNetworkTags)),
+                Void.class);
     }
 
     /**
