@@ -11,6 +11,7 @@ import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
@@ -56,16 +57,22 @@ class SupervisionServiceTest {
     SupervisionService supervisionService;
 
     @Test
-    void recreateSharingLinksOnlyForGroupsWithReferences() {
+        void recreateSharingLinksSkipsStashedNodesAndGroupsWithoutReferences() {
         UUID studyUuid = UUID.randomUUID();
         UUID groupWithReferences = UUID.randomUUID();
         UUID groupWithoutReferences = UUID.randomUUID();
+        UUID stashedGroup = UUID.randomUUID();
         List<UUID> modificationGroupUuids = List.of(groupWithReferences, groupWithoutReferences);
         String userId = "userId";
+        NodeEntity activeNode = new NodeEntity();
+        NodeEntity secondActiveNode = new NodeEntity();
+        NodeEntity stashedNode = new NodeEntity();
+        stashedNode.setStashed(true);
 
         when(networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid)).thenReturn(List.of(
-                NetworkModificationNodeInfoEntity.builder().modificationGroupUuid(groupWithReferences).build(),
-                NetworkModificationNodeInfoEntity.builder().modificationGroupUuid(groupWithoutReferences).build()));
+            NetworkModificationNodeInfoEntity.builder().node(activeNode).modificationGroupUuid(groupWithReferences).build(),
+            NetworkModificationNodeInfoEntity.builder().node(secondActiveNode).modificationGroupUuid(groupWithoutReferences).build(),
+            NetworkModificationNodeInfoEntity.builder().node(stashedNode).modificationGroupUuid(stashedGroup).build()));
         when(networkModificationService.getContainersWithModificationReferences(modificationGroupUuids))
                 .thenReturn(Set.of(groupWithReferences));
 
@@ -73,7 +80,8 @@ class SupervisionServiceTest {
 
         verify(networkModificationService).getContainersWithModificationReferences(modificationGroupUuids);
         verify(networkModificationService).createSharingLinks(groupWithReferences, true, userId);
-        verify(networkModificationService, never()).createSharingLinks(groupWithoutReferences, any(Boolean.class), userId);
+        verify(networkModificationService, never()).createSharingLinks(groupWithoutReferences, true, userId);
+        verify(networkModificationService, never()).createSharingLinks(stashedGroup, true, userId);
     }
 
     @Test

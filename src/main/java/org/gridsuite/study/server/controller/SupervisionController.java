@@ -44,8 +44,8 @@ public class SupervisionController {
 
     private final RestClient restClient;
 
-    public SupervisionController(SupervisionService supervisionService, StudyService studyService, RootNetworkService rootNetworkService,
-                                 EquipmentInfosService equipmentInfosService, RestClient restClient) {
+    public SupervisionController(SupervisionService supervisionService, StudyService studyService, RootNetworkService rootNetworkService, EquipmentInfosService equipmentInfosService, RestClient
+            restClient) {
         this.supervisionService = supervisionService;
         this.studyService = studyService;
         this.rootNetworkService = rootNetworkService;
@@ -172,9 +172,9 @@ public class SupervisionController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/network-modification-shared-links/recreate")
-    @Operation(summary = "Recreate network-modification shared links for a study")
-    @ApiResponse(responseCode = "200", description = "Network-modification shared links recreated")
+    @PostMapping(value = "/studies/{studyUuid}/network-modification-sharing-links/recreate")
+    @Operation(summary = "Recreate network-modification sharing links for a study")
+    @ApiResponse(responseCode = "200", description = "Network-modification sharing links recreated")
     public ResponseEntity<Void> recreateSharingLinks(@PathVariable("studyUuid") UUID studyUuid,
                                                                     @RequestHeader("userId") String userId) {
         supervisionService.recreateSharingLinks(studyUuid, userId);
