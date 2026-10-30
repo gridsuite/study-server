@@ -265,13 +265,10 @@ class NetworkModificationServiceTest {
     void testDuplicateModificationsGroupAssociatesTheRootNetworkTags() {
         UUID sourceGroupUuid = UUID.randomUUID();
         UUID groupUuid = UUID.randomUUID();
-        UUID nodeUuid = UUID.randomUUID();
-        UUID studyUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/" + sourceGroupUuid + "/duplicate"
-                + "?groupUuid=" + groupUuid + "&nodeContainerUuid=" + nodeUuid + "&studyRootContainerUuid=" + studyUuid
-                + "&rootNetworkTags=PH1&rootNetworkTags=A%26B%2BC";
+                + "?groupUuid=" + groupUuid + "&rootNetworkTags=PH1&rootNetworkTags=A%26B%2BC";
 
-        networkModificationService.duplicateModificationsGroup(sourceGroupUuid, groupUuid, nodeUuid, studyUuid, List.of("PH1", "A&B+C"), "userId");
+        networkModificationService.duplicateModificationsGroup(sourceGroupUuid, groupUuid, List.of("PH1", "A&B+C"), "userId");
 
         verify(restTemplate).exchange(eq(URI.create(expectedUrl)), eq(HttpMethod.POST), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
     }

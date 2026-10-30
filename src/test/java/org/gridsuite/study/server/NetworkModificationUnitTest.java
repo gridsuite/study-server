@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.controller.StudyController;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
+import org.gridsuite.study.server.dto.NodeInfos;
 import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
@@ -290,6 +291,21 @@ class NetworkModificationUnitTest {
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid, node2Uuid, node4Uuid));
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid, node2Uuid, node4Uuid));
         checkElementUpdatedMessageSent(studyUuid, USER_ID_HEADER);
+    }
+
+    @Test
+    void findNodeInfosByModificationGroupUuid() {
+        setupWithOneRootNetwork();
+        UUID groupUuid = networkModificationNodeInfoRepository.findById(node2Uuid).orElseThrow().getModificationGroupUuid();
+
+        NodeInfos nodeInfos = networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid);
+
+        assertEquals(node2Uuid, nodeInfos.nodeUuid());
+        assertEquals(studyUuid, nodeInfos.studyUuid());
+
+        UUID unknownGroupUuid = UUID.randomUUID();
+        StudyException exception = assertThrows(StudyException.class, () -> networkModificationTreeService.findNodeInfosByModificationGroupUuid(unknownGroupUuid));
+        assertEquals(NOT_FOUND, exception.getBusinessErrorCode());
     }
 
     private void updateNetworkModificationActivationStatus(List<UUID> networkModificationUuids, UUID nodeWithModification, List<UUID> childrenNodes, List<UUID> nodesToUnbuild, boolean activated) {

@@ -109,20 +109,37 @@ public class DirectoryService {
         return response.getStatusCode() == HttpStatus.OK;
     }
 
-    public void createElementsReferences(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, String userId) {
-        references.forEach(ref -> {
-            boolean insideComposite = ref.containerId() != null;
-            ReferenceAttributes referenceAttributes = ReferenceAttributes.createReferenceAttributes(
-                    ref.modificationUuid(),
-                    insideComposite ? nodeUuid : studyUuid,
-                    insideComposite ? ref.containerId() : nodeUuid,
-                    insideComposite ? ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION
-                            : ReferenceAttributes.ReferenceType.STUDY_NODE);
-            createElementReference(ref.referencedId(), referenceAttributes, userId);
-        });
+    public void createSharingLinks(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, String userId) {
+        references.forEach(ref -> createSharingLink(ref.referencedId(), toReferenceAttributes(ref, studyUuid, nodeUuid), false, userId));
     }
 
-    public void createElementReference(@NonNull UUID elementUuid, @NonNull ReferenceAttributes referenceAttributes, String userId) {
+    public void createSharingLinks(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, boolean recreate, String userId) {
+        references.forEach(ref -> createSharingLink(ref.referencedId(), toReferenceAttributes(ref, studyUuid, nodeUuid), recreate, userId));
+    }
+
+    public void updateSharingLinks(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, String userId) {
+        references.forEach(ref -> updateSharingLink(ref.referencedId(), toReferenceAttributes(ref, studyUuid, nodeUuid), userId));
+    }
+
+    public void removeSharingLinks(List<ModificationReference> references, String userId) {
+        references.forEach(ref -> removeSharingLink(ref.referencedId(), ref.modificationUuid(), userId));
+    }
+
+    /**
+     * a modification-reference at the root of the node group is registered as used by the node of the study,
+     * one nested in a composite as used by this composite of the node
+     */
+    private static ReferenceAttributes toReferenceAttributes(ModificationReference ref, UUID studyUuid, UUID nodeUuid) {
+        boolean insideComposite = ref.containerId() != null;
+        return ReferenceAttributes.createReferenceAttributes(
+                ref.modificationUuid(),
+                insideComposite ? nodeUuid : studyUuid,
+                insideComposite ? ref.containerId() : nodeUuid,
+                insideComposite ? ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION
+                        : ReferenceAttributes.ReferenceType.STUDY_NODE);
+    }
+
+    public void createSharingLink(@NonNull UUID elementUuid, @NonNull ReferenceAttributes referenceAttributes, boolean recreate, String userId) {
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -131,10 +148,34 @@ public class DirectoryService {
 
         var path = UriComponentsBuilder.fromPath(
                 DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")
+            .queryParam("recreate", recreate)
             .buildAndExpand(elementUuid)
             .toUriString();
 
         restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.POST, requestEntity, ElementAttributes.class);
+    }
+
+    /**
+     * remove reference from the shared modification in directory server
+     * @param referenceUuid uuid of the composite or group where the 'Modification reference' is located
+     * @param userId id of the user who caused the unreferencing
+     * @param sharedElementUuid uuid of the referenced shared element in the directory-server
+     */
+    public void removeSharingLink(UUID sharedElementUuid, UUID referenceUuid, String userId) {
+        Objects.requireNonNull(referenceUuid);
+        Objects.requireNonNull(sharedElementUuid);
+
+        var path = UriComponentsBuilder.fromPath(
+                        DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references/{referenceUuid}")
+                .buildAndExpand(sharedElementUuid, referenceUuid)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Object> requestEntity = new HttpEntity<>(headers);
+        restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.DELETE, requestEntity, ElementAttributes.class);
     }
 
     public void createElement(UUID directoryUuid, String description, UUID elementUuid, String elementName, String type, String userId) {
@@ -173,7 +214,7 @@ public class DirectoryService {
      * @param referenceAttributes new attributes of the modification-reference
      * @param userId id of the user who moves the reference
      */
-    public void updateElementReference(@NonNull UUID elementUuid, @NonNull ReferenceAttributes referenceAttributes, String userId) {
+    public void updateSharingLink(@NonNull UUID elementUuid, @NonNull ReferenceAttributes referenceAttributes, String userId) {
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
