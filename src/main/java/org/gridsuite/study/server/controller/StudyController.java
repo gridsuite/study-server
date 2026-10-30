@@ -315,7 +315,18 @@ public class StudyController {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         networkModificationActivityRunnerService.runWith(studyUuid, nodeUuid, userId,
-            () -> networkModificationService.unshareModificationReference(studyUuid, nodeUuid, modificationUuid, userId));
+                () -> networkModificationService.unshareModificationReferences(studyUuid, Map.of(nodeUuid, List.of(modificationUuid)), userId));
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/unshare")
+    @Operation(summary = "Unshare all the reference modifications and copy the referenced composites in their place")
+    @ApiResponse(responseCode = "200", description = "All the reference modifications from the study have been replaced by copies of their referenced composites")
+    public ResponseEntity<Void> unshareAllModificationReferences(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsStudyExist(studyUuid);
+        networkModificationService.unshareAllReferencesInStudy(studyUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1046,7 +1057,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications was deleted"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<Void> deleteNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                           @Parameter(description = "Network modification UUIDs") @RequestParam(name = "uuids", required = false) List<UUID> networkModificationUuids,
+                                                           @Parameter(description = "Network modification UUIDs") @RequestParam(name = "uuids") List<UUID> networkModificationUuids,
                                                            @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.deleteNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);

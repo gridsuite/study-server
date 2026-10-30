@@ -59,6 +59,7 @@ import java.util.stream.Stream;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
+import static org.gridsuite.study.server.service.SupervisionService.SUPERVISION_USER;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com>
@@ -564,7 +565,7 @@ public class RootNetworkNodeInfoService {
             studyServerExecutionService.runAsync(() -> sensitivityAnalysisRestService.deleteSensitivityAnalysisResults(infos.getSensitivityAnalysisResultUuids())),
             studyServerExecutionService.runAsync(() -> shortCircuitRestService.deleteShortCircuitAnalysisResults(infos.getShortCircuitAnalysisResultUuids())),
             studyServerExecutionService.runAsync(() -> shortCircuitRestService.deleteShortCircuitAnalysisResults(infos.getOneBusShortCircuitAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> voltageInitRestService.deleteVoltageInitResults(infos.getVoltageInitResultUuids())),
+            studyServerExecutionService.runAsync(() -> voltageInitRestService.deleteVoltageInitResults(infos.getVoltageInitResultUuids(), SUPERVISION_USER)),
             studyServerExecutionService.runAsync(() -> dynamicSimulationRestService.deleteResults(infos.getDynamicSimulationResultUuids())),
             studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisRestService.deleteResults(infos.getDynamicSecurityAnalysisResultUuids())),
             studyServerExecutionService.runAsync(() -> dynamicMarginCalculationRestService.deleteResults(infos.getDynamicMarginCalculationResultUuids())),

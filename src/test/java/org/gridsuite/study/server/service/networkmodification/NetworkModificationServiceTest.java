@@ -128,27 +128,14 @@ class NetworkModificationServiceTest {
     @Test
     void testUnshareModificationReference() {
         UUID modificationReferenceUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationReferenceUuid + "/unshare";
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/unshare";
 
-        networkModificationService.unshareModificationReference(modificationReferenceUuid, USER_ID);
+        networkModificationService.unshareModificationReferences(List.of(modificationReferenceUuid), USER_ID);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set(HEADER_USER_ID, USER_ID);
-        verify(restTemplate).exchange(expectedUrl, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
-    }
-
-    @Test
-    void testDeleteModificationsGroups() {
-        UUID firstUuid = UUID.randomUUID();
-        UUID secondUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        networkModificationService.deleteModificationsGroups(List.of(firstUuid, secondUuid));
-        HttpEntity<String> httpEntity = new HttpEntity<>("[\"" + firstUuid + "\",\"" + secondUuid + "\"]", headers);
-        verify(restTemplate).exchange(expectedUrl, HttpMethod.DELETE, httpEntity, new ParameterizedTypeReference<Map<UUID, UUID>>() { });
+        verify(restTemplate).exchange(expectedUrl, HttpMethod.PUT, new HttpEntity<>(List.of(modificationReferenceUuid), headers), Void.class);
     }
 
     @Test
@@ -214,6 +201,33 @@ class NetworkModificationServiceTest {
     }
 
     @Test
+    void testDeleteModificationReferences() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/" + groupUuid + "/references";
+
+        networkModificationService.deleteModificationReferences(groupUuid, "userId");
+
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.DELETE),
+                argThat((HttpEntity<?> entity) -> "userId".equals(entity.getHeaders().getFirst(HEADER_USER_ID))), eq(Void.class));
+    }
+
+    @Test
+    void testAddRootNetworkTag() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
+                + "?groupUuids=" + groupUuid + "&newTag=PH2";
+
+        networkModificationService.addRootNetworkTag(List.of(groupUuid), "PH2");
+
+        verify(restTemplate).exchange(eq(URI.create(expectedUrl)), eq(HttpMethod.POST), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+
+        // there is nothing to add the tag to without a group
+        networkModificationService.addRootNetworkTag(List.of(), "PH2");
+
+        verifyNoMoreInteractions(restTemplate);
+    }
+
+    @Test
     void testRenameRootNetworkTag() {
         UUID firstGroupUuid = UUID.randomUUID();
         UUID secondGroupUuid = UUID.randomUUID();
@@ -222,7 +236,7 @@ class NetworkModificationServiceTest {
 
         networkModificationService.renameRootNetworkTag(List.of(firstGroupUuid, secondGroupUuid), "PH1", "PH2", USER_ID);
 
-        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+        verify(restTemplate).exchange(eq(URI.create(expectedUrl)), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
 
         // there is nothing to rename without a group
         networkModificationService.renameRootNetworkTag(List.of(), "PH1", "PH2", USER_ID);

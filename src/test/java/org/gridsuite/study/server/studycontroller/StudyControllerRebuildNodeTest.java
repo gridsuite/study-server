@@ -170,8 +170,17 @@ class StudyControllerRebuildNodeTest {
         ResponseEntity<Void> response = studyController.unshareModificationReference(modificationUuid, studyUuid, nodeUuid, userId);
 
         Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(networkModificationService, times(1)).unshareModificationReference(studyUuid, nodeUuid, modificationUuid, userId);
+        verify(networkModificationService, times(1)).unshareModificationReferences(studyUuid, Map.of(nodeUuid, List.of(modificationUuid)), userId);
         verify(studyService, times(1)).assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         verify(studyService, times(1)).assertIsNodeNotReadOnly(nodeUuid);
+    }
+
+    @Test
+    void testUnshareAllReferencesInStudy() {
+        ResponseEntity<Void> response = studyController.unshareAllModificationReferences(studyUuid, userId);
+
+        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(studyService, times(1)).assertIsStudyExist(studyUuid);
+        verify(networkModificationService, times(1)).unshareAllReferencesInStudy(studyUuid, userId);
     }
 }

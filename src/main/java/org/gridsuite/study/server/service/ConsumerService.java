@@ -25,8 +25,8 @@ import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.nodeactivity.BatchActionType;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
-import org.gridsuite.study.server.nodeactivity.NodeActivityService;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
@@ -82,7 +82,6 @@ public class ConsumerService {
     private final UserAdminService userAdminService;
     private final LoadFlowService loadFlowService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
-    private final NodeActivityService nodeActivityService;
     private final WorkspaceService workspaceService;
     private final NetworkModificationService networkModificationService;
 
@@ -103,7 +102,6 @@ public class ConsumerService {
                            UserAdminService userAdminService,
                            LoadFlowService loadFlowService,
                            NodeActivityRunnerService nodeActivityRunnerService,
-                           NodeActivityService nodeActivityService,
                            WorkspaceService workspaceService,
                            NetworkModificationService networkModificationService) {
         this.objectMapper = objectMapper;
@@ -119,7 +117,6 @@ public class ConsumerService {
         this.computationParametersService = computationParametersService;
         this.userAdminService = userAdminService;
         this.loadFlowService = loadFlowService;
-        this.nodeActivityService = nodeActivityService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
         this.workspaceService = workspaceService;
         this.networkModificationService = networkModificationService;
@@ -146,16 +143,16 @@ public class ConsumerService {
         Optional<RerunLoadFlowInfos> rerunLoadFlowInfos = getRerunLoadFlowInfos(message);
         UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
 
+        studyService.handleBuildSuccess(studyUuid, nodeUuid, rootNetworkUuid, message.getPayload());
+
         if (rerunLoadFlowInfos.isPresent()) {
             RerunLoadFlowInfos workflowInfos = rerunLoadFlowInfos.get();
             loadFlowService.sendLoadflowRequestWorflow(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid(),
                 workflowInfos.isWithRatioTapChangers(), workflowInfos.getUserId(), workflowInfos.getQuotaId());
         } else {
             // a rerun's loadflow removes the activity when its own result arrives
-            nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
+            nodeActivityRunnerService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
         }
-
-        studyService.handleBuildSuccess(studyUuid, nodeUuid, rootNetworkUuid, message.getPayload());
     }
 
     private Optional<RerunLoadFlowInfos> getRerunLoadFlowInfos(Message<?> message) throws JsonProcessingException {
@@ -228,7 +225,7 @@ public class ConsumerService {
             userAdminService.releaseQuotaId(infos.getUserId(), infos.getQuotaId());
             loadFlowService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, infos.getLoadflowResultUuid());
         });
-        nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
+        nodeActivityRunnerService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
     }
 
     @Bean
@@ -361,7 +358,7 @@ public class ConsumerService {
 
     private void removeReimportCaseActivity(UUID studyUuid, UUID rootNetworkUuid) {
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-        nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, List.of(rootNodeUuid));
+        nodeActivityRunnerService.removeActivities(studyUuid, rootNetworkUuid, List.of(rootNodeUuid));
     }
 
     /**
@@ -474,7 +471,7 @@ public class ConsumerService {
     }
 
     private void removeComputationActivity(UUID studyUuid, NodeReceiver receiverObj) {
-        nodeActivityService.removeActivities(studyUuid, receiverObj.getRootNetworkUuid(), List.of(receiverObj.getNodeUuid()));
+        nodeActivityRunnerService.removeActivities(studyUuid, receiverObj.getRootNetworkUuid(), List.of(receiverObj.getNodeUuid()));
     }
 
     public void consumeCalculationDebug(Message<String> msg, ComputationType computationType) {
@@ -932,6 +929,24 @@ public class ConsumerService {
                 modificationUuidsByNodes.computeIfAbsent(nodeId, k -> new ArrayList<>()).add(ref.getReferenceId());
             }
         }));
-        modificationUuidsByNodes.entrySet().forEach(entry -> studyService.sharedModificationsUpdatedNotification(entry.getKey(), entry.getValue(), onlyMetadata));
+        modificationUuidsByNodes.entrySet().forEach(entry -> {
+                try {
+                    handleSharedModificationsUpdate(entry.getKey(), entry.getValue(), onlyMetadata);
+                } catch (Exception e) {
+                    LOGGER.error(String.format("Could not handle shared modifications update for node %s", entry.getKey()), e);
+                }
+            }
+        );
+    }
+
+    private void handleSharedModificationsUpdate(UUID nodeUuid, List<UUID> networkModificationUuids, boolean onlyMetada) {
+        if (networkModificationUuids.isEmpty()) {
+            return;
+        }
+        UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
+        if (!onlyMetada) {
+            nodeActivityRunnerService.runBatchAction(BatchActionType.INVALIDATE_NODE_TREE, studyUuid, nodeUuid);
+        }
+        notificationService.emitSharedModificationsUpdated(studyUuid, nodeUuid, networkModificationUuids);
     }
 }

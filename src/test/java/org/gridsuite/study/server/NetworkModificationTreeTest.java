@@ -34,7 +34,7 @@ import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
-import org.gridsuite.study.server.nodeactivity.NodeActivityService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.nodeactivity.NodeActivityType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -90,6 +90,7 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NODE_NOT_FOUND;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
@@ -225,7 +226,7 @@ class NetworkModificationTreeTest {
     @Autowired
     private RootNetworkRepository rootNetworkRepository;
     @Autowired
-    private NodeActivityService nodeActivityService;
+    private NodeActivityRunnerService nodeActivityRunnerService;
     @MockitoSpyBean
     private StudyService studyService;
 
@@ -816,7 +817,7 @@ class NetworkModificationTreeTest {
         RootNode root = getRootNode(rootStudyId, firstRootNetworkUuid);
         UUID rootId = root.getId();
 
-        RootNodeInfoEntity rootInfos = rootNodeInfoRepository.findById(rootId).orElseThrow(() -> new StudyException(NOT_FOUND, "Node not found"));
+        RootNodeInfoEntity rootInfos = rootNodeInfoRepository.findById(rootId).orElseThrow(() -> new StudyException(NODE_NOT_FOUND, "Node not found"));
         assertEquals(rootId, rootInfos.getId());
 
         List<AbstractNode> children = root.getChildren();
@@ -1041,7 +1042,7 @@ class NetworkModificationTreeTest {
         RootNode root = createRoot();
         UUID studyId = root.getStudyId();
         UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyId);
-        nodeActivityService.addNodeActivities(NodeActivityType.BUILD, studyId, rootNetworkUuid, List.of(root.getId()));
+        nodeActivityRunnerService.addNodeActivities(NodeActivityType.BUILD, studyId, rootNetworkUuid, List.of(root.getId()));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/restore?anchorNodeId={anchorNodeId}", studyId, root.getId())
                         .header(USER_ID_HEADER, "userId")

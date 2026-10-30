@@ -75,7 +75,6 @@ public class NetworkModificationTreeService {
     private final UserAdminService userAdminService;
 
     private final StudyServerExecutionService studyServerExecutionService;
-    private final DirectoryService directoryService;
 
     public NetworkModificationTreeService(NodeRepository nodesRepository,
                                           RootNodeInfoRepository rootNodeInfoRepository,
@@ -88,8 +87,7 @@ public class NetworkModificationTreeService {
                                           NetworkService networkStoreService,
                                           ReportService reportService,
                                           UserAdminService userAdminService,
-                                          StudyServerExecutionService studyServerExecutionService,
-                                          DirectoryService directoryService) {
+                                          StudyServerExecutionService studyServerExecutionService) {
         this.nodesRepository = nodesRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.networkModificationService = networkModificationService;
@@ -102,7 +100,6 @@ public class NetworkModificationTreeService {
         this.reportService = reportService;
         this.userAdminService = userAdminService;
         this.studyServerExecutionService = studyServerExecutionService;
-        this.directoryService = directoryService;
     }
 
     private NetworkModificationNodeInfoEntity createNetworkModificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {
@@ -352,6 +349,7 @@ public class NetworkModificationTreeService {
         NodeEntity nodeToStash = nodeToStashInfo.getNode();
         UUID modificationGroupUuid = nodeToStashInfo.getModificationGroupUuid();
         networkModificationService.deleteStashedModificationsFromGroups(List.of(modificationGroupUuid), userId);
+        networkModificationService.deleteModificationReferences(modificationGroupUuid, userId);
         if (!stashChildren) {
             insertNodesToParent(nodeToStash.getParentNode(), nodeToStashInfo.getColumnPosition(), getChildren(nodeId));
         } else {
@@ -711,7 +709,7 @@ public class NetworkModificationTreeService {
     }
 
     public NetworkModificationNodeInfoEntity getNetworkModificationNodeInfoEntity(UUID nodeId) {
-        return networkModificationNodeInfoRepository.findById(nodeId).orElseThrow(() -> new StudyException(NOT_FOUND, "Node not found"));
+        return networkModificationNodeInfoRepository.findById(nodeId).orElseThrow(() -> new StudyException(NODE_NOT_FOUND, "Node not found"));
     }
 
     private AbstractNodeInfoEntity getNodeInfoEntity(UUID nodeUuid) {
@@ -933,7 +931,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void restoreNode(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId, String userId) {
+    public void restoreNode(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId) {
         for (UUID nodeId : nodeIds) {
             NodeEntity nodeToRestore = getNodeEntity(nodeId);
             NodeEntity anchorNode = getNodeEntity(anchorNodeId);
@@ -948,10 +946,7 @@ public class NetworkModificationTreeService {
             nodeToRestore.setStashed(false);
             nodeToRestore.setStashDate(null);
             modificationNodeToRestore.setColumnPosition(getNextColumnPosition(anchorNodeId));
-            NodeEntity newNode = nodesRepository.save(nodeToRestore);
-            // restore the references pointing from directory server to netmod-server
-            List<ModificationReference> modificationsReferences = networkModificationService.getModificationReferences(getModificationGroupUuid(newNode.getIdNode()));
-            directoryService.createElementsReferences(modificationsReferences, studyId, newNode.getIdNode(), userId);
+            nodesRepository.save(nodeToRestore);
             if (hasChildren(nodeId)) {
                 restoreNodeChildren(studyId, nodeId);
                 notificationService.emitSubtreeInserted(studyId, nodeId, anchorNodeId);
@@ -1006,6 +1001,10 @@ public class NetworkModificationTreeService {
 
     public List<NodeEntity> getAllNodes(UUID studyUuid) {
         return nodesRepository.findAllByStudyId(studyUuid);
+    }
+
+    public List<NodeEntity> getAllNotStashedNetworkModificationNodes(UUID studyUuid) {
+        return nodesRepository.findAllByStudyIdAndTypeAndStashed(studyUuid, NodeType.NETWORK_MODIFICATION, false);
     }
 
     /**

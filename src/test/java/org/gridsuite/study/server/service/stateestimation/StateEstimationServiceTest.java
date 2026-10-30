@@ -24,12 +24,20 @@ import org.springframework.http.ResponseEntity;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.gridsuite.study.server.dto.ComputationType.STATE_ESTIMATION;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class StateEstimationServiceTest {
 
     private static final UUID RESULT_UUID = UUID.randomUUID();
+    private static final UUID NODE_UUID = UUID.randomUUID();
+    private static final UUID ROOT_NETWORK_UUID = UUID.randomUUID();
+    private static final UUID NETWORK_UUID = UUID.randomUUID();
+    private static final String VARIANT_ID = "node_variant";
+    private static final String GLOBAL_FILTERS = "{\"countryCode\":[\"FR\"]}";
 
     @Mock
     private StudyRepository studyRepository;
@@ -64,5 +72,27 @@ class StateEstimationServiceTest {
         when(stateEstimationRestService.downloadDebugFile(RESULT_UUID)).thenReturn(response);
 
         assertThat(stateEstimationService.downloadDebugFile(RESULT_UUID)).isEqualTo(response);
+    }
+
+    @Test
+    void measurementsUseStoredResultNetworkAndNodeVariant() {
+        when(rootNetworkNodeInfoService.getComputationResultUuid(NODE_UUID, ROOT_NETWORK_UUID, STATE_ESTIMATION)).thenReturn(RESULT_UUID);
+        when(rootNetworkService.getNetworkUuid(ROOT_NETWORK_UUID)).thenReturn(NETWORK_UUID);
+        when(networkModificationTreeService.getVariantId(NODE_UUID, ROOT_NETWORK_UUID)).thenReturn(VARIANT_ID);
+        when(stateEstimationRestService.getStateEstimationMeasurements(RESULT_UUID, NETWORK_UUID, VARIANT_ID, GLOBAL_FILTERS)).thenReturn("[]");
+
+        assertThat(stateEstimationService.getStateEstimationMeasurements(NODE_UUID, ROOT_NETWORK_UUID, GLOBAL_FILTERS)).isEqualTo("[]");
+
+        verify(stateEstimationRestService).getStateEstimationMeasurements(RESULT_UUID, NETWORK_UUID, VARIANT_ID, GLOBAL_FILTERS);
+        verifyNoInteractions(notificationService, studyRepository, computationParametersService);
+    }
+
+    @Test
+    void measurementsWithoutStoredResultDoNothingElse() {
+        when(rootNetworkNodeInfoService.getComputationResultUuid(NODE_UUID, ROOT_NETWORK_UUID, STATE_ESTIMATION)).thenReturn(null);
+
+        assertThat(stateEstimationService.getStateEstimationMeasurements(NODE_UUID, ROOT_NETWORK_UUID, GLOBAL_FILTERS)).isNull();
+
+        verifyNoInteractions(rootNetworkService, networkModificationTreeService, stateEstimationRestService, notificationService, studyRepository);
     }
 }
