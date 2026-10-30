@@ -40,39 +40,48 @@ gridsuite:
     -
       name: loadflow-server
       base-uri: http://localhost:5008
+      optional: true
     -
       name: actions-server
       base-uri: http://localhost:5022
     -
       name: security-analysis-server
       base-uri: http://localhost:5023
+      optional: true
     -
       name: report-server
       base-uri: http://localhost:5028
     -
       name: sensitivity-analysis-server
       base-uri: http://localhost:5030
+      optional: true
     -
       name: shortcircuit-server
       base-uri: http://localhost:5031
+      optional: true
     -
       name: dynamic-simulation-server
       base-uri: http://localhost:5032
+      optional: true
     -
       name: dynamic-security-analysis-server
       base-uri: http://localhost:5040
+      optional: true
     -
       name: dynamic-margin-calculation-server
       base-uri: http://localhost:5041
+      optional: true
     -
       name: timeseries-server
       base-uri: http://localhost:5037
     -
       name: dynamic-mapping-server
       base-uri: http://localhost:5036
+      optional: true
     -
       name: voltage-init-server
       base-uri: http://localhost:5038
+      optional: true
     -
       name: filter-server
       base-uri: http://localhost:5027
@@ -85,6 +94,7 @@ gridsuite:
     -
       name: pcc-min-server
       base-uri: http://localhost:6042
+      optional: true
     -
       name: study-config-server
       base-uri: http://localhost:5035/

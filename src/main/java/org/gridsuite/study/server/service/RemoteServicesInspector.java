@@ -118,6 +118,15 @@ public class RemoteServicesInspector {
         return CompletableFuture.completedFuture(false);
     }
 
+    @Async
+    public CompletableFuture<Boolean> isOptionalServiceUp(RemoteServiceName name) {
+        return isOptionalServiceUp(
+                remoteServicesProperties.getServices().stream()
+                        .filter(service -> service.getName().equals(name))
+                        .findFirst().orElse(null)
+        );
+    }
+
     /**
      * Get all {@link RemoteServiceName services} actuator information and aggregate them
      * @param view the view to use to filter the services returned
