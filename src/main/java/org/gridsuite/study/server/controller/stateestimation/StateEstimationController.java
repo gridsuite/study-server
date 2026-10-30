@@ -83,7 +83,7 @@ public class StateEstimationController {
                 ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/measurements", produces = APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/measurements", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get the state estimation measurements of a study node, restricted by global filters only")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation measurements"),
         @ApiResponse(responseCode = "204", description = "No state estimation has been done yet"),
