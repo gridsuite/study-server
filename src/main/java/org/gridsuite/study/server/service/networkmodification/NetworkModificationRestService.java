@@ -666,9 +666,9 @@ public class NetworkModificationRestService {
      * Asks network-modification-server to notify back the recreation of the references of the group, so that they are created in directory-server.
      * Called after the commit only, so that the node holding the group is resolvable when the notification is consumed.
      */
-    public void recreateReferences(UUID groupUuid, String userId) {
+    public void createSharingLinks(UUID groupUuid, String userId) {
         Objects.requireNonNull(groupUuid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + "/references")
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + "/sharing-links")
                 .buildAndExpand(groupUuid)
                 .toUriString();
 

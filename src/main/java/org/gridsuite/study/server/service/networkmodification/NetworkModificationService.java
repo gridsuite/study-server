@@ -273,7 +273,7 @@ public class NetworkModificationService {
 
     private void updateElementsReferences(List<ModificationReference> modificationReferences, UUID rootContainerId, UUID containerId,
                                           ReferenceAttributes.ReferenceType targetReferenceType, String userId) {
-        modificationReferences.forEach(ref -> directoryService.updateElementReference(
+        modificationReferences.forEach(ref -> directoryService.updateSharingLink(
             ref.referencedId(),
             ReferenceAttributes.createReferenceAttributes(ref.modificationUuid(), rootContainerId, containerId, targetReferenceType), userId)
         );

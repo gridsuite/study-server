@@ -6,9 +6,9 @@
  */
 package org.gridsuite.study.server.service;
 
-import org.gridsuite.study.server.dto.ElementReferenceAction;
 import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.NodeInfos;
+import org.gridsuite.study.server.dto.SharingLinkAction;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.nodeactivity.NodeActivityService;
@@ -75,7 +75,7 @@ class ConsumerCompositeReferenceChangesTest {
     @Autowired
     private ConsumerService consumerService;
 
-    private Consumer<Message<List<ModificationReference>>> consumeCompositeReferenceChanges;
+    private Consumer<Message<List<ModificationReference>>> consumeCompositeLinksChanges;
 
     private static final String USER_ID = "userId";
     private final UUID groupUuid = UUID.randomUUID();
@@ -87,7 +87,7 @@ class ConsumerCompositeReferenceChangesTest {
 
     @BeforeEach
     void setup() {
-        consumeCompositeReferenceChanges = consumerService.consumeCompositeReferenceChanges();
+        consumeCompositeLinksChanges = consumerService.consumeCompositeLinksChanges();
     }
 
     @Test
@@ -95,9 +95,9 @@ class ConsumerCompositeReferenceChangesTest {
         when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid))
                 .thenReturn(new NodeInfos(nodeUuid, "node", studyUuid));
 
-        consumeCompositeReferenceChanges.accept(compositeReferenceMessage(ElementReferenceAction.CREATE));
+        consumeCompositeLinksChanges.accept(compositeReferenceMessage(SharingLinkAction.CREATE));
 
-        verify(directoryService).createElementsReferences(references, studyUuid, nodeUuid, USER_ID);
+        verify(directoryService).createSharingLinks(references, studyUuid, nodeUuid, false, USER_ID);
         verifyNoMoreInteractions(directoryService);
     }
 
@@ -106,17 +106,17 @@ class ConsumerCompositeReferenceChangesTest {
         when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid))
                 .thenReturn(new NodeInfos(nodeUuid, "node", studyUuid));
 
-        consumeCompositeReferenceChanges.accept(compositeReferenceMessage(ElementReferenceAction.UPDATE));
+        consumeCompositeLinksChanges.accept(compositeReferenceMessage(SharingLinkAction.UPDATE));
 
-        verify(directoryService).updateElementsReferences(references, studyUuid, nodeUuid, USER_ID);
+        verify(directoryService).updateSharingLinks(references, studyUuid, nodeUuid, USER_ID);
         verifyNoMoreInteractions(directoryService);
     }
 
     @Test
     void testDeleteReferences() {
-        consumeCompositeReferenceChanges.accept(compositeReferenceMessage(ElementReferenceAction.DELETE));
+        consumeCompositeLinksChanges.accept(compositeReferenceMessage(SharingLinkAction.DELETE));
 
-        verify(directoryService).removeElementsReferences(references, USER_ID);
+        verify(directoryService).removeSharingLinks(references, USER_ID);
         verifyNoMoreInteractions(directoryService);
     }
 
@@ -125,12 +125,12 @@ class ConsumerCompositeReferenceChangesTest {
         when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid))
                 .thenThrow(new StudyException(NOT_FOUND, "Node infos not found"));
 
-        Message<List<ModificationReference>> message = compositeReferenceMessage(ElementReferenceAction.CREATE);
-        assertThrows(StudyException.class, () -> consumeCompositeReferenceChanges.accept(message));
+        Message<List<ModificationReference>> message = compositeReferenceMessage(SharingLinkAction.CREATE);
+        assertThrows(StudyException.class, () -> consumeCompositeLinksChanges.accept(message));
         verifyNoInteractions(directoryService);
     }
 
-    private Message<List<ModificationReference>> compositeReferenceMessage(ElementReferenceAction action) {
+    private Message<List<ModificationReference>> compositeReferenceMessage(SharingLinkAction action) {
         // headers are received as strings from the broker
         return MessageBuilder.withPayload(references)
                 .setHeader(ConsumerService.HEADER_ACTION, action.name())

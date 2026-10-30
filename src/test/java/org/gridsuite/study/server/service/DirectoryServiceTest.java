@@ -96,7 +96,7 @@ class DirectoryServiceTest {
         ModificationReference rootReference = new ModificationReference(UUID.randomUUID(), UUID.randomUUID(), null);
         ModificationReference compositeReference = new ModificationReference(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
 
-        directoryService.updateElementsReferences(List.of(rootReference, compositeReference), studyUuid, nodeUuid, USER_ID);
+        directoryService.updateSharingLinks(List.of(rootReference, compositeReference), studyUuid, nodeUuid, USER_ID);
 
         ArgumentCaptor<HttpEntity<ReferenceAttributes>> rootEntityCaptor = ArgumentCaptor.forClass(HttpEntity.class);
         verify(restTemplate).exchange(eq(referenceUrl(rootReference)), eq(HttpMethod.PUT), rootEntityCaptor.capture(), eq(Void.class));
@@ -115,7 +115,7 @@ class DirectoryServiceTest {
         ModificationReference reference1 = new ModificationReference(UUID.randomUUID(), UUID.randomUUID(), null);
         ModificationReference reference2 = new ModificationReference(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
 
-        directoryService.removeElementsReferences(List.of(reference1, reference2), USER_ID);
+        directoryService.removeSharingLinks(List.of(reference1, reference2), USER_ID);
 
         ArgumentCaptor<HttpEntity<Object>> entityCaptor = ArgumentCaptor.forClass(HttpEntity.class);
         verify(restTemplate).exchange(eq(referenceUrl(reference1)), eq(HttpMethod.DELETE), entityCaptor.capture(), eq(ElementAttributes.class));
@@ -129,8 +129,8 @@ class DirectoryServiceTest {
     @Test
     void testRemoveElementReferenceWithNullArguments() {
         UUID uuid = UUID.randomUUID();
-        assertThrows(NullPointerException.class, () -> directoryService.removeElementReference(uuid, null, USER_ID));
-        assertThrows(NullPointerException.class, () -> directoryService.removeElementReference(null, uuid, USER_ID));
+        assertThrows(NullPointerException.class, () -> directoryService.removeSharingLink(uuid, null, USER_ID));
+        assertThrows(NullPointerException.class, () -> directoryService.removeSharingLink(null, uuid, USER_ID));
         verifyNoInteractions(restTemplate);
     }
 

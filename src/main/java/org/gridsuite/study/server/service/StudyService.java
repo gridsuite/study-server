@@ -1642,7 +1642,7 @@ public class StudyService {
         duplicateModificationsOrInsertComposites(targetStudyUuid, targetNodeUuid,
             (groupUuid, modificationApplicationContexts) -> {
                 NetworkModificationsResult result = networkModificationRestService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts), userId);
-                directoryService.createElementsReferences(networkModificationRestService.getChildrenModificationsReferences(result.modificationUuids()), targetStudyUuid, targetNodeUuid, userId);
+                directoryService.createSharingLinks(networkModificationRestService.getChildrenModificationsReferences(result.modificationUuids()), targetStudyUuid, targetNodeUuid, userId);
                 return result;
             },
             userId);
@@ -1677,7 +1677,7 @@ public class StudyService {
             directoryService.createElement(parentDirectoryUuid, null, modificationUuid, name, DirectoryService.MODIFICATION, userId);
             // extraction replaced the local composite by a new reference modification, in the node group or in a parent
             // composite: register it on the shared element
-            directoryService.createElementsReferences(List.of(newReference), studyUuid, nodeUuid, userId);
+            directoryService.createSharingLinks(List.of(newReference), studyUuid, nodeUuid, userId);
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
         }
@@ -1727,8 +1727,8 @@ public class StudyService {
             if (!composite.isShared()) {
                 continue;
             }
-            directoryService.createElementReference(composite.id(), ReferenceAttributes.createReferenceAttributes(
-                    insertedModificationUuids.get(i), studyUuid, nodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE), userId);
+            directoryService.createSharingLink(composite.id(), ReferenceAttributes.createReferenceAttributes(
+                    insertedModificationUuids.get(i), studyUuid, nodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE), false, userId);
         }
     }
 

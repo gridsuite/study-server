@@ -11,8 +11,9 @@ package org.gridsuite.study.server.dto;
  *
  * @author Maissa Souissi <maissa.souissi at rte-france.com>
  */
-public enum ElementReferenceAction {
+public enum SharingLinkAction {
     CREATE,
+    RECREATE,
     UPDATE,
     DELETE,
 }

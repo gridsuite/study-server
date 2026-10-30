@@ -17,7 +17,7 @@ spring:
       consumePccMinResult;consumePccMinRunning;consumePccMinStopped;consumePccMinFailed;\
       consumeAsymmetricalLoadResult;consumeAsymmetricalLoadRunning;consumeAsymmetricalLoadStopped;consumeAsymmetricalLoadFailed;\
       consumeNetworkExportFinished;\
-      consumeSharedElementUpdate;consumeCompositeReferenceChanges"
+      consumeSharedElementUpdate;consumeCompositeLinksChanges"
     stream:
       bindings:
         publishStudyUpdate-out-0:
@@ -27,9 +27,9 @@ spring:
         consumeSharedElementUpdate-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}element.shared.update
           group: studySharedElementUpdateGroup
-        consumeCompositeReferenceChanges-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}reference.composite
-          group: studyCompositeReferenceGroup
+        consumeCompositeLinksChanges-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}composite.links
+          group: studyCompositeLinksGroup
         publishQuotaUpdate-out-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}quota.update
         consumeSaResult-in-0:

@@ -904,25 +904,29 @@ public class ConsumerService {
     }
 
     @Bean
-    public Consumer<Message<List<ModificationReference>>> consumeCompositeReferenceChanges() {
-        return this::handleCompositeReferenceChanges;
+    public Consumer<Message<List<ModificationReference>>> consumeCompositeLinksChanges() {
+        return this::handleCompositeLinksChanges;
     }
 
     /**
      * Keeps the references registered on the shared elements in directory-server in sync with the modification-references
      * network-modification-server created, moved or deleted in the group of a node.
      */
-    void handleCompositeReferenceChanges(Message<List<ModificationReference>> message) {
-        ElementReferenceAction action = ElementReferenceAction.valueOf(String.valueOf(message.getHeaders().get(HEADER_ACTION)));
+    void handleCompositeLinksChanges(Message<List<ModificationReference>> message) {
+        SharingLinkAction action = SharingLinkAction.valueOf(String.valueOf(message.getHeaders().get(HEADER_ACTION)));
         UUID groupUuid = UUID.fromString(String.valueOf(message.getHeaders().get(HEADER_GROUP_UUID)));
         String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
         List<ModificationReference> references = message.getPayload();
 
         NodeInfos nodeInfos = networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid);
         switch (action) {
-            case DELETE -> directoryService.removeElementsReferences(references, userId);
-            case CREATE -> directoryService.createElementsReferences(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), userId);
-            case UPDATE -> directoryService.updateElementsReferences(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), userId);
+            case DELETE -> directoryService.removeSharingLinks(references, userId);
+            case CREATE ->
+                directoryService.createSharingLinks(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), false, userId);
+            case RECREATE ->
+                directoryService.createSharingLinks(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), true, userId);
+            case UPDATE ->
+                directoryService.updateSharingLinks(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), userId);
         }
     }
 

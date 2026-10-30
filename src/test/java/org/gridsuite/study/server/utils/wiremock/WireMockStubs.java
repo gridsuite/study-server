@@ -248,8 +248,8 @@ public class WireMockStubs {
         ).getId();
     }
 
-    public UUID stubRecreateElementReferences() {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + "/.*/references"))
+    public UUID stubCreateSharingLinks() {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + "/.*/sharing-links"))
             .willReturn(WireMock.ok())
         ).getId();
     }
@@ -294,8 +294,8 @@ public class WireMockStubs {
         verifyPostRequest(wireMock, stubId, URI_NETWORK_MODIFICATION_GROUPS + "/.*/duplicate", true, Map.of("groupUuid", WireMock.matching(".*")), nbRequests);
     }
 
-    public void verifyRecreateElementReferences(UUID stubId, int nbRequests) {
-        verifyPostRequest(wireMock, stubId, URI_NETWORK_MODIFICATION_GROUPS + "/.*/references", true, Map.of(), nbRequests);
+    public void verifyCreateSharingLinks(UUID stubId, int nbRequests) {
+        verifyPostRequest(wireMock, stubId, URI_NETWORK_MODIFICATION_GROUPS + "/.*/sharing-links", true, Map.of(), nbRequests);
     }
 
     public void verifyNetworkModificationDeleteGroup(UUID stubId) {
