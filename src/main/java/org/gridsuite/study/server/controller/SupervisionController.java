@@ -175,9 +175,9 @@ public class SupervisionController {
     @PostMapping(value = "/studies/{studyUuid}/network-modification-shared-links/recreate")
     @Operation(summary = "Recreate network-modification shared links for a study")
     @ApiResponse(responseCode = "200", description = "Network-modification shared links recreated")
-    public ResponseEntity<Void> recreateNetworkModificationSharedLink(@PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Void> recreateSharingLinks(@PathVariable("studyUuid") UUID studyUuid,
                                                                     @RequestHeader("userId") String userId) {
-        supervisionService.recreateNetworkModificationSharedLink(studyUuid, userId);
+        supervisionService.recreateSharingLinks(studyUuid, userId);
         return ResponseEntity.ok().build();
     }
 

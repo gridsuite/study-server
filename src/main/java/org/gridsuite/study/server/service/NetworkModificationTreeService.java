@@ -75,7 +75,6 @@ public class NetworkModificationTreeService {
     private final UserAdminService userAdminService;
 
     private final StudyServerExecutionService studyServerExecutionService;
-    private final DirectoryService directoryService;
 
     public NetworkModificationTreeService(NodeRepository nodesRepository,
                                           RootNodeInfoRepository rootNodeInfoRepository,
@@ -88,8 +87,7 @@ public class NetworkModificationTreeService {
                                           NetworkService networkStoreService,
                                           ReportService reportService,
                                           UserAdminService userAdminService,
-                                          StudyServerExecutionService studyServerExecutionService,
-                                          DirectoryService directoryService) {
+                                          StudyServerExecutionService studyServerExecutionService) {
         this.nodesRepository = nodesRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.networkModificationService = networkModificationService;
@@ -102,7 +100,6 @@ public class NetworkModificationTreeService {
         this.reportService = reportService;
         this.userAdminService = userAdminService;
         this.studyServerExecutionService = studyServerExecutionService;
-        this.directoryService = directoryService;
     }
 
     private NetworkModificationNodeInfoEntity createNetworkModificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {
@@ -261,9 +258,11 @@ public class NetworkModificationTreeService {
                 insertMode
         );
 
-        // Then we create the modification group and recreate references
-        networkModificationService.duplicateModificationsGroup(modificationGroupUuid, newGroupUuid, node.getId(), studyUuid,
+        // Then we create the modification group, and recreate its references once the node is committed
+        networkModificationService.duplicateModificationsGroup(modificationGroupUuid, newGroupUuid,
             rootNetworkService.getStudyRootNetworkTags(studyUuid), userId);
+        // TODO do this in network modification server
+        networkModificationService.createSharingLinks(newGroupUuid, userId);
 
         return node.getId();
     }
@@ -360,6 +359,7 @@ public class NetworkModificationTreeService {
         NodeEntity nodeToStash = nodeToStashInfo.getNode();
         UUID modificationGroupUuid = nodeToStashInfo.getModificationGroupUuid();
         networkModificationService.deleteStashedModificationsFromGroups(List.of(modificationGroupUuid), userId);
+        networkModificationService.deleteModificationReferences(modificationGroupUuid, userId);
         if (!stashChildren) {
             insertNodesToParent(nodeToStash.getParentNode(), nodeToStashInfo.getColumnPosition(), getChildren(nodeId));
         } else {
@@ -620,8 +620,9 @@ public class NetworkModificationTreeService {
 
             nextParentId = duplicateNode(newStudyEntity, nodeParentId, model, InsertMode.CHILD).getId();
 
-            networkModificationService.duplicateModificationsGroup(modificationGroupToDuplicateId, newModificationGroupId, nextParentId, newStudyEntity.getId(),
+            networkModificationService.duplicateModificationsGroup(modificationGroupToDuplicateId, newModificationGroupId,
                 rootNetworkService.getStudyRootNetworkTags(newStudyEntity.getId()), userId);
+            networkModificationService.createSharingLinks(newModificationGroupId, userId);
         } else {
             // when cloning studyTree, we don't clone root node
             // if cloning the whole study, the root node is previously created
@@ -941,7 +942,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void restoreNode(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId, String userId) {
+    public void restoreNode(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId) {
         for (UUID nodeId : nodeIds) {
             NodeEntity nodeToRestore = getNodeEntity(nodeId);
             NodeEntity anchorNode = getNodeEntity(anchorNodeId);
@@ -956,10 +957,7 @@ public class NetworkModificationTreeService {
             nodeToRestore.setStashed(false);
             nodeToRestore.setStashDate(null);
             modificationNodeToRestore.setColumnPosition(getNextColumnPosition(anchorNodeId));
-            NodeEntity newNode = nodesRepository.save(nodeToRestore);
-            // restore the references pointing from directory server to netmod-server
-            List<ModificationReference> modificationsReferences = networkModificationService.getModificationReferences(getModificationGroupUuid(newNode.getIdNode()));
-            directoryService.createElementsSharedLinks(modificationsReferences, studyId, newNode.getIdNode(), userId);
+            nodesRepository.save(nodeToRestore);
             if (hasChildren(nodeId)) {
                 restoreNodeChildren(studyId, nodeId);
                 notificationService.emitSubtreeInserted(studyId, nodeId, anchorNodeId);

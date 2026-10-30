@@ -126,7 +126,7 @@ class NetworkModificationReferencingInfosUpdateTest {
 
         ArgumentCaptor<ReferenceAttributes> referenceAttributesCaptor = ArgumentCaptor.forClass(ReferenceAttributes.class);
         ArgumentCaptor<UUID> sharedModificationUuidCaptor = ArgumentCaptor.forClass(UUID.class);
-        verify(directoryService, times(1)).updateElementSharedLinks(sharedModificationUuidCaptor.capture(), referenceAttributesCaptor.capture(), anyString());
+        verify(directoryService, times(1)).updateSharingLink(sharedModificationUuidCaptor.capture(), referenceAttributesCaptor.capture(), anyString());
 
         assertEquals(sharedModificationUuid, sharedModificationUuidCaptor.getValue());
 

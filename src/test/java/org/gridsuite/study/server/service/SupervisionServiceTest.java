@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
@@ -55,7 +56,7 @@ class SupervisionServiceTest {
     SupervisionService supervisionService;
 
     @Test
-    void recreateNetworkModificationSharedLinkOnlyForGroupsWithReferences() {
+    void recreateSharingLinksOnlyForGroupsWithReferences() {
         UUID studyUuid = UUID.randomUUID();
         UUID groupWithReferences = UUID.randomUUID();
         UUID groupWithoutReferences = UUID.randomUUID();
@@ -68,11 +69,11 @@ class SupervisionServiceTest {
         when(networkModificationService.getContainersWithModificationReferences(modificationGroupUuids))
                 .thenReturn(Set.of(groupWithReferences));
 
-        supervisionService.recreateNetworkModificationSharedLink(studyUuid, userId);
+        supervisionService.recreateSharingLinks(studyUuid, userId);
 
         verify(networkModificationService).getContainersWithModificationReferences(modificationGroupUuids);
-        verify(networkModificationService).recreateReferences(groupWithReferences, userId);
-        verify(networkModificationService, never()).recreateReferences(groupWithoutReferences, userId);
+        verify(networkModificationService).createSharingLinks(groupWithReferences, true, userId);
+        verify(networkModificationService, never()).createSharingLinks(groupWithoutReferences, any(Boolean.class), userId);
     }
 
     @Test

@@ -107,7 +107,7 @@ public class SupervisionService {
 
     private final NetworkModificationRestService networkModificationService;
 
-    private static final String SUPERVISION_USER = "Supervision";
+    public static final String SUPERVISION_USER = "Supervision";
 
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService, LoadFlowService loadFlowService,
@@ -354,7 +354,7 @@ public class SupervisionService {
             });
             reportService.deleteReports(reportsToDelete);
         }
-        voltageInitService.deleteAllVoltageInitResults();
+        voltageInitService.deleteAllVoltageInitResults(SUPERVISION_USER);
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.VOLTAGE_INITIALIZATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
@@ -438,12 +438,12 @@ public class SupervisionService {
         LOGGER.trace("Study {} nodes builds deleted and root node invalidated in : {} milliseconds", studyUuid, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime.get()));
     }
 
-    public void recreateNetworkModificationSharedLink(UUID studyUuid, String userId) {
+    public void recreateSharingLinks(UUID studyUuid, String userId) {
         List<UUID> modificationGroupUuids = networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid).stream()
                 .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
                 .toList();
         networkModificationService.getContainersWithModificationReferences(modificationGroupUuids)
-                .forEach(groupUuid -> networkModificationService.recreateReferences(groupUuid, userId));
+                .forEach(groupUuid -> networkModificationService.createSharingLinks(groupUuid, true, userId));
     }
 
     public void deleteAllStashedElements(UUID studyId) {

@@ -117,6 +117,16 @@ public class StateEstimationService extends AbstractComputationService {
         return stateEstimationRestService.downloadDebugFile(resultUuid);
     }
 
+    public String getStateEstimationMeasurements(@NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String globalFilters) {
+        UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION);
+        if (resultUuid == null) {
+            return null;
+        }
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
+        return stateEstimationRestService.getStateEstimationMeasurements(resultUuid, networkUuid, variantId, globalFilters);
+    }
+
     public String computeLogicalControls(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);

@@ -4,27 +4,19 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.service.networkmodification;
+package org.gridsuite.study.server.service;
 
-import org.gridsuite.study.server.dto.ElementSharedLinkAction;
 import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.NodeInfos;
+import org.gridsuite.study.server.dto.SharingLinkAction;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.nodeactivity.NodeActivityService;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.service.CaseService;
-import org.gridsuite.study.server.service.ConsumerService;
-import org.gridsuite.study.server.service.DirectoryService;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
-import org.gridsuite.study.server.service.RootNetworkService;
-import org.gridsuite.study.server.service.StudyConfigService;
-import org.gridsuite.study.server.service.StudyService;
-import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,7 +39,7 @@ import static org.mockito.Mockito.*;
  */
 @SpringBootTest
 @DisableElasticsearch
-class ConsumerNetworkModificationReferenceChangesTest {
+class ConsumerCompositeReferenceChangesTest {
 
     private static final String HEADER_ACTION = "action";
     private static final String HEADER_GROUP_UUID = "groupUuid";
@@ -86,7 +78,7 @@ class ConsumerNetworkModificationReferenceChangesTest {
     @Autowired
     private ConsumerService consumerService;
 
-    private Consumer<Message<List<ModificationReference>>> consumeNetworkModificationReferenceChanges;
+    private Consumer<Message<List<ModificationReference>>> consumeCompositeLinksChanges;
 
     private static final String USER_ID = "userId";
     private final UUID groupUuid = UUID.randomUUID();
@@ -98,7 +90,7 @@ class ConsumerNetworkModificationReferenceChangesTest {
 
     @BeforeEach
     void setup() {
-        consumeNetworkModificationReferenceChanges = consumerService.consumeNetworkModificationReferenceChanges();
+        consumeCompositeLinksChanges = consumerService.consumeCompositeLinksChanges();
     }
 
     @Test
@@ -106,9 +98,28 @@ class ConsumerNetworkModificationReferenceChangesTest {
         when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid))
                 .thenReturn(new NodeInfos(nodeUuid, "node", studyUuid));
 
-        consumeNetworkModificationReferenceChanges.accept(compositeReferenceMessage(ElementSharedLinkAction.CREATE));
+        consumeCompositeLinksChanges.accept(compositeReferenceMessage(SharingLinkAction.CREATE));
 
-        verify(directoryService).createElementsSharedLinks(references, studyUuid, nodeUuid, USER_ID);
+        verify(directoryService).createSharingLinks(references, studyUuid, nodeUuid, false, USER_ID);
+        verifyNoMoreInteractions(directoryService);
+    }
+
+    @Test
+    void testUpdateReferences() {
+        when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid))
+                .thenReturn(new NodeInfos(nodeUuid, "node", studyUuid));
+
+        consumeCompositeLinksChanges.accept(compositeReferenceMessage(SharingLinkAction.UPDATE));
+
+        verify(directoryService).updateSharingLinks(references, studyUuid, nodeUuid, USER_ID);
+        verifyNoMoreInteractions(directoryService);
+    }
+
+    @Test
+    void testDeleteReferences() {
+        consumeCompositeLinksChanges.accept(compositeReferenceMessage(SharingLinkAction.DELETE));
+
+        verify(directoryService).removeSharingLinks(references, USER_ID);
         verifyNoMoreInteractions(directoryService);
     }
 
@@ -117,12 +128,12 @@ class ConsumerNetworkModificationReferenceChangesTest {
         when(networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid))
                 .thenThrow(new StudyException(NOT_FOUND, "Node infos not found"));
 
-        Message<List<ModificationReference>> message = compositeReferenceMessage(ElementSharedLinkAction.CREATE);
-        assertThrows(StudyException.class, () -> consumeNetworkModificationReferenceChanges.accept(message));
+        Message<List<ModificationReference>> message = compositeReferenceMessage(SharingLinkAction.CREATE);
+        assertThrows(StudyException.class, () -> consumeCompositeLinksChanges.accept(message));
         verifyNoInteractions(directoryService);
     }
 
-    private Message<List<ModificationReference>> compositeReferenceMessage(ElementSharedLinkAction action) {
+    private Message<List<ModificationReference>> compositeReferenceMessage(SharingLinkAction action) {
         // headers are received as strings from the broker
         return MessageBuilder.withPayload(references)
                 .setHeader(HEADER_ACTION, action.name())

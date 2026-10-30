@@ -139,19 +139,6 @@ class NetworkModificationServiceTest {
     }
 
     @Test
-    void testDeleteModificationsGroups() {
-        UUID firstUuid = UUID.randomUUID();
-        UUID secondUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        networkModificationService.deleteModificationsGroups(List.of(firstUuid, secondUuid));
-        HttpEntity<String> httpEntity = new HttpEntity<>("[\"" + firstUuid + "\",\"" + secondUuid + "\"]", headers);
-        verify(restTemplate).exchange(expectedUrl, HttpMethod.DELETE, httpEntity, new ParameterizedTypeReference<Map<UUID, UUID>>() { });
-    }
-
-    @Test
     void testDeleteStashedModificationsGroups() {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
@@ -214,15 +201,14 @@ class NetworkModificationServiceTest {
     }
 
     @Test
-    void testRecreateReferences() {
+    void testDeleteModificationReferences() {
         UUID groupUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/" + groupUuid + "/references";
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, USER_ID);
 
-        networkModificationService.recreateReferences(groupUuid, USER_ID);
+        networkModificationService.deleteModificationReferences(groupUuid, "userId");
 
-        verify(restTemplate).exchange(expectedUrl, HttpMethod.POST, new HttpEntity<>(headers), Void.class);
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.DELETE),
+                argThat((HttpEntity<?> entity) -> "userId".equals(entity.getHeaders().getFirst(HEADER_USER_ID))), eq(Void.class));
     }
 
     @Test
@@ -279,13 +265,10 @@ class NetworkModificationServiceTest {
     void testDuplicateModificationsGroupAssociatesTheRootNetworkTags() {
         UUID sourceGroupUuid = UUID.randomUUID();
         UUID groupUuid = UUID.randomUUID();
-        UUID nodeUuid = UUID.randomUUID();
-        UUID studyUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/" + sourceGroupUuid + "/duplicate"
-                + "?groupUuid=" + groupUuid + "&nodeContainerUuid=" + nodeUuid + "&studyRootContainerUuid=" + studyUuid
-                + "&rootNetworkTags=PH1&rootNetworkTags=A%26B%2BC";
+                + "?groupUuid=" + groupUuid + "&rootNetworkTags=PH1&rootNetworkTags=A%26B%2BC";
 
-        networkModificationService.duplicateModificationsGroup(sourceGroupUuid, groupUuid, nodeUuid, studyUuid, List.of("PH1", "A&B+C"), "userId");
+        networkModificationService.duplicateModificationsGroup(sourceGroupUuid, groupUuid, List.of("PH1", "A&B+C"), "userId");
 
         verify(restTemplate).exchange(eq(URI.create(expectedUrl)), eq(HttpMethod.POST), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
     }

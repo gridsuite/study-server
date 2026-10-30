@@ -142,7 +142,7 @@ public class NetworkModificationService {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationRestService.restoreModifications(groupId, modificationsUuids, studyUuid, nodeUuid, userId);
+            networkModificationRestService.restoreModifications(groupId, modificationsUuids, userId);
             networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid);
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
@@ -273,7 +273,7 @@ public class NetworkModificationService {
 
     private void updateElementsSharedLinks(List<ModificationReference> modificationReferences, UUID rootContainerId, UUID containerId,
                                            ReferenceAttributes.ReferenceType targetReferenceType, String userId) {
-        modificationReferences.forEach(ref -> directoryService.updateElementSharedLinks(
+        modificationReferences.forEach(ref -> directoryService.updateSharingLink(
             ref.referencedId(),
             ReferenceAttributes.createReferenceAttributes(ref.modificationUuid(), rootContainerId, containerId, targetReferenceType), userId)
         );
@@ -301,7 +301,7 @@ public class NetworkModificationService {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
         try {
             networkModificationTreeService.assertStudyContainsNode(targetStudyUuid, targetNodeUuid);
-            newCompositeUuid = networkModificationRestService.assembleModificationsIntoComposite(modificationsUuids, targetNodeUuid, userId);
+            newCompositeUuid = networkModificationRestService.assembleModificationsIntoComposite(modificationsUuids, userId);
         } finally {
             notificationService.emitModificationsUpdated(targetStudyUuid, targetNodeUuid, childrenUuids);
         }

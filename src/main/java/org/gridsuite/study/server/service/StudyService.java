@@ -670,19 +670,11 @@ public class StudyService {
             // delete all distant resources linked to nodes
             studyServerExecutionService.runAsync(() -> deleteStudyInfos.getModificationGroupUuidsNodeUuids().stream()
                     .filter(Objects::nonNull)
-                    .forEach(groupUuidNodeUuid -> deleteModificationsFromGroup(groupUuidNodeUuid, userId)));
+                    .forEach(groupUuidNodeUuid -> networkModificationRestService.deleteModificationsByGroup(groupUuidNodeUuid.getFirst(), userId)));
 
             LOGGER.trace("Delete study '{}' : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
 
         }
-    }
-
-    private void deleteModificationsFromGroup(Pair<UUID, UUID> groupUuidNodeUuid, String userId) {
-        // fetch the references data in order to remove those references from directory-server
-        List<ModificationReference> referencesToBeDeleted = networkModificationRestService.getModificationReferences(groupUuidNodeUuid.getFirst());
-        removeReferences(referencesToBeDeleted, userId);
-
-        networkModificationRestService.deleteModifications(groupUuidNodeUuid.getFirst());
     }
 
     @Transactional
@@ -1481,15 +1473,6 @@ public class StudyService {
     }
 
     @Transactional
-    public void sharedModificationsUpdatedNotification(UUID nodeUuid, List<UUID> networkModificationUuids, boolean onlyMetadata) {
-        UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
-        if (!onlyMetadata) {
-            networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid);
-        }
-        notificationService.emitSharedModificationsUpdated(studyUuid, nodeUuid, networkModificationUuids);
-    }
-
-    @Transactional
     public void deleteNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
         assertIsStudyExist(studyUuid);
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
@@ -1497,22 +1480,12 @@ public class StudyService {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
             }
-            UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-
-            List<ModificationReference> referencesToBeDeleted = networkModificationRestService.getModificationReferences(modificationsUuids);
-            networkModificationRestService.deleteModifications(groupId, modificationsUuids);
-            // if there are unstashed references modifications in the deleted netmods, those references have to be removed from directory server
-            removeReferences(referencesToBeDeleted, userId);
+            // the references of the deleted modifications are removed from directory-server through the DELETE notification network-modification-server emits
+            networkModificationRestService.deleteModificationsByUuids(modificationsUuids, userId);
         } finally {
             notificationService.emitModificationsDeleted(studyUuid, nodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
-    }
-
-    private void removeReferences(List<ModificationReference> references, String userId) {
-        references.forEach(reference ->
-                directoryService.removeElementReference(reference.referencedId(), reference.modificationUuid(), userId)
-        );
     }
 
     private void removeNodesFromAliases(UUID studyUuid, List<UUID> nodeIds, boolean removeChildren) {
@@ -1568,7 +1541,7 @@ public class StudyService {
                 .mapToObj(index -> Pair.of(modificationGroupUuids.get(index), removedNodeUuids.get(index)))
                 .toList();
         futures.add(studyServerExecutionService.runAsync(() -> modificationGroupUuidsNodeUuids.forEach(
-                groupUuidNodeUuid -> deleteModificationsFromGroup(groupUuidNodeUuid, userId))
+                groupUuidNodeUuid -> networkModificationRestService.deleteModificationsByGroup(groupUuidNodeUuid.getFirst(), userId))
         ));
         futures.add(studyServerExecutionService.runAsync(() -> deleteNodeInfos.getRemovedNodeUuids().forEach(dynamicSimulationEventService::deleteEventsByNodeId)));
         futures.addAll(rootNetworkNodeInfoService.getRemoteDeletions(deleteNodeInfos));
@@ -1613,7 +1586,7 @@ public class StudyService {
 
     public void restoreNodes(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId, String userId) {
         networkModificationTreeService.assertIsRootOrConstructionNode(anchorNodeId);
-        networkModificationTreeService.restoreNode(studyId, nodeIds, anchorNodeId, userId);
+        networkModificationTreeService.restoreNode(studyId, nodeIds, anchorNodeId);
         notificationService.emitElementUpdated(studyId, userId);
     }
 
@@ -1669,7 +1642,7 @@ public class StudyService {
         duplicateModificationsOrInsertComposites(targetStudyUuid, targetNodeUuid,
             (groupUuid, modificationApplicationContexts) -> {
                 NetworkModificationsResult result = networkModificationRestService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts), userId);
-                directoryService.createElementsSharedLinks(networkModificationRestService.getChildrenModificationsReferences(result.modificationUuids()), targetStudyUuid, targetNodeUuid, userId);
+                directoryService.createSharingLinks(networkModificationRestService.getChildrenModificationsReferences(result.modificationUuids()), targetStudyUuid, targetNodeUuid, userId);
                 return result;
             },
             userId);
@@ -1704,7 +1677,7 @@ public class StudyService {
             directoryService.createElement(parentDirectoryUuid, null, modificationUuid, name, DirectoryService.MODIFICATION, userId);
             // extraction replaced the local composite by a new reference modification, in the node group or in a parent
             // composite: register it on the shared element
-            directoryService.createElementsSharedLinks(List.of(newReference), studyUuid, nodeUuid, userId);
+            directoryService.createSharingLinks(List.of(newReference), studyUuid, nodeUuid, userId);
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
         }
@@ -1754,8 +1727,8 @@ public class StudyService {
             if (!composite.isShared()) {
                 continue;
             }
-            directoryService.createElementSharedLink(composite.id(), ReferenceAttributes.createReferenceAttributes(
-                    insertedModificationUuids.get(i), studyUuid, nodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE), userId);
+            directoryService.createSharingLink(composite.id(), ReferenceAttributes.createReferenceAttributes(
+                    insertedModificationUuids.get(i), studyUuid, nodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE), false, userId);
         }
     }
 
