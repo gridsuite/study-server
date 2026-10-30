@@ -65,8 +65,8 @@ public class ConsumerService {
     private static final String HEADER_WITH_RATIO_TAP_CHANGERS = "withRatioTapChangers";
     private static final String HEADER_ERROR_MESSAGE = "errorMessage";
     private static final String HEADER_EXPORT_UUID = "exportUuid";
-    static final String HEADER_ACTION = "action";
-    static final String HEADER_GROUP_UUID = "groupUuid";
+    private static final String HEADER_ACTION = "action";
+    private static final String HEADER_GROUP_UUID = "groupUuid";
     private static final String HEADER_ONLY_METADATA = "onlyMetadata";
 
     private final ObjectMapper objectMapper;

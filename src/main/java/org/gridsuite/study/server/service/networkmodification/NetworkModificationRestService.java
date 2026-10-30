@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
 import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.StudyConstants.CompositeModificationsActionType;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.NodeReceiver;
@@ -662,13 +663,18 @@ public class NetworkModificationRestService {
                 new ParameterizedTypeReference<Map<UUID, UUID>>() { });
     }
 
+    public void createSharingLinks(UUID groupUuid, String userId) {
+        createSharingLinks(groupUuid, false, userId);
+    }
+
     /**
      * Asks network-modification-server to notify back the recreation of the references of the group, so that they are created in directory-server.
      * Called after the commit only, so that the node holding the group is resolvable when the notification is consumed.
      */
-    public void createSharingLinks(UUID groupUuid, String userId) {
+    public void createSharingLinks(UUID groupUuid, boolean recreate, String userId) {
         Objects.requireNonNull(groupUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + "/sharing-links")
+                .queryParam("recreate", recreate)
                 .buildAndExpand(groupUuid)
                 .toUriString();
 

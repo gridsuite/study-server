@@ -41,6 +41,9 @@ import static org.mockito.Mockito.*;
 @DisableElasticsearch
 class ConsumerCompositeReferenceChangesTest {
 
+    private static final String HEADER_ACTION = "action";
+    private static final String HEADER_GROUP_UUID = "groupUuid";
+
     @MockitoBean
     private NotificationService notificationService;
     @MockitoBean
@@ -133,8 +136,8 @@ class ConsumerCompositeReferenceChangesTest {
     private Message<List<ModificationReference>> compositeReferenceMessage(SharingLinkAction action) {
         // headers are received as strings from the broker
         return MessageBuilder.withPayload(references)
-                .setHeader(ConsumerService.HEADER_ACTION, action.name())
-                .setHeader(ConsumerService.HEADER_GROUP_UUID, groupUuid.toString())
+                .setHeader(HEADER_ACTION, action.name())
+                .setHeader(HEADER_GROUP_UUID, groupUuid.toString())
                 .setHeader("userId", USER_ID)
                 .build();
     }
