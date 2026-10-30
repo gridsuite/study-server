@@ -440,7 +440,6 @@ public class SupervisionService {
 
     public void recreateSharingLinks(UUID studyUuid, String userId) {
         List<UUID> modificationGroupUuids = networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid).stream()
-                .filter(nodeInfo -> !nodeInfo.getNode().isStashed())
                 .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
                 .toList();
         networkModificationService.getContainersWithModificationReferences(modificationGroupUuids)
