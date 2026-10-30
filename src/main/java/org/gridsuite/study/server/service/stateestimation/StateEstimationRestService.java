@@ -13,6 +13,7 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
@@ -37,12 +38,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.service.client.RemoteServiceName.STATE_ESTIMATION_SERVER;
 
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Service
 public class StateEstimationRestService extends AbstractComputationRestService implements ComputationParameters {
+    private final RemoteServicesInspector remoteServicesInspector; //TODO : transférer dans AbstractComputationRestService si validé par un tech
 
     static final String RESULT_UUID = "resultUuid";
 
@@ -52,9 +55,15 @@ public class StateEstimationRestService extends AbstractComputationRestService i
 
     @Autowired
     public StateEstimationRestService(RemoteServicesProperties remoteServicesProperties,
-                                      ObjectMapper objectMapper, RestTemplate restTemplate) {
+                                      ObjectMapper objectMapper, RestTemplate restTemplate,
+                                      RemoteServicesInspector remoteServicesInspector) {
         super(remoteServicesProperties.getServiceUri("state-estimation-server"), restTemplate);
         this.objectMapper = objectMapper;
+        this.remoteServicesInspector = remoteServicesInspector;
+    }
+
+    private boolean isOptionalAndDown() {
+        return !remoteServicesInspector.isOptionalServiceUp(STATE_ESTIMATION_SERVER).isDone();
     }
 
     public String getStateEstimationResult(UUID resultUuid) {
@@ -177,6 +186,9 @@ public class StateEstimationRestService extends AbstractComputationRestService i
 
     @Override
     public UUID createDefaultParameters() {
+        if (isOptionalAndDown())
+            return null;
+
         var path = UriComponentsBuilder
             .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/parameters/default")
             .buildAndExpand()
