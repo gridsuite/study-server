@@ -37,7 +37,7 @@ import static org.gridsuite.study.server.StudyConstants.*;
  */
 @Service
 public class LogicalControlsRestService extends AbstractComputationRestService {
-    static final String RESULTS = "results";
+    private static final String RESULTS = "results";
     private static final String LOGICAL_CONTROLS = "logical-controls";
     private static final String LOGICAL_CONTROLS_URI = DELIMITER + STATE_ESTIMATION_API_VERSION + DELIMITER + LOGICAL_CONTROLS;
 
