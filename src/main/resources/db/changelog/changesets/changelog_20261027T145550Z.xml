@@ -1,0 +1,28 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="amarsli (generated)" id="1793112986689-14">
+        <createTable tableName="batch_node_action">
+            <column name="node_id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="batch_node_actionPK"/>
+            </column>
+            <column name="created_at" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+            <column name="study_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex indexName="batch_action_study_id_idx" tableName="batch_node_action">
+            <column name="study_id"/>
+        </createIndex>
+        <addForeignKeyConstraint baseTableName="batch_node_action" baseColumnNames="study_id"
+                                 constraintName="batch_node_action_study_fk"
+                                 referencedTableName="study" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="batch_node_action" baseColumnNames="node_id"
+                                 constraintName="batch_node_action_node_fk"
+                                 referencedTableName="node" referencedColumnNames="id_node" onDelete="CASCADE"/>
+    </changeSet>
+</databaseChangeLog>

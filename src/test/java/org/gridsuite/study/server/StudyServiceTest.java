@@ -255,22 +255,6 @@ class StudyServiceTest {
         assertFalse(studyService.getOperationQuotaStatus());
     }
 
-    @Test
-    void testSharedModificationsUpdatedNotification() {
-        UUID studyUuid = UUID.randomUUID();
-        UUID nodeUuid = UUID.randomUUID();
-        List<UUID> networkModificationUuids = List.of(UUID.randomUUID(), UUID.randomUUID());
-
-        doReturn(studyUuid).when(networkModificationTreeService).getStudyUuidForNodeId(nodeUuid);
-        doNothing().when(networkModificationTreeService).invalidateNodeTree(any(), any());
-
-        studyService.sharedModificationsUpdatedNotification(nodeUuid, networkModificationUuids, false);
-
-        verify(networkModificationTreeService, times(1)).invalidateNodeTree(studyUuid, nodeUuid);
-
-        verify(notificationService, times(1)).emitSharedModificationsUpdated(studyUuid, nodeUuid, networkModificationUuids);
-    }
-
     private void mockNodeBuild(UUID nodeUuid, UUID rootNetworkUuid) {
         doReturn(NodeBuildStatus.from(BuildStatus.NOT_BUILT)).when(networkModificationTreeService).getNodeBuildStatus(nodeUuid, rootNetworkUuid);
     }

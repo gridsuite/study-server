@@ -1,0 +1,170 @@
+/**
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+package org.gridsuite.study.server.nodeactivity;
+
+import org.gridsuite.study.server.dto.DeleteNodeInfos;
+import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.nodeactivity.BatchActionRepository;
+import org.gridsuite.study.server.repository.nodeactivity.NodeActivityRepository;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NetworkService;
+import org.gridsuite.study.server.utils.TestUtils;
+import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNBUILD;
+import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+/**
+ * @author Slimane amar <slimane.amar at rte-france.com>
+ */
+@SpringBootTest
+@DisableElasticsearch
+class BatchActionServiceTest {
+    @Autowired
+    private StudyRepository studyRepository;
+    @Autowired
+    private NodeActivityRepository nodeActivityRepository;
+    @Autowired
+    private BatchActionRepository batchActionRepository;
+    @Autowired
+    private NodeActivityRunnerService nodeActivityRunnerService;
+
+    @Autowired
+    private TestUtils studyTestUtils;
+
+    @MockitoSpyBean
+    private BatchActionRunnerService batchActionRunnerService;
+
+    @MockitoSpyBean
+    private NetworkModificationTreeService networkModificationTreeService;
+
+    @MockitoBean
+    private NotificationService notificationService;
+    @MockitoBean
+    private NetworkService networkService;
+
+    private UUID studyUuid;
+    private UUID nodeUuid;
+    private UUID otherNodeUuid;
+    private UUID rootNetworkUuid;
+
+    @BeforeEach
+    void setUp() {
+        cleanDB();
+        createStudy();
+    }
+
+    @AfterEach
+    void tearDown() {
+        cleanDB();
+    }
+
+    private void cleanDB() {
+        deleteStudy();
+        nodeActivityRepository.deleteAll();
+        batchActionRepository.deleteAll();
+    }
+
+    @Test
+    void testRunBatchActionImmediate() {
+        nodeActivityRunnerService.runBatchAction(BatchActionType.INVALIDATE_NODE_TREE, studyUuid, nodeUuid);
+        verify(networkModificationTreeService, times(1)).invalidateNodeTree(studyUuid, nodeUuid);
+        assertEquals(0, batchActionRepository.count());
+    }
+
+    @Test
+    void testRunBatchActionDeferred() {
+        nodeActivityRunnerService.addNodeActivities(UNBUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid));
+        nodeActivityRunnerService.addNodeActivities(UNBUILD, studyUuid, rootNetworkUuid, List.of(otherNodeUuid));
+
+        nodeActivityRunnerService.runBatchAction(BatchActionType.INVALIDATE_NODE_TREE, studyUuid, nodeUuid);
+        verify(networkModificationTreeService, times(0)).invalidateNodeTree(studyUuid, nodeUuid);
+        assertEquals(1, batchActionRepository.count());
+
+        // Activity on other node does not block the batch
+        nodeActivityRunnerService.removeActivities(studyUuid, rootNetworkUuid, List.of(otherNodeUuid));
+        verify(networkModificationTreeService, times(0)).invalidateNodeTree(studyUuid, nodeUuid);
+        assertEquals(1, batchActionRepository.count());
+
+        // Activity on node does block the batch
+        nodeActivityRunnerService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
+        verify(networkModificationTreeService, times(1)).invalidateNodeTree(studyUuid, nodeUuid);
+        assertEquals(0, batchActionRepository.count());
+    }
+
+    @Test
+    void testRunBatchActionOrdered() {
+        nodeActivityRunnerService.addNodeActivities(UNBUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid));
+        nodeActivityRunnerService.addNodeActivities(UNBUILD, studyUuid, rootNetworkUuid, List.of(otherNodeUuid));
+
+        nodeActivityRunnerService.runBatchAction(BatchActionType.INVALIDATE_NODE_TREE, studyUuid, nodeUuid);
+        nodeActivityRunnerService.runBatchAction(BatchActionType.INVALIDATE_NODE_TREE, studyUuid, otherNodeUuid);
+        assertEquals(2, batchActionRepository.count());
+
+        // Run the batch on other node (last batch) : failed
+        reset(batchActionRunnerService);
+        ArgumentCaptor<BatchActionEntity> infosCaptor = ArgumentCaptor.forClass(BatchActionEntity.class);
+        nodeActivityRunnerService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
+        assertEquals(2, batchActionRepository.count());
+        verify(batchActionRunnerService, times(1)).runAction(any(), infosCaptor.capture());
+        assertEquals(otherNodeUuid, infosCaptor.getValue().getNodeId());
+
+        // Run the batch on other node (last batch) : success
+        // Then run the batch on the first node : success
+        nodeActivityRunnerService.removeActivities(studyUuid, rootNetworkUuid, List.of(otherNodeUuid));
+        assertEquals(0, batchActionRepository.count());
+    }
+
+    @Test
+    void testDeleteBatchActionWithDBForeignKeys() {
+        batchActionRepository.save(new BatchActionEntity(nodeUuid, studyUuid, BatchActionType.INVALIDATE_NODE_TREE, Instant.now()));
+        batchActionRepository.save(new BatchActionEntity(otherNodeUuid, studyUuid, BatchActionType.INVALIDATE_NODE_TREE, Instant.now()));
+        assertEquals(2, batchActionRepository.count());
+
+        networkModificationTreeService.doDeleteNode(nodeUuid, false, new DeleteNodeInfos());
+        List<BatchActionEntity> all = batchActionRepository.findAll();
+        assertEquals(1, all.size());
+        assertEquals(otherNodeUuid, all.getFirst().getNodeId());
+
+        deleteStudy();
+        assertEquals(0, batchActionRepository.count());
+    }
+
+    private void createStudy() {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(UUID.randomUUID(), UUID.randomUUID(), "case_name", "case_format", UUID.randomUUID());
+        studyUuid = studyRepository.save(studyEntity).getId();
+        rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+
+        NodeEntity rootNodeEntity = networkModificationTreeService.createRoot(studyEntity);
+        nodeUuid = networkModificationTreeService.createNode(studyEntity, rootNodeEntity.getIdNode(), createModificationNodeInfo("node"), InsertMode.AFTER, null).getId();
+        otherNodeUuid = networkModificationTreeService.createNode(studyEntity, rootNodeEntity.getIdNode(), createModificationNodeInfo("otherNode"), InsertMode.AFTER, null).getId();
+    }
+
+    private void deleteStudy() {
+        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
+        studyRepository.deleteAll();
+    }
+}

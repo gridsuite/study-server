@@ -17,8 +17,8 @@ import java.util.UUID;
 @Service
 public class NodeActivityRunnerService extends AbstractNodeActivityRunnerService {
 
-    public NodeActivityRunnerService(NodeActivityService nodeActivityService) {
-        super(nodeActivityService);
+    public NodeActivityRunnerService(BatchActionRunnerService batchActionRunnerService, NodeActivityService nodeActivityService) {
+        super(batchActionRunnerService, nodeActivityService);
     }
 
     public void runWith(NodeActivityType type, UUID studyUuid, List<UUID> nodeUuids, Runnable action) {

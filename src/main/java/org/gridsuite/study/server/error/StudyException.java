@@ -49,4 +49,8 @@ public class StudyException extends AbstractBusinessException {
     public Map<String, Object> getBusinessErrorValues() {
         return businessErrorValues;
     }
+
+    public boolean isNodeActivityConflict() {
+        return errorCode == StudyBusinessErrorCode.NODE_ACTIVITY_CONFLICT;
+    }
 }

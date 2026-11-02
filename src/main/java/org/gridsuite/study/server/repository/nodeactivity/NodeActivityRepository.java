@@ -8,6 +8,7 @@ package org.gridsuite.study.server.repository.nodeactivity;
 
 import org.gridsuite.study.server.nodeactivity.NodeActivityEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.UUID;
@@ -15,6 +16,7 @@ import java.util.UUID;
 /**
  * @author Ayoub Labidi <ayoub.labidi_externe at rte-france.com>
  */
+@Repository
 public interface NodeActivityRepository extends JpaRepository<NodeActivityEntity, UUID> {
 
     List<NodeActivityEntity> findAllByStudyId(UUID studyId);
