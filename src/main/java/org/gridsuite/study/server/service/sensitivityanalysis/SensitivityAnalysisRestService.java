@@ -14,6 +14,7 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
@@ -36,6 +37,7 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
+import static org.gridsuite.study.server.service.client.RemoteServiceName.SENSITIVITY_ANALYSIS_SERVER;
 
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
@@ -51,9 +53,10 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
     private final ObjectMapper objectMapper;
 
     SensitivityAnalysisRestService(RemoteServicesProperties remoteServicesProperties,
+                                   RemoteServicesInspector remoteServicesInspector,
                                    RestTemplate restTemplate,
                                    ObjectMapper objectMapper) {
-        super(remoteServicesProperties.getServiceUri("sensitivity-analysis-server"), restTemplate);
+        super(remoteServicesProperties.getServiceUri("sensitivity-analysis-server"), restTemplate, remoteServicesInspector, SENSITIVITY_ANALYSIS_SERVER);
         this.objectMapper = objectMapper;
     }
 

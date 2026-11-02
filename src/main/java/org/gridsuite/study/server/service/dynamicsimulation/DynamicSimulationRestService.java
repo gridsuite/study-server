@@ -24,6 +24,7 @@ import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
@@ -50,6 +51,7 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_TYPE;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_UUID;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.TIME_SERIES_BAD_TYPE;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
+import static org.gridsuite.study.server.service.client.RemoteServiceName.DYNAMIC_SIMULATION_SERVER;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 
 /**
@@ -68,10 +70,11 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
     private final TimeSeriesClient timeSeriesClient;
 
     public DynamicSimulationRestService(RemoteServicesProperties remoteServicesProperties,
+                                        RemoteServicesInspector remoteServicesInspector,
                                         RestTemplate restTemplate,
                                         ObjectMapper objectMapper,
                                         TimeSeriesClient timeSeriesClient) {
-        super(remoteServicesProperties.getServiceUri("dynamic-simulation-server"), restTemplate);
+        super(remoteServicesProperties.getServiceUri("dynamic-simulation-server"), restTemplate, remoteServicesInspector, DYNAMIC_SIMULATION_SERVER);
         this.objectMapper = objectMapper;
         this.timeSeriesClient = timeSeriesClient;
     }

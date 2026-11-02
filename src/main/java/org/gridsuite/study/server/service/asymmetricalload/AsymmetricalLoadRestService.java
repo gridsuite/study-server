@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.RunAsymmetricalLoadParametersInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
@@ -41,6 +42,7 @@ import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
+import static org.gridsuite.study.server.service.client.RemoteServiceName.*;
 
 /**
  * @author Etienne Lesot <etienne.lesot at rte-france.com>
@@ -60,8 +62,9 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
 
     @Autowired
     public AsymmetricalLoadRestService(RemoteServicesProperties remoteServicesProperties,
+                                       RemoteServicesInspector remoteServicesInspector,
                                        ObjectMapper objectMapper, RestTemplate restTemplate) {
-        super(remoteServicesProperties.getServiceUri("pcc-min-server"), restTemplate);
+        super(remoteServicesProperties.getServiceUri("pcc-min-server"), restTemplate, remoteServicesInspector, PCC_MIN_SERVER);
         this.objectMapper = objectMapper;
     }
 

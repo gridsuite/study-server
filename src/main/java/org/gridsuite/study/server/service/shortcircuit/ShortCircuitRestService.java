@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.VariantInfos;
 import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
@@ -40,6 +41,7 @@ import java.util.Objects;
 import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
+import static org.gridsuite.study.server.service.client.RemoteServiceName.SHORTCIRCUIT_SERVER;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 import static org.gridsuite.study.server.utils.StudyUtils.*;
 
@@ -57,9 +59,10 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
 
     @Autowired
     public ShortCircuitRestService(RemoteServicesProperties remoteServicesProperties,
+                                   RemoteServicesInspector remoteServicesInspector,
                                    RestTemplate restTemplate,
                                    ObjectMapper objectMapper) {
-        super(remoteServicesProperties.getServiceUri("shortcircuit-server"), restTemplate);
+        super(remoteServicesProperties.getServiceUri("shortcircuit-server"), restTemplate, remoteServicesInspector, SHORTCIRCUIT_SERVER);
         this.objectMapper = objectMapper;
     }
 
@@ -298,12 +301,17 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
 
     @Override
     public UUID duplicateParameters(UUID parametersUuid) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-        return restTemplate.postForObject(getBaseUriForParameters()
-            .pathSegment("{parametersUuid}", "duplicate")
-            .buildAndExpand(parametersUuid)
-            .toUri(), new HttpEntity<>(headers), UUID.class);
+        return executeIfServiceAvailable(
+                () -> {
+                    HttpHeaders headers = new HttpHeaders();
+                    headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+                    return restTemplate.postForObject(getBaseUriForParameters()
+                            .pathSegment("{parametersUuid}", "duplicate")
+                            .buildAndExpand(parametersUuid)
+                            .toUri(), new HttpEntity<>(headers), UUID.class);
+                }
+        );
+
     }
 
     @Override

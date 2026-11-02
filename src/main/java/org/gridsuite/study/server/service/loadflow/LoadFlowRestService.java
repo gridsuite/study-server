@@ -15,6 +15,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
@@ -33,6 +34,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.service.client.RemoteServiceName.LOADFLOW_SERVER;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -53,9 +55,10 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
     }
 
     public LoadFlowRestService(RemoteServicesProperties remoteServicesProperties,
+                               RemoteServicesInspector remoteServicesInspector,
                                ObjectMapper objectMapper,
                                RestTemplate restTemplate) {
-        super(remoteServicesProperties.getServiceUri("loadflow-server"), restTemplate);
+        super(remoteServicesProperties.getServiceUri("loadflow-server"), restTemplate, remoteServicesInspector, LOADFLOW_SERVER);
         this.objectMapper = objectMapper;
     }
 

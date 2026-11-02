@@ -1,6 +1,8 @@
 package org.gridsuite.study.server.service.common;
 
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
+import org.gridsuite.study.server.service.client.RemoteServiceName;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -15,9 +17,37 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RESULTS_UUIDS;
 
 public abstract class AbstractComputationRestService extends AbstractRestClient {
+    private final RemoteServicesInspector servicesInspector;
+    private final RemoteServiceName serviceName;
 
-    protected AbstractComputationRestService(String baseUri, RestTemplate restTemplate) {
+    protected AbstractComputationRestService(String baseUri, RestTemplate restTemplate,
+                                             RemoteServicesInspector servicesInspector,
+                                             RemoteServiceName serviceName) {
         super(baseUri, restTemplate);
+        this.servicesInspector = servicesInspector;
+        this.serviceName = serviceName;
+    }
+
+    private boolean isOptionalAndDown() {
+        return !servicesInspector.isOptionalServiceUp(serviceName).isDone();
+    }
+
+    @FunctionalInterface
+    public interface RestExecutor<T> {
+        T execute();
+    }
+
+    /**
+     * run a REST request, except if the service is optional and non available
+     * @param executor the request to be executed
+     * @param <T> type of the result
+     * @return result if the service is available or non optional, null otherwise
+     */
+    protected <T> T executeIfServiceAvailable(RestExecutor<T> executor) {
+        if (isOptionalAndDown()) {
+            return null;
+        }
+        return executor.execute();
     }
 
     public abstract List<String> getEnumValues(String enumName, UUID resultUuidOpt);
