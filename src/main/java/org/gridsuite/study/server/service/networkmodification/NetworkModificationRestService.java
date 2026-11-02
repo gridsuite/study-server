@@ -673,10 +673,11 @@ public class NetworkModificationRestService {
      */
     public void createSharingLinks(UUID groupUuid, boolean recreate, String userId) {
         Objects.requireNonNull(groupUuid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + "/sharing-links")
-                .queryParam("recreate", recreate)
-                .buildAndExpand(groupUuid)
-                .toUriString();
+        var uriBuilder = UriComponentsBuilder.fromPath(GROUP_PATH + "/sharing-links");
+        if (recreate) {
+            uriBuilder.queryParam("recreate", true);
+        }
+        var path = uriBuilder.buildAndExpand(groupUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
