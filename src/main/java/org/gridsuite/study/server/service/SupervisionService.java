@@ -438,7 +438,7 @@ public class SupervisionService {
         LOGGER.trace("Study {} nodes builds deleted and root node invalidated in : {} milliseconds", studyUuid, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime.get()));
     }
 
-    public void recreateSharingLinks(UUID studyUuid, String userId) {
+    public void recreateNetworkModificationSharingLinks(UUID studyUuid, String userId) {
         List<UUID> modificationGroupUuids = networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid).stream()
                 .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
                 .toList();
