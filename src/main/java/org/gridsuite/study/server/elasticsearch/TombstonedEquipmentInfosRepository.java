@@ -6,10 +6,12 @@
  */
 package org.gridsuite.study.server.elasticsearch;
 
+import org.gridsuite.study.server.dto.elasticsearch.BasicEquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 import org.springframework.lang.NonNull;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -20,7 +22,13 @@ import java.util.UUID;
 public interface TombstonedEquipmentInfosRepository extends ElasticsearchRepository<TombstonedEquipmentInfos, String> {
     List<TombstonedEquipmentInfos> findAllByNetworkUuid(@NonNull UUID networkUuid);
 
-    Set<TombstonedEquipmentInfos> findByIdInAndNetworkUuidAndVariantId(@NonNull List<String> equipmentIds, @NonNull UUID networkUuid, @NonNull String variantId);
+    // Looked up by document id: a derived query on the analyzed equipmentId field would also match other ids sharing a token (T1 and T1(1))
+    default Set<TombstonedEquipmentInfos> findByIdInAndNetworkUuidAndVariantId(@NonNull List<String> equipmentIds, @NonNull UUID networkUuid, @NonNull String variantId) {
+        Set<TombstonedEquipmentInfos> tombstonedEquipmentInfos = new HashSet<>();
+        findAllById(equipmentIds.stream().distinct().map(id -> BasicEquipmentInfos.buildUniqueId(networkUuid, variantId, id)).toList())
+            .forEach(tombstonedEquipmentInfos::add);
+        return tombstonedEquipmentInfos;
+    }
 
     void deleteAllByNetworkUuid(@NonNull UUID networkUuid);
 
