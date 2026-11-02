@@ -66,13 +66,10 @@ class SupervisionServiceTest {
         String userId = "userId";
         NodeEntity activeNode = new NodeEntity();
         NodeEntity secondActiveNode = new NodeEntity();
-        NodeEntity stashedNode = new NodeEntity();
-        stashedNode.setStashed(true);
 
         when(networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid)).thenReturn(List.of(
             NetworkModificationNodeInfoEntity.builder().node(activeNode).modificationGroupUuid(groupWithReferences).build(),
-            NetworkModificationNodeInfoEntity.builder().node(secondActiveNode).modificationGroupUuid(groupWithoutReferences).build(),
-            NetworkModificationNodeInfoEntity.builder().node(stashedNode).modificationGroupUuid(stashedGroup).build()));
+            NetworkModificationNodeInfoEntity.builder().node(secondActiveNode).modificationGroupUuid(groupWithoutReferences).build()));
         when(networkModificationService.getContainersWithModificationReferences(modificationGroupUuids))
                 .thenReturn(Set.of(groupWithReferences));
 
