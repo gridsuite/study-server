@@ -32,7 +32,6 @@ class SecurityAnalysisRestServiceTest {
 
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
-
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private RestClient restClient;
 
@@ -47,8 +46,7 @@ class SecurityAnalysisRestServiceTest {
     @Test
     void testGetProviders() {
         String providers = "[\"OpenLoadFlow\"]";
-        when(restClient.get().uri(BASE_URI + "/" + SECURITY_ANALYSIS_API_VERSION + "/providers").retrieve().body(String.class))
-            .thenReturn(providers);
+        when(restClient.get().uri(BASE_URI + "/" + SECURITY_ANALYSIS_API_VERSION + "/providers").retrieve().body(String.class)).thenReturn(providers);
 
         assertThat(securityAnalysisRestService.getProviders()).isEqualTo(providers);
     }
@@ -56,8 +54,7 @@ class SecurityAnalysisRestServiceTest {
     @Test
     void testGetDefaultLimitReductions() {
         String defaultLimitReductions = "[]";
-        when(restClient.get().uri(BASE_URI + "/" + SECURITY_ANALYSIS_API_VERSION + "/parameters/default-limit-reductions")
-            .retrieve().body(String.class)).thenReturn(defaultLimitReductions);
+        when(restClient.get().uri(BASE_URI + "/" + SECURITY_ANALYSIS_API_VERSION + "/parameters/default-limit-reductions").retrieve().body(String.class)).thenReturn(defaultLimitReductions);
 
         assertThat(securityAnalysisRestService.getDefaultLimitReductions()).isEqualTo(defaultLimitReductions);
     }
@@ -66,8 +63,7 @@ class SecurityAnalysisRestServiceTest {
     void testGetParameters() {
         UUID parameterUuid = UUID.randomUUID();
         String parameters = "{\"provider\":\"OpenLoadFlow\"}";
-        when(restClient.get().uri(BASE_URI + "/" + SECURITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid)
-            .retrieve().body(String.class)).thenReturn(parameters);
+        when(restClient.get().uri(BASE_URI + "/" + SECURITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid).retrieve().body(String.class)).thenReturn(parameters);
 
         assertThat(securityAnalysisRestService.getParameters(parameterUuid)).isEqualTo(parameters);
     }

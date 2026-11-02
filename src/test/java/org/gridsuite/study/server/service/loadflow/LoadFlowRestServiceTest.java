@@ -35,7 +35,6 @@ class LoadFlowRestServiceTest {
 
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
-
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private RestClient restClient;
 
@@ -52,8 +51,7 @@ class LoadFlowRestServiceTest {
     @Test
     void testGetProviders() {
         String providers = "[\"OpenLoadFlow\"]";
-        when(restClient.get().uri(BASE_URI + "/" + LOADFLOW_API_VERSION + "/providers").retrieve().body(String.class))
-            .thenReturn(providers);
+        when(restClient.get().uri(BASE_URI + "/" + LOADFLOW_API_VERSION + "/providers").retrieve().body(String.class)).thenReturn(providers);
 
         assertThat(loadFlowRestService.getProviders()).isEqualTo(providers);
     }
@@ -61,8 +59,7 @@ class LoadFlowRestServiceTest {
     @Test
     void testGetSpecificParameters() {
         String specificParameters = "{\"provider\":\"OpenLoadFlow\"}";
-        when(restClient.get().uri(BASE_URI + "/" + LOADFLOW_API_VERSION + "/specific-parameters").retrieve().body(String.class))
-            .thenReturn(specificParameters);
+        when(restClient.get().uri(BASE_URI + "/" + LOADFLOW_API_VERSION + "/specific-parameters").retrieve().body(String.class)).thenReturn(specificParameters);
 
         assertThat(loadFlowRestService.getSpecificParameters()).isEqualTo(specificParameters);
     }
@@ -70,8 +67,7 @@ class LoadFlowRestServiceTest {
     @Test
     void testGetDefaultLimitReductions() {
         String defaultLimitReductions = "[]";
-        when(restClient.get().uri(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/default-limit-reductions").retrieve().body(String.class))
-            .thenReturn(defaultLimitReductions);
+        when(restClient.get().uri(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/default-limit-reductions").retrieve().body(String.class)).thenReturn(defaultLimitReductions);
 
         assertThat(loadFlowRestService.getDefaultLimitReductions()).isEqualTo(defaultLimitReductions);
     }
@@ -80,8 +76,7 @@ class LoadFlowRestServiceTest {
     void testGetParameters() {
         UUID parameterUuid = UUID.randomUUID();
         String parameters = "{\"provider\":\"OpenLoadFlow\"}";
-        when(restClient.get().uri(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/" + parameterUuid)
-            .retrieve().body(String.class)).thenReturn(parameters);
+        when(restClient.get().uri(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/" + parameterUuid).retrieve().body(String.class)).thenReturn(parameters);
 
         assertThat(loadFlowRestService.getParameters(parameterUuid)).isEqualTo(parameters);
     }
@@ -93,8 +88,7 @@ class LoadFlowRestServiceTest {
         String parameters = objectMapper.writeValueAsString(Map.of(
                 "provider", "OpenLoadFlow",
                 "commonParameters", commonParameters));
-        when(restClient.get().uri(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/" + parameterUuid)
-            .retrieve().body(String.class)).thenReturn(parameters);
+        when(restClient.get().uri(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/" + parameterUuid).retrieve().body(String.class)).thenReturn(parameters);
 
         assertThat(objectMapper.writeValueAsString(loadFlowRestService.getCommonParameters(parameterUuid)))
                 .isEqualTo(objectMapper.writeValueAsString(commonParameters));

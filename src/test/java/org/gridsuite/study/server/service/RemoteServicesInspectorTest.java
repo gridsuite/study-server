@@ -11,6 +11,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.NullNode;
+import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.assertj.core.api.WithAssertions;
 import org.gridsuite.study.server.RemoteServicesProperties;
@@ -26,7 +28,6 @@ import org.gridsuite.study.server.service.client.RemoteServiceName;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Answers;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,15 +36,25 @@ import org.springframework.boot.test.autoconfigure.web.client.RestClientTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.test.web.client.ResponseActions;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
 
-import java.net.URI;
+import java.net.SocketException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestToUriTemplate;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withException;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+
+@Slf4j
 @DisableElasticsearch
 @DisableCloudStream
 @DisableJpa
@@ -52,7 +63,6 @@ import java.util.stream.Collectors;
 @ExtendWith({MockitoExtension.class})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.MethodName.class)
-//TODO
 class RemoteServicesInspectorTest implements WithAssertions {
     @Autowired
     private RemoteServicesProperties remoteServicesProperties;
@@ -68,21 +78,24 @@ class RemoteServicesInspectorTest implements WithAssertions {
     @MockitoBean
     private InfoEndpoint infoEndpoint;
 
+    private MockRestServiceServer server;
+
     @TestConfiguration
     public static class TestConfig {
-        static RestClient restClient;
+        static MockRestServiceServer server;
 
         @Bean
         public RestClient.Builder testRestClientBuilder() {
-            RestClient.Builder builder = Mockito.mock(RestClient.Builder.class, Answers.RETURNS_SELF);
-            restClient = Mockito.mock(RestClient.class, Answers.RETURNS_DEEP_STUBS);
-            Mockito.when(builder.build()).thenReturn(restClient);
+            RestClient.Builder builder = Mockito.spy(RestClient.builder());
+            server = MockRestServiceServer.bindTo(builder).ignoreExpectOrder(true).build();
+            Mockito.doReturn(builder).when(builder).requestFactory(Mockito.any(ClientHttpRequestFactory.class));
             return builder;
         }
     }
 
     @BeforeAll
     void setup() {
+        server = TestConfig.server;
         remoteServicesProperties.setServices(Arrays.stream(RemoteServiceName.values())
                 .map(RemoteServiceName::serviceName)
                 .map(name -> new RemoteServicesProperties.Service(name, "http://" + name + "/", false))
@@ -91,9 +104,17 @@ class RemoteServicesInspectorTest implements WithAssertions {
 
     @BeforeEach
     void prepareCleanEnv() {
-        Mockito.reset(TestConfig.restClient);
         remoteServicesProperties.getRemoteServiceViewFilter().clear();
         remoteServicesProperties.setRemoteServiceViewDefault(EnumSet.allOf(RemoteServiceName.class));
+    }
+
+    @AfterEach
+    void serverCheckup() {
+        try {
+            server.verify();
+        } finally {
+            server.reset();
+        }
     }
 
     /**
@@ -134,18 +155,16 @@ class RemoteServicesInspectorTest implements WithAssertions {
                 RemoteServiceName.VOLTAGE_INIT_SERVER.serviceName());
         remoteServicesProperties.getServices().forEach(s -> s.setOptional(optionalServices.contains(s.getName())));
 
-        optionalServices.forEach(name -> {
-            var service = remoteServicesProperties.getServices().stream()
-                .filter(candidate -> candidate.getName().equals(name))
-                .findFirst()
-                .orElseThrow();
-            String healthUri = service.getBaseUri() + "/actuator/health";
-            Mockito.when(TestConfig.restClient.get().uri(healthUri).retrieve().body(String.class))
-                .thenAnswer(invocation -> {
-                    Thread.sleep(delayResponse);
-                    return jsonResponse;
-                });
-        });
+        // any optional service will be mocked with JSON to respond
+        optionalServices.forEach(name -> server.expect(requestToUriTemplate("http://{service}//actuator/health", name))
+                .andExpect(method(HttpMethod.GET)).andRespond(request -> {
+                    try {
+                        Thread.sleep(delayResponse);
+                    } catch (InterruptedException ex) {
+                        log.error("wait before request interrupted", ex);
+                    }
+                    return withSuccess(jsonResponse, MediaType.APPLICATION_JSON).createResponse(request);
+                }));
 
         // all services are supposed to be Up/Down
         assertThat(remoteServicesInspector.getOptionalServices()).containsExactlyInAnyOrder(
@@ -173,8 +192,7 @@ class RemoteServicesInspectorTest implements WithAssertions {
     @Test
     void testServiceInfoReturnPartialResultIfNotUnavailable() {
         testServiceInfo(0, RemoteServiceName.LOADFLOW_SERVER);
-        Mockito.when(TestConfig.restClient.get().uri(serviceInfoUri(RemoteServiceName.LOADFLOW_SERVER))
-            .retrieve().body(String.class)).thenThrow(new RestClientException("Test no server"));
+        serverExpectInfo(RemoteServiceName.LOADFLOW_SERVER).andRespond(withException(new SocketException("Test no server")));
         final Map<String, JsonNode> expected = Arrays.stream(RemoteServiceName.values())
                 .collect(Collectors.toMap(RemoteServiceName::serviceName, srv -> EMPTY_OBJ));
         expected.put(RemoteServiceName.LOADFLOW_SERVER.serviceName(), NullNode.instance);
@@ -247,16 +265,20 @@ class RemoteServicesInspectorTest implements WithAssertions {
     private void testServiceInfo(final int delay, final EnumSet<RemoteServiceName> mockSrv) {
         Mockito.when(infoEndpoint.info()).thenReturn(Collections.emptyMap());
         for (final RemoteServiceName service : mockSrv) {
-            Mockito.when(TestConfig.restClient.get().uri(serviceInfoUri(service)).retrieve().body(String.class))
-                .thenAnswer(invocation -> {
+            serverExpectInfo(service).andRespond(request -> {
+                try {
                     Thread.sleep(delay);
-                    return "{}";
-                });
+                } catch (InterruptedException ex) {
+                    log.error("wait before request interrupted", ex);
+                }
+                return withSuccess("{}", MediaType.APPLICATION_JSON).createResponse(request);
+            });
         }
     }
 
-    private URI serviceInfoUri(RemoteServiceName service) {
-        return URI.create(remoteServicesProperties.getServiceUri(service.serviceName()) + "/actuator/info").normalize();
+    private ResponseActions serverExpectInfo(@NonNull final RemoteServiceName service) {
+        return server.expect(requestToUriTemplate("http://{service}/actuator/info", service.serviceName()))
+                .andExpect(method(HttpMethod.GET));
     }
 
     @Test

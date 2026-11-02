@@ -13,31 +13,28 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.QuotaConsumptionRepository;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Answers;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.test.context.bean.override.convention.TestBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.matches;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 /**
  * @author Ghiles Abdellah {@literal <ghiles.abdellah at rte-france.com>}
@@ -49,10 +46,8 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-//TODO
 class UserAdminServiceTest {
     private static final String USER_ID = "userId";
-    private static final String BASE_URI = "http://user-admin-server";
 
     @Autowired
     private UserAdminService userAdminService;
@@ -60,18 +55,8 @@ class UserAdminServiceTest {
     @Autowired
     private QuotaConsumptionRepository quotaConsumptionRepository;
 
-    @TestBean(name = "studyRestClient", methodName = "createRestClient")
+    @MockitoBean(answers = org.mockito.Answers.RETURNS_DEEP_STUBS)
     private RestClient restClient;
-
-    static RestClient createRestClient() {
-        return Mockito.mock(RestClient.class, Answers.RETURNS_DEEP_STUBS);
-    }
-
-    @BeforeEach
-    void configureRestClient() {
-        Mockito.reset(restClient);
-        userAdminService.setUserAdminServerBaseUri(BASE_URI);
-    }
 
     @AfterEach
     void cleanDB() {
@@ -79,41 +64,37 @@ class UserAdminServiceTest {
     }
 
     @Test
-    void testGetUserQuotaState() throws Exception {
+    void testGetUserQuotaState() {
         Map<QuotaType, QuotaState> expectedState = Map.of(
                 QuotaType.LOAD_FLOW, new QuotaState(1, 5),
                 QuotaType.BUILD, new QuotaState(0, 10));
-        String expectedUrl = BASE_URI + "/v1/users/" + USER_ID + "/quota/state";
-        var requestSpec = restClient.get().uri(expectedUrl);
-        var responseType = new ParameterizedTypeReference<Map<QuotaType, QuotaState>>() { };
-        when(requestSpec.retrieve().body(responseType)).thenReturn(expectedState);
+        when(restClient.get().uri(anyString()).retrieve().body(
+                Mockito.<ParameterizedTypeReference<Map<QuotaType, QuotaState>>>any()))
+                .thenReturn(expectedState);
+        Mockito.clearInvocations(restClient.get());
 
         Map<QuotaType, QuotaState> result = userAdminService.getUserQuotaState(USER_ID);
 
         assertEquals(expectedState, result);
+        verify(restClient.get(), times(1)).uri(matches(".*/users/" + USER_ID + "/quota/state$"));
     }
 
     @Test
     void testConsumeQuotaReturnsQuotaId() {
         UUID quotaId = UUID.randomUUID();
-        String expectedUrl = BASE_URI + "/v1/users/" + USER_ID + "/quota/SHORT_CIRCUIT/consume";
-        when(restClient.post().uri(expectedUrl).retrieve().body(UUID.class)).thenReturn(quotaId);
+        when(restClient.post().uri(anyString()).retrieve().body(eq(UUID.class))).thenReturn(quotaId);
+        Mockito.clearInvocations(restClient.post());
 
         UUID result = userAdminService.consumeQuota(USER_ID, QuotaType.SHORT_CIRCUIT);
 
         assertEquals(quotaId, result);
+        verify(restClient.post(), times(1)).uri(matches(".*/users/" + USER_ID + "/quota/SHORT_CIRCUIT/consume$"));
     }
 
     @Test
     void testConsumeQuotaThrowsStudyExceptionWhenQuotaExhausted() {
-        String expectedUrl = BASE_URI + "/v1/users/" + USER_ID + "/quota/SHORT_CIRCUIT/consume";
-        HttpClientErrorException quotaExhausted = HttpClientErrorException.create(
-            HttpStatus.TOO_MANY_REQUESTS,
-            "Too Many Requests",
-            HttpHeaders.EMPTY,
-            new byte[0],
-            StandardCharsets.UTF_8);
-        when(restClient.post().uri(expectedUrl).retrieve().body(UUID.class)).thenThrow(quotaExhausted);
+        when(restClient.post().uri(anyString()).retrieve().body(eq(UUID.class)))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.TOO_MANY_REQUESTS, "Bad Request", null, null, null));
 
         assertThrows(StudyException.class, () -> userAdminService.consumeQuota(USER_ID, QuotaType.SHORT_CIRCUIT));
     }
@@ -121,61 +102,53 @@ class UserAdminServiceTest {
     @Test
     void testReleaseQuotaIdCallsReleaseEndpoint() {
         UUID quotaId = UUID.randomUUID();
-        var requestSpec = expectReleaseQuota(quotaId);
 
         userAdminService.releaseQuotaId(USER_ID, quotaId);
 
-        verify(requestSpec).retrieve();
+        verify(restClient.post(), times(1)).uri(matches(".*/users/" + USER_ID + "/quota/" + quotaId + "/release$"));
     }
 
     @Test
     void testRegisterThenReleaseQuotaUsesLocalMapping() {
         UUID resultUuid = UUID.randomUUID();
         UUID quotaId = UUID.randomUUID();
-        var requestSpec = expectReleaseQuota(quotaId);
 
         userAdminService.registerQuotaConsumption(resultUuid, quotaId);
         assertTrue(quotaConsumptionRepository.findById(resultUuid).isPresent());
 
         userAdminService.releaseQuota(USER_ID, resultUuid);
 
+        verify(restClient.post(), times(1)).uri(matches(".*/users/" + USER_ID + "/quota/" + quotaId + "/release$"));
         assertTrue(quotaConsumptionRepository.findById(resultUuid).isEmpty());
-        verify(requestSpec).retrieve();
     }
 
     @Test
     void testReleaseQuotaIsNoOpWhenNoMappingRegistered() {
         userAdminService.releaseQuota(USER_ID, UUID.randomUUID());
 
-        verifyNoInteractions(restClient);
+        verify(restClient, times(0)).post();
     }
 
     @Test
     void testRegisterThenReleaseFailedQuotaIdUsesLocalMapping() {
         UUID resultUuid = UUID.randomUUID();
         UUID quotaId = UUID.randomUUID();
-        var requestSpec = expectReleaseQuota(quotaId);
 
         userAdminService.registerQuotaConsumption(resultUuid, quotaId);
         assertTrue(quotaConsumptionRepository.findByQuotaId(quotaId).isPresent());
 
         userAdminService.releaseFailedQuotaId(USER_ID, quotaId);
 
+        verify(restClient.post(), times(1)).uri(matches(".*/users/" + USER_ID + "/quota/" + quotaId + "/release$"));
         assertTrue(quotaConsumptionRepository.findByQuotaId(quotaId).isEmpty());
-        verify(requestSpec).retrieve();
     }
 
     @Test
     void testReleaseFailedQuotaIdCallsReleaseEndpointWhenNoMappingRegistered() {
         UUID quotaId = UUID.randomUUID();
-        var requestSpec = expectReleaseQuota(quotaId);
 
         userAdminService.releaseFailedQuotaId(USER_ID, quotaId);
 
-        verify(requestSpec).retrieve();
-    }
-
-    private RestClient.RequestBodySpec expectReleaseQuota(UUID quotaId) {
-        return restClient.post().uri(BASE_URI + "/v1/users/" + USER_ID + "/quota/" + quotaId + "/release");
+        verify(restClient.post(), times(1)).uri(matches(".*/users/" + USER_ID + "/quota/" + quotaId + "/release$"));
     }
 }

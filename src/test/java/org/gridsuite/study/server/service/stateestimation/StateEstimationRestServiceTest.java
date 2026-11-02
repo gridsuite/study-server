@@ -69,11 +69,7 @@ class StateEstimationRestServiceTest {
         UUID resultUuid = UUID.randomUUID();
         ResponseEntity<Resource> response = ResponseEntity.ok(new ByteArrayResource("debug".getBytes()));
         String url = BASE_URI + "/" + STATE_ESTIMATION_API_VERSION + "/results/" + resultUuid + "/download-debug-file";
-        when(restClient
-            .get()
-            .uri(url)
-            .retrieve()
-            .toEntity(Resource.class)).thenReturn(response);
+        when(restClient.get().uri(url).retrieve().toEntity(Resource.class)).thenReturn(response);
 
         assertThat(stateEstimationRestService.downloadDebugFile(resultUuid)).isEqualTo(response);
     }

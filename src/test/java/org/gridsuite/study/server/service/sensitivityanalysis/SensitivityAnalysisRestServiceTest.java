@@ -32,7 +32,6 @@ class SensitivityAnalysisRestServiceTest {
 
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
-
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private RestClient restClient;
 
@@ -47,8 +46,7 @@ class SensitivityAnalysisRestServiceTest {
     @Test
     void testGetProviders() {
         String providers = "[\"OpenLoadFlow\"]";
-        when(restClient.get().uri(BASE_URI + "/" + SENSITIVITY_ANALYSIS_API_VERSION + "/providers").retrieve().body(String.class))
-            .thenReturn(providers);
+        when(restClient.get().uri(BASE_URI + "/" + SENSITIVITY_ANALYSIS_API_VERSION + "/providers").retrieve().body(String.class)).thenReturn(providers);
 
         assertThat(sensitivityAnalysisRestService.getProviders()).isEqualTo(providers);
     }
@@ -57,8 +55,7 @@ class SensitivityAnalysisRestServiceTest {
     void testGetParameters() {
         UUID parameterUuid = UUID.randomUUID();
         String parameters = "{\"provider\":\"OpenLoadFlow\"}";
-        when(restClient.get().uri(BASE_URI + "/" + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid)
-            .retrieve().body(String.class)).thenReturn(parameters);
+        when(restClient.get().uri(BASE_URI + "/" + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid).retrieve().body(String.class)).thenReturn(parameters);
 
         assertThat(sensitivityAnalysisRestService.getParameters(parameterUuid)).isEqualTo(parameters);
     }

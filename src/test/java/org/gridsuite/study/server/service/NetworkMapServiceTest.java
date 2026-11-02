@@ -40,11 +40,7 @@ class NetworkMapServiceTest {
     void testGetElementSchema() {
         String response = "{\"type\":\"object\"}";
         String expectedUrl = NETWORK_MAP_SERVER_URI + "/v1/schemas/LINE/TAB";
-        when(restClient
-            .get()
-            .uri(expectedUrl)
-            .retrieve()
-            .body(String.class)).thenReturn(response);
+        when(restClient.get().uri(expectedUrl).retrieve().body(String.class)).thenReturn(response);
 
         assertThat(networkMapService.getElementSchema("LINE", "TAB")).isEqualTo(response);
     }

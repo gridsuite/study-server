@@ -12,22 +12,20 @@ import org.gridsuite.study.server.dto.ReferenceAttributes;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Answers;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.client.RestClient;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -42,7 +40,7 @@ class DirectoryServiceTest {
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
 
-    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    @Mock(answer = org.mockito.Answers.RETURNS_DEEP_STUBS)
     private RestClient restClient;
 
     private DirectoryService directoryService;
@@ -58,22 +56,17 @@ class DirectoryServiceTest {
         UUID elementUuid = UUID.randomUUID();
         String response = "[{\"name\":\"element\"}]";
         String expectedUrl = DIRECTORY_SERVER_URI + "/v1/elements?ids=" + elementUuid + "&elementTypes=STUDY&strictMode=false";
+        ArgumentCaptor<Consumer<HttpHeaders>> headersCaptor = ArgumentCaptor.forClass(Consumer.class);
         var requestSpec = restClient.get().uri(expectedUrl);
-        doReturn(requestSpec).when(requestSpec).headers(any());
+        doReturn(requestSpec).when(requestSpec).headers(headersCaptor.capture());
         when(requestSpec.retrieve().body(String.class)).thenReturn(response);
 
         assertThat(directoryService.getElements(List.of(elementUuid), List.of("STUDY"), false, USER_ID)).isEqualTo(response);
 
-        verify(requestSpec).headers(argThat(headers -> {
-            HttpHeaders requestHeaders = new HttpHeaders();
-            headers.accept(requestHeaders);
-            return USER_ID.equals(requestHeaders.getFirst(HEADER_USER_ID));
-        }));
-        verify(requestSpec).headers(argThat(headers -> {
-            HttpHeaders requestHeaders = new HttpHeaders();
-            headers.accept(requestHeaders);
-            return MediaType.APPLICATION_JSON.equals(requestHeaders.getContentType());
-        }));
+        HttpHeaders headers = new HttpHeaders();
+        headersCaptor.getAllValues().forEach(consumer -> consumer.accept(headers));
+        assertThat(headers.getFirst(HEADER_USER_ID)).isEqualTo(USER_ID);
+        assertThat(headers.getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
     }
 
     @Test
@@ -85,6 +78,8 @@ class DirectoryServiceTest {
         when(requestSpec.retrieve().toBodilessEntity()).thenReturn(ResponseEntity.ok().<Void>build());
 
         assertThat(directoryService.elementExists(directoryUuid, "elementName", "STUDY")).isTrue();
+
+        verify(requestSpec.retrieve()).toBodilessEntity();
     }
 
     @Test
@@ -109,32 +104,40 @@ class DirectoryServiceTest {
 
         directoryService.updateSharingLinks(List.of(rootReference, compositeReference), studyUuid, nodeUuid, USER_ID);
 
-        var rootRequest = restClient.put().uri(referenceUrl(rootReference)).headers(any()).contentType(MediaType.APPLICATION_JSON);
-        verify(rootRequest).body(argThat((Object body) -> {
-            assertThat(body).usingRecursiveComparison().isEqualTo(ReferenceAttributes.createReferenceAttributes(
-                rootReference.modificationUuid(), studyUuid, nodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE));
-            return true;
-        }));
+        ArgumentCaptor<ReferenceAttributes> rootBodyCaptor = ArgumentCaptor.forClass(ReferenceAttributes.class);
+        var rootRequest = restClient.put().uri(referenceUrl(rootReference));
+        verify(rootRequest).body(rootBodyCaptor.capture());
+        assertThat(rootBodyCaptor.getValue()).usingRecursiveComparison().isEqualTo(ReferenceAttributes.createReferenceAttributes(
+            rootReference.modificationUuid(), studyUuid, nodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE));
+        ArgumentCaptor<Consumer<HttpHeaders>> headersCaptor = ArgumentCaptor.forClass(Consumer.class);
+        verify(rootRequest).headers(headersCaptor.capture());
+        HttpHeaders headers = new HttpHeaders();
+        headersCaptor.getValue().accept(headers);
+        assertThat(headers.getFirst(HEADER_USER_ID)).isEqualTo(USER_ID);
 
-        var compositeRequest = restClient.put().uri(referenceUrl(compositeReference)).headers(any()).contentType(MediaType.APPLICATION_JSON);
-        verify(compositeRequest).body(argThat((Object body) -> {
-            assertThat(body).usingRecursiveComparison().isEqualTo(ReferenceAttributes.createReferenceAttributes(
-                compositeReference.modificationUuid(), nodeUuid, compositeReference.containerId(), ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION));
-            return true;
-        }));
+        ArgumentCaptor<ReferenceAttributes> compositeBodyCaptor = ArgumentCaptor.forClass(ReferenceAttributes.class);
+        verify(restClient.put().uri(referenceUrl(compositeReference))).body(compositeBodyCaptor.capture());
+        assertThat(compositeBodyCaptor.getValue()).usingRecursiveComparison().isEqualTo(ReferenceAttributes.createReferenceAttributes(
+            compositeReference.modificationUuid(), nodeUuid, compositeReference.containerId(), ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION));
     }
 
     @Test
     void testRemoveElementsReferences() {
         ModificationReference reference1 = new ModificationReference(UUID.randomUUID(), UUID.randomUUID(), null);
         ModificationReference reference2 = new ModificationReference(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
-        makeFluent(restClient.method(org.springframework.http.HttpMethod.DELETE).uri(referenceUrl(reference1)));
-        makeFluent(restClient.method(org.springframework.http.HttpMethod.DELETE).uri(referenceUrl(reference2)));
+        makeFluent(restClient.method(HttpMethod.DELETE).uri(referenceUrl(reference1)));
+        makeFluent(restClient.method(HttpMethod.DELETE).uri(referenceUrl(reference2)));
 
         directoryService.removeSharingLinks(List.of(reference1, reference2), USER_ID);
 
-        verify(restClient.method(org.springframework.http.HttpMethod.DELETE).uri(referenceUrl(reference1))).headers(any());
-        verify(restClient.method(org.springframework.http.HttpMethod.DELETE).uri(referenceUrl(reference2))).headers(any());
+        ArgumentCaptor<Consumer<HttpHeaders>> headersCaptor = ArgumentCaptor.forClass(Consumer.class);
+        verify(restClient.method(HttpMethod.DELETE).uri(referenceUrl(reference1))).headers(headersCaptor.capture());
+        verify(restClient.method(HttpMethod.DELETE).uri(referenceUrl(reference2))).retrieve();
+
+        HttpHeaders headers = new HttpHeaders();
+        headersCaptor.getValue().accept(headers);
+        assertThat(headers.getFirst(HEADER_USER_ID)).isEqualTo(USER_ID);
+        verify(restClient.method(HttpMethod.DELETE).uri(referenceUrl(reference1))).contentType(MediaType.APPLICATION_JSON);
     }
 
     @Test

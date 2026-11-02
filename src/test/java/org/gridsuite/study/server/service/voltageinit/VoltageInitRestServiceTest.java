@@ -48,11 +48,7 @@ class VoltageInitRestServiceTest {
         UUID resultUuid = UUID.randomUUID();
         ResponseEntity<Resource> response = ResponseEntity.ok(new ByteArrayResource("debug".getBytes()));
         String url = BASE_URI + "/" + VOLTAGE_INIT_API_VERSION + "/results/" + resultUuid + "/download-debug-file";
-        when(restClient
-            .get()
-            .uri(url)
-            .retrieve()
-            .toEntity(Resource.class)).thenReturn(response);
+        when(restClient.get().uri(url).retrieve().toEntity(Resource.class)).thenReturn(response);
 
         assertThat(voltageInitRestService.downloadDebugFile(resultUuid)).isEqualTo(response);
     }
@@ -61,11 +57,7 @@ class VoltageInitRestServiceTest {
     void testGetParameters() {
         UUID parameterUuid = UUID.randomUUID();
         VoltageInitParametersInfos parameters = new VoltageInitParametersInfos();
-        when(restClient
-            .get()
-            .uri(BASE_URI + "/" + VOLTAGE_INIT_API_VERSION + "/parameters/" + parameterUuid)
-            .retrieve()
-            .body(VoltageInitParametersInfos.class)).thenReturn(parameters);
+        when(restClient.get().uri(BASE_URI + "/" + VOLTAGE_INIT_API_VERSION + "/parameters/" + parameterUuid).retrieve().body(VoltageInitParametersInfos.class)).thenReturn(parameters);
 
         assertThat(voltageInitRestService.getParameters(parameterUuid)).isEqualTo(parameters);
     }

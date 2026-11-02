@@ -47,11 +47,7 @@ class ShortCircuitRestServiceTest {
         UUID resultUuid = UUID.randomUUID();
         ResponseEntity<Resource> response = ResponseEntity.ok(new ByteArrayResource("debug".getBytes()));
         String url = BASE_URI + "/" + SHORT_CIRCUIT_API_VERSION + "/results/" + resultUuid + "/download-debug-file";
-        when(restClient
-            .get()
-            .uri(url)
-            .retrieve()
-            .toEntity(Resource.class)).thenReturn(response);
+        when(restClient.get().uri(url).retrieve().toEntity(Resource.class)).thenReturn(response);
 
         assertThat(shortCircuitRestService.downloadDebugFile(resultUuid)).isEqualTo(response);
     }
@@ -59,11 +55,7 @@ class ShortCircuitRestServiceTest {
     @Test
     void testGetSpecificParameters() {
         String specificParameters = "{\"provider\":\"short-circuit\"}";
-        when(restClient
-            .get()
-            .uri(BASE_URI + "/" + SHORT_CIRCUIT_API_VERSION + "/parameters/specific-parameters")
-            .retrieve()
-            .body(String.class)).thenReturn(specificParameters);
+        when(restClient.get().uri(BASE_URI + "/" + SHORT_CIRCUIT_API_VERSION + "/parameters/specific-parameters").retrieve().body(String.class)).thenReturn(specificParameters);
 
         assertThat(shortCircuitRestService.getSpecificParameters()).isEqualTo(specificParameters);
     }

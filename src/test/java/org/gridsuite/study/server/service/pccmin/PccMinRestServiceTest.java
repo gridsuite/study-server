@@ -43,11 +43,7 @@ class PccMinRestServiceTest {
     void testGetParameters() {
         UUID parameterUuid = UUID.randomUUID();
         String parameters = "{\"provider\":\"pcc-min\"}";
-        when(restClient
-            .get()
-            .uri(BASE_URI + "/" + PCC_MIN_API_VERSION + "/parameters/" + parameterUuid)
-            .retrieve()
-            .body(String.class)).thenReturn(parameters);
+        when(restClient.get().uri(BASE_URI + "/" + PCC_MIN_API_VERSION + "/parameters/" + parameterUuid).retrieve().body(String.class)).thenReturn(parameters);
 
         assertThat(pccMinRestService.getParameters(parameterUuid)).isEqualTo(parameters);
     }

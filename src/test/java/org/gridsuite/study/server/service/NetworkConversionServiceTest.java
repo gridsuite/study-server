@@ -32,11 +32,7 @@ class NetworkConversionServiceTest {
         String response = "{\"format\":\"UCTE\"}";
         NetworkConversionService networkConversionService = new NetworkConversionService(NETWORK_CONVERSION_SERVER_URI, new ObjectMapper(), restClient);
         String expectedUrl = NETWORK_CONVERSION_SERVER_URI + "/v1/cases/" + caseUuid + "/import-parameters";
-        when(restClient
-            .get()
-            .uri(expectedUrl)
-            .retrieve()
-            .body(String.class)).thenReturn(response);
+        when(restClient.get().uri(expectedUrl).retrieve().body(String.class)).thenReturn(response);
 
         assertThat(networkConversionService.getCaseImportParameters(caseUuid)).isEqualTo(response);
     }
