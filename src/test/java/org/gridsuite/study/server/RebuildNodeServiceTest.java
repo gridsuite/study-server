@@ -133,7 +133,7 @@ class RebuildNodeServiceTest {
 
         UUID modificationUuid = UUID.randomUUID();
         ModificationMoveInfos modificationMoveInfos = new ModificationMoveInfos(modificationUuid, null, null, null);
-        studyController.moveModifications(studyUuid, node1Uuid, modificationUuid, List.of(modificationMoveInfos), userId);
+        studyController.moveModifications(studyUuid, node1Uuid, node1Uuid, List.of(modificationMoveInfos), userId);
 
         verify(networkModificationService, times(0)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
     }

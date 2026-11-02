@@ -34,7 +34,7 @@ import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
-import org.gridsuite.study.server.nodeactivity.NodeActivityService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.nodeactivity.NodeActivityType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -226,7 +226,7 @@ class NetworkModificationTreeTest {
     @Autowired
     private RootNetworkRepository rootNetworkRepository;
     @Autowired
-    private NodeActivityService nodeActivityService;
+    private NodeActivityRunnerService nodeActivityRunnerService;
     @MockitoSpyBean
     private StudyService studyService;
 
@@ -1042,7 +1042,7 @@ class NetworkModificationTreeTest {
         RootNode root = createRoot();
         UUID studyId = root.getStudyId();
         UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyId);
-        nodeActivityService.addNodeActivities(NodeActivityType.BUILD, studyId, rootNetworkUuid, List.of(root.getId()));
+        nodeActivityRunnerService.addNodeActivities(NodeActivityType.BUILD, studyId, rootNetworkUuid, List.of(root.getId()));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/restore?anchorNodeId={anchorNodeId}", studyId, root.getId())
                         .header(USER_ID_HEADER, "userId")
