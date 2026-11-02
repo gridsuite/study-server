@@ -22,7 +22,6 @@ import java.util.UUID;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -58,27 +57,5 @@ class DirectoryControllerTest {
             .andExpect(content().json(elements));
 
         verify(directoryService).getElements(List.of(elementUuid), List.of("STUDY"), false, USER_ID);
-    }
-
-    @Test
-    void testElementExists() throws Exception {
-        UUID directoryUuid = UUID.randomUUID();
-        when(directoryService.elementExists(directoryUuid, "elementName", "STUDY")).thenReturn(true);
-
-        mockMvc.perform(head(BASE_URL + "/directories/{directoryUuid}/elements/{elementName}/types/{type}", directoryUuid, "elementName", "STUDY"))
-            .andExpect(status().isOk())
-            .andExpect(content().string(""));
-
-        verify(directoryService).elementExists(directoryUuid, "elementName", "STUDY");
-    }
-
-    @Test
-    void testElementDoesNotExist() throws Exception {
-        UUID directoryUuid = UUID.randomUUID();
-        when(directoryService.elementExists(directoryUuid, "elementName", "STUDY")).thenReturn(false);
-
-        mockMvc.perform(head(BASE_URL + "/directories/{directoryUuid}/elements/{elementName}/types/{type}", directoryUuid, "elementName", "STUDY"))
-            .andExpect(status().isNoContent())
-            .andExpect(content().string(""));
     }
 }

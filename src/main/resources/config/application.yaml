@@ -18,7 +18,7 @@ spring:
       consumeAsymmetricalLoadResult;consumeAsymmetricalLoadRunning;consumeAsymmetricalLoadStopped;consumeAsymmetricalLoadFailed;\
       consumeLogicalControlsResult;consumeLogicalControlsRunning;consumeLogicalControlsStopped;consumeLogicalControlsFailed;\
       consumeNetworkExportFinished;\
-      consumeSharedElementUpdate"
+      consumeSharedElementUpdate;consumeCompositeLinksChanges"
     stream:
       bindings:
         publishStudyUpdate-out-0:
@@ -28,6 +28,9 @@ spring:
         consumeSharedElementUpdate-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}element.shared.update
           group: studySharedElementUpdateGroup
+        consumeCompositeLinksChanges-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}composite.links
+          group: studyCompositeLinksGroup
         publishQuotaUpdate-out-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}quota.update
         consumeSaResult-in-0:
