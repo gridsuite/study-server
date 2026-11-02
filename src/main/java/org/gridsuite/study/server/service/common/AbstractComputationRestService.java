@@ -8,6 +8,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.List;
 import java.util.UUID;
 
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RESULTS_UUIDS;
 
 public abstract class AbstractComputationRestService extends AbstractRestClientService {
@@ -34,6 +35,20 @@ public abstract class AbstractComputationRestService extends AbstractRestClientS
         }
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(path).queryParam(QUERY_PARAM_RESULTS_UUIDS, resultsUuids);
         restClient.delete().uri(serverBaseUri + uriComponentsBuilder.build().toUriString())
+                .retrieve().toBodilessEntity();
+    }
+
+    public static void deleteCalculationResults(List<UUID> resultsUuids,
+                                                String path,
+                                                RestClient restClient,
+                                                String serverBaseUri,
+                                                String userId) {
+        if (resultsUuids != null && resultsUuids.isEmpty()) {
+            return;
+        }
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(path).queryParam(QUERY_PARAM_RESULTS_UUIDS, resultsUuids);
+        restClient.delete().uri(serverBaseUri + uriComponentsBuilder.build().toUriString())
+                .headers(headers -> headers.set(HEADER_USER_ID, userId))
                 .retrieve().toBodilessEntity();
     }
 }

@@ -76,7 +76,7 @@ class NodeActivityRulesTest {
 
     @Test
     void invalidatesChildrenIsClassified() {
-        List<NodeActivityType> touchOnlyTheirNode = List.of(BUILD, UNBUILD, COMPUTE, EDIT_EVENTS);
+        List<NodeActivityType> touchOnlyTheirNode = List.of(BUILD, UNBUILD, COMPUTE, EDIT_EVENTS, UNSHARE_MODIFICATIONS);
         List<NodeActivityType> invalidateTheirChildren = List.of(UNBUILD_CHILDREN, UNBUILD_ALL,
             COMPUTE_AND_UNBUILD_CHILDREN, REIMPORT_CASE, EDIT_TREE, EDIT_MODIFICATIONS, DELETE_NODES);
 
@@ -92,7 +92,7 @@ class NodeActivityRulesTest {
         List<NodeActivityType> oneRootNetwork = List.of(BUILD, UNBUILD, UNBUILD_CHILDREN, COMPUTE,
             COMPUTE_AND_UNBUILD_CHILDREN, REIMPORT_CASE);
         List<NodeActivityType> allRootNetworks = List.of(UNBUILD_ALL, EDIT_TREE, EDIT_MODIFICATIONS,
-            DELETE_NODES, EDIT_EVENTS);
+            DELETE_NODES, EDIT_EVENTS, UNSHARE_MODIFICATIONS);
 
         assertThat(oneRootNetwork).noneMatch(NodeActivityType::affectsAllRootNetworks);
         assertThat(allRootNetworks).allMatch(NodeActivityType::affectsAllRootNetworks);

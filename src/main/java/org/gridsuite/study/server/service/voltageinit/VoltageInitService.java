@@ -81,7 +81,7 @@ public class VoltageInitService extends AbstractComputationService {
     private UUID handleVoltageInitRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, boolean debug, String userId) {
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
         if (prevResultUuid != null) {
-            voltageInitRestService.deleteVoltageInitResults(List.of(prevResultUuid));
+            voltageInitRestService.deleteVoltageInitResults(List.of(prevResultUuid), userId);
         }
 
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);

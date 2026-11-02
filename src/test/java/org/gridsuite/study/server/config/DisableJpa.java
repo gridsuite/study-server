@@ -14,6 +14,7 @@ import org.gridsuite.study.server.repository.dynamicsimulation.EventRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
+import org.gridsuite.study.server.repository.nodeactivity.BatchActionRepository;
 import org.gridsuite.study.server.repository.nodeactivity.NodeActivityRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -73,6 +74,11 @@ public @interface DisableJpa {
         @Bean
         public NodeActivityRepository nodeActivityRepository() {
             return mock(NodeActivityRepository.class);
+        }
+
+        @Bean
+        public BatchActionRepository batchActionRepository() {
+            return mock(BatchActionRepository.class);
         }
 
         @Bean

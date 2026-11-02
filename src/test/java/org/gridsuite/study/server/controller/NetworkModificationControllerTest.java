@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.controller;
 
-import org.gridsuite.study.server.service.NetworkModificationService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,9 +20,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -36,7 +34,7 @@ class NetworkModificationControllerTest {
     private static final String RESPONSE = "{\"name\":\"modification\"}";
 
     @Mock
-    private NetworkModificationService networkModificationService;
+    private NetworkModificationRestService networkModificationService;
 
     private MockMvc mockMvc;
 
@@ -85,23 +83,6 @@ class NetworkModificationControllerTest {
             .andExpect(content().json(RESPONSE));
 
         verify(networkModificationService).getLineTypeWithLimits(lineTypeUuid, "FR", "25", "1.0");
-    }
-
-    @Test
-    void testGetNetworkModificationsFromComposite() throws Exception {
-        UUID firstUuid = UUID.randomUUID();
-        UUID secondUuid = UUID.randomUUID();
-        when(networkModificationService.getNetworkModificationsFromComposite(List.of(firstUuid, secondUuid), false, USER_ID)).thenReturn(RESPONSE);
-
-        mockMvc.perform(get(BASE_URL + "/network-composite-modifications/network-modifications")
-                .param("uuids", firstUuid.toString(), secondUuid.toString())
-                .param("onlyMetadata", "false")
-                .header(HEADER_USER_ID, USER_ID))
-            .andExpect(status().isOk())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(content().json(RESPONSE));
-
-        verify(networkModificationService).getNetworkModificationsFromComposite(List.of(firstUuid, secondUuid), false, USER_ID);
     }
 
     @Test
@@ -171,18 +152,5 @@ class NetworkModificationControllerTest {
             .andExpect(content().string(""));
 
         verify(networkModificationService).updateNetworkModificationsMetadata(List.of(firstUuid, secondUuid), metadata, "userId");
-    }
-
-    @Test
-    void testhasModificationReference() throws Exception {
-        UUID firstUuid = UUID.randomUUID();
-        UUID secondUuid = UUID.randomUUID();
-
-        mockMvc.perform(get(BASE_URL + "/containers/references/exists")
-                        .param("uuids", firstUuid.toString(), secondUuid.toString())
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(content().string("false"));
-        verify(networkModificationService).hasModificationReferences(List.of(firstUuid, secondUuid));
     }
 }

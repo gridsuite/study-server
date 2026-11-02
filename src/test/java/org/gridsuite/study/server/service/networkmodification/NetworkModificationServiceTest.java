@@ -4,11 +4,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.service;
+package org.gridsuite.study.server.service.networkmodification;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ModificationReference;
+import org.gridsuite.study.server.dto.RootNetworkTagsCheckInfos;
+import org.gridsuite.study.server.dto.SharedModificationsWriteAccess;
+import org.gridsuite.study.server.service.RootNetworkService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,6 +23,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -48,13 +52,13 @@ class NetworkModificationServiceTest {
     @Mock
     private RootNetworkService rootNetworkService;
 
-    private NetworkModificationService networkModificationService;
+    private NetworkModificationRestService networkModificationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setup() {
         when(remoteServicesProperties.getServiceUri("network-modification-server")).thenReturn(NETWORK_MODIFICATION_SERVER_URI);
-        networkModificationService = new NetworkModificationService(remoteServicesProperties,
+        networkModificationService = new NetworkModificationRestService(remoteServicesProperties,
             restClient, objectMapper, rootNetworkService);
     }
 
@@ -82,19 +86,6 @@ class NetworkModificationServiceTest {
         when(restClient.get().uri(expectedUrl).retrieve().body(String.class)).thenReturn(RESPONSE);
 
         assertThat(networkModificationService.getLineTypeWithLimits(lineTypeUuid, "FR", "25", "1.0")).isEqualTo(RESPONSE);
-    }
-
-    @Test
-    void testGetNetworkModificationsFromComposite() {
-        UUID firstUuid = UUID.randomUUID();
-        UUID secondUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/network-modifications?uuids=" + firstUuid + "&uuids=" + secondUuid + "&onlyMetadata=false";
-        var requestSpec = restClient.get().uri(expectedUrl);
-        makeHeadersFluent(requestSpec);
-        when(requestSpec.retrieve().body(String.class)).thenReturn(RESPONSE);
-
-        assertThat(networkModificationService.getNetworkModificationsFromComposite(List.of(firstUuid, secondUuid), false, USER_ID)).isEqualTo(RESPONSE);
-        assertHeaders(requestSpec, Map.of(HEADER_USER_ID, USER_ID));
     }
 
     @Test
@@ -150,17 +141,18 @@ class NetworkModificationServiceTest {
     }
 
     @Test
-    void testDeleteModificationsGroups() {
-        UUID firstUuid = UUID.randomUUID();
-        UUID secondUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups";
-        var requestSpec = restClient.method(HttpMethod.DELETE).uri(expectedUrl);
+    void testUnshareModificationReference() {
+        UUID modificationReferenceUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/unshare";
+        var requestSpec = restClient.put().uri(expectedUrl);
+        makeHeadersFluent(requestSpec);
         makeContentTypeFluent(requestSpec);
         makeBodyFluent(requestSpec);
 
-        networkModificationService.deleteModificationsGroups(List.of(firstUuid, secondUuid));
-        verify(requestSpec).contentType(MediaType.APPLICATION_JSON);
-        verify(requestSpec).body("[\"" + firstUuid + "\",\"" + secondUuid + "\"]");
+        networkModificationService.unshareModificationReferences(List.of(modificationReferenceUuid), USER_ID);
+
+        verify(requestSpec).body(List.of(modificationReferenceUuid));
+        assertHeaders(requestSpec, Map.of(HEADER_USER_ID, USER_ID));
     }
 
     @Test
@@ -225,20 +217,52 @@ class NetworkModificationServiceTest {
     }
 
     @Test
+    void testDeleteModificationReferences() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/" + groupUuid + "/references";
+        var requestSpec = restClient.delete().uri(expectedUrl);
+        makeHeadersFluent(requestSpec);
+
+        networkModificationService.deleteModificationReferences(groupUuid, "userId");
+
+        assertHeaders(requestSpec, Map.of(HEADER_USER_ID, USER_ID));
+        verify(requestSpec).retrieve();
+    }
+
+    @Test
+    void testAddRootNetworkTag() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
+                + "?groupUuids=" + groupUuid + "&newTag=PH2";
+        var requestSpec = restClient.post().uri(URI.create(expectedUrl));
+        makeContentTypeFluent(requestSpec);
+
+        networkModificationService.addRootNetworkTag(List.of(groupUuid), "PH2");
+
+        verify(requestSpec).retrieve();
+
+        // there is nothing to add the tag to without a group
+        networkModificationService.addRootNetworkTag(List.of(), "PH2");
+
+    }
+
+    @Test
     void testRenameRootNetworkTag() {
         UUID firstGroupUuid = UUID.randomUUID();
         UUID secondGroupUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
                 + "?groupUuids=" + firstGroupUuid + "&groupUuids=" + secondGroupUuid + "&oldTag=PH1&newTag=PH2";
-        var requestSpec = restClient.put().uri(expectedUrl);
+        var requestSpec = restClient.put().uri(URI.create(expectedUrl));
         makeContentTypeFluent(requestSpec);
+        makeHeadersFluent(requestSpec);
 
-        networkModificationService.renameRootNetworkTag(List.of(firstGroupUuid, secondGroupUuid), "PH1", "PH2");
+        networkModificationService.renameRootNetworkTag(List.of(firstGroupUuid, secondGroupUuid), "PH1", "PH2", USER_ID);
         verify(requestSpec).contentType(MediaType.APPLICATION_JSON);
         verify(requestSpec).retrieve();
+        assertHeaders(requestSpec, Map.of(HEADER_USER_ID, USER_ID));
 
         // there is nothing to rename without a group
-        networkModificationService.renameRootNetworkTag(List.of(), "PH1", "PH2");
+        networkModificationService.renameRootNetworkTag(List.of(), "PH1", "PH2", USER_ID);
     }
 
     @Test
@@ -258,18 +282,46 @@ class NetworkModificationServiceTest {
     }
 
     @Test
-    void testAssertReferencedModificationsAreWritable() {
+    void testDuplicateModificationsGroupAssociatesTheRootNetworkTags() {
+        UUID sourceGroupUuid = UUID.randomUUID();
         UUID groupUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/references/authorized?uuids=" + groupUuid;
-        var requestSpec = restClient.get().uri(expectedUrl);
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/" + sourceGroupUuid + "/duplicate"
+                + "?groupUuid=" + groupUuid + "&rootNetworkTags=PH1&rootNetworkTags=A%26B%2BC";
+        var requestSpec = restClient.post().uri(URI.create(expectedUrl));
+        makeContentTypeFluent(requestSpec);
         makeHeadersFluent(requestSpec);
 
-        networkModificationService.assertReferencedModificationsAreWritable(List.of(groupUuid), USER_ID);
-        assertHeaders(requestSpec, Map.of(HEADER_USER_ID, USER_ID));
-        verify(requestSpec).retrieve();
+        networkModificationService.duplicateModificationsGroup(sourceGroupUuid, groupUuid, List.of("PH1", "A&B+C"), "userId");
 
-        // there is nothing to check without a container
-        networkModificationService.assertReferencedModificationsAreWritable(List.of(), USER_ID);
+        verify(requestSpec).retrieve();
+        assertHeaders(requestSpec, Map.of(HEADER_USER_ID, USER_ID));
+    }
+
+    @Test
+    void testAssertRootNetworkTagsAllowed() {
+        UUID groupUuid = UUID.randomUUID();
+        UUID modificationUuid = UUID.randomUUID();
+        UUID sharedUuid = UUID.randomUUID();
+        String url = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/root-network-tags/authorized";
+        var requestSpec = restClient.post().uri(url);
+        makeHeadersFluent(requestSpec);
+        makeContentTypeFluent(requestSpec);
+        makeBodyFluent(requestSpec);
+
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of(), List.of(), List.of("PH1", "PH2"), USER_ID);
+        verify(requestSpec).body(new RootNetworkTagsCheckInfos(List.of(groupUuid), List.of(), List.of(), List.of("PH1", "PH2")));
+
+        // the modifications and the shared modifications are checked too, even alone
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of(modificationUuid), List.of(), List.of("PH1"), USER_ID);
+        verify(requestSpec).body(new RootNetworkTagsCheckInfos(List.of(), List.of(modificationUuid), List.of(), List.of("PH1")));
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of(), List.of(sharedUuid), List.of("PH1"), USER_ID);
+        verify(requestSpec).body(new RootNetworkTagsCheckInfos(List.of(), List.of(), List.of(sharedUuid), List.of("PH1")));
+
+        // there is nothing to check without a tag, or without anything to check it on
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of(), List.of(), List.of(), USER_ID);
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of(), List.of(), List.of("PH1"), USER_ID);
+
+        org.mockito.Mockito.verify(requestSpec, org.mockito.Mockito.times(3)).retrieve();
     }
 
     @Test
@@ -300,5 +352,46 @@ class NetworkModificationServiceTest {
 
     private void makeBodyFluent(RestClient.RequestBodySpec requestSpec) {
         doReturn(requestSpec).when(requestSpec).body(any(Object.class));
+    }
+
+    @Test
+    void testGetReferencedModificationsWriteAccess() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/references/write-access?uuids=" + groupUuid;
+        var requestSpec = restClient.get().uri(expectedUrl);
+        makeHeadersFluent(requestSpec);
+        when(requestSpec.retrieve().body(SharedModificationsWriteAccess.class)).thenReturn(SharedModificationsWriteAccess.NONE_WRITABLE);
+
+        assertThat(networkModificationService.getReferencedModificationsWriteAccess(List.of(groupUuid), USER_ID))
+            .isEqualTo(SharedModificationsWriteAccess.NONE_WRITABLE);
+    }
+
+    @Test
+    void testGetContainersWithModificationReferences() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/reference-modifications";
+        var requestSpec = restClient.post().uri(expectedUrl);
+        makeContentTypeFluent(requestSpec);
+        makeBodyFluent(requestSpec);
+        when(requestSpec.retrieve().body(new ParameterizedTypeReference<List<UUID>>() { })).thenReturn(List.of(groupUuid));
+
+        assertThat(networkModificationService.getContainersWithModificationReferences(List.of(groupUuid))).containsExactly(groupUuid);
+        // there is nothing to ask without a container
+        assertThat(networkModificationService.getContainersWithModificationReferences(List.of())).isEmpty();
+        verify(requestSpec).body(List.of(groupUuid));
+    }
+
+    @Test
+    void testUpdateNetworkModificationsNameAndDescription() {
+        UUID modificationUuid = UUID.randomUUID();
+        String metadata = "";
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid + "/name-and-description";
+        var requestSpec = restClient.put().uri(expectedUrl);
+        makeHeadersFluent(requestSpec);
+        makeContentTypeFluent(requestSpec);
+        makeBodyFluent(requestSpec);
+
+        networkModificationService.updateNetworkModificationNameAndDescription(modificationUuid, metadata, USER_ID);
+        verify(requestSpec).body(metadata);
     }
 }

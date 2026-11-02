@@ -20,6 +20,8 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.utils.MatcherReportLog;
 import org.gridsuite.study.server.utils.TestUtils;
+import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
+import org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.util.Pair;
 import org.springframework.http.HttpHeaders;
@@ -652,6 +654,9 @@ class NodeControllerTest extends StudyTestBase {
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node3.getId(), rootNetworkUuid).getGlobalBuildStatus());
         duplicateNode(study1Uuid, study1Uuid, emptyNode, node3.getId(), InsertMode.BEFORE, false, userId);
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node3.getId(), rootNetworkUuid).getGlobalBuildStatus());
+
+        // copies within the study are not checked against its shared modifications
+        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL, Map.of(), 0);
     }
 
     @Test
@@ -747,6 +752,7 @@ class NodeControllerTest extends StudyTestBase {
                 .stream().map(NodeEntity::getIdNode)
                 .toList();
         UUID stubDuplicateUuid = wireMockStubs.stubDuplicateModificationGroup();
+        UUID stubRecreateReferencesUuid = wireMockStubs.stubCreateSharingLinks();
 
         mockMvc.perform(post(STUDIES_URL +
                     "/{study1Uuid}/tree/subtrees?subtreeToCopyParentNodeUuid={parentNodeToCopy}&referenceNodeUuid={referenceNodeUuid}&sourceStudyUuid={sourceStudyUuid}",
@@ -761,6 +767,9 @@ class NodeControllerTest extends StudyTestBase {
         checkSubtreeCreatedMessageSent(study1Uuid, nodesAfterDuplication.get(0), node4.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockStubs.verifyDuplicateModificationGroup(stubDuplicateUuid, 3);
+        wireMockStubs.verifyCreateSharingLinks(stubRecreateReferencesUuid, 3);
+        // copies within the study are not checked against its shared modifications
+        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL, Map.of(), 0);
 
         Map<UUID, AbstractNode> allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
         networkModificationTreeService.getAllChildrenUuids(node4.getId()).forEach(childUuid ->
@@ -879,6 +888,8 @@ class NodeControllerTest extends StudyTestBase {
 
         // duplicate the node1 from study 1 after node2 from study 2
         UUID duplicatedNodeUuid = duplicateNode(study1Uuid, study2Uuid, node1, study2Node2.getId(), InsertMode.AFTER, true, userId);
+        wireMockServer.verify(1, WireMock.postRequestedFor(WireMock.urlPathEqualTo(WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL))
+                .withRequestBody(WireMock.matchingJsonPath("$.containerUuids[0]", WireMock.equalTo(node1.getModificationGroupUuid().toString()))));
 
         //node2 should now have 1 child
         allNodes = networkModificationTreeService.getAllNodes(study2Uuid);
@@ -887,6 +898,26 @@ class NodeControllerTest extends StudyTestBase {
                 && nodeEntity.getIdNode().equals(duplicatedNodeUuid)
                 && nodeEntity.getParentNode().getIdNode().equals(study2Node2.getId()))
             .count());
+
+        // copy the subtree of node1 and node2 from study 1 under the first node of study 2: all its groups are checked
+        List<UUID> study2NodesBeforeSubtreeCopy = networkModificationTreeService.getAllNodes(study2Uuid).stream().map(NodeEntity::getIdNode).toList();
+        UUID stubDuplicateUuid = wireMockStubs.stubDuplicateModificationGroup();
+        UUID stubRecreateReferencesUuid = wireMockStubs.stubCreateSharingLinks();
+        mockMvc.perform(post(STUDIES_URL +
+                    "/{targetStudyUuid}/tree/subtrees?subtreeToCopyParentNodeUuid={parentNodeToCopy}&referenceNodeUuid={referenceNodeUuid}&sourceStudyUuid={sourceStudyUuid}",
+                study2Uuid, modificationNodeUuid, study2ModificationNodeUuid, study1Uuid)
+                .header(USER_ID_HEADER, userId))
+            .andExpect(status().isOk());
+        List<UUID> copiedNodeUuids = networkModificationTreeService.getAllNodes(study2Uuid).stream().map(NodeEntity::getIdNode)
+                .filter(nodeUuid -> !study2NodesBeforeSubtreeCopy.contains(nodeUuid)).toList();
+        assertEquals(3, copiedNodeUuids.size());
+        checkSubtreeCreatedMessageSent(study2Uuid, copiedNodeUuids.getFirst(), study2ModificationNodeUuid);
+        checkElementUpdatedMessageSent(study2Uuid, userId);
+        wireMockStubs.verifyDuplicateModificationGroup(stubDuplicateUuid, 3);
+        wireMockStubs.verifyCreateSharingLinks(stubRecreateReferencesUuid, 3);
+        wireMockServer.verify(1, WireMock.postRequestedFor(WireMock.urlPathEqualTo(WireMockStubs.ROOT_NETWORK_TAGS_AUTHORIZED_URL))
+                .withRequestBody(WireMock.matchingJsonPath("$.containerUuids[?(@ == '" + node1.getModificationGroupUuid() + "')]"))
+                .withRequestBody(WireMock.matchingJsonPath("$.containerUuids[?(@ == '" + node2.getModificationGroupUuid() + "')]")));
     }
 
     private UUID duplicateNode(UUID sourceStudyUuid, UUID targetStudyUuid, NetworkModificationNode nodeToCopy, UUID referenceNodeUuid, InsertMode insertMode, boolean checkMessagesForStatusModels,
@@ -895,6 +926,7 @@ class NodeControllerTest extends StudyTestBase {
         UUID stubGetCountUuid = wireMockStubs.stubNetworkModificationCountGet(nodeToCopy.getModificationGroupUuid().toString(),
             EMPTY_MODIFICATION_GROUP_UUID.equals(nodeToCopy.getModificationGroupUuid()) ? 0 : 1);
         UUID stubDuplicateUuid = wireMockStubs.stubDuplicateModificationGroup();
+        UUID stubRecreateReferencesUuid = wireMockStubs.stubCreateSharingLinks();
         if (sourceStudyUuid.equals(targetStudyUuid)) {
             //if source and target are the same no need to pass sourceStudy param
             mockMvc.perform(post(STUDIES_URL +
@@ -923,6 +955,7 @@ class NodeControllerTest extends StudyTestBase {
 
         wireMockStubs.verifyNetworkModificationCountsGet(stubGetCountUuid, nodeToCopy.getModificationGroupUuid().toString());
         wireMockStubs.verifyDuplicateModificationGroup(stubDuplicateUuid, 1);
+        wireMockStubs.verifyCreateSharingLinks(stubRecreateReferencesUuid, 1);
 
         return nodesAfterDuplication.get(0);
     }

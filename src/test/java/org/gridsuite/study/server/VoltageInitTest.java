@@ -50,6 +50,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
@@ -229,7 +230,7 @@ class VoltageInitTest {
     private NetworkModificationTreeService networkModificationTreeService;
 
     @MockitoSpyBean
-    private NetworkModificationService networkModificationService;
+    private NetworkModificationRestService networkModificationService;
 
     @Autowired
     private StudyRepository studyRepository;
@@ -960,7 +961,7 @@ class VoltageInitTest {
         assertEquals(rootNetworkService.getRootNetworkTag(firstRootNetworkUuid), ctx1.rootNetworkTag());
         assertEquals(rootNetworkService.getRootNetworkTag(secondRootNetworkUuid), ctx2.rootNetworkTag());
         verify(networkModificationService, times(1)).updateRootNetworkApplicability(
-            List.of(VOLTAGE_INIT_MODIFICATION_UUID), rootNetworkService.getRootNetworkTag(secondRootNetworkUuid), false);
+            List.of(VOLTAGE_INIT_MODIFICATION_UUID), rootNetworkService.getRootNetworkTag(secondRootNetworkUuid), false, "userId");
 
         // Error case: try to generate the voltageInit modification on the second root network (where no computation has been made)
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyUuid, secondRootNetworkUuid, nodeUuid)

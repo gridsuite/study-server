@@ -57,10 +57,11 @@ public class LoadFlowStudyParametersController {
     @GetMapping(value = "/parameters")
     @Operation(summary = "Get loadflow parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters")})
-    public ResponseEntity<String> getLoadFlowParameters(@PathVariable("studyUuid") UUID studyUuid) {
+    public ResponseEntity<String> getLoadFlowParameters(@PathVariable("studyUuid") UUID studyUuid,
+                                                        @RequestHeader(HEADER_USER_ID) String userId) {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(loadFlowService.getLoadFlowParametersValues(studyUuid));
+                .body(loadFlowService.getLoadFlowParametersValues(studyUuid, userId));
     }
 
     @GetMapping(value = "/parameters/id")

@@ -34,7 +34,7 @@ import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
-import org.gridsuite.study.server.nodeactivity.NodeActivityService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.nodeactivity.NodeActivityType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -50,6 +50,7 @@ import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMargin
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
@@ -89,6 +90,7 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NODE_NOT_FOUND;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
@@ -146,7 +148,7 @@ class NetworkModificationTreeTest {
     private NetworkConversionService networkConversionService;
 
     @Autowired
-    private NetworkModificationService networkModificationService;
+    private NetworkModificationRestService networkModificationService;
 
     @Autowired
     private SensitivityAnalysisRestService sensitivityAnalysisService;
@@ -224,7 +226,7 @@ class NetworkModificationTreeTest {
     @Autowired
     private RootNetworkRepository rootNetworkRepository;
     @Autowired
-    private NodeActivityService nodeActivityService;
+    private NodeActivityRunnerService nodeActivityRunnerService;
     @MockitoSpyBean
     private StudyService studyService;
 
@@ -295,6 +297,11 @@ class NetworkModificationTreeTest {
 
                 if (path.matches("/v1/results.*") && request.getMethod().equals("DELETE")) {
                     return new MockResponse(HttpStatus.OK.value());
+                } else if ("/v1/containers/reference-modifications".equals(path) && request.getMethod().equals("POST")) {
+                    // only the nodes of MODIFICATION_GROUP_UUID_2 hold shared modifications
+                    List<UUID> containersWithReferenceModifications = request.getBody().readUtf8().contains(MODIFICATION_GROUP_UUID_2.toString()) ? List.of(MODIFICATION_GROUP_UUID_2) : List.of();
+                    return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE),
+                        objectMapper.writeValueAsString(containersWithReferenceModifications));
                 } else if (path.matches("/v1/references\\?uuids=.*") && request.getMethod().equals("GET")) {
                     return new MockResponse(
                             HttpStatus.OK.value(),
@@ -451,6 +458,8 @@ class NetworkModificationTreeTest {
         assertFalse(networkModificationNode.getNodeBuildStatus().isBuilt());
         assertEquals("not_built", networkModificationNode.getName());
         assertEquals("not built node", networkModificationNode.getDescription());
+        assertTrue(networkModificationNode.getHasReferencedModifications());
+        assertTrue(((NetworkModificationNode) getNode(root.getStudyId(), networkModificationNode.getId(), firstRootNetworkUuid)).getHasReferencedModifications());
         deleteNode(root.getStudyId(), children, false, Set.of(children.get(0)), true, userId);
         // Check built status correctly initialized
         final NetworkModificationNode node2 = buildNetworkModificationConstructionNode("built", "built node",
@@ -463,6 +472,7 @@ class NetworkModificationTreeTest {
         assertTrue(networkModificationNode.getNodeBuildStatus().isBuilt());
         assertEquals("built", networkModificationNode.getName());
         assertEquals("built node", networkModificationNode.getDescription());
+        assertFalse(networkModificationNode.getHasReferencedModifications());
         deleteNode(root.getStudyId(), children, false, Set.of(children.get(0)), userId);
     }
 
@@ -807,7 +817,7 @@ class NetworkModificationTreeTest {
         RootNode root = getRootNode(rootStudyId, firstRootNetworkUuid);
         UUID rootId = root.getId();
 
-        RootNodeInfoEntity rootInfos = rootNodeInfoRepository.findById(rootId).orElseThrow(() -> new StudyException(NOT_FOUND, "Node not found"));
+        RootNodeInfoEntity rootInfos = rootNodeInfoRepository.findById(rootId).orElseThrow(() -> new StudyException(NODE_NOT_FOUND, "Node not found"));
         assertEquals(rootId, rootInfos.getId());
 
         List<AbstractNode> children = root.getChildren();
@@ -1032,7 +1042,7 @@ class NetworkModificationTreeTest {
         RootNode root = createRoot();
         UUID studyId = root.getStudyId();
         UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyId);
-        nodeActivityService.addNodeActivities(NodeActivityType.BUILD, studyId, rootNetworkUuid, List.of(root.getId()));
+        nodeActivityRunnerService.addNodeActivities(NodeActivityType.BUILD, studyId, rootNetworkUuid, List.of(root.getId()));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/restore?anchorNodeId={anchorNodeId}", studyId, root.getId())
                         .header(USER_ID_HEADER, "userId")

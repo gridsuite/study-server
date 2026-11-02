@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.UUID;
 
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -82,14 +83,14 @@ class LoadFlowParametersControllerTest {
     @Test
     void testGetLoadFlowParameters() throws Exception {
         UUID parameterUuid = UUID.randomUUID();
-        when(loadFlowService.getCommonParameters(parameterUuid)).thenReturn(PARAMETERS);
+        when(loadFlowService.getParameters(parameterUuid, "userId")).thenReturn(PARAMETERS);
 
-        mockMvc.perform(get(BASE_URL + "/parameters/{parameterUuid}", parameterUuid))
+        mockMvc.perform(get(BASE_URL + "/parameters/{parameterUuid}", parameterUuid).header(HEADER_USER_ID, "userId"))
             .andExpect(status().isOk())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
             .andExpect(content().json(PARAMETERS));
 
-        verify(loadFlowService).getCommonParameters(parameterUuid);
+        verify(loadFlowService).getParameters(parameterUuid, "userId");
     }
 
     @Test
