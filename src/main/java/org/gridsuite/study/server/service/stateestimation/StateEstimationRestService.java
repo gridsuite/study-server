@@ -178,18 +178,26 @@ public class StateEstimationRestService extends AbstractComputationRestService i
         return studyEntity.getStateEstimationParametersUuid();
     }
 
+    protected <T> T executeWithOptionalServiceFallback(RestExecutor<T> executor, T fallbackValues) {
+        try {
+            return executor.execute();
+        } catch (Exception e) {
+            if (isOptionalAndDown()) {
+                return fallbackValues;
+            }
+            throw e;
+        }
+    }
+
     @Override
     public UUID createDefaultParameters() {
-        return executeIfServiceAvailable(
-            () -> {
-                var path = UriComponentsBuilder
+        return executeWithOptionalServiceFallback(() -> {
+            var path = UriComponentsBuilder
                     .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/parameters/default")
                     .buildAndExpand()
                     .toUriString();
-
-                return restTemplate.exchange(baseUri + path, HttpMethod.POST, null, UUID.class).getBody();
-            }
-        );
+            return restTemplate.exchange(baseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+        }, null);
     }
 
     public UUID createStateEstimationParameters(String parameters) {

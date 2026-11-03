@@ -301,17 +301,12 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
 
     @Override
     public UUID duplicateParameters(UUID parametersUuid) {
-        return executeIfServiceAvailable(
-                () -> {
-                    HttpHeaders headers = new HttpHeaders();
-                    headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-                    return restTemplate.postForObject(getBaseUriForParameters()
-                            .pathSegment("{parametersUuid}", "duplicate")
-                            .buildAndExpand(parametersUuid)
-                            .toUri(), new HttpEntity<>(headers), UUID.class);
-                }
-        );
-
+            HttpHeaders headers = new HttpHeaders();
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+            return restTemplate.postForObject(getBaseUriForParameters()
+                    .pathSegment("{parametersUuid}", "duplicate")
+                    .buildAndExpand(parametersUuid)
+                    .toUri(), new HttpEntity<>(headers), UUID.class);
     }
 
     @Override

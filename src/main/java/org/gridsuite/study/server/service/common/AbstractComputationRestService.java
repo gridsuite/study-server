@@ -28,8 +28,8 @@ public abstract class AbstractComputationRestService extends AbstractRestClient 
         this.serviceName = serviceName;
     }
 
-    private boolean isOptionalAndDown() {
-        return !servicesInspector.isOptionalServiceUp(serviceName).isDone();
+    public boolean isOptionalAndDown() {
+        return !servicesInspector.isOptionalServiceUpSync(serviceName);
     }
 
     @FunctionalInterface

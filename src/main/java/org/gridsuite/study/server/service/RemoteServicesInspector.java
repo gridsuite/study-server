@@ -118,13 +118,24 @@ public class RemoteServicesInspector {
         return CompletableFuture.completedFuture(false);
     }
 
-    @Async
-    public CompletableFuture<Boolean> isOptionalServiceUp(RemoteServiceName name) {
-        return isOptionalServiceUp(
-                remoteServicesProperties.getServices().stream()
-                        .filter(service -> service.getName().equals(name))
-                        .findFirst().orElse(null)
-        );
+    public boolean isOptionalServiceUpSync(RemoteServiceName name) {
+        RemoteServicesProperties.Service service = remoteServicesProperties.getServices().stream()
+                .filter(s -> s.getName().equals(name))
+                .findFirst()
+                .orElse(null);
+
+        if (service == null) {
+            return false;
+        }
+
+        try {
+            final String result = restTemplate.getForObject(service.getBaseUri() + "/actuator/health", String.class);
+            final JsonNode node = objectMapper.readTree(result).path(ACTUATOR_HEALTH_STATUS_JSON_FIELD);
+            return "UP".equalsIgnoreCase(node.asText());
+        } catch (RestClientException | JsonProcessingException e) {
+            LOGGER.debug("Service {} is not available", service.getName(), e);
+            return false;
+        }
     }
 
     /**
