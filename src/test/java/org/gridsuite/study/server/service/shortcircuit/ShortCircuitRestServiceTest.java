@@ -8,6 +8,7 @@ package org.gridsuite.study.server.service.shortcircuit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +34,8 @@ class ShortCircuitRestServiceTest {
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
     @Mock
+    private RemoteServicesInspector remoteServicesInspector;
+    @Mock
     private RestTemplate restTemplate;
 
     private ShortCircuitRestService shortCircuitRestService;
@@ -40,7 +43,7 @@ class ShortCircuitRestServiceTest {
     @BeforeEach
     void setUp() {
         when(remoteServicesProperties.getServiceUri("shortcircuit-server")).thenReturn(BASE_URI);
-        shortCircuitRestService = new ShortCircuitRestService(remoteServicesProperties, restTemplate, new ObjectMapper());
+        shortCircuitRestService = new ShortCircuitRestService(remoteServicesProperties, remoteServicesInspector, restTemplate, new ObjectMapper());
     }
 
     @Test

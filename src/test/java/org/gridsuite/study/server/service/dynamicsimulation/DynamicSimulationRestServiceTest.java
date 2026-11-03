@@ -11,6 +11,7 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
@@ -18,6 +19,7 @@ import org.gridsuite.study.server.service.client.util.ParameterTestUtils;
 import org.gridsuite.study.server.utils.assertions.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -69,6 +71,9 @@ class DynamicSimulationRestServiceTest extends AbstractWireMockRestClientTest {
     @Autowired
     private RemoteServicesProperties remoteServicesProperties;
 
+    @Mock
+    private RemoteServicesInspector remoteServicesInspector;
+
     @Autowired
     private TimeSeriesClient timeSeriesClient;
 
@@ -76,7 +81,7 @@ class DynamicSimulationRestServiceTest extends AbstractWireMockRestClientTest {
     void setup() {
         // config client
         remoteServicesProperties.setServiceUri("dynamic-simulation-server", initMockWebServer());
-        dynamicSimulationRestService = new DynamicSimulationRestService(remoteServicesProperties, restTemplate, objectMapper, timeSeriesClient);
+        dynamicSimulationRestService = new DynamicSimulationRestService(remoteServicesProperties, remoteServicesInspector, restTemplate, objectMapper, timeSeriesClient);
     }
 
     @Test

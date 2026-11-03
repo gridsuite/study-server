@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.json.LoadFlowParametersJsonModule;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +38,8 @@ class LoadFlowRestServiceTest {
     private RemoteServicesProperties remoteServicesProperties;
     @Mock
     private RestTemplate restTemplate;
+    @Mock
+    private RemoteServicesInspector remoteServicesInspector;
 
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new LoadFlowParametersJsonModule());
 
@@ -45,7 +48,7 @@ class LoadFlowRestServiceTest {
     @BeforeEach
     void setUp() {
         when(remoteServicesProperties.getServiceUri("loadflow-server")).thenReturn(BASE_URI);
-        loadFlowRestService = new LoadFlowRestService(remoteServicesProperties, objectMapper, restTemplate);
+        loadFlowRestService = new LoadFlowRestService(remoteServicesProperties, remoteServicesInspector, objectMapper, restTemplate);
     }
 
     @Test

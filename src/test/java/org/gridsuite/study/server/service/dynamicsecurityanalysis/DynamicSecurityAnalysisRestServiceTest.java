@@ -11,11 +11,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
 import org.gridsuite.study.server.utils.assertions.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -60,12 +62,14 @@ class DynamicSecurityAnalysisRestServiceTest extends AbstractWireMockRestClientT
     private ObjectMapper objectMapper;
     @Autowired
     private RemoteServicesProperties remoteServicesProperties;
+    @Mock
+    private RemoteServicesInspector remoteServicesInspector;
 
     @BeforeEach
     void setup() {
         // config client
         remoteServicesProperties.setServiceUri("dynamic-security-analysis-server", initMockWebServer());
-        dynamicSecurityAnalysisRestService = new DynamicSecurityAnalysisRestService(remoteServicesProperties, restTemplate, objectMapper);
+        dynamicSecurityAnalysisRestService = new DynamicSecurityAnalysisRestService(remoteServicesProperties, remoteServicesInspector, restTemplate, objectMapper);
     }
 
     @Test

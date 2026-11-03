@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service.voltageinit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,13 +36,15 @@ class VoltageInitRestServiceTest {
     private RemoteServicesProperties remoteServicesProperties;
     @Mock
     private RestTemplate restTemplate;
+    @Mock
+    private RemoteServicesInspector remoteServicesInspector;
 
     private VoltageInitRestService voltageInitRestService;
 
     @BeforeEach
     void setUp() {
         when(remoteServicesProperties.getServiceUri("voltage-init-server")).thenReturn(BASE_URI);
-        voltageInitRestService = new VoltageInitRestService(remoteServicesProperties, restTemplate, new ObjectMapper());
+        voltageInitRestService = new VoltageInitRestService(remoteServicesProperties, remoteServicesInspector, restTemplate, new ObjectMapper());
     }
 
     @Test
