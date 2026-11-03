@@ -212,12 +212,14 @@ public class PccMinRestService extends AbstractComputationRestService implements
 
     @Override
     public UUID createDefaultParameters() {
-        var path = UriComponentsBuilder
-            .fromPath(PARAMETERS_URI + DELIMITER + "default")
-            .buildAndExpand()
-            .toUriString();
+        return executeWithOptionalServiceFallback(() -> {
+            var path = UriComponentsBuilder
+                .fromPath(PARAMETERS_URI + DELIMITER + "default")
+                .buildAndExpand()
+                .toUriString();
 
-        return restTemplate.exchange(baseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+            return restTemplate.exchange(baseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+        }, null);
     }
 
     public String getPccMinParameters(UUID parametersUuid) {

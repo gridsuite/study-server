@@ -249,13 +249,14 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
 
     @Override
     public UUID createDefaultParameters() {
+        return executeWithOptionalServiceFallback(() -> {
+            var path = UriComponentsBuilder
+                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/default")
+                .buildAndExpand()
+                .toUriString();
 
-        var path = UriComponentsBuilder
-            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/default")
-            .buildAndExpand()
-            .toUriString();
-
-        return restTemplate.postForObject(baseUri + path, null, UUID.class);
+            return restTemplate.postForObject(baseUri + path, null, UUID.class);
+        }, null);
     }
 
     public UUID createSensitivityAnalysisParameters(String parameters) {

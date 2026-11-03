@@ -4,6 +4,8 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.RemoteServiceName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -18,6 +20,7 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RESULTS_UUIDS;
 
 public abstract class AbstractComputationRestService extends AbstractRestClient {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractComputationRestService.class);
     private final RemoteServicesInspector servicesInspector;
     private final RemoteServiceName serviceName;
 
@@ -44,6 +47,7 @@ public abstract class AbstractComputationRestService extends AbstractRestClient 
             if (isOptionalAndDown()) {
                 // the error is not thrown and won't be displayed in the console :
                 // because this is an optional service, it may be down and ignored
+                LOGGER.debug("The service '{}' threw the error '{}'. It is silenced because this service is optional.", serviceName, e);
                 return fallbackReturnValue;
             }
             throw e;

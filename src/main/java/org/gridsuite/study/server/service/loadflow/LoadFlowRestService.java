@@ -285,13 +285,14 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
 
     @Override
     public UUID createDefaultParameters() {
+        return executeWithOptionalServiceFallback(() -> {
+            var path = UriComponentsBuilder
+                    .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters/default")
+                    .buildAndExpand()
+                    .toUriString();
 
-        var path = UriComponentsBuilder
-                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters/default")
-                .buildAndExpand()
-                .toUriString();
-
-        return restTemplate.postForObject(baseUri + path, null, UUID.class);
+            return restTemplate.postForObject(baseUri + path, null, UUID.class);
+        }, null);
     }
 
     public UUID getLoadFlowParametersOrDefaultsUuid(StudyEntity studyEntity) {

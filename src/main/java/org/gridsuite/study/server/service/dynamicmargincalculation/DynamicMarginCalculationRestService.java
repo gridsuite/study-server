@@ -109,14 +109,16 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
 
     @Override
     public UUID createDefaultParameters() {
-        String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_PARAMETER);
+        return executeWithOptionalServiceFallback(() -> {
+            String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_PARAMETER);
 
-        String url = UriComponentsBuilder
-                .fromUriString(parametersBaseUrl + "/default")
-                .buildAndExpand()
-                .toUriString();
+            String url = UriComponentsBuilder
+                    .fromUriString(parametersBaseUrl + "/default")
+                    .buildAndExpand()
+                    .toUriString();
 
-        return getRestTemplate().postForObject(url, null, UUID.class);
+            return getRestTemplate().postForObject(url, null, UUID.class);
+        }, null);
     }
 
     public void updateParameters(UUID parametersUuid, String parametersInfos) {

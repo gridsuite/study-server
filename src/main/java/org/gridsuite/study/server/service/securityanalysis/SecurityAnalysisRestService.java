@@ -270,13 +270,14 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
 
     @Override
     public UUID createDefaultParameters() {
+        return executeWithOptionalServiceFallback(() -> {
+            var path = UriComponentsBuilder
+                    .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/default")
+                    .buildAndExpand()
+                    .toUriString();
 
-        var path = UriComponentsBuilder
-                .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/default")
-                .buildAndExpand()
-                .toUriString();
-
-        return restTemplate.exchange(baseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+            return restTemplate.exchange(baseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+        }, null);
     }
 
     public UUID createSecurityAnalysisParameters(String parameters) {

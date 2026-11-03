@@ -108,13 +108,15 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
     }
 
     public UUID createDefaultParameters() {
-        String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
+        return executeWithOptionalServiceFallback(() -> {
+            String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
 
-        String url = UriComponentsBuilder.fromUriString(parametersBaseUrl + "/default")
-                .buildAndExpand()
-                .toUriString();
+            String url = UriComponentsBuilder.fromUriString(parametersBaseUrl + "/default")
+                    .buildAndExpand()
+                    .toUriString();
 
-        return getRestTemplate().postForObject(url, null, UUID.class);
+            return getRestTemplate().postForObject(url, null, UUID.class);
+        }, null);
     }
 
     public void updateParameters(UUID parametersUuid, String parametersInfos) {

@@ -265,15 +265,17 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
     }
 
     public UUID createParameters(@Nullable final String parametersInfos) {
-        final UriComponentsBuilder uri = getBaseUriForParameters();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-        if (StringUtils.isBlank(parametersInfos)) {
-            return restTemplate.postForObject(uri.pathSegment("default").build().toUri(), new HttpEntity<>(headers), UUID.class);
-        } else {
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            return restTemplate.postForObject(uri.build().toUri(), new HttpEntity<>(parametersInfos, headers), UUID.class);
-        }
+        return executeWithOptionalServiceFallback(() -> {
+            final UriComponentsBuilder uri = getBaseUriForParameters();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+            if (StringUtils.isBlank(parametersInfos)) {
+                return restTemplate.postForObject(uri.pathSegment("default").build().toUri(), new HttpEntity<>(headers), UUID.class);
+            } else {
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                return restTemplate.postForObject(uri.build().toUri(), new HttpEntity<>(parametersInfos, headers), UUID.class);
+            }
+        }, null);
     }
 
     @Override

@@ -128,17 +128,19 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
     }
 
     public UUID createVoltageInitParameters(@Nullable VoltageInitParametersInfos parameters) {
-        var path = UriComponentsBuilder
-                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters")
-                .buildAndExpand()
-                .toUriString();
+        return executeWithOptionalServiceFallback(() -> {
+            var path = UriComponentsBuilder
+                    .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters")
+                    .buildAndExpand()
+                    .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<VoltageInitParametersInfos> httpEntity = new HttpEntity<>(parameters, headers);
+            HttpEntity<VoltageInitParametersInfos> httpEntity = new HttpEntity<>(parameters, headers);
 
-        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+            return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        }, null);
     }
 
     @Override
