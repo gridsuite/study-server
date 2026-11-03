@@ -304,8 +304,11 @@ public class ConsumerService {
         try {
             studyService.updateNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
         } catch (Exception e) {
-            rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.UNLOADED);
-            notificationService.emitRootNetworksUpdateFailed(studyUuid, e.getMessage());
+            try {
+                rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.UNLOADED);
+            } finally {
+                notificationService.emitRootNetworksUpdateFailed(studyUuid, e.getMessage());
+            }
             throw e;
         }
     }

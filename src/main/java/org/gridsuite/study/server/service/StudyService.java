@@ -520,14 +520,13 @@ public class StudyService {
             return;
         }
         rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADING);
+        UUID caseUuid = rootNetwork.getCaseUuid();
+        UUID originalCaseUuid = rootNetwork.getOriginalCaseUuid();
+        RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(rootNetworkUuid).caseInfos(new CaseInfos(caseUuid, originalCaseUuid, null, caseFormat)).build();
         try {
-            UUID caseUuid = rootNetwork.getCaseUuid();
-            UUID originalCaseUuid = rootNetwork.getOriginalCaseUuid();
-            RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(rootNetworkUuid).caseInfos(new CaseInfos(caseUuid, originalCaseUuid, null, caseFormat)).build();
-
             recreateNetwork(rootNetworkInfos, studyUuid, userId, null, true, rootNetwork.getReportUuid());
         } catch (Exception e) {
-            rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADED);
+            rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.UNLOADED);
             throw e;
         }
     }
@@ -708,7 +707,7 @@ public class StudyService {
     }
 
     @Transactional
-    public CreatedStudyBasicInfos updateNetwork(UUID studyUuid, UUID rootNetworkUuid, NetworkInfos networkInfos, String userId) {
+    public void updateNetwork(UUID studyUuid, UUID rootNetworkUuid, NetworkInfos networkInfos, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
         RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
 
@@ -720,7 +719,6 @@ public class StudyService {
 
         notificationService.emitStudyNetworkRecreationDone(studyEntity.getId(), userId);
 
-        return createdStudyBasicInfos;
     }
 
     public UserProfileInfos getUserProfile(String userId) {
