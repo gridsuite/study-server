@@ -178,8 +178,9 @@ public class DirectoryService {
         restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.DELETE, requestEntity, ElementAttributes.class);
     }
 
-    public void createElement(UUID directoryUuid, String description, UUID elementUuid, String elementName, String type, String userId) {
-        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/directories/{directoryUuid}/elements");
+    public void createElement(UUID directoryUuid, String description, UUID elementUuid, String elementName, String type, String userId, boolean allowNewName) {
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/directories/{directoryUuid}/elements")
+                .queryParam("allowNewName", allowNewName);
         ElementAttributes elementAttributes = new ElementAttributes(elementUuid, elementName, type, userId, 0, description);
         String path = pathBuilder.buildAndExpand(directoryUuid).toUriString();
 
