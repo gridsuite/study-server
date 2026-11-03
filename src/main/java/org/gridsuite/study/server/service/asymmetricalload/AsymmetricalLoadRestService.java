@@ -248,29 +248,32 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
     @Override
     public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
+        executeWithOptionalServiceCheck(() -> {
+            String path = UriComponentsBuilder
+                .fromPath(PARAMETER_URI)
+                .buildAndExpand(uuid)
+                .toUriString();
 
-        String path = UriComponentsBuilder
-            .fromPath(PARAMETER_URI)
-            .buildAndExpand(uuid)
-            .toUriString();
-
-        restTemplate.delete(baseUri + path);
+            restTemplate.delete(baseUri + path);
+        });
     }
 
     @Override
     public UUID duplicateParameters(UUID sourceParametersUuid) {
-        Objects.requireNonNull(sourceParametersUuid);
+        return executeWithOptionalServiceFallback(() -> {
+            Objects.requireNonNull(sourceParametersUuid);
 
-        String path = UriComponentsBuilder
-                .fromPath(PARAMETERS_URI + "/{uuid}/duplicate")
-                .buildAndExpand(sourceParametersUuid)
-                .toUriString();
+            String path = UriComponentsBuilder
+                    .fromPath(PARAMETERS_URI + "/{uuid}/duplicate")
+                    .buildAndExpand(sourceParametersUuid)
+                    .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
 
-        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+            return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        }, null);
     }
 
     public ResponseEntity<byte[]> exportAsymmetricalLoadResultsAsCsv(UUID resultUuid, String csvHeaders, UUID networkUuid, String variantId, Sort sort, String filters, String globalFilters) {

@@ -40,6 +40,20 @@ public abstract class AbstractComputationRestService extends AbstractRestClient 
         return !servicesInspector.isOptionalServiceUpSync(service);
     }
 
+    protected void executeWithOptionalServiceCheck(VoidRestExecutor executor) {
+        try {
+            executor.execute();
+        } catch (Exception e) {
+            if (isOptionalAndDown()) {
+                // the error is not thrown and won't be displayed in the console :
+                // because this is an optional service, it may be down and ignored
+                LOGGER.debug("The service '{}' threw the error '{}'. It is silenced because this service is optional.", serviceName, e.toString());
+            } else {
+                throw e;
+            }
+        }
+    }
+
     protected <T> T executeWithOptionalServiceFallback(RestExecutor<T> executor, T fallbackReturnValue) {
         try {
             return executor.execute();
@@ -47,7 +61,7 @@ public abstract class AbstractComputationRestService extends AbstractRestClient 
             if (isOptionalAndDown()) {
                 // the error is not thrown and won't be displayed in the console :
                 // because this is an optional service, it may be down and ignored
-                LOGGER.debug("The service '{}' threw the error '{}'. It is silenced because this service is optional.", serviceName, e);
+                LOGGER.debug("The service '{}' threw the error '{}'. It is silenced because this service is optional.", serviceName, e.toString());
                 return fallbackReturnValue;
             }
             throw e;
@@ -57,6 +71,11 @@ public abstract class AbstractComputationRestService extends AbstractRestClient 
     @FunctionalInterface
     public interface RestExecutor<T> {
         T execute();
+    }
+
+    @FunctionalInterface
+    public interface VoidRestExecutor {
+        void execute();
     }
 
     public abstract List<String> getEnumValues(String enumName, UUID resultUuidOpt);
