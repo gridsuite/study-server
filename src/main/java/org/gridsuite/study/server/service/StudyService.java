@@ -520,11 +520,16 @@ public class StudyService {
             return;
         }
         rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADING);
-        UUID caseUuid = rootNetwork.getCaseUuid();
-        UUID originalCaseUuid = rootNetwork.getOriginalCaseUuid();
-        RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(rootNetworkUuid).caseInfos(new CaseInfos(caseUuid, originalCaseUuid, null, caseFormat)).build();
+        try {
+            UUID caseUuid = rootNetwork.getCaseUuid();
+            UUID originalCaseUuid = rootNetwork.getOriginalCaseUuid();
+            RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(rootNetworkUuid).caseInfos(new CaseInfos(caseUuid, originalCaseUuid, null, caseFormat)).build();
 
-        recreateNetwork(rootNetworkInfos, studyUuid, userId, null, true, rootNetwork.getReportUuid());
+            recreateNetwork(rootNetworkInfos, studyUuid, userId, null, true, rootNetwork.getReportUuid());
+        } catch (Exception e) {
+            rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADED);
+            throw e;
+        }
     }
 
     private void recreateNetwork(RootNetworkInfos rootNetworkInfos, UUID studyUuid, String userId, Map<String, Object> importParameters, boolean shouldLoadPreviousImportParameters, UUID reportId) {
