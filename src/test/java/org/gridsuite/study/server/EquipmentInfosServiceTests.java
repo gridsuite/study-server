@@ -182,9 +182,16 @@ class EquipmentInfosServiceTests implements WithAssertions {
     void testFindTombstonedEquipmentInfosMatchesExactIds() {
         equipmentInfosService.addTombstonedEquipmentInfos(TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).variantId("variant1").id("T1").build());
         equipmentInfosService.addTombstonedEquipmentInfos(TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).variantId("variant1").id("POSTE T1").build());
+        equipmentInfosService.addTombstonedEquipmentInfos(TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).variantId("variant2").id("T1").build());
 
         assertTrue(equipmentInfosService.findTombstonedEquipmentInfosByIdIn(NETWORK_UUID, "variant1", List.of("T1(1)")).isEmpty());
         assertEquals(Set.of("T1"), equipmentInfosService.findTombstonedEquipmentInfosByIdIn(NETWORK_UUID, "variant1", List.of("T1", "T1(1)"))
+            .stream().map(TombstonedEquipmentInfos::getId).collect(Collectors.toSet()));
+        assertEquals(Set.of("variant1"), equipmentInfosService.findTombstonedEquipmentInfosByIdIn(NETWORK_UUID, "variant1", List.of("T1"))
+            .stream().map(TombstonedEquipmentInfos::getVariantId).collect(Collectors.toSet()));
+
+        equipmentInfosService.addTombstonedEquipmentInfos(TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).variantId("variant1").id("T1(1)").build());
+        assertEquals(Set.of("T1(1)"), equipmentInfosService.findTombstonedEquipmentInfosByIdIn(NETWORK_UUID, "variant1", List.of("T1(1)"))
             .stream().map(TombstonedEquipmentInfos::getId).collect(Collectors.toSet()));
     }
 
