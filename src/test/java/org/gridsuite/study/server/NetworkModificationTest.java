@@ -2264,16 +2264,6 @@ class NetworkModificationTest {
                 mapper.writeValueAsString(expectedReference));
     }
 
-    private void verifyDirectoryWriteChecks(UUID directoryUuid, String elementName) {
-        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/elements/authorized",
-                Map.of("accessType", equalTo("WRITE"),
-                        "targetDirectoryUuid", equalTo(directoryUuid.toString()),
-                        "recursiveCheck", equalTo("false")));
-        WireMockUtilsCriteria.verifyHeadRequest(wireMockServer,
-                "/v1/directories/" + directoryUuid + "/elements/" + elementName + "/types/MODIFICATION",
-                Map.of(), 1);
-    }
-
     @Test
     void testAssembleModificationsIntoNewComposite() throws Exception {
         String userId = "userId";
