@@ -55,19 +55,6 @@ public abstract class AbstractComputationRestService extends AbstractRestClient 
         T execute();
     }
 
-    /**
-     * run a REST request, except if the service is optional and non available
-     * @param executor the request to be executed
-     * @param <T> type of the result
-     * @return result if the service is available or non optional, null otherwise
-     */
-    protected <T> T executeIfServiceAvailable(RestExecutor<T> executor) {
-        if (isOptionalAndDown()) {
-            return null;
-        }
-        return executor.execute();
-    }
-
     public abstract List<String> getEnumValues(String enumName, UUID resultUuidOpt);
 
     public List<String> getEnumValues(String enumName, UUID resultUuid, String apiVersion, RestTemplate restTemplate) {
