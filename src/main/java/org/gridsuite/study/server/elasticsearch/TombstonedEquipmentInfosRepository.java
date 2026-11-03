@@ -22,7 +22,6 @@ import java.util.UUID;
 public interface TombstonedEquipmentInfosRepository extends ElasticsearchRepository<TombstonedEquipmentInfos, String> {
     List<TombstonedEquipmentInfos> findAllByNetworkUuid(@NonNull UUID networkUuid);
 
-    // Looked up by document id: a derived query on the analyzed equipmentId field would also match other ids sharing a token (T1 and T1(1))
     default Set<TombstonedEquipmentInfos> findByIdInAndNetworkUuidAndVariantId(@NonNull List<String> equipmentIds, @NonNull UUID networkUuid, @NonNull String variantId) {
         Set<TombstonedEquipmentInfos> tombstonedEquipmentInfos = new HashSet<>();
         findAllById(equipmentIds.stream().distinct().map(id -> BasicEquipmentInfos.buildUniqueId(networkUuid, variantId, id)).toList())
