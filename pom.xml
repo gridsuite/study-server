@@ -55,7 +55,6 @@
         <sonar.organization>gridsuite</sonar.organization>
         <sonar.projectKey>org.gridsuite:study-server</sonar.projectKey>
         <sonar.coverage.exclusions>**/migration/**/*</sonar.coverage.exclusions>
-        <network-store.version>1.53.0-SNAPSHOT</network-store.version>
     </properties>
 
     <build>
@@ -97,23 +96,6 @@
                 <version>${mockwebserver3.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
-            </dependency>
-
-            <!-- TODO REMOVE ONCE NETWORK STORE RELEASE INCLUDING POWSYBL CORE 7.4 IS OUT -->
-            <dependency>
-                <groupId>com.powsybl</groupId>
-                <artifactId>powsybl-network-store-client</artifactId>
-                <version>${network-store.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.powsybl</groupId>
-                <artifactId>powsybl-network-store-iidm-impl</artifactId>
-                <version>${network-store.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.powsybl</groupId>
-                <artifactId>powsybl-network-store-model</artifactId>
-                <version>${network-store.version}</version>
             </dependency>
 
             <!-- imports -->
