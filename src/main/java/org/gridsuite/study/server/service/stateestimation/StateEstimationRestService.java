@@ -178,17 +178,6 @@ public class StateEstimationRestService extends AbstractComputationRestService i
         return studyEntity.getStateEstimationParametersUuid();
     }
 
-    protected <T> T executeWithOptionalServiceFallback(RestExecutor<T> executor, T fallbackValues) {
-        try {
-            return executor.execute();
-        } catch (Exception e) {
-            if (isOptionalAndDown()) {
-                return fallbackValues;
-            }
-            throw e;
-        }
-    }
-
     @Override
     public UUID createDefaultParameters() {
         return executeWithOptionalServiceFallback(() -> {

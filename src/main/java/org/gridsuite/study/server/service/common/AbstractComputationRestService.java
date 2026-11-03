@@ -1,5 +1,6 @@
 package org.gridsuite.study.server.service.common;
 
+import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.RemoteServiceName;
@@ -29,7 +30,24 @@ public abstract class AbstractComputationRestService extends AbstractRestClient 
     }
 
     public boolean isOptionalAndDown() {
-        return !servicesInspector.isOptionalServiceUpSync(serviceName);
+        RemoteServicesProperties.Service service = servicesInspector.getService(serviceName);
+        if (service == null || !service.isOptional()) {
+            return false;
+        }
+        return !servicesInspector.isOptionalServiceUpSync(service);
+    }
+
+    protected <T> T executeWithOptionalServiceFallback(RestExecutor<T> executor, T fallbackReturnValue) {
+        try {
+            return executor.execute();
+        } catch (Exception e) {
+            if (isOptionalAndDown()) {
+                // the error is not thrown and won't be displayed in the console :
+                // because this is an optional service, it may be down and ignored
+                return fallbackReturnValue;
+            }
+            throw e;
+        }
     }
 
     @FunctionalInterface

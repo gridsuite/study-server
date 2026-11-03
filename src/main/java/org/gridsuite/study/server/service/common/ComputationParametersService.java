@@ -169,13 +169,7 @@ public class ComputationParametersService {
 
     public ComputationParameterUUIDs createDefaultComputationParameters(String userId, UserProfileInfos userProfileInfos) {
         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder parametersBuilder = ComputationParameterUUIDs.builder();
-        Set<String> downOptionalServices = remoteServicesInspector.getOptionalServices().stream()
-                .filter(serviceStatus -> serviceStatus.status() == ServiceStatus.DOWN)
-                .map(ServiceStatusInfos::name)
-                .collect(Collectors.toSet());
-        computationParametersDefinitions.forEach(definition -> {
-            // down optional services should not be called, they should not generate errors
-            if (!downOptionalServices.contains(definition.serviceName().serviceName())) {
+        computationParametersDefinitions.forEach(definition ->
                 definition.parametersSetter().accept(parametersBuilder,
                         definition.service.doCreateDefaultParameters(
                                 userId,
@@ -184,9 +178,8 @@ public class ComputationParametersService {
                                 definition.type().getLabel(),
                                 LOGGER
                         )
-                );
-            }
-        });
+                )
+        );
         return parametersBuilder.build();
     }
 
