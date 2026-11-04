@@ -121,6 +121,9 @@ public class RemoteServicesInspector {
     public boolean isOptionalServiceUpSync(@NonNull RemoteServicesProperties.Service service) {
         try {
             final String result = restTemplate.getForObject(service.getBaseUri() + "/actuator/health", String.class);
+            if (result == null) {
+                return false;
+            }
             final JsonNode node = objectMapper.readTree(result).path(ACTUATOR_HEALTH_STATUS_JSON_FIELD);
             return "UP".equalsIgnoreCase(node.asText());
         } catch (RestClientException | JsonProcessingException _) {
