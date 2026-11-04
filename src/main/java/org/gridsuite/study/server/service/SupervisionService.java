@@ -462,7 +462,7 @@ public class SupervisionService {
     }
 
     public void recreateNetworkModificationSharingLinks(UUID studyUuid, String userId) {
-        List<UUID> modificationGroupUuids = networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid)
+        List<UUID> modificationGroupUuids = networkModificationTreeService.getAllNetworkModificationNodeInfos(studyUuid, false)
             .stream()
             .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
             .toList();

@@ -61,17 +61,14 @@ class SupervisionServiceTest {
         UUID studyUuid = UUID.randomUUID();
         UUID groupWithReferences = UUID.randomUUID();
         UUID groupWithoutReferences = UUID.randomUUID();
-        UUID stashedGroup = UUID.randomUUID();
         List<UUID> modificationGroupUuids = List.of(groupWithReferences, groupWithoutReferences);
         String userId = "userId";
         NodeEntity activeNode = new NodeEntity();
         NodeEntity secondActiveNode = new NodeEntity();
 
-        when(networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid)).thenReturn(List.of(
+        when(networkModificationTreeService.getAllNetworkModificationNodeInfos(studyUuid, false)).thenReturn(List.of(
             NetworkModificationNodeInfoEntity.builder().node(activeNode).modificationGroupUuid(groupWithReferences).build(),
             NetworkModificationNodeInfoEntity.builder().node(secondActiveNode).modificationGroupUuid(groupWithoutReferences).build()));
-        when(networkModificationService.getContainersWithModificationReferences(modificationGroupUuids))
-                .thenReturn(Set.of(groupWithReferences));
 
         supervisionService.recreateNetworkModificationSharingLinks(studyUuid, userId);
 
