@@ -148,7 +148,8 @@ public class StudyService {
         VOLTAGE_INITIALIZATION("VoltageInit"),
         STATE_ESTIMATION("StateEstimation"),
         PCC_MIN("PccMin"),
-        ASYMMETRICAL_LOAD("AsymmetricalLoad");
+        ASYMMETRICAL_LOAD("AsymmetricalLoad"),
+        LOGICAL_CONTROLS("LogicalControls");
 
         public final String reportKey;
 
@@ -519,12 +520,17 @@ public class StudyService {
             LOGGER.warn("Root network '{}' is already loading, skipping recreateNetwork", rootNetworkUuid);
             return;
         }
+        RootNetworkLoadStatus previousLoadStatus = rootNetwork.getLoadStatus();
         rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADING);
         UUID caseUuid = rootNetwork.getCaseUuid();
         UUID originalCaseUuid = rootNetwork.getOriginalCaseUuid();
         RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(rootNetworkUuid).caseInfos(new CaseInfos(caseUuid, originalCaseUuid, null, caseFormat)).build();
-
-        recreateNetwork(rootNetworkInfos, studyUuid, userId, null, true, rootNetwork.getReportUuid());
+        try {
+            recreateNetwork(rootNetworkInfos, studyUuid, userId, null, true, rootNetwork.getReportUuid());
+        } catch (Exception e) {
+            rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, previousLoadStatus == RootNetworkLoadStatus.LOADED ? RootNetworkLoadStatus.LOADED : RootNetworkLoadStatus.UNLOADED);
+            throw e;
+        }
     }
 
     private void recreateNetwork(RootNetworkInfos rootNetworkInfos, UUID studyUuid, String userId, Map<String, Object> importParameters, boolean shouldLoadPreviousImportParameters, UUID reportId) {
@@ -703,7 +709,7 @@ public class StudyService {
     }
 
     @Transactional
-    public CreatedStudyBasicInfos updateNetwork(UUID studyUuid, UUID rootNetworkUuid, NetworkInfos networkInfos, String userId) {
+    public void updateNetwork(UUID studyUuid, UUID rootNetworkUuid, NetworkInfos networkInfos, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
         RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
 
@@ -715,7 +721,6 @@ public class StudyService {
 
         notificationService.emitStudyNetworkRecreationDone(studyEntity.getId(), userId);
 
-        return createdStudyBasicInfos;
     }
 
     public UserProfileInfos getUserProfile(String userId) {
@@ -2448,6 +2453,7 @@ public class StudyService {
         allComputationStatus.put(SECURITY_ANALYSIS, rootNetworkNodeInfoService.getSecurityAnalysisStatus(nodeUuid, rootNetworkUuid));
         allComputationStatus.put(PCC_MIN, rootNetworkNodeInfoService.getPccMinStatus(nodeUuid, rootNetworkUuid));
         allComputationStatus.put(ASYMMETRICAL_LOAD, rootNetworkNodeInfoService.getAsymmetricalLoadStatus(nodeUuid, rootNetworkUuid));
+        allComputationStatus.put(LOGICAL_CONTROLS, rootNetworkNodeInfoService.getLogicalControlsStatus(nodeUuid, rootNetworkUuid));
         allComputationStatus.put(DYNAMIC_MARGIN_CALCULATION, rootNetworkNodeInfoService.getDynamicMarginCalculationStatus(nodeUuid, rootNetworkUuid));
         allComputationStatus.put(DYNAMIC_SECURITY_ANALYSIS, rootNetworkNodeInfoService.getDynamicSecurityAnalysisStatus(nodeUuid, rootNetworkUuid));
         allComputationStatus.put(DYNAMIC_SIMULATION, rootNetworkNodeInfoService.getDynamicSimulationStatus(nodeUuid, rootNetworkUuid));

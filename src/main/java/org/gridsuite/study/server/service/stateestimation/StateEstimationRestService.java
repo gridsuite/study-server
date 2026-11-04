@@ -273,19 +273,4 @@ public class StateEstimationRestService extends AbstractComputationRestService i
         return getRestClient().get().uri(getBaseUri() + path)
             .retrieve().toEntity(Resource.class);
     }
-
-    public String runLogicalComputation(UUID networkUuid, String variantId, UUID parametersUuid) {
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/networks/{networkUuid}/logical-controls");
-        if (parametersUuid != null) {
-            uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
-        }
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        var path = uriComponentsBuilder.buildAndExpand(networkUuid).toUriString();
-
-        return restClient.post().uri(baseUri + path)
-            .contentType(MediaType.APPLICATION_JSON)
-            .retrieve().body(String.class);
-    }
 }

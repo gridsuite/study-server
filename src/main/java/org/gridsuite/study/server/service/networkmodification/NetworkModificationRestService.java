@@ -625,14 +625,15 @@ public class NetworkModificationRestService {
      * Asks network-modification-server to notify back the recreation of the references of the group, so that they are created in directory-server.
      * Called after the commit only, so that the node holding the group is resolvable when the notification is consumed.
      */
-    public void createSharingLinks(UUID groupUuid, String userId) {
-        Objects.requireNonNull(groupUuid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + "/sharing-links")
-                .buildAndExpand(groupUuid)
+    public void createSharingLinks(List<UUID> groupUuids, String userId) {
+        Objects.requireNonNull(groupUuids);
+        var path = UriComponentsBuilder.fromPath(GROUPS + "/sharing-links")
                 .toUriString();
 
         restClient.post().uri(getNetworkModificationServerURI(false) + path)
             .headers(headers -> headers.set(HEADER_USER_ID, userId))
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(groupUuids)
             .retrieve().toBodilessEntity();
     }
 
