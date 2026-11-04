@@ -152,11 +152,12 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
 
     public void deleteParameters(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
+        executeWithOptionalServiceCheck(() -> {
+            String url = getParametersWithUuidUrl(parametersUuid);
 
-        String url = getParametersWithUuidUrl(parametersUuid);
-
-        // call dynamic-margin-calculation REST API
-        getRestTemplate().delete(url);
+            // call dynamic-margin-calculation REST API
+            getRestTemplate().delete(url);
+        });
     }
 
     public UUID runDynamicMarginCalculation(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid,

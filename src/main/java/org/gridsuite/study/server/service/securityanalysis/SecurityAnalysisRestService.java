@@ -262,11 +262,13 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
     @Override
     public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
-                .buildAndExpand(uuid)
-                .toUriString();
+        executeWithOptionalServiceCheck(() -> {
+            String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
+                    .buildAndExpand(uuid)
+                    .toUriString();
 
-        restTemplate.delete(baseUri + path);
+            restTemplate.delete(baseUri + path);
+        });
     }
 
     @Override

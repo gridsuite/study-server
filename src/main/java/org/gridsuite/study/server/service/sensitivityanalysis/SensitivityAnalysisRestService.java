@@ -305,13 +305,14 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
     @Override
     public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
+        executeWithOptionalServiceCheck(() -> {
+            String path = UriComponentsBuilder
+                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
+                .buildAndExpand(uuid)
+                .toUriString();
 
-        String path = UriComponentsBuilder
-            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
-            .buildAndExpand(uuid)
-            .toUriString();
-
-        restTemplate.delete(baseUri + path);
+            restTemplate.delete(baseUri + path);
+        });
     }
 
     public String getSensitivityAnalysisFactorCount(UUID networkUuid, String variantId, String sensitivityAnalysisParameters) {

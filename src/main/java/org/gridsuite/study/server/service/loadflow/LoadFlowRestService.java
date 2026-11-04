@@ -277,11 +277,13 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
     @Override
     public void deleteParameters(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
-        String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
-                .buildAndExpand(parametersUuid)
-                .toUriString();
+        executeWithOptionalServiceCheck(() -> {
+            String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
+                    .buildAndExpand(parametersUuid)
+                    .toUriString();
 
-        restTemplate.delete(baseUri + path);
+            restTemplate.delete(baseUri + path);
+        });
     }
 
     @Override

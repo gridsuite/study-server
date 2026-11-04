@@ -148,11 +148,12 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
 
     public void deleteParameters(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
+        executeWithOptionalServiceCheck(() -> {
+            String url = getParametersWithUuidUrl(parametersUuid);
 
-        String url = getParametersWithUuidUrl(parametersUuid);
-
-        // call dynamic-security-analysis REST API
-        getRestTemplate().delete(url);
+            // call dynamic-security-analysis REST API
+            getRestTemplate().delete(url);
+        });
     }
 
     public UUID runDynamicSecurityAnalysis(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid,

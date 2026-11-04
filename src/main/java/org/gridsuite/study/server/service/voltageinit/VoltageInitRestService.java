@@ -181,10 +181,12 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
 
     @Override
     public void deleteParameters(UUID parametersUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)
-            .buildAndExpand(parametersUuid).toUriString();
+        executeWithOptionalServiceCheck(() -> {
+            String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)
+                .buildAndExpand(parametersUuid).toUriString();
 
-        restTemplate.delete(baseUri + path);
+            restTemplate.delete(baseUri + path);
+        });
     }
 
     public void stopVoltageInit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {

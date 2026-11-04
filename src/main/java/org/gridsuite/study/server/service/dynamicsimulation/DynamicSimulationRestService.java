@@ -175,11 +175,12 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
 
     public void deleteParameters(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
+        executeWithOptionalServiceCheck(() -> {
+            String url = getParametersWithUuidUrl(parametersUuid);
 
-        String url = getParametersWithUuidUrl(parametersUuid);
-
-        // call dynamic-simulation REST API
-        getRestTemplate().delete(url);
+            // call dynamic-simulation REST API
+            getRestTemplate().delete(url);
+        });
     }
 
     public UUID getDynamicSimulationParametersUuidOrElseCreateDefault(StudyEntity studyEntity) {
