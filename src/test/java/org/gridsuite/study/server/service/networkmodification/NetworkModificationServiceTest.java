@@ -217,15 +217,16 @@ class NetworkModificationServiceTest {
         UUID groupUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
                 + "?groupUuids=" + groupUuid + "&newTag=PH2";
-        var requestSpec = restClient.post().uri(URI.create(expectedUrl));
-        makeContentTypeFluent(requestSpec);
 
         networkModificationService.addRootNetworkTag(List.of(groupUuid), "PH2");
+
+        verify(restClient.post().uri(URI.create(expectedUrl)).contentType(MediaType.APPLICATION_JSON).retrieve()).toBodilessEntity();
+        clearInvocations(restClient);
 
         // there is nothing to add the tag to without a group
         networkModificationService.addRootNetworkTag(List.of(), "PH2");
 
-        verify(requestSpec).retrieve();
+        verifyNoMoreInteractions(restClient);
     }
 
     @Test
@@ -234,16 +235,16 @@ class NetworkModificationServiceTest {
         UUID secondGroupUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
                 + "?groupUuids=" + firstGroupUuid + "&groupUuids=" + secondGroupUuid + "&oldTag=PH1&newTag=PH2";
-        var requestSpec = restClient.put().uri(URI.create(expectedUrl));
-        makeContentTypeFluent(requestSpec);
-        makeHeadersFluent(requestSpec);
 
         networkModificationService.renameRootNetworkTag(List.of(firstGroupUuid, secondGroupUuid), "PH1", "PH2", USER_ID);
+
+        verify(restClient.put().uri(URI.create(expectedUrl)).contentType(MediaType.APPLICATION_JSON).headers(any()).retrieve()).toBodilessEntity();
+        clearInvocations(restClient);
 
         // there is nothing to rename without a group
         networkModificationService.renameRootNetworkTag(List.of(), "PH1", "PH2", USER_ID);
 
-        verify(requestSpec).retrieve();
+        verifyNoMoreInteractions(restClient);
     }
 
     @Test
@@ -251,16 +252,17 @@ class NetworkModificationServiceTest {
         UUID groupUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
                 + "?groupUuids=" + groupUuid + "&rootNetworkTags=PH1&rootNetworkTags=PH2";
-        var requestSpec = restClient.method(HttpMethod.DELETE).uri(expectedUrl);
-        makeContentTypeFluent(requestSpec);
 
         networkModificationService.deleteRootNetworkTags(List.of(groupUuid), List.of("PH1", "PH2"));
+
+        verify(restClient.method(HttpMethod.DELETE).uri(expectedUrl).contentType(MediaType.APPLICATION_JSON).retrieve()).toBodilessEntity();
+        clearInvocations(restClient);
 
         // there is nothing to drop without a group or without a tag
         networkModificationService.deleteRootNetworkTags(List.of(), List.of("PH1"));
         networkModificationService.deleteRootNetworkTags(List.of(groupUuid), List.of());
 
-        verify(requestSpec).retrieve();
+        verifyNoMoreInteractions(restClient);
     }
 
     @Test
@@ -269,13 +271,10 @@ class NetworkModificationServiceTest {
         UUID groupUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/" + sourceGroupUuid + "/duplicate"
                 + "?groupUuid=" + groupUuid + "&rootNetworkTags=PH1&rootNetworkTags=A%26B%2BC";
-        var requestSpec = restClient.post().uri(URI.create(expectedUrl));
-        makeContentTypeFluent(requestSpec);
-        makeHeadersFluent(requestSpec);
 
         networkModificationService.duplicateModificationsGroup(sourceGroupUuid, groupUuid, List.of("PH1", "A&B+C"), "userId");
 
-        verify(requestSpec).retrieve();
+        verify(restClient.post().uri(URI.create(expectedUrl)).contentType(MediaType.APPLICATION_JSON).headers(any()).retrieve()).toBodilessEntity();
     }
 
     @Test

@@ -13,7 +13,7 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Answers;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
@@ -24,7 +24,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.LOADFLOW_API_VERSION;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -35,7 +34,7 @@ class LoadFlowRestServiceTest {
 
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
-    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    @Mock(answer = org.mockito.Answers.RETURNS_DEEP_STUBS)
     private RestClient restClient;
 
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new LoadFlowParametersJsonModule());
@@ -98,13 +97,12 @@ class LoadFlowRestServiceTest {
     void testUpdateParameters() {
         UUID parameterUuid = UUID.randomUUID();
         String parameters = "{\"provider\":\"OpenLoadFlow\"}";
-        var requestSpec = restClient.put().uri(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/" + parameterUuid);
-        doReturn(requestSpec).when(requestSpec).contentType(MediaType.APPLICATION_JSON);
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
 
         loadFlowRestService.updateParameters(parameterUuid, parameters);
 
-        verify(requestSpec).contentType(MediaType.APPLICATION_JSON);
-        verify(requestSpec).body(parameters);
-        verify(requestSpec).retrieve();
+        verify(restClient.put().uri(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/" + parameterUuid)).contentType(MediaType.APPLICATION_JSON);
+        verify(restClient.put().uri(BASE_URI + "/" + LOADFLOW_API_VERSION + "/parameters/" + parameterUuid).contentType(MediaType.APPLICATION_JSON)).body(captor.capture());
+        assertThat(captor.getValue()).isEqualTo(parameters);
     }
 }
