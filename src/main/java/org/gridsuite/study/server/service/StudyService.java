@@ -2360,6 +2360,14 @@ public class StudyService {
         notificationService.emitComputationResultColumnFilterChanged(studyUuid, computationType, computationSubType);
     }
 
+    @Transactional
+    public void resetComputationResultFilters(UUID studyUuid, String computationType, String computationSubType) {
+        UUID computationResultFiltersId = getComputationResultFiltersId(studyUuid);
+        studyConfigService.resetComputationResultFilters(computationResultFiltersId, computationType, computationSubType);
+        notificationService.emitComputationResultGlobalFilterChanged(studyUuid, computationType);
+        notificationService.emitComputationResultColumnFilterChanged(studyUuid, computationType, computationSubType);
+    }
+
     public UUID getComputationResultFiltersId(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
         UUID computationResultFiltersId = studyEntity.getComputationResultFiltersUuid();
