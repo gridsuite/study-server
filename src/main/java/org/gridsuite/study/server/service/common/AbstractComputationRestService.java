@@ -24,7 +24,8 @@ public abstract class AbstractComputationRestService extends AbstractRestClient 
     private final RemoteServicesInspector servicesInspector;
     private final RemoteServiceName serviceName;
 
-    protected AbstractComputationRestService(String baseUri, RestTemplate restTemplate,
+    protected AbstractComputationRestService(String baseUri,
+                                             RestTemplate restTemplate,
                                              RemoteServicesInspector servicesInspector,
                                              RemoteServiceName serviceName) {
         super(baseUri, restTemplate);
