@@ -663,25 +663,27 @@ public class NetworkModificationRestService {
                 new ParameterizedTypeReference<Map<UUID, UUID>>() { });
     }
 
-    public void createSharingLinks(UUID groupUuid, String userId) {
-        createSharingLinks(groupUuid, false, userId);
+    public void createSharingLinks(List<UUID> groupUuids, String userId) {
+        createSharingLinks(groupUuids, false, userId);
     }
 
     /**
      * Asks network-modification-server to notify back the recreation of the references of the group, so that they are created in directory-server.
      * Called after the commit only, so that the node holding the group is resolvable when the notification is consumed.
      */
-    public void createSharingLinks(UUID groupUuid, boolean recreate, String userId) {
-        Objects.requireNonNull(groupUuid);
-        var uriBuilder = UriComponentsBuilder.fromPath(GROUP_PATH + "/sharing-links");
-        if (recreate) {
-            uriBuilder.queryParam("recreate", true);
-        }
-        var path = uriBuilder.buildAndExpand(groupUuid).toUriString();
+    public void createSharingLinks(List<UUID> groupUuids, boolean recreate, String userId) {
+        Objects.requireNonNull(groupUuids);
+        var path = UriComponentsBuilder.fromPath(GROUPS + "/sharing-links")
+            .queryParam("recreate", recreate)
+            .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
-        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.POST, new HttpEntity<>(headers), Void.class);
+        restTemplate.exchange(
+            getNetworkModificationServerURI(false) + path,
+            HttpMethod.POST,
+            new HttpEntity<>(groupUuids, headers),
+            Void.class);
     }
 
     public void deleteModificationReferences(UUID groupUuid, String userId) {

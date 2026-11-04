@@ -57,7 +57,7 @@ class SupervisionServiceTest {
     SupervisionService supervisionService;
 
     @Test
-        void recreateNetworkModificationSharingLinksSkipsStashedNodesAndGroupsWithoutReferences() {
+    void recreateNetworkModificationSharingLinksSkipsStashedNodesAndGroupsWithoutReferences() {
         UUID studyUuid = UUID.randomUUID();
         UUID groupWithReferences = UUID.randomUUID();
         UUID groupWithoutReferences = UUID.randomUUID();
@@ -75,10 +75,7 @@ class SupervisionServiceTest {
 
         supervisionService.recreateNetworkModificationSharingLinks(studyUuid, userId);
 
-        verify(networkModificationService).getContainersWithModificationReferences(modificationGroupUuids);
-        verify(networkModificationService).createSharingLinks(groupWithReferences, true, userId);
-        verify(networkModificationService, never()).createSharingLinks(groupWithoutReferences, true, userId);
-        verify(networkModificationService, never()).createSharingLinks(stashedGroup, true, userId);
+        verify(networkModificationService).createSharingLinks(modificationGroupUuids, true, userId);
     }
 
     @Test

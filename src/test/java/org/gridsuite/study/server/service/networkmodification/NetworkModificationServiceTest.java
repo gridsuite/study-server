@@ -214,15 +214,22 @@ class NetworkModificationServiceTest {
     @Test
     void testCreateSharingLinksWithRecreate() {
         UUID groupUuid = UUID.randomUUID();
-        String baseUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/" + groupUuid + "/sharing-links";
+        String baseUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/sharing-links";
 
-        networkModificationService.createSharingLinks(groupUuid, USER_ID);
-        networkModificationService.createSharingLinks(groupUuid, true, USER_ID);
+        networkModificationService.createSharingLinks(List.of(groupUuid), USER_ID);
+        networkModificationService.createSharingLinks(List.of(groupUuid), true, USER_ID);
 
-        verify(restTemplate).exchange(eq(baseUrl), eq(HttpMethod.POST),
-            argThat((HttpEntity<?> entity) -> USER_ID.equals(entity.getHeaders().getFirst(HEADER_USER_ID))), eq(Void.class));
-        verify(restTemplate).exchange(eq(baseUrl + "?recreate=true"), eq(HttpMethod.POST),
-            argThat((HttpEntity<?> entity) -> USER_ID.equals(entity.getHeaders().getFirst(HEADER_USER_ID))), eq(Void.class));
+        verify(restTemplate).exchange(
+            eq(baseUrl + "?recreate=true"),
+            eq(HttpMethod.POST),
+            argThat((HttpEntity<?> entity) -> USER_ID.equals(entity.getHeaders().getFirst(HEADER_USER_ID)) && List.of(groupUuid).equals(entity.getBody())),
+            eq(Void.class)
+        );
+        verify(restTemplate).exchange(
+            eq(baseUrl + "?recreate=true"),
+            eq(HttpMethod.POST),
+            argThat((HttpEntity<?> entity) -> USER_ID.equals(entity.getHeaders().getFirst(HEADER_USER_ID)) && List.of(groupUuid).equals(entity.getBody())),
+            eq(Void.class));
     }
 
     @Test
