@@ -260,9 +260,8 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
 
     @Override
     public UUID duplicateParameters(UUID sourceParametersUuid) {
+        Objects.requireNonNull(sourceParametersUuid);
         return executeWithOptionalServiceFallback(() -> {
-            Objects.requireNonNull(sourceParametersUuid);
-
             String path = UriComponentsBuilder
                     .fromPath(PARAMETERS_URI + "/{uuid}/duplicate")
                     .buildAndExpand(sourceParametersUuid)

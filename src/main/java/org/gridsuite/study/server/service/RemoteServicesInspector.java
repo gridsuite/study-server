@@ -123,14 +123,14 @@ public class RemoteServicesInspector {
             final String result = restTemplate.getForObject(service.getBaseUri() + "/actuator/health", String.class);
             final JsonNode node = objectMapper.readTree(result).path(ACTUATOR_HEALTH_STATUS_JSON_FIELD);
             return "UP".equalsIgnoreCase(node.asText());
-        } catch (RestClientException | JsonProcessingException e) {
+        } catch (RestClientException | JsonProcessingException _) {
             return false;
         }
     }
 
     public RemoteServicesProperties.Service getService(RemoteServiceName name) {
         return remoteServicesProperties.getServices().stream()
-                .filter(s -> s.getName().equals(name.serviceName()))
+                .filter(s -> s.getName().equalsIgnoreCase(name.serviceName()))
                 .findFirst()
                 .orElse(null);
     }
