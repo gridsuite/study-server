@@ -105,8 +105,7 @@ class NetworkModificationServiceTest {
         UUID modificationUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid;
         var requestSpec = restClient.put().uri(expectedUrl);
-        makeContentTypeFluent(requestSpec);
-        makeHeadersFluent(requestSpec);
+        makeFluent(requestSpec);
 
         networkModificationService.updateNetworkModification(modificationUuid, RESPONSE, USER_ID);
         verify(requestSpec).contentType(MediaType.APPLICATION_JSON);
@@ -119,12 +118,10 @@ class NetworkModificationServiceTest {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications?uuids=" + firstUuid + "&uuids=" + secondUuid;
-        var requestSpec = restClient.put().uri(expectedUrl);
-        makeContentTypeFluent(requestSpec);
-        makeHeadersFluent(requestSpec);
 
         networkModificationService.updateNetworkModificationsMetadata(List.of(firstUuid, secondUuid), RESPONSE, "userId");
-        verify(requestSpec).body(RESPONSE);
+
+        verify(restClient.put().uri(expectedUrl).contentType(MediaType.APPLICATION_JSON).headers(any())).body(RESPONSE);
     }
 
     @Test
@@ -132,8 +129,7 @@ class NetworkModificationServiceTest {
         UUID modificationReferenceUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/unshare";
         var requestSpec = restClient.put().uri(expectedUrl);
-        makeHeadersFluent(requestSpec);
-        makeContentTypeFluent(requestSpec);
+        makeFluent(requestSpec);
 
         networkModificationService.unshareModificationReferences(List.of(modificationReferenceUuid), USER_ID);
 
@@ -148,8 +144,7 @@ class NetworkModificationServiceTest {
         UUID secondUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/stashed-modifications";
         var requestSpec = restClient.method(HttpMethod.DELETE).uri(expectedUrl);
-        makeContentTypeFluent(requestSpec);
-        makeHeadersFluent(requestSpec);
+        makeFluent(requestSpec);
 
         networkModificationService.deleteStashedModificationsFromGroups(List.of(firstUuid, secondUuid), USER_ID);
         verify(requestSpec).contentType(MediaType.APPLICATION_JSON);
@@ -164,9 +159,8 @@ class NetworkModificationServiceTest {
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/references?uuids=" + firstUuid + "&uuids=" + secondUuid;
         List<ModificationReference> expected = List.of(new ModificationReference(firstUuid, UUID.randomUUID(), null));
         var requestSpec = restClient.get().uri(expectedUrl);
-        makeHeadersFluent(requestSpec);
-        var responseType = new ParameterizedTypeReference<List<ModificationReference>>() { };
-        when(requestSpec.retrieve().body(responseType)).thenReturn(expected);
+        doReturn(requestSpec).when(requestSpec).headers(any());
+        when(requestSpec.retrieve().body(new ParameterizedTypeReference<List<ModificationReference>>() { })).thenReturn(expected);
 
         assertThat(networkModificationService.getModificationReferences(List.of(firstUuid, secondUuid))).isEqualTo(expected);
     }
@@ -179,9 +173,8 @@ class NetworkModificationServiceTest {
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-composite-modifications/parent-composites?uuids=" + firstUuid + "&uuids=" + secondUuid;
         Map<UUID, UUID> expected = Map.of(firstUuid, compositeUuid);
         var requestSpec = restClient.get().uri(expectedUrl);
-        makeHeadersFluent(requestSpec);
-        var responseType = new ParameterizedTypeReference<Map<UUID, UUID>>() { };
-        when(requestSpec.retrieve().body(responseType)).thenReturn(expected);
+        doReturn(requestSpec).when(requestSpec).headers(any());
+        when(requestSpec.retrieve().body(new ParameterizedTypeReference<Map<UUID, UUID>>() { })).thenReturn(expected);
 
         assertThat(networkModificationService.findParentComposites(List.of(firstUuid, secondUuid))).isEqualTo(expected);
     }
@@ -192,9 +185,8 @@ class NetworkModificationServiceTest {
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/" + groupUuid + "/references";
         List<ModificationReference> expected = List.of(new ModificationReference(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()));
         var requestSpec = restClient.get().uri(expectedUrl);
-        makeHeadersFluent(requestSpec);
-        var responseType = new ParameterizedTypeReference<List<ModificationReference>>() { };
-        when(requestSpec.retrieve().body(responseType)).thenReturn(expected);
+        doReturn(requestSpec).when(requestSpec).headers(any());
+        when(requestSpec.retrieve().body(new ParameterizedTypeReference<List<ModificationReference>>() { })).thenReturn(expected);
 
         assertThat(networkModificationService.getModificationReferences(groupUuid)).isEqualTo(expected);
     }
@@ -204,7 +196,7 @@ class NetworkModificationServiceTest {
         UUID groupUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/" + groupUuid + "/references";
         var requestSpec = restClient.delete().uri(expectedUrl);
-        makeHeadersFluent(requestSpec);
+        doReturn(requestSpec).when(requestSpec).headers(any());
 
         networkModificationService.deleteModificationReferences(groupUuid, "userId");
 
@@ -284,8 +276,7 @@ class NetworkModificationServiceTest {
         UUID sharedUuid = UUID.randomUUID();
         String url = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/root-network-tags/authorized";
         var requestSpec = restClient.post().uri(url);
-        makeHeadersFluent(requestSpec);
-        makeContentTypeFluent(requestSpec);
+        makeFluent(requestSpec);
 
         networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of(), List.of(), List.of("PH1", "PH2"), USER_ID);
         verify(requestSpec).body(new RootNetworkTagsCheckInfos(List.of(groupUuid), List.of(), List.of(), List.of("PH1", "PH2")));
@@ -295,18 +286,19 @@ class NetworkModificationServiceTest {
         verify(requestSpec).body(new RootNetworkTagsCheckInfos(List.of(), List.of(modificationUuid), List.of(), List.of("PH1")));
         networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of(), List.of(sharedUuid), List.of("PH1"), USER_ID);
         verify(requestSpec).body(new RootNetworkTagsCheckInfos(List.of(), List.of(), List.of(sharedUuid), List.of("PH1")));
-
-        // there is nothing to check without a tag, or without anything to check it on
-        networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of(), List.of(), List.of(), USER_ID);
-        networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of(), List.of(), List.of("PH1"), USER_ID);
-
-        verify(requestSpec, times(3)).body(any(Object.class));
         verify(requestSpec, times(3)).contentType(MediaType.APPLICATION_JSON);
         verify(requestSpec, times(3)).headers(argThat(headersConsumer -> {
             HttpHeaders headers = new HttpHeaders();
             headersConsumer.accept(headers);
             return USER_ID.equals(headers.getFirst(HEADER_USER_ID));
         }));
+        clearInvocations(restClient);
+
+        // there is nothing to check without a tag, or without anything to check it on
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of(), List.of(), List.of(), USER_ID);
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of(), List.of(), List.of("PH1"), USER_ID);
+
+        verifyNoMoreInteractions(restClient);
     }
 
     @Test
@@ -323,7 +315,7 @@ class NetworkModificationServiceTest {
         UUID groupUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/references/write-access?uuids=" + groupUuid;
         var requestSpec = restClient.get().uri(expectedUrl);
-        makeHeadersFluent(requestSpec);
+        doReturn(requestSpec).when(requestSpec).headers(any());
         when(requestSpec.retrieve().body(SharedModificationsWriteAccess.class)).thenReturn(SharedModificationsWriteAccess.NONE_WRITABLE);
 
         assertThat(networkModificationService.getReferencedModificationsWriteAccess(List.of(groupUuid), USER_ID))
@@ -334,8 +326,7 @@ class NetworkModificationServiceTest {
     void testGetContainersWithModificationReferences() {
         UUID groupUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/reference-modifications";
-        var requestSpec = restClient.post().uri(expectedUrl);
-        makeContentTypeFluent(requestSpec);
+        var requestSpec = restClient.post().uri(expectedUrl).contentType(MediaType.APPLICATION_JSON);
         when(requestSpec.body(List.of(groupUuid)).retrieve().body(new ParameterizedTypeReference<List<UUID>>() { })).thenReturn(List.of(groupUuid));
         clearInvocations(requestSpec);
 
@@ -351,8 +342,7 @@ class NetworkModificationServiceTest {
         String metadata = "";
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid + "/name-and-description";
         var requestSpec = restClient.put().uri(expectedUrl);
-        makeHeadersFluent(requestSpec);
-        makeContentTypeFluent(requestSpec);
+        makeFluent(requestSpec);
 
         networkModificationService.updateNetworkModificationNameAndDescription(modificationUuid, metadata, USER_ID);
         verify(requestSpec).body(metadata);
@@ -377,11 +367,8 @@ class NetworkModificationServiceTest {
         }));
     }
 
-    private void makeHeadersFluent(RestClient.RequestHeadersSpec<?> requestSpec) {
+    private void makeFluent(RestClient.RequestBodySpec requestSpec) {
         doReturn(requestSpec).when(requestSpec).headers(any());
-    }
-
-    private void makeContentTypeFluent(RestClient.RequestBodySpec requestSpec) {
         doReturn(requestSpec).when(requestSpec).contentType(any(MediaType.class));
     }
 }

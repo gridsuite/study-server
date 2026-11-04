@@ -156,7 +156,7 @@ class RemoteServicesInspectorTest implements WithAssertions {
         remoteServicesProperties.getServices().forEach(s -> s.setOptional(optionalServices.contains(s.getName())));
 
         // any optional service will be mocked with JSON to respond
-        optionalServices.forEach(name -> server.expect(requestToUriTemplate("http://{service}//actuator/health", name))
+        optionalServices.forEach(name -> server.expect(requestToUriTemplate("http://{service}/actuator/health", name))
                 .andExpect(method(HttpMethod.GET)).andRespond(request -> {
                     try {
                         Thread.sleep(delayResponse);

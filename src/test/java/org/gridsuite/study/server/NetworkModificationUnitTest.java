@@ -85,8 +85,6 @@ class NetworkModificationUnitTest {
     private NetworkService networkService;
     @MockitoBean(answers = org.mockito.Answers.RETURNS_DEEP_STUBS)
     private RestClient restClient;
-    @MockitoBean
-    private ReportService reportService;
     @MockitoSpyBean
     private RootNetworkService rootNetworkService;
     @MockitoSpyBean
@@ -147,7 +145,6 @@ class NetworkModificationUnitTest {
         doReturn(requestSpec).when(requestSpec).uri(anyString());
         doReturn(requestSpec).when(requestSpec).header(anyString(), anyString());
         doReturn(requestSpec).when(requestSpec).contentType(any(MediaType.class));
-        doReturn(requestSpec).when(requestSpec).body(any(Object.class));
     }
 
     private void cleanDB() {
