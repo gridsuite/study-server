@@ -251,12 +251,13 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
     @Override
     public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
+        return executeWithOptionalServiceFallback(() -> {
+            var path = UriComponentsBuilder
+                    .fromPath(DELIMITER + LOADFLOW_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + DELIMITER + "{uuid}" + DELIMITER + "duplicate")
+                    .buildAndExpand(sourceParametersUuid).toUriString();
 
-        var path = UriComponentsBuilder
-                .fromPath(DELIMITER + LOADFLOW_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + DELIMITER + "{uuid}" + DELIMITER + "duplicate")
-                .buildAndExpand(sourceParametersUuid).toUriString();
-
-        return restTemplate.postForObject(baseUri + path, null, UUID.class);
+            return restTemplate.postForObject(baseUri + path, null, UUID.class);
+        }, null);
     }
 
     public void updateLoadFlowParameters(UUID parametersUuid, @Nullable String parameters) {

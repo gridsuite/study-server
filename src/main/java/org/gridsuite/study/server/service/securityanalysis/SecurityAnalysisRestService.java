@@ -231,14 +231,15 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
     @Override
     public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
+        return executeWithOptionalServiceFallback(() -> {
+            var path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + DELIMITER + "{uuid}" + DELIMITER + "duplicate")
+                    .buildAndExpand(sourceParametersUuid).toUriString();
 
-        var path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + DELIMITER + "{uuid}" + DELIMITER + "duplicate")
-                .buildAndExpand(sourceParametersUuid).toUriString();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        return restTemplate.exchange(baseUri + path, HttpMethod.POST, new HttpEntity<>(null, headers), UUID.class).getBody();
+            return restTemplate.exchange(baseUri + path, HttpMethod.POST, new HttpEntity<>(null, headers), UUID.class).getBody();
+        }, null);
     }
 
     public String getSecurityAnalysisParameters(UUID parametersUuid) {

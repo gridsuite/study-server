@@ -277,15 +277,15 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
 
     @Override
     public UUID duplicateParameters(UUID sourceParametersUuid) {
-
         Objects.requireNonNull(sourceParametersUuid);
+        return executeWithOptionalServiceFallback(() -> {
+            var path = UriComponentsBuilder
+                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + "/{uuid}/duplicate")
+                .buildAndExpand(sourceParametersUuid)
+                .toUriString();
 
-        var path = UriComponentsBuilder
-            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + "/{uuid}/duplicate")
-            .buildAndExpand(sourceParametersUuid)
-            .toUriString();
-
-        return restTemplate.postForObject(baseUri + path, null, UUID.class);
+            return restTemplate.postForObject(baseUri + path, null, UUID.class);
+        }, null);
     }
 
     public void updateSensitivityAnalysisParameters(UUID parametersUuid, @Nullable String parameters) {

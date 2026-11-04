@@ -246,17 +246,18 @@ public class PccMinRestService extends AbstractComputationRestService implements
     @Override
     public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
+        return executeWithOptionalServiceFallback(() -> {
+            String path = UriComponentsBuilder
+                .fromPath(PARAMETERS_URI + "/{uuid}/duplicate")
+                .buildAndExpand(sourceParametersUuid)
+                .toUriString();
 
-        String path = UriComponentsBuilder
-            .fromPath(PARAMETERS_URI + "/{uuid}/duplicate")
-            .buildAndExpand(sourceParametersUuid)
-            .toUriString();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
-
-        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+            return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        }, null);
     }
 
     public ResponseEntity<byte[]> exportPccMinResultsAsCsv(UUID resultUuid, String csvHeaders, UUID networkUuid, String variantId, Sort sort, String filters, String globalFilters) {
