@@ -233,10 +233,10 @@ class NetworkModificationUnitTest {
         checkModificationUpdatedMessageReceived(studyUuid, node1Uuid, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
 
         NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
-        Mockito.verify(restClient.put(), Mockito.times(1)).uri(
+        verify(restClient.put(), times(1)).uri(
                 matches(".*network-modifications\\?uuids=" + modificationUuid +
                         "&groupUuid=" + node1Infos.getModificationGroupUuid().toString()));
-        Mockito.verify(restClient.put(), Mockito.times(1)).body(metadata);
+        verify(restClient.put(), times(1)).body(metadata);
     }
 
     @Test
@@ -270,7 +270,7 @@ class NetworkModificationUnitTest {
         networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos, rerunLoadFlowInfos);
 
         ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
-        Mockito.verify(restClient.post(), Mockito.times(1)).uri(urlCaptor.capture());
+        verify(restClient.post(), times(1)).uri(urlCaptor.capture());
 
         assertTrue(urlCaptor.getValue().contains(QUERY_PARAM_WORKFLOW_TYPE + "=" + rerunLoadFlowInfos.getType().name()));
         assertTrue(urlCaptor.getValue().contains(QUERY_PARAM_WORKFLOW_INFOS + "=" + URLEncoder.encode(objectMapper.writeValueAsString(rerunLoadFlowInfos), StandardCharsets.UTF_8)));
@@ -319,10 +319,10 @@ class NetworkModificationUnitTest {
         checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
 
         NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
-        Mockito.verify(restClient.put(), Mockito.times(1)).uri(
+        verify(restClient.put(), times(1)).uri(
                 matches(".*network-modifications\\?" + networkModificationUuids.stream().map(uuid -> "uuids=" + uuid.toString() + "&").collect(Collectors.joining()) +
                         "groupUuid=" + node1Infos.getModificationGroupUuid().toString()));
-        Mockito.verify(restClient.put(), Mockito.times(1)).body(metadata);
+        verify(restClient.put(), times(1)).body(metadata);
     }
 
     private void checkModificationUpdatedMessageReceived(UUID studyUuid, UUID nodeUuid, List<UUID> childrenNodeUuids, String notificationType) {

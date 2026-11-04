@@ -31,7 +31,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Answers.RETURNS_DEEP_STUBS;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -83,7 +82,7 @@ class UserAdminServiceTest {
     @Test
     void testConsumeQuotaReturnsQuotaId() {
         UUID quotaId = UUID.randomUUID();
-        when(restClient.post().uri(anyString()).retrieve().body(eq(UUID.class))).thenReturn(quotaId);
+        when(restClient.post().uri(anyString()).retrieve().body(UUID.class)).thenReturn(quotaId);
         Mockito.clearInvocations(restClient.post());
 
         UUID result = userAdminService.consumeQuota(USER_ID, QuotaType.SHORT_CIRCUIT);
@@ -94,7 +93,7 @@ class UserAdminServiceTest {
 
     @Test
     void testConsumeQuotaThrowsStudyExceptionWhenQuotaExhausted() {
-        when(restClient.post().uri(anyString()).retrieve().body(eq(UUID.class)))
+        when(restClient.post().uri(anyString()).retrieve().body(UUID.class))
                 .thenThrow(HttpClientErrorException.create(HttpStatus.TOO_MANY_REQUESTS, "Bad Request", null, null, null));
 
         assertThrows(StudyException.class, () -> userAdminService.consumeQuota(USER_ID, QuotaType.SHORT_CIRCUIT));
