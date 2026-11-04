@@ -60,6 +60,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.utils.TestUtils.ELEMENT_UPDATE_DESTINATION;
 import static org.gridsuite.study.server.utils.TestUtils.checkUpdateStatusMessagesReceived;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Answers.RETURNS_DEEP_STUBS;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -83,7 +84,7 @@ class NetworkModificationUnitTest {
 
     @MockitoBean
     private NetworkService networkService;
-    @MockitoBean(answers = org.mockito.Answers.RETURNS_DEEP_STUBS)
+    @MockitoBean(answers = RETURNS_DEEP_STUBS)
     private RestClient restClient;
     @MockitoSpyBean
     private RootNetworkService rootNetworkService;
