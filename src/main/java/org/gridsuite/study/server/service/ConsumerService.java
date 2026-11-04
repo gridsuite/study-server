@@ -277,7 +277,7 @@ public class ConsumerService {
                     .networkInfos(networkInfos)
                     .importParameters(importParameters)
                     .build());
-                case NETWORK_RECREATION -> studyService.updateNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
+                case NETWORK_RECREATION -> updateRecreatedNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
                 case ROOT_NETWORK_MODIFICATION -> studyService.modifyRootNetwork(studyUuid, RootNetworkInfos.builder()
                     .id(rootNetworkUuid)
                     .networkInfos(networkInfos)
@@ -299,6 +299,19 @@ public class ConsumerService {
             }
             LOGGER.trace("{} for study uuid '{}' : {} seconds", caseImportAction.getLabel(), studyUuid,
                 TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
+        }
+    }
+
+    private void updateRecreatedNetwork(UUID studyUuid, UUID rootNetworkUuid, NetworkInfos networkInfos, String userId) {
+        try {
+            studyService.updateNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
+        } catch (Exception e) {
+            try {
+                rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.UNLOADED);
+            } finally {
+                notificationService.emitRootNetworksUpdateFailed(studyUuid, e.getMessage());
+            }
+            throw e;
         }
     }
 
