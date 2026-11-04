@@ -176,6 +176,25 @@ class ConsumerServiceSharedElementUpdateTest {
     }
 
     @Test
+    void testFailureOnOneNodeDoesNotPreventOtherNodesNotification() {
+        UUID staleNodeUuid = UUID.randomUUID();
+        UUID nodeUuid = UUID.randomUUID();
+        UUID staleModificationUuid = UUID.randomUUID();
+        UUID modificationUuid = UUID.randomUUID();
+
+        doThrow(new RuntimeException("Node not found"))
+            .when(networkModificationTreeService).getStudyUuidForNodeId(staleNodeUuid);
+
+        consumeSharedElementUpdate.accept(sharedElementUpdateMessage(
+            List.of(createStudyNodeReference(staleModificationUuid, staleNodeUuid), createStudyNodeReference(modificationUuid, nodeUuid)),
+            List.of()));
+
+        verify(nodeActivityRunnerService, times(1)).runBatchAction(any(), any(), any());
+        verify(notificationService, times(1)).emitSharedModificationsUpdated(any(), any(), anyList());
+        verify(notificationService).emitSharedModificationsUpdated(studyUuid, nodeUuid, List.of(modificationUuid));
+    }
+
+    @Test
     void testNoSharedCompositeUpdated() {
         consumeSharedElementUpdate.accept(sharedElementUpdateMessage(List.of(), List.of()));
 
