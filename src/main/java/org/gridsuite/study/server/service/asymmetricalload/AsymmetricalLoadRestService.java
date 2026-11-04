@@ -55,8 +55,8 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
     private static final String PARAMETER_UUID = "{parametersUuid}";
     private static final String ASYMMETRICAL_LOAD = "asymmetrical-load";
     private static final String ASYMMETRICAL_LOAD_URI = DELIMITER + PCC_MIN_API_VERSION + DELIMITER + ASYMMETRICAL_LOAD;
-    private static final String PARAMETERS_URI = ASYMMETRICAL_LOAD_URI + DELIMITER + PATH_PARAM_PARAMETERS;
-    private static final String PARAMETER_URI = PARAMETERS_URI + DELIMITER + PARAMETER_UUID;
+    private static final String ASYMMETRICAL_LOAD_PARAMETERS_URI = ASYMMETRICAL_LOAD_URI + DELIMITER + PATH_PARAM_PARAMETERS;
+    private static final String ASYMMETRICAL_LOAD_PARAMETER_URI = ASYMMETRICAL_LOAD_PARAMETERS_URI + DELIMITER + PARAMETER_UUID;
 
     private final ObjectMapper objectMapper;
 
@@ -195,7 +195,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
 
     public UUID createAsymmetricalLoadParameters(String parameters) {
         var path = UriComponentsBuilder
-            .fromPath(PARAMETERS_URI)
+            .fromPath(ASYMMETRICAL_LOAD_PARAMETERS_URI)
             .buildAndExpand()
             .toUriString();
 
@@ -207,7 +207,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
     }
 
     public void updateAsymmetricalLoadParameters(UUID parametersUuid, @Nullable String parameters) {
-        var uriBuilder = UriComponentsBuilder.fromPath(PARAMETER_URI);
+        var uriBuilder = UriComponentsBuilder.fromPath(ASYMMETRICAL_LOAD_PARAMETER_URI);
         String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
@@ -228,7 +228,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
     public UUID createDefaultParameters() {
         return executeWithOptionalServiceFallback(() -> {
             var path = UriComponentsBuilder
-                    .fromPath(PARAMETERS_URI + DELIMITER + "default")
+                    .fromPath(ASYMMETRICAL_LOAD_PARAMETERS_URI + DELIMITER + "default")
                     .buildAndExpand()
                     .toUriString();
 
@@ -239,7 +239,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
     public String getAsymmetricalLoadParameters(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
 
-        String path = UriComponentsBuilder.fromPath(PARAMETER_URI)
+        String path = UriComponentsBuilder.fromPath(ASYMMETRICAL_LOAD_PARAMETER_URI)
             .buildAndExpand(parametersUuid).toUriString();
 
         return restTemplate.getForObject(baseUri + path, String.class);
@@ -250,7 +250,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
         Objects.requireNonNull(uuid);
         executeWithOptionalServiceCheck(() -> {
             String path = UriComponentsBuilder
-                .fromPath(PARAMETER_URI)
+                .fromPath(ASYMMETRICAL_LOAD_PARAMETER_URI)
                 .buildAndExpand(uuid)
                 .toUriString();
 
@@ -263,7 +263,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
         Objects.requireNonNull(sourceParametersUuid);
         return executeWithOptionalServiceFallback(() -> {
             String path = UriComponentsBuilder
-                    .fromPath(PARAMETERS_URI + "/{uuid}/duplicate")
+                    .fromPath(ASYMMETRICAL_LOAD_PARAMETERS_URI + "/{uuid}/duplicate")
                     .buildAndExpand(sourceParametersUuid)
                     .toUriString();
 
