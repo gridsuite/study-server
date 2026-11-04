@@ -974,8 +974,24 @@ class RootNetworkTest {
     }
 
     @Test
-    void testRecreateNetworkSetsUnloadedStatusWhenRequestFails() {
+    void testRecreateRootNetworkLoadedStatusWhenRequestFails() {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNetworkUuid = testUtils.getOneRootNetworkUuid(studyUuid);
+
+        doThrow(new StudyException(NOT_FOUND, "Case not found")).when(caseService).assertCaseExists(CASE_UUID);
+
+        assertThrows(StudyException.class, () -> studyService.recreateNetwork(USER_ID, studyUuid, rootNetworkUuid, CASE_FORMAT2));
+
+        verify(rootNetworkService, times(1)).updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADING);
+        assertEquals(RootNetworkLoadStatus.LOADED, rootNetworkRepository.findById(rootNetworkUuid).orElseThrow().getLoadStatus());
+    }
+
+    @Test
+    void testRecreateRootNetworkUnloadedStatusWhenRequestFailsAndNetworkWasNotLoaded() {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyEntity.getRootNetworks().getFirst().setLoadStatus(RootNetworkLoadStatus.UNLOADING);
         studyRepository.save(studyEntity);
         UUID studyUuid = studyEntity.getId();
         UUID rootNetworkUuid = testUtils.getOneRootNetworkUuid(studyUuid);
