@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.extension.Parameters;
 import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import com.google.common.collect.ImmutableSet;
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
@@ -86,6 +87,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
@@ -300,6 +302,9 @@ class NetworkModificationTest {
     @MockitoSpyBean
     private StudyService studyService;
 
+    private CountDownLatch countDownLatchForBuild;
+    private CountDownLatch countDownLatchForBuildStop;
+
     @BeforeEach
     void setup() {
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase", new ResourceSet("", TEST_FILE));
@@ -341,8 +346,11 @@ class NetworkModificationTest {
         userAdminService.setUserAdminServerBaseUri(baseUrl);
         wireMockStubs.stubRootNetworkTagsAllowed();
 
+        countDownLatchForBuild = new CountDownLatch(1);
+        countDownLatchForBuildStop = new CountDownLatch(1);
+
         buildOkStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_STRING + "/build"))
-            .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", DEFAULT_BUILD_RESULT, "destination", "build.result"))
+            .withPostServeAction(POST_ACTION_SEND_INPUT, Parameters.from(Map.of("payload", DEFAULT_BUILD_RESULT, "destination", "build.result", "latch", countDownLatchForBuild)))
             .willReturn(WireMock.ok())).getId();
         buildFailedStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_2_STRING + "/build"))
             .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", "", "destination", "build.run.dlx", HEADER_ERROR_MESSAGE, ERROR_MESSAGE))
@@ -350,7 +358,7 @@ class NetworkModificationTest {
         buildErrorStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_3_STRING + "/build"))
             .willReturn(WireMock.serverError())).getId();
         buildStopStubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/build/stop"))
-            .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", "", "destination", "build.stopped"))
+            .withPostServeAction(POST_ACTION_SEND_INPUT, Parameters.from(Map.of("payload", "", "destination", "build.stopped", "latch", countDownLatchForBuildStop)))
             .willReturn(WireMock.ok())).getId();
         userProfileQuotaStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/users/" + USER_ID + "/quota/state"))
             .willReturn(WireMock.ok()
@@ -3139,6 +3147,9 @@ class NetworkModificationTest {
                         .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
 
+        // await the end of build
+        countDownLatchForBuild.await();
+
         // node update -> BUILT
         Message<byte[]> buildStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -3159,6 +3170,9 @@ class NetworkModificationTest {
         // stop build
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build/stop", studyUuid, rootNetworkUuid, nodeUuid))
             .andExpect(status().isOk());
+
+        // await the end of stop build
+        countDownLatchForBuildStop.await();
 
         buildStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
