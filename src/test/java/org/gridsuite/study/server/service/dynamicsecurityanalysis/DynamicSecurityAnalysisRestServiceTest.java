@@ -408,12 +408,21 @@ class DynamicSecurityAnalysisRestServiceTest extends AbstractWireMockRestClientT
     }
 
     @Test
-    void testDeleteResults() {
-        // configure mock server response
-        wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(RESULT_BASE_URL + "?resultsUuids"))
+    void testDeleteResultsWithoutUuids() {
+        assertThrows(NullPointerException.class, () -> dynamicSecurityAnalysisRestService.deleteResults(null));
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicSecurityAnalysisRestService.deleteResults(List.of()));
+        wireMockServer.verify(0, WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(RESULT_BASE_URL)));
+    }
+
+    @Test
+    void testDeleteAllResults() {
+        String url = buildEndPointUrl("", API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_SUPERVISION_RESULT);
+        wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(url))
                 .willReturn(WireMock.ok()));
-        // call service to test
-        Assertions.assertThatNoException().isThrownBy(() -> dynamicSecurityAnalysisRestService.deleteResults(null));
+
+        dynamicSecurityAnalysisRestService.deleteAllResults();
+
+        wireMockServer.verify(WireMock.deleteRequestedFor(WireMock.urlEqualTo(url)));
     }
 
     @Test

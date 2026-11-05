@@ -267,11 +267,22 @@ public class ComputationServerStubs {
         WireMockUtilsCriteria.verifyDeleteRequest(wireMock, "/v1/results", false, Map.of("resultsUuids", WireMock.equalTo(resultUuid)));
     }
 
-    public void stubDeleteResults(String path) {
-        wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching(path))
-            .withQueryParam("resultsUuids", matching(".*"))
+    public void stubDeleteAllResults() {
+        stubDeleteAllResults("");
+    }
+
+    public void stubDeleteAllResults(String prefix) {
+        wireMock.stubFor(WireMock.delete(WireMock.urlEqualTo("/v1/supervision/" + prefix + "results"))
             .willReturn(WireMock.ok())
         );
+    }
+
+    public void verifyDeleteAllResults() {
+        verifyDeleteAllResults("");
+    }
+
+    public void verifyDeleteAllResults(String prefix) {
+        WireMockUtilsCriteria.verifyDeleteRequest(wireMock, "/v1/supervision/" + prefix + "results", Map.of());
     }
 
     public void stubResultsCount(int count) {

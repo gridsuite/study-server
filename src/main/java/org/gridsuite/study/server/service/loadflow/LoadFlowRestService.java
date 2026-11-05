@@ -95,7 +95,7 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
         return restTemplate.exchange(baseUri + path, HttpMethod.POST, new HttpEntity<>(headers), UUID.class).getBody();
     }
 
-    public void deleteLoadFlowResults(List<UUID> resultsUuids) {
+    public void deleteResults(List<UUID> resultsUuids) {
         deleteCalculationResults(resultsUuids, DELIMITER + LOADFLOW_API_VERSION + "/results", restTemplate, baseUri);
     }
 

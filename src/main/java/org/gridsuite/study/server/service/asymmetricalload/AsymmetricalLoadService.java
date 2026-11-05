@@ -83,7 +83,7 @@ public class AsymmetricalLoadService extends AbstractComputationService {
 
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ASYMMETRICAL_LOAD);
         if (prevResultUuid != null) {
-            asymmetricalLoadRestService.deleteAsymmetricalLoadResults(List.of(prevResultUuid));
+            asymmetricalLoadRestService.deleteResults(List.of(prevResultUuid));
         }
         var runAsymmetricalLoadParametersInfos = new RunAsymmetricalLoadParametersInfos(studyEntity.getShortCircuitParametersUuid(), studyEntity.getAsymmetricalLoadParametersUuid(), null);
 

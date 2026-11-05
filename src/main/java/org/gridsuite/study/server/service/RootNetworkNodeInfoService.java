@@ -543,18 +543,18 @@ public class RootNetworkNodeInfoService {
     public List<CompletableFuture<?>> getRemoteDeletions(RemoteDeletionInfos infos) {
         return List.of(
             studyServerExecutionService.runAsync(() -> reportService.deleteReports(infos.getReportUuids())),
-            studyServerExecutionService.runAsync(() -> loadFlowRestService.deleteLoadFlowResults(infos.getLoadFlowResultUuids())),
-            studyServerExecutionService.runAsync(() -> securityAnalysisRestService.deleteSecurityAnalysisResults(infos.getSecurityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> sensitivityAnalysisRestService.deleteSensitivityAnalysisResults(infos.getSensitivityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> shortCircuitRestService.deleteShortCircuitAnalysisResults(infos.getShortCircuitAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> shortCircuitRestService.deleteShortCircuitAnalysisResults(infos.getOneBusShortCircuitAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> voltageInitRestService.deleteVoltageInitResults(infos.getVoltageInitResultUuids(), SUPERVISION_USER)),
+            studyServerExecutionService.runAsync(() -> loadFlowRestService.deleteResults(infos.getLoadFlowResultUuids())),
+            studyServerExecutionService.runAsync(() -> securityAnalysisRestService.deleteResults(infos.getSecurityAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> sensitivityAnalysisRestService.deleteResults(infos.getSensitivityAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> shortCircuitRestService.deleteResults(infos.getShortCircuitAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> shortCircuitRestService.deleteResults(infos.getOneBusShortCircuitAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> voltageInitRestService.deleteResults(infos.getVoltageInitResultUuids(), SUPERVISION_USER)),
             studyServerExecutionService.runAsync(() -> dynamicSimulationRestService.deleteResults(infos.getDynamicSimulationResultUuids())),
             studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisRestService.deleteResults(infos.getDynamicSecurityAnalysisResultUuids())),
             studyServerExecutionService.runAsync(() -> dynamicMarginCalculationRestService.deleteResults(infos.getDynamicMarginCalculationResultUuids())),
-            studyServerExecutionService.runAsync(() -> stateEstimationRestService.deleteStateEstimationResults(infos.getStateEstimationResultUuids())),
-            studyServerExecutionService.runAsync(() -> pccMinRestService.deletePccMinResults(infos.getPccMinResultUuids())),
-            studyServerExecutionService.runAsync(() -> asymmetricalLoadRestService.deleteAsymmetricalLoadResults(infos.getAsymmetricalLoadResultUuids()))
+            studyServerExecutionService.runAsync(() -> stateEstimationRestService.deleteResults(infos.getStateEstimationResultUuids())),
+            studyServerExecutionService.runAsync(() -> pccMinRestService.deleteResults(infos.getPccMinResultUuids())),
+            studyServerExecutionService.runAsync(() -> asymmetricalLoadRestService.deleteResults(infos.getAsymmetricalLoadResultUuids()))
         );
     }
 

@@ -190,12 +190,12 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
         return restTemplate.getForObject(baseUri + path, SecurityAnalysisStatus.class);
     }
 
-    public void deleteSecurityAnalysisResults(List<UUID> resultsUuids) {
+    public void deleteResults(List<UUID> resultsUuids) {
         deleteCalculationResults(resultsUuids, DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results", restTemplate, baseUri);
     }
 
-    public void deleteAllSecurityAnalysisResults() {
-        deleteSecurityAnalysisResults(null);
+    public void deleteAllResults() {
+        restTemplate.delete(baseUri + DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/supervision/results");
     }
 
     public Integer getSecurityAnalysisResultsCount() {

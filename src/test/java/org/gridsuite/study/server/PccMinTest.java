@@ -448,9 +448,7 @@ class PccMinTest {
             .withQueryParam("resultsUuids", matching(".*"))
             .willReturn(WireMock.ok().withBody(PCC_MIN_RESULT_UUID)));
 
-        wireMockServer.stubFor(delete(urlPathEqualTo("/v1/results"))
-            .withQueryParam("resultsUuids", matching(".*"))
-            .willReturn(ok()));
+        computationServerStubs.stubDeleteAllResults();
 
         Integer dryRunCount = supervisionService.deleteComputationResults(ComputationType.PCC_MIN, true);
         assertEquals(1, dryRunCount);
@@ -459,8 +457,7 @@ class PccMinTest {
         Integer deletedCount = supervisionService.deleteComputationResults(ComputationType.PCC_MIN, false);
         assertEquals(1, deletedCount);
 
-        wireMockServer.verify(1, deleteRequestedFor(urlPathEqualTo("/v1/results"))
-            .withQueryParam("resultsUuids", matching(".*")));
+        computationServerStubs.verifyDeleteAllResults();
 
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByPccMinResultUuidNotNull().size());
     }

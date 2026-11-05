@@ -63,6 +63,7 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
     public static final String DYNAMIC_SIMULATION_END_POINT_RUN = "networks";
     public static final String DYNAMIC_SIMULATION_END_POINT_RESULT = "results";
     public static final String DYNAMIC_SIMULATION_END_POINT_RESULT_COUNT = "supervision/results-count";
+    public static final String DYNAMIC_SIMULATION_END_POINT_SUPERVISION_RESULT = "supervision/results";
 
     private final ObjectMapper objectMapper;
     private final TimeSeriesClient timeSeriesClient;
@@ -374,7 +375,7 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
      * @param resultUuids a given results UUID
      */
     public void deleteResults(List<UUID> resultUuids) {
-        if (CollectionUtils.isEmpty(resultUuids)) {
+        if (Objects.requireNonNull(resultUuids, "resultUuids must not be null").isEmpty()) {
             return;
         }
 
@@ -388,7 +389,7 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
      * Delete all results
      */
     public void deleteAllResults() {
-        deleteResults(null);
+        getRestTemplate().delete(buildEndPointUrl(getBaseUri(), DYNAMIC_SIMULATION_API_VERSION, DYNAMIC_SIMULATION_END_POINT_SUPERVISION_RESULT));
     }
 
     /**

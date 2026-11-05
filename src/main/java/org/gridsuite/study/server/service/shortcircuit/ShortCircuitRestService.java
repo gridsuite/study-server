@@ -228,12 +228,12 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
         restTemplate.exchange(baseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
-    public void deleteShortCircuitAnalysisResults(List<UUID> resultsUuids) {
+    public void deleteResults(List<UUID> resultsUuids) {
         deleteCalculationResults(resultsUuids, DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results", restTemplate, baseUri);
     }
 
-    public void deleteAllShortCircuitAnalysisResults() {
-        deleteShortCircuitAnalysisResults(null);
+    public void deleteAllResults() {
+        restTemplate.delete(baseUri + DELIMITER + SHORT_CIRCUIT_API_VERSION + "/supervision/results");
     }
 
     public Integer getShortCircuitResultsCount() {
