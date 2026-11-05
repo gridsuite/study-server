@@ -441,7 +441,7 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
         String url = UriComponentsBuilder.fromUriString(resultBaseUrl + "/{resultUuid}/download-debug-file")
                 .buildAndExpand(resultUuid)
                 .toUriString();
-        return getRestClient().method(org.springframework.http.HttpMethod.GET)
+        return getRestClient().get()
             .uri(url)
             .retrieve().toEntity(Resource.class);
     }

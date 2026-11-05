@@ -126,19 +126,21 @@ class DirectoryServiceTest {
     void testRemoveElementsReferences() {
         ModificationReference reference1 = new ModificationReference(UUID.randomUUID(), UUID.randomUUID(), null);
         ModificationReference reference2 = new ModificationReference(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
-        makeFluent(restClient.method(HttpMethod.DELETE).uri(referenceUrl(reference1)));
-        makeFluent(restClient.method(HttpMethod.DELETE).uri(referenceUrl(reference2)));
+        var request1 = restClient.delete().uri(referenceUrl(reference1));
+        var request2 = restClient.delete().uri(referenceUrl(reference2));
+        doReturn(request1).when(request1).headers(any());
+        doReturn(request2).when(request2).headers(any());
 
         directoryService.removeSharingLinks(List.of(reference1, reference2), USER_ID);
 
         ArgumentCaptor<Consumer<HttpHeaders>> headersCaptor = ArgumentCaptor.forClass(Consumer.class);
-        verify(restClient.method(HttpMethod.DELETE).uri(referenceUrl(reference1))).headers(headersCaptor.capture());
-        verify(restClient.method(HttpMethod.DELETE).uri(referenceUrl(reference2))).retrieve();
+        verify(request1).headers(headersCaptor.capture());
+        verify(request2).retrieve();
 
         HttpHeaders headers = new HttpHeaders();
         headersCaptor.getValue().accept(headers);
         assertThat(headers.getFirst(HEADER_USER_ID)).isEqualTo(USER_ID);
-        verify(restClient.method(HttpMethod.DELETE).uri(referenceUrl(reference1))).contentType(MediaType.APPLICATION_JSON);
+        assertThat(headers.getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
     }
 
     @Test

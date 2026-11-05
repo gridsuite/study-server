@@ -442,9 +442,9 @@ public class NetworkModificationRestService {
                 .buildAndExpand()
                 .toUriString();
 
-        restClient.method(HttpMethod.DELETE)
+        restClient.delete()
             .uri(path)
-            .contentType(MediaType.APPLICATION_JSON)
+            .headers(headers -> headers.setContentType(MediaType.APPLICATION_JSON))
             .retrieve().toBodilessEntity();
     }
 
@@ -668,7 +668,7 @@ public class NetworkModificationRestService {
             .queryParam(QUERY_PARAM_GROUP_UUIDS, groupUuids)
             .toUriString();
 
-        restClient.method(HttpMethod.DELETE)
+        restClient.delete()
             .uri(getNetworkModificationServerURI(false) + path)
             .retrieve().toBodilessEntity();
     }

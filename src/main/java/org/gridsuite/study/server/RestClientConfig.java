@@ -26,17 +26,13 @@ import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.util.DefaultUriBuilderFactory;
 
 @Configuration
 public class RestClientConfig {
 
     @Bean
     public RestClient studyRestClient(RestClient.Builder builder) {
-        DefaultUriBuilderFactory uriBuilderFactory = new DefaultUriBuilderFactory();
-        uriBuilderFactory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.URI_COMPONENT);
         return builder
-                .uriBuilderFactory(uriBuilderFactory)
                 .messageConverters(messageConverters -> {
                     //find and replace Jackson message converter with our own
                     for (int i = 0; i < messageConverters.size(); i++) {

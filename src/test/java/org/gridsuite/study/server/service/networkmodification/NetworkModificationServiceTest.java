@@ -245,10 +245,13 @@ class NetworkModificationServiceTest {
         UUID groupUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
                 + "?groupUuids=" + groupUuid + "&rootNetworkTags=PH1&rootNetworkTags=PH2";
+        var requestSpec = restClient.delete().uri(expectedUrl);
+        doReturn(requestSpec).when(requestSpec).headers(any());
 
         networkModificationService.deleteRootNetworkTags(List.of(groupUuid), List.of("PH1", "PH2"));
 
-        verify(restClient.method(HttpMethod.DELETE).uri(expectedUrl).contentType(MediaType.APPLICATION_JSON).retrieve()).toBodilessEntity();
+        assertHeaders(requestSpec, Map.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE));
+        verify(requestSpec.retrieve()).toBodilessEntity();
         clearInvocations(restClient);
 
         // there is nothing to drop without a group or without a tag

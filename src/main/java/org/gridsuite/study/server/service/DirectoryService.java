@@ -163,10 +163,12 @@ public class DirectoryService {
                 .buildAndExpand(sharedElementUuid, referenceUuid)
                 .toUriString();
 
-        restClient.method(HttpMethod.DELETE)
+        restClient.delete()
             .uri(getDirectoryServerServerBaseUri() + path)
-            .headers(headers -> headers.set(HEADER_USER_ID, userId))
-            .contentType(MediaType.APPLICATION_JSON)
+            .headers(headers -> {
+                headers.set(HEADER_USER_ID, userId);
+                headers.setContentType(MediaType.APPLICATION_JSON);
+            })
             .retrieve().toEntity(ElementAttributes.class);
     }
 
