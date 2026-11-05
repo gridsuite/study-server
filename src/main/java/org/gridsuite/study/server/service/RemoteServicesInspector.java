@@ -132,7 +132,11 @@ public class RemoteServicesInspector {
     }
 
     public RemoteServicesProperties.Service getService(RemoteServiceName name) {
-        return remoteServicesProperties.getServices().stream()
+        final List<RemoteServicesProperties.Service> services = remoteServicesProperties.getServices();
+        if (services == null) {
+            return null;
+        }
+        return services.stream()
                 .filter(s -> s.getName().equalsIgnoreCase(name.serviceName()))
                 .findFirst()
                 .orElse(null);
