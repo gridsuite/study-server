@@ -277,7 +277,7 @@ public class ConsumerService {
                     .networkInfos(networkInfos)
                     .importParameters(importParameters)
                     .build());
-                case NETWORK_RECREATION -> studyService.updateNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
+                case NETWORK_RECREATION -> updateRecreatedNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
                 case ROOT_NETWORK_MODIFICATION -> studyService.modifyRootNetwork(studyUuid, RootNetworkInfos.builder()
                     .id(rootNetworkUuid)
                     .networkInfos(networkInfos)
@@ -299,6 +299,19 @@ public class ConsumerService {
             }
             LOGGER.trace("{} for study uuid '{}' : {} seconds", caseImportAction.getLabel(), studyUuid,
                 TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
+        }
+    }
+
+    private void updateRecreatedNetwork(UUID studyUuid, UUID rootNetworkUuid, NetworkInfos networkInfos, String userId) {
+        try {
+            studyService.updateNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
+        } catch (Exception e) {
+            try {
+                rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.UNLOADED);
+            } finally {
+                notificationService.emitRootNetworksUpdateFailed(studyUuid, e.getMessage());
+            }
+            throw e;
         }
     }
 
@@ -406,10 +419,10 @@ public class ConsumerService {
     }
 
     private void handleQuotaEnd(ComputationType computationType, String userId, UUID resultUuid) {
-        if (!shouldCheckOperationQuotas) {
+        QuotaType quotaType = QuotaType.mapFromComputationType(computationType);
+        if (!shouldCheckOperationQuotas || quotaType == null) {
             return;
         }
-        QuotaType quotaType = QuotaType.mapFromComputationType(computationType);
         userAdminService.releaseQuota(userId, resultUuid);
         notificationService.emitQuotaChange(userId, quotaType);
     }
@@ -836,6 +849,26 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeAsymmetricalLoadFailed() {
         return message -> consumeCalculationFailed(message, ASYMMETRICAL_LOAD);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeLogicalControlsResult() {
+        return message -> consumeCalculationResult(message, LOGICAL_CONTROLS);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeLogicalControlsRunning() {
+        return message -> consumeCalculationRunning(message, LOGICAL_CONTROLS);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeLogicalControlsStopped() {
+        return message -> consumeCalculationStopped(message, LOGICAL_CONTROLS);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeLogicalControlsFailed() {
+        return message -> consumeCalculationFailed(message, LOGICAL_CONTROLS);
     }
 
     public void consumeNetworkExportFinished(Message<String> msg) {

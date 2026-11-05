@@ -22,6 +22,7 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyCreationRequestEntity;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -156,6 +157,8 @@ class RootNetworkTest {
     private StudyService studyService;
     @MockitoSpyBean
     private StudyServerExecutionService studyServerExecutionService;
+    @MockitoSpyBean
+    private NotificationService notificationService;
 
     @MockitoBean
     private ReportService reportService;
@@ -968,6 +971,60 @@ class RootNetworkTest {
         assertEquals(RootNetworkLoadStatus.LOADING, rootNetworkRepository.findById(rootNetworkUuid).orElseThrow().getLoadStatus());
         verifyPostRequest(wireMockServer, stubId, "/v1/networks", true,
             Map.of("caseUuid", WireMock.equalTo(CASE_UUID.toString()), "caseFormat", WireMock.equalTo(CASE_FORMAT2)), 1);
+    }
+
+    @Test
+    void testRecreateRootNetworkLoadedStatusWhenRequestFails() {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNetworkUuid = testUtils.getOneRootNetworkUuid(studyUuid);
+
+        doThrow(new StudyException(NOT_FOUND, "Case not found")).when(caseService).assertCaseExists(CASE_UUID);
+
+        assertThrows(StudyException.class, () -> studyService.recreateNetwork(USER_ID, studyUuid, rootNetworkUuid, CASE_FORMAT2));
+
+        verify(rootNetworkService, times(1)).updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADING);
+        assertEquals(RootNetworkLoadStatus.LOADED, rootNetworkRepository.findById(rootNetworkUuid).orElseThrow().getLoadStatus());
+    }
+
+    @Test
+    void testRecreateRootNetworkUnloadedStatusWhenRequestFailsAndNetworkWasNotLoaded() {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyEntity.getRootNetworks().getFirst().setLoadStatus(RootNetworkLoadStatus.UNLOADING);
+        studyRepository.save(studyEntity);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNetworkUuid = testUtils.getOneRootNetworkUuid(studyUuid);
+
+        doThrow(new StudyException(NOT_FOUND, "Case not found")).when(caseService).assertCaseExists(CASE_UUID);
+
+        assertThrows(StudyException.class, () -> studyService.recreateNetwork(USER_ID, studyUuid, rootNetworkUuid, CASE_FORMAT2));
+
+        verify(rootNetworkService, times(1)).updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADING);
+        assertEquals(RootNetworkLoadStatus.UNLOADED, rootNetworkRepository.findById(rootNetworkUuid).orElseThrow().getLoadStatus());
+    }
+
+    @Test
+    void testRecreateNetworkSetsUnloadedStatusWhenUpdateFails() throws Exception {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNetworkUuid = testUtils.getOneRootNetworkUuid(studyUuid);
+        rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADING);
+
+        String errorMessage = "Network update failed";
+        doThrow(new RuntimeException(errorMessage)).when(studyService).updateNetwork(eq(studyUuid), eq(rootNetworkUuid), any(NetworkInfos.class), eq(USER_ID));
+
+        RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(rootNetworkUuid)
+            .caseInfos(new CaseInfos(CASE_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT2))
+            .networkInfos(new NetworkInfos(NETWORK_UUID, "netId"))
+            .reportUuid(REPORT_UUID)
+            .build();
+        createAndConsumeMessageCaseImport(studyUuid, rootNetworkInfos, CaseImportAction.NETWORK_RECREATION);
+
+        assertEquals(RootNetworkLoadStatus.UNLOADED, rootNetworkRepository.findById(rootNetworkUuid).orElseThrow().getLoadStatus());
+        verify(notificationService, times(1)).emitRootNetworksUpdateFailed(studyUuid, errorMessage);
+        verify(caseService, never()).disableCaseExpiration(CASE_UUID);
     }
 
     private Map<String, Object> createConsumeCaseImportSucceededHeaders(

@@ -16,6 +16,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
+import org.gridsuite.study.server.service.logicalcontrols.LogicalControlsRestService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
+import static org.gridsuite.study.server.dto.ComputationType.LOGICAL_CONTROLS;
 import static org.gridsuite.study.server.dto.ComputationType.STATE_ESTIMATION;
 
 /**
@@ -36,6 +38,7 @@ import static org.gridsuite.study.server.dto.ComputationType.STATE_ESTIMATION;
 @Service
 public class StateEstimationService extends AbstractComputationService {
     private final StateEstimationRestService stateEstimationRestService;
+    private final LogicalControlsRestService logicalControlsRestService;
     private final ObjectMapper objectMapper;
 
     protected StateEstimationService(StudyRepository studyRepository,
@@ -44,10 +47,12 @@ public class StateEstimationService extends AbstractComputationService {
                                      RootNetworkNodeInfoService rootNetworkNodeInfoService, NetworkModificationTreeService networkModificationTreeService,
                                      RootNetworkService rootNetworkService,
                                      StateEstimationRestService stateEstimationRestService,
+                                     LogicalControlsRestService logicalControlsRestService,
                                      UserAdminService userAdminService,
                                      ObjectMapper objectMapper) {
         super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService, computationParametersService, userAdminService);
         this.stateEstimationRestService = stateEstimationRestService;
+        this.logicalControlsRestService = logicalControlsRestService;
         this.objectMapper = objectMapper;
     }
 
@@ -95,6 +100,8 @@ public class StateEstimationService extends AbstractComputationService {
 
     @Transactional
     public void setStateEstimationParametersValues(UUID studyUuid, String parameters, String userId) {
+        // note: changing state-estimation parameters invalidates both state estimation and logical controls results
+        // (Logical controls use quality thresholds from state-estimation parameters)
         setComputationParameters(
                 studyUuid,
                 parameters,
@@ -104,13 +111,18 @@ public class StateEstimationService extends AbstractComputationService {
                 stateEstimationRestService::createStateEstimationParameters,
                 stateEstimationRestService::updateStateEstimationParameters,
                 STATE_ESTIMATION,
-                List.of(this::invalidateStateEstimationStatusOnAllNodes),
-                NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS
+                List.of(this::invalidateStateEstimationStatusOnAllNodes, this::invalidateLogicalControlsStatusOnAllNodes),
+                NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS,
+                NotificationService.UPDATE_TYPE_LOGICAL_CONTROLS_STATUS
         );
     }
 
     private void invalidateStateEstimationStatusOnAllNodes(UUID studyUuid) {
         stateEstimationRestService.invalidateStateEstimationStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, STATE_ESTIMATION));
+    }
+
+    private void invalidateLogicalControlsStatusOnAllNodes(UUID studyUuid) {
+        logicalControlsRestService.invalidateLogicalControlsStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, LOGICAL_CONTROLS));
     }
 
     public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
@@ -125,13 +137,5 @@ public class StateEstimationService extends AbstractComputationService {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         return stateEstimationRestService.getStateEstimationMeasurements(resultUuid, networkUuid, variantId, globalFilters);
-    }
-
-    public String computeLogicalControls(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        UUID paramsUuid = studyEntity.getStateEstimationParametersUuid();
-        return stateEstimationRestService.runLogicalComputation(networkUuid, variantId, paramsUuid);
     }
 }
