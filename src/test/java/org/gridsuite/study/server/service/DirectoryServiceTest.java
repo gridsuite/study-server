@@ -76,7 +76,7 @@ class DirectoryServiceTest {
         String expectedUrl = DIRECTORY_SERVER_URI + "/v1/directories/" + directoryUuid + "/elements/elementName/types/STUDY";
         var requestSpec = restClient.head().uri(expectedUrl);
         doReturn(requestSpec).when(requestSpec).headers(any());
-        when(requestSpec.retrieve().toBodilessEntity()).thenReturn(ResponseEntity.ok().<Void>build());
+        when(requestSpec.retrieve().toBodilessEntity()).thenReturn(ResponseEntity.ok().build());
 
         assertThat(directoryService.elementExists(directoryUuid, "elementName", "STUDY")).isTrue();
 
@@ -89,7 +89,7 @@ class DirectoryServiceTest {
         String expectedUrl = DIRECTORY_SERVER_URI + "/v1/directories/" + directoryUuid + "/elements/elementName/types/STUDY";
         var requestSpec = restClient.head().uri(expectedUrl);
         doReturn(requestSpec).when(requestSpec).headers(any());
-        when(requestSpec.retrieve().toBodilessEntity()).thenReturn(ResponseEntity.noContent().<Void>build());
+        when(requestSpec.retrieve().toBodilessEntity()).thenReturn(ResponseEntity.noContent().build());
 
         assertThat(directoryService.elementExists(directoryUuid, "elementName", "STUDY")).isFalse();
     }

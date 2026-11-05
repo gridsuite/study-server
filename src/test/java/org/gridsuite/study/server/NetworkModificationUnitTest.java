@@ -135,17 +135,11 @@ class NetworkModificationUnitTest {
 
     @BeforeEach
     void setup() {
-        makeFluent(restClient.put());
-        makeFluent(restClient.post());
+        var requestSpec = restClient.put();
+        doReturn(requestSpec).when(requestSpec).uri(anyString());
         cleanDB();
 
         doAnswer(invocation -> List.of()).when(networkModificationTreeService).getHighestNodeUuids(any(), any());
-    }
-
-    private static void makeFluent(RestClient.RequestBodyUriSpec requestSpec) {
-        doReturn(requestSpec).when(requestSpec).uri(anyString());
-        doReturn(requestSpec).when(requestSpec).header(anyString(), anyString());
-        doReturn(requestSpec).when(requestSpec).contentType(any(MediaType.class));
     }
 
     private void cleanDB() {
@@ -236,7 +230,7 @@ class NetworkModificationUnitTest {
         verify(restClient.put(), times(1)).uri(
                 matches(".*network-modifications\\?uuids=" + modificationUuid +
                         "&groupUuid=" + node1Infos.getModificationGroupUuid().toString()));
-        verify(restClient.put(), times(1)).body(metadata);
+        verify(restClient.put().contentType(MediaType.APPLICATION_JSON), times(1)).body(metadata);
     }
 
     @Test
@@ -322,7 +316,7 @@ class NetworkModificationUnitTest {
         verify(restClient.put(), times(1)).uri(
                 matches(".*network-modifications\\?" + networkModificationUuids.stream().map(uuid -> "uuids=" + uuid.toString() + "&").collect(Collectors.joining()) +
                         "groupUuid=" + node1Infos.getModificationGroupUuid().toString()));
-        verify(restClient.put(), times(1)).body(metadata);
+        verify(restClient.put().contentType(MediaType.APPLICATION_JSON), times(1)).body(metadata);
     }
 
     private void checkModificationUpdatedMessageReceived(UUID studyUuid, UUID nodeUuid, List<UUID> childrenNodeUuids, String notificationType) {
