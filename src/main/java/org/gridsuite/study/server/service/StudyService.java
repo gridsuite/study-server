@@ -520,12 +520,17 @@ public class StudyService {
             LOGGER.warn("Root network '{}' is already loading, skipping recreateNetwork", rootNetworkUuid);
             return;
         }
+        RootNetworkLoadStatus previousLoadStatus = rootNetwork.getLoadStatus();
         rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADING);
         UUID caseUuid = rootNetwork.getCaseUuid();
         UUID originalCaseUuid = rootNetwork.getOriginalCaseUuid();
         RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(rootNetworkUuid).caseInfos(new CaseInfos(caseUuid, originalCaseUuid, null, caseFormat)).build();
-
-        recreateNetwork(rootNetworkInfos, studyUuid, userId, null, true, rootNetwork.getReportUuid());
+        try {
+            recreateNetwork(rootNetworkInfos, studyUuid, userId, null, true, rootNetwork.getReportUuid());
+        } catch (Exception e) {
+            rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, previousLoadStatus == RootNetworkLoadStatus.LOADED ? RootNetworkLoadStatus.LOADED : RootNetworkLoadStatus.UNLOADED);
+            throw e;
+        }
     }
 
     private void recreateNetwork(RootNetworkInfos rootNetworkInfos, UUID studyUuid, String userId, Map<String, Object> importParameters, boolean shouldLoadPreviousImportParameters, UUID reportId) {
@@ -704,7 +709,7 @@ public class StudyService {
     }
 
     @Transactional
-    public CreatedStudyBasicInfos updateNetwork(UUID studyUuid, UUID rootNetworkUuid, NetworkInfos networkInfos, String userId) {
+    public void updateNetwork(UUID studyUuid, UUID rootNetworkUuid, NetworkInfos networkInfos, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
         RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
 
@@ -716,7 +721,6 @@ public class StudyService {
 
         notificationService.emitStudyNetworkRecreationDone(studyEntity.getId(), userId);
 
-        return createdStudyBasicInfos;
     }
 
     public UserProfileInfos getUserProfile(String userId) {
@@ -2353,6 +2357,14 @@ public class StudyService {
     public void updateColumns(UUID studyUuid, String computationType, String computationSubType, String columnInfos) {
         UUID computationResultFiltersId = getComputationResultFiltersId(studyUuid);
         studyConfigService.updateColumns(computationResultFiltersId, computationType, computationSubType, columnInfos);
+        notificationService.emitComputationResultColumnFilterChanged(studyUuid, computationType, computationSubType);
+    }
+
+    @Transactional
+    public void resetComputationResultFilters(UUID studyUuid, String computationType, String computationSubType) {
+        UUID computationResultFiltersId = getComputationResultFiltersId(studyUuid);
+        studyConfigService.resetComputationResultFilters(computationResultFiltersId, computationType, computationSubType);
+        notificationService.emitComputationResultGlobalFilterChanged(studyUuid, computationType);
         notificationService.emitComputationResultColumnFilterChanged(studyUuid, computationType, computationSubType);
     }
 
