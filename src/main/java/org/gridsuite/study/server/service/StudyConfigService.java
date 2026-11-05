@@ -487,6 +487,14 @@ public class StudyConfigService {
             .retrieve().toBodilessEntity();
     }
 
+    public void resetComputationResultFilters(UUID computationResultFiltersId, String computationType, String computationSubType) {
+        Map<String, Object> uriVariables = Map.of(COMPUTATION_RESULT_FILTERS_ID, computationResultFiltersId, COMPUTATION_TYPE, computationType, COMPUTATION_SUB_TYPE, computationSubType);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI +
+                "/{computationResultFiltersId}/{computationType}/{computationSubType}/reset-filters").buildAndExpand(uriVariables).toUriString();
+        restClient.put().uri(studyConfigServerBaseUri + path)
+            .retrieve().toBodilessEntity();
+    }
+
     public UUID createComputationResultsFiltersId() {
         var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI + DEFAULT_URI)
                 .buildAndExpand().toUriString();
