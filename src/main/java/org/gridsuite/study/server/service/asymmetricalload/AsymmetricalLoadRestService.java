@@ -127,12 +127,12 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
         return restTemplate.getForObject(baseUri + path, String.class);
     }
 
-    public void deleteAsymmetricalLoadResults(List<UUID> resultsUuids) {
+    public void deleteResults(List<UUID> resultsUuids) {
         deleteCalculationResults(resultsUuids, ASYMMETRICAL_LOAD_URI + "/results", restTemplate, baseUri);
     }
 
-    public void deleteAllAsymmetricalLoadResults() {
-        deleteAsymmetricalLoadResults(null);
+    public void deleteAllResults() {
+        restTemplate.delete(baseUri + DELIMITER + PCC_MIN_API_VERSION + "/supervision/asymmetrical-load/results");
     }
 
     public Integer getAsymmetricalLoadResultsCount() {

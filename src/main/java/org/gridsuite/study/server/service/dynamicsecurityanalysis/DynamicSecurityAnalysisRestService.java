@@ -50,6 +50,7 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
     public static final String DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER = "parameters";
     public static final String DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN = "networks";
     public static final String DYNAMIC_SECURITY_ANALYSIS_END_POINT_RESULT = "results";
+    public static final String DYNAMIC_SECURITY_ANALYSIS_END_POINT_SUPERVISION_RESULT = "supervision/results";
 
     private final ObjectMapper objectMapper;
 
@@ -230,7 +231,7 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
     }
 
     public void deleteResults(List<UUID> resultUuids) {
-        if (CollectionUtils.isEmpty(resultUuids)) {
+        if (Objects.requireNonNull(resultUuids, "resultUuids must not be null").isEmpty()) {
             return;
         }
         String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RESULT);
@@ -241,7 +242,7 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
     }
 
     public void deleteAllResults() {
-        deleteResults(null);
+        getRestTemplate().delete(buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_SUPERVISION_RESULT));
     }
 
     public Integer getResultsCount() {

@@ -80,7 +80,7 @@ public class ShortCircuitService extends AbstractComputationService {
         ComputationType computationType = busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS;
         UUID shortCircuitResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, computationType);
         if (shortCircuitResultUuid != null) {
-            shortCircuitRestService.deleteShortCircuitAnalysisResults(List.of(shortCircuitResultUuid));
+            shortCircuitRestService.deleteResults(List.of(shortCircuitResultUuid));
         }
         UUID scReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(computationType.name(), UUID.randomUUID());
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);

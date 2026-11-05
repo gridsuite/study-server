@@ -405,8 +405,7 @@ class LogicalControlsTest {
 
         wireMockServer.stubFor(get(urlPathEqualTo("/v1/supervision/logical-controls/results-count"))
             .willReturn(okJson("1")));
-        wireMockServer.stubFor(delete(urlPathEqualTo("/v1/logical-controls/results"))
-            .willReturn(ok()));
+        computationServerStubs.stubDeleteAllResults(LOGICAL_CONTROLS_PREFIX);
         wireMockServer.stubFor(delete(urlPathMatching("/v1/reports.*"))
             .willReturn(ok()));
 
@@ -416,7 +415,7 @@ class LogicalControlsTest {
 
         Integer deletedCount = supervisionService.deleteComputationResults(ComputationType.LOGICAL_CONTROLS, false);
         assertEquals(1, deletedCount);
-        wireMockServer.verify(1, deleteRequestedFor(urlPathEqualTo("/v1/logical-controls/results")));
+        computationServerStubs.verifyDeleteAllResults(LOGICAL_CONTROLS_PREFIX);
 
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByLogicalControlsResultUuidNotNull().size());
     }

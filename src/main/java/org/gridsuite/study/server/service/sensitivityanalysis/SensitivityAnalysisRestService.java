@@ -212,12 +212,12 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
         }
     }
 
-    public void deleteSensitivityAnalysisResults(List<UUID> resultsUuids) {
+    public void deleteResults(List<UUID> resultsUuids) {
         deleteCalculationResults(resultsUuids, DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results", restTemplate, baseUri);
     }
 
-    public void deleteAllSensitivityAnalysisResults() {
-        deleteSensitivityAnalysisResults(null);
+    public void deleteAllResults() {
+        restTemplate.delete(baseUri + DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/supervision/results");
     }
 
     public Integer getSensitivityAnalysisResultsCount() {

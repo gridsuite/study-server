@@ -9,6 +9,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
@@ -32,7 +33,7 @@ public abstract class AbstractComputationRestService extends AbstractRestClient 
                                                 String path,
                                                 RestTemplate restTemplate,
                                                 String serverBaseUri) {
-        if (resultsUuids != null && resultsUuids.isEmpty()) {
+        if (Objects.requireNonNull(resultsUuids, "resultsUuids must not be null").isEmpty()) {
             return;
         }
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(path).queryParam(QUERY_PARAM_RESULTS_UUIDS, resultsUuids);
@@ -44,7 +45,7 @@ public abstract class AbstractComputationRestService extends AbstractRestClient 
                                                 RestTemplate restTemplate,
                                                 String serverBaseUri,
                                                 String userId) {
-        if (resultsUuids != null && resultsUuids.isEmpty()) {
+        if (Objects.requireNonNull(resultsUuids, "resultsUuids must not be null").isEmpty()) {
             return;
         }
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(path).queryParam(QUERY_PARAM_RESULTS_UUIDS, resultsUuids);

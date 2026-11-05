@@ -154,12 +154,12 @@ public class StateEstimationRestService extends AbstractComputationRestService i
         return restTemplate.getForObject(baseUri + path, String.class);
     }
 
-    public void deleteStateEstimationResults(List<UUID> resultsUuids) {
+    public void deleteResults(List<UUID> resultsUuids) {
         deleteCalculationResults(resultsUuids, DELIMITER + STATE_ESTIMATION_API_VERSION + "/results", restTemplate, baseUri);
     }
 
-    public void deleteAllStateEstimationResults() {
-        deleteStateEstimationResults(null);
+    public void deleteAllResults() {
+        restTemplate.delete(baseUri + DELIMITER + STATE_ESTIMATION_API_VERSION + "/supervision/results");
     }
 
     public Integer getStateEstimationResultsCount() {

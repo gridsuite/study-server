@@ -114,12 +114,12 @@ public class LogicalControlsRestService extends AbstractComputationRestService {
         }
     }
 
-    public void deleteLogicalControlsResults(List<UUID> resultsUuids) {
+    public void deleteResults(List<UUID> resultsUuids) {
         deleteCalculationResults(resultsUuids, LOGICAL_CONTROLS_URI + "/results", restTemplate, baseUri);
     }
 
-    public void deleteAllLogicalControlsResults() {
-        deleteLogicalControlsResults(null);
+    public void deleteAllResults() {
+        restTemplate.delete(baseUri + DELIMITER + STATE_ESTIMATION_API_VERSION + "/supervision/logical-controls/results");
     }
 
     public Integer getLogicalControlsResultsCount() {

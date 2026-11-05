@@ -71,7 +71,7 @@ public class LogicalControlsService extends AbstractComputationService {
 
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOGICAL_CONTROLS);
         if (prevResultUuid != null) {
-            logicalControlsRestService.deleteLogicalControlsResults(List.of(prevResultUuid));
+            logicalControlsRestService.deleteResults(List.of(prevResultUuid));
         }
 
         UUID result = logicalControlsRestService.runLogicalControls(networkUuid, variantId, studyEntity.getStateEstimationParametersUuid(), new ReportInfos(reportUuid, nodeUuid), receiver, userId);

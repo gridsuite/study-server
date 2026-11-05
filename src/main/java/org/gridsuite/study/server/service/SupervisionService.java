@@ -290,7 +290,7 @@ public class SupervisionService {
             rootNetworkNodeInfo.getComputationReports().remove(ComputationType.SECURITY_ANALYSIS.name());
         });
         reportService.deleteReports(reportsToDelete);
-        securityAnalysisService.deleteAllSecurityAnalysisResults();
+        securityAnalysisService.deleteAllResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.SECURITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
@@ -306,7 +306,7 @@ public class SupervisionService {
             rootNetworkNodeInfo.getComputationReports().remove(ComputationType.SENSITIVITY_ANALYSIS.name());
         });
         reportService.deleteReports(reportsToDelete);
-        sensitivityAnalysisService.deleteAllSensitivityAnalysisResults();
+        sensitivityAnalysisService.deleteAllResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.SENSITIVITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
 
         return rootNetworkNodeInfoEntities.size();
@@ -339,7 +339,7 @@ public class SupervisionService {
         }
 
         // Then delete all results (1-bus and all-buses), cause short-circuit-server cannot make the difference
-        shortCircuitService.deleteAllShortCircuitAnalysisResults();
+        shortCircuitService.deleteAllResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.SHORT_CIRCUIT, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         // return distinct processed time point node info count
         return (int) Stream.concat(allBusesrootNetworkNodeInfoEntities.stream(), oneBusrootNetworkNodeInfoEntities.stream())
@@ -361,7 +361,7 @@ public class SupervisionService {
             });
             reportService.deleteReports(reportsToDelete);
         }
-        voltageInitService.deleteAllVoltageInitResults(SUPERVISION_USER);
+        voltageInitService.deleteAllResults(SUPERVISION_USER);
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.VOLTAGE_INITIALIZATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
@@ -377,7 +377,7 @@ public class SupervisionService {
             rootNetworkNodeInfo.getComputationReports().remove(ComputationType.STATE_ESTIMATION.name());
         });
         reportService.deleteReports(reportsToDelete);
-        stateEstimationService.deleteAllStateEstimationResults();
+        stateEstimationService.deleteAllResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.STATE_ESTIMATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
@@ -393,7 +393,7 @@ public class SupervisionService {
             rootNetworkNodeInfo.getComputationReports().remove(ComputationType.PCC_MIN.name());
         });
         reportService.deleteReports(reportsToDelete);
-        pccMinService.deleteAllPccMinResults();
+        pccMinService.deleteAllResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.PCC_MIN, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
@@ -409,7 +409,7 @@ public class SupervisionService {
             rootNetworkNodeInfo.getComputationReports().remove(ComputationType.ASYMMETRICAL_LOAD.name());
         });
         reportService.deleteReports(reportsToDelete);
-        asymmetricalLoadRestService.deleteAllAsymmetricalLoadResults();
+        asymmetricalLoadRestService.deleteAllResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.ASYMMETRICAL_LOAD, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
@@ -425,7 +425,7 @@ public class SupervisionService {
             rootNetworkNodeInfo.getComputationReports().remove(ComputationType.LOGICAL_CONTROLS.name());
         });
         reportService.deleteReports(reportsToDelete);
-        logicalControlsRestService.deleteAllLogicalControlsResults();
+        logicalControlsRestService.deleteAllResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.LOGICAL_CONTROLS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
