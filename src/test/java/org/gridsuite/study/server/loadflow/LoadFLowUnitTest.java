@@ -25,6 +25,7 @@ import org.gridsuite.study.server.repository.networkmodificationtree.NodeReposit
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
@@ -84,7 +85,7 @@ class LoadFLowUnitTest {
     @MockitoBean
     private RootNetworkService rootNetworkService;
     @MockitoBean
-    private NetworkModificationService networkModificationService;
+    private NetworkModificationRestService networkModificationService;
     @MockitoBean
     private LoadFlowRestService loadFlowRestService;
     @MockitoBean

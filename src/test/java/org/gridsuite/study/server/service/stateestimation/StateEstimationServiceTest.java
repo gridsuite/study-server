@@ -11,6 +11,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
+import org.gridsuite.study.server.service.logicalcontrols.LogicalControlsRestService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,12 +24,20 @@ import org.springframework.http.ResponseEntity;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.gridsuite.study.server.dto.ComputationType.STATE_ESTIMATION;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class StateEstimationServiceTest {
 
     private static final UUID RESULT_UUID = UUID.randomUUID();
+    private static final UUID NODE_UUID = UUID.randomUUID();
+    private static final UUID ROOT_NETWORK_UUID = UUID.randomUUID();
+    private static final UUID NETWORK_UUID = UUID.randomUUID();
+    private static final String VARIANT_ID = "node_variant";
+    private static final String GLOBAL_FILTERS = "{\"countryCode\":[\"FR\"]}";
 
     @Mock
     private StudyRepository studyRepository;
@@ -45,6 +54,8 @@ class StateEstimationServiceTest {
     @Mock
     private StateEstimationRestService stateEstimationRestService;
     @Mock
+    private LogicalControlsRestService logicalControlsRestService;
+    @Mock
     private UserAdminService userAdminService;
 
     private StateEstimationService stateEstimationService;
@@ -52,7 +63,7 @@ class StateEstimationServiceTest {
     @BeforeEach
     void setUp() {
         stateEstimationService = new StateEstimationService(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService,
-            networkModificationTreeService, rootNetworkService, stateEstimationRestService, userAdminService, new ObjectMapper());
+            networkModificationTreeService, rootNetworkService, stateEstimationRestService, logicalControlsRestService, userAdminService, new ObjectMapper());
     }
 
     @Test
@@ -61,5 +72,27 @@ class StateEstimationServiceTest {
         when(stateEstimationRestService.downloadDebugFile(RESULT_UUID)).thenReturn(response);
 
         assertThat(stateEstimationService.downloadDebugFile(RESULT_UUID)).isEqualTo(response);
+    }
+
+    @Test
+    void measurementsUseStoredResultNetworkAndNodeVariant() {
+        when(rootNetworkNodeInfoService.getComputationResultUuid(NODE_UUID, ROOT_NETWORK_UUID, STATE_ESTIMATION)).thenReturn(RESULT_UUID);
+        when(rootNetworkService.getNetworkUuid(ROOT_NETWORK_UUID)).thenReturn(NETWORK_UUID);
+        when(networkModificationTreeService.getVariantId(NODE_UUID, ROOT_NETWORK_UUID)).thenReturn(VARIANT_ID);
+        when(stateEstimationRestService.getStateEstimationMeasurements(RESULT_UUID, NETWORK_UUID, VARIANT_ID, GLOBAL_FILTERS)).thenReturn("[]");
+
+        assertThat(stateEstimationService.getStateEstimationMeasurements(NODE_UUID, ROOT_NETWORK_UUID, GLOBAL_FILTERS)).isEqualTo("[]");
+
+        verify(stateEstimationRestService).getStateEstimationMeasurements(RESULT_UUID, NETWORK_UUID, VARIANT_ID, GLOBAL_FILTERS);
+        verifyNoInteractions(notificationService, studyRepository, computationParametersService);
+    }
+
+    @Test
+    void measurementsWithoutStoredResultDoNothingElse() {
+        when(rootNetworkNodeInfoService.getComputationResultUuid(NODE_UUID, ROOT_NETWORK_UUID, STATE_ESTIMATION)).thenReturn(null);
+
+        assertThat(stateEstimationService.getStateEstimationMeasurements(NODE_UUID, ROOT_NETWORK_UUID, GLOBAL_FILTERS)).isNull();
+
+        verifyNoInteractions(rootNetworkService, networkModificationTreeService, stateEstimationRestService, notificationService, studyRepository);
     }
 }

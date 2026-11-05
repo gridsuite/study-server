@@ -95,7 +95,7 @@ class AsymmetricalLoadTest {
             "\"SENSITIVITY_ANALYSIS\":null,\"SHORT_CIRCUIT\":null,\"SHORT_CIRCUIT_ONE_BUS\":null," +
             "\"VOLTAGE_INITIALIZATION\":null,\"DYNAMIC_SIMULATION\":null,\"DYNAMIC_SECURITY_ANALYSIS\":null," +
             "\"DYNAMIC_MARGIN_CALCULATION\":null,\"STATE_ESTIMATION\":null,\"PCC_MIN\":null," +
-            "\"ASYMMETRICAL_LOAD\":\"{\\\"status\\\":\\\"COMPLETED\\\"}\"}";
+            "\"ASYMMETRICAL_LOAD\":\"{\\\"status\\\":\\\"COMPLETED\\\"}\",\"LOGICAL_CONTROLS\":null}";
     private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
 
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";

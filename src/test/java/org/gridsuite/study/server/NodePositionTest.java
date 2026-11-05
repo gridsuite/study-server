@@ -17,8 +17,8 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
-import org.gridsuite.study.server.service.NetworkModificationService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
@@ -56,7 +56,7 @@ class NodePositionTest {
     @Autowired
     private NodeRepository nodeRepository;
     @MockitoBean
-    private NetworkModificationService networkModificationService;
+    private NetworkModificationRestService networkModificationService;
     @Autowired
     private TestUtils studyTestUtils;
 

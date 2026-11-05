@@ -394,6 +394,12 @@ public class RootNetworkService {
         return study.getRootNetworks();
     }
 
+    public List<String> getStudyRootNetworkTags(UUID studyUuid) {
+        return rootNetworkRepository.findAllByStudyId(studyUuid).stream()
+                .map(RootNetworkEntity::getTag)
+                .toList();
+    }
+
     public List<UUID> getStudyRootNetworkIds(UUID studyUuid) {
         return rootNetworkRepository.findAllByStudyId(studyUuid).stream()
                 .map(RootNetworkEntity::getId)

@@ -27,6 +27,8 @@ import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurit
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
+import org.gridsuite.study.server.service.logicalcontrols.LogicalControlsRestService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
@@ -94,6 +96,8 @@ public class SupervisionService {
 
     private final AsymmetricalLoadRestService asymmetricalLoadRestService;
 
+    private final LogicalControlsRestService logicalControlsRestService;
+
     private final ElasticsearchOperations elasticsearchOperations;
 
     private final StudyInfosService studyInfosService;
@@ -104,9 +108,9 @@ public class SupervisionService {
 
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
-    private final NetworkModificationService networkModificationService;
+    private final NetworkModificationRestService networkModificationService;
 
-    private static final String SUPERVISION_USER = "Supervision";
+    public static final String SUPERVISION_USER = "Supervision";
 
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService, LoadFlowService loadFlowService,
@@ -122,6 +126,7 @@ public class SupervisionService {
                               VoltageInitRestService voltageInitService,
                               EquipmentInfosService equipmentInfosService,
                               AsymmetricalLoadRestService asymmetricalLoadRestService,
+                              LogicalControlsRestService logicalControlsRestService,
                               StateEstimationRestService stateEstimationService,
                               PccMinRestService pccMinService,
                               ElasticsearchOperations elasticsearchOperations,
@@ -130,7 +135,7 @@ public class SupervisionService {
                               StudyRepository studyRepository,
                               NodeRepository nodeRepository,
                               NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
-                              NetworkModificationService networkModificationService) {
+                              NetworkModificationRestService networkModificationService) {
 
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -149,6 +154,7 @@ public class SupervisionService {
         this.stateEstimationService = stateEstimationService;
         this.pccMinService = pccMinService;
         this.asymmetricalLoadRestService = asymmetricalLoadRestService;
+        this.logicalControlsRestService = logicalControlsRestService;
         this.elasticsearchOperations = elasticsearchOperations;
         this.studyInfosService = studyInfosService;
         this.rootNetworkService = rootNetworkService;
@@ -182,6 +188,8 @@ public class SupervisionService {
                 dryRun ? pccMinService.getPccMinResultsCount() : deletePccMinResults();
             case ASYMMETRICAL_LOAD ->
                 dryRun ? asymmetricalLoadRestService.getAsymmetricalLoadResultsCount() : deleteAsymmetricalLoadResults();
+            case LOGICAL_CONTROLS ->
+                dryRun ? logicalControlsRestService.getLogicalControlsResultsCount() : deleteLogicalControlsResults();
         };
     }
 
@@ -353,7 +361,7 @@ public class SupervisionService {
             });
             reportService.deleteReports(reportsToDelete);
         }
-        voltageInitService.deleteAllVoltageInitResults();
+        voltageInitService.deleteAllVoltageInitResults(SUPERVISION_USER);
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.VOLTAGE_INITIALIZATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
@@ -403,6 +411,22 @@ public class SupervisionService {
         reportService.deleteReports(reportsToDelete);
         asymmetricalLoadRestService.deleteAllAsymmetricalLoadResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.ASYMMETRICAL_LOAD, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        return rootNetworkNodeInfoEntities.size();
+    }
+
+    private Integer deleteLogicalControlsResults() {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        startTime.set(System.nanoTime());
+        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByLogicalControlsResultUuidNotNull();
+        List<UUID> reportsToDelete = new ArrayList<>();
+        rootNetworkNodeInfoEntities.forEach(rootNetworkNodeInfo -> {
+            rootNetworkNodeInfo.setLogicalControlsResultUuid(null);
+            reportsToDelete.add(rootNetworkNodeInfo.getComputationReports().get(ComputationType.LOGICAL_CONTROLS.name()));
+            rootNetworkNodeInfo.getComputationReports().remove(ComputationType.LOGICAL_CONTROLS.name());
+        });
+        reportService.deleteReports(reportsToDelete);
+        logicalControlsRestService.deleteAllLogicalControlsResults();
+        LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.LOGICAL_CONTROLS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
 

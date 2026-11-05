@@ -4,11 +4,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.service;
+package org.gridsuite.study.server.service.networkmodification;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ModificationReference;
+import org.gridsuite.study.server.dto.RootNetworkTagsCheckInfos;
+import org.gridsuite.study.server.dto.SharedModificationsWriteAccess;
+import org.gridsuite.study.server.service.RootNetworkService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,6 +22,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -45,12 +49,12 @@ class NetworkModificationServiceTest {
     @Mock
     private RootNetworkService rootNetworkService;
 
-    private NetworkModificationService networkModificationService;
+    private NetworkModificationRestService networkModificationService;
 
     @BeforeEach
     void setup() {
         when(remoteServicesProperties.getServiceUri("network-modification-server")).thenReturn(NETWORK_MODIFICATION_SERVER_URI);
-        networkModificationService = new NetworkModificationService(remoteServicesProperties, restTemplate, new ObjectMapper(), rootNetworkService);
+        networkModificationService = new NetworkModificationRestService(remoteServicesProperties, restTemplate, new ObjectMapper(), rootNetworkService);
     }
 
     @Test
@@ -77,16 +81,6 @@ class NetworkModificationServiceTest {
         when(restTemplate.getForObject(expectedUrl, String.class)).thenReturn(RESPONSE);
 
         assertThat(networkModificationService.getLineTypeWithLimits(lineTypeUuid, "FR", "25", "1.0")).isEqualTo(RESPONSE);
-    }
-
-    @Test
-    void testGetNetworkModificationsFromComposite() {
-        UUID firstUuid = UUID.randomUUID();
-        UUID secondUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/network-modifications?uuids=" + firstUuid + "&uuids=" + secondUuid + "&onlyMetadata=false";
-        expectUserIdIsForwarded(expectedUrl);
-
-        assertThat(networkModificationService.getNetworkModificationsFromComposite(List.of(firstUuid, secondUuid), false, USER_ID)).isEqualTo(RESPONSE);
     }
 
     @Test
@@ -132,16 +126,16 @@ class NetworkModificationServiceTest {
     }
 
     @Test
-    void testDeleteModificationsGroups() {
-        UUID firstUuid = UUID.randomUUID();
-        UUID secondUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups";
+    void testUnshareModificationReference() {
+        UUID modificationReferenceUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/unshare";
+
+        networkModificationService.unshareModificationReferences(List.of(modificationReferenceUuid), USER_ID);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        networkModificationService.deleteModificationsGroups(List.of(firstUuid, secondUuid));
-        HttpEntity<String> httpEntity = new HttpEntity<>("[\"" + firstUuid + "\",\"" + secondUuid + "\"]", headers);
-        verify(restTemplate).exchange(expectedUrl, HttpMethod.DELETE, httpEntity, new ParameterizedTypeReference<Map<UUID, UUID>>() { });
+        headers.set(HEADER_USER_ID, USER_ID);
+        verify(restTemplate).exchange(expectedUrl, HttpMethod.PUT, new HttpEntity<>(List.of(modificationReferenceUuid), headers), Void.class);
     }
 
     @Test
@@ -207,18 +201,45 @@ class NetworkModificationServiceTest {
     }
 
     @Test
+    void testDeleteModificationReferences() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/" + groupUuid + "/references";
+
+        networkModificationService.deleteModificationReferences(groupUuid, "userId");
+
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.DELETE),
+                argThat((HttpEntity<?> entity) -> "userId".equals(entity.getHeaders().getFirst(HEADER_USER_ID))), eq(Void.class));
+    }
+
+    @Test
+    void testAddRootNetworkTag() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
+                + "?groupUuids=" + groupUuid + "&newTag=PH2";
+
+        networkModificationService.addRootNetworkTag(List.of(groupUuid), "PH2");
+
+        verify(restTemplate).exchange(eq(URI.create(expectedUrl)), eq(HttpMethod.POST), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+
+        // there is nothing to add the tag to without a group
+        networkModificationService.addRootNetworkTag(List.of(), "PH2");
+
+        verifyNoMoreInteractions(restTemplate);
+    }
+
+    @Test
     void testRenameRootNetworkTag() {
         UUID firstGroupUuid = UUID.randomUUID();
         UUID secondGroupUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
                 + "?groupUuids=" + firstGroupUuid + "&groupUuids=" + secondGroupUuid + "&oldTag=PH1&newTag=PH2";
 
-        networkModificationService.renameRootNetworkTag(List.of(firstGroupUuid, secondGroupUuid), "PH1", "PH2");
+        networkModificationService.renameRootNetworkTag(List.of(firstGroupUuid, secondGroupUuid), "PH1", "PH2", USER_ID);
 
-        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+        verify(restTemplate).exchange(eq(URI.create(expectedUrl)), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
 
         // there is nothing to rename without a group
-        networkModificationService.renameRootNetworkTag(List.of(), "PH1", "PH2");
+        networkModificationService.renameRootNetworkTag(List.of(), "PH1", "PH2", USER_ID);
 
         verifyNoMoreInteractions(restTemplate);
     }
@@ -241,19 +262,42 @@ class NetworkModificationServiceTest {
     }
 
     @Test
-    void testAssertReferencedModificationsAreWritable() {
+    void testDuplicateModificationsGroupAssociatesTheRootNetworkTags() {
+        UUID sourceGroupUuid = UUID.randomUUID();
         UUID groupUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/references/authorized?uuids=" + groupUuid;
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/" + sourceGroupUuid + "/duplicate"
+                + "?groupUuid=" + groupUuid + "&rootNetworkTags=PH1&rootNetworkTags=A%26B%2BC";
 
-        networkModificationService.assertReferencedModificationsAreWritable(List.of(groupUuid), USER_ID);
+        networkModificationService.duplicateModificationsGroup(sourceGroupUuid, groupUuid, List.of("PH1", "A&B+C"), "userId");
 
-        // the server needs the user to tell whether the shared modifications are writable
+        verify(restTemplate).exchange(eq(URI.create(expectedUrl)), eq(HttpMethod.POST), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+    }
+
+    @Test
+    void testAssertRootNetworkTagsAllowed() {
+        UUID groupUuid = UUID.randomUUID();
+        UUID modificationUuid = UUID.randomUUID();
+        UUID sharedUuid = UUID.randomUUID();
+        String url = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/root-network-tags/authorized";
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, USER_ID);
-        verify(restTemplate).exchange(expectedUrl, HttpMethod.GET, new HttpEntity<>(headers), Void.class);
+        headers.setContentType(MediaType.APPLICATION_JSON);
 
-        // there is nothing to check without a container
-        networkModificationService.assertReferencedModificationsAreWritable(List.of(), USER_ID);
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of(), List.of(), List.of("PH1", "PH2"), USER_ID);
+        verify(restTemplate).exchange(url, HttpMethod.POST, new HttpEntity<>(
+                new RootNetworkTagsCheckInfos(List.of(groupUuid), List.of(), List.of(), List.of("PH1", "PH2")), headers), Void.class);
+
+        // the modifications and the shared modifications are checked too, even alone
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of(modificationUuid), List.of(), List.of("PH1"), USER_ID);
+        verify(restTemplate).exchange(url, HttpMethod.POST, new HttpEntity<>(
+                new RootNetworkTagsCheckInfos(List.of(), List.of(modificationUuid), List.of(), List.of("PH1")), headers), Void.class);
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of(), List.of(sharedUuid), List.of("PH1"), USER_ID);
+        verify(restTemplate).exchange(url, HttpMethod.POST, new HttpEntity<>(
+                new RootNetworkTagsCheckInfos(List.of(), List.of(), List.of(sharedUuid), List.of("PH1")), headers), Void.class);
+
+        // there is nothing to check without a tag, or without anything to check it on
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of(), List.of(), List.of(), USER_ID);
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of(), List.of(), List.of("PH1"), USER_ID);
 
         verifyNoMoreInteractions(restTemplate);
     }
@@ -265,6 +309,42 @@ class NetworkModificationServiceTest {
 
         networkModificationService.hasModificationReferences(List.of(modificationUuid));
         verify(restTemplate).getForObject(eq(expectedUrl), eq(Boolean.class));
+    }
+
+    @Test
+    void testGetReferencedModificationsWriteAccess() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/references/write-access?uuids=" + groupUuid;
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, USER_ID);
+        when(restTemplate.exchange(expectedUrl, HttpMethod.GET, new HttpEntity<>(headers), SharedModificationsWriteAccess.class))
+            .thenReturn(ResponseEntity.ok(SharedModificationsWriteAccess.NONE_WRITABLE));
+
+        assertThat(networkModificationService.getReferencedModificationsWriteAccess(List.of(groupUuid), USER_ID))
+            .isEqualTo(SharedModificationsWriteAccess.NONE_WRITABLE);
+    }
+
+    @Test
+    void testGetContainersWithModificationReferences() {
+        UUID groupUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/reference-modifications";
+        when(restTemplate.exchange(eq(expectedUrl), eq(HttpMethod.POST), argThat((HttpEntity<?> entity) -> List.of(groupUuid).equals(entity.getBody())), any(ParameterizedTypeReference.class)))
+            .thenReturn(ResponseEntity.ok(List.of(groupUuid)));
+
+        assertThat(networkModificationService.getContainersWithModificationReferences(List.of(groupUuid))).containsExactly(groupUuid);
+        // there is nothing to ask without a container
+        assertThat(networkModificationService.getContainersWithModificationReferences(List.of())).isEmpty();
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.POST), any(HttpEntity.class), any(ParameterizedTypeReference.class));
+    }
+
+    @Test
+    void testUpdateNetworkModificationsNameAndDescription() {
+        UUID modificationUuid = UUID.randomUUID();
+        String metadata = "";
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid + "/name-and-description";
+
+        networkModificationService.updateNetworkModificationNameAndDescription(modificationUuid, metadata, USER_ID);
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
     }
 
     private void expectUserIdIsForwarded(String expectedUrl) {

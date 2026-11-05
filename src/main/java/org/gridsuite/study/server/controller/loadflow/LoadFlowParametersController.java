@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/loadflow")
 public class LoadFlowParametersController {
@@ -39,8 +41,9 @@ public class LoadFlowParametersController {
     }
 
     @GetMapping(value = "/parameters/{parameterUuid}")
-    public ResponseEntity<String> getLoadFlowParameters(@PathVariable UUID parameterUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(loadFlowService.getCommonParameters(parameterUuid));
+    public ResponseEntity<String> getLoadFlowParameters(@PathVariable UUID parameterUuid,
+                                                        @RequestHeader(HEADER_USER_ID) String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(loadFlowService.getParameters(parameterUuid, userId));
     }
 
     @PutMapping(value = "/parameters/{parameterUuid}")

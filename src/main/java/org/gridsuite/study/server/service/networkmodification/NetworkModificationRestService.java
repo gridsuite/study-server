@@ -4,7 +4,7 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.service;
+package org.gridsuite.study.server.service.networkmodification;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,8 +14,11 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.RootNetworkTagsCheckInfos;
+import org.gridsuite.study.server.dto.SharedModificationsWriteAccess;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
+import org.gridsuite.study.server.service.RootNetworkService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.util.Pair;
@@ -41,7 +44,7 @@ import static org.gridsuite.study.server.utils.JsonUtils.getModificationContextJ
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Service
-public class NetworkModificationService {
+public class NetworkModificationRestService {
 
     private static final String DELIMITER = "/";
     private static final String COMPOSITE_PATH = "network-composite-modifications" + DELIMITER;
@@ -54,11 +57,11 @@ public class NetworkModificationService {
     private static final String QUERY_PARAM_ACTION = "action";
     private static final String QUERY_PARAM_NAME = "name";
     private static final String QUERY_PARAM_GROUP_UUID = "groupUuid";
-    public static final String QUERY_PARAM_NODE_CONTAINER_UUID = "nodeContainerUuid";
-    private static final String QUERY_PARAM_STUDY_ROOT_CONTAINER_UUID = "studyRootContainerUuid";
     private static final String QUERY_PARAM_ROOT_NETWORK_TAG = "rootNetworkTag";
     private static final String QUERY_PARAM_GROUP_UUIDS = "groupUuids";
     private static final String QUERY_PARAM_ROOT_NETWORK_TAGS = "rootNetworkTags";
+    private static final String QUERY_PARAM_OLD_TAG = "oldTag";
+    private static final String QUERY_PARAM_NEW_TAG = "newTag";
     private static final String ROOT_NETWORK_TAG_PATH = "root-network-tag";
     private static final String PARAM_USER_INPUT = "userInput";
 
@@ -68,9 +71,9 @@ public class NetworkModificationService {
     private String networkModificationServerBaseUri;
 
     @Autowired
-    NetworkModificationService(RemoteServicesProperties remoteServicesProperties,
-                               RestTemplate restTemplate,
-                               ObjectMapper objectMapper, RootNetworkService rootNetworkService) {
+    NetworkModificationRestService(RemoteServicesProperties remoteServicesProperties,
+                                   RestTemplate restTemplate,
+                                   ObjectMapper objectMapper, RootNetworkService rootNetworkService) {
         this.networkModificationServerBaseUri = remoteServicesProperties.getServiceUri("network-modification-server");
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
@@ -125,14 +128,6 @@ public class NetworkModificationService {
         return restTemplate.getForObject(getNetworkModificationServerURI(false) + path, String.class);
     }
 
-    public String getNetworkModificationsFromComposite(List<UUID> compositeModificationUuids, boolean onlyMetadata, String userId) {
-        String path = UriComponentsBuilder.fromPath(CONTAINERS + DELIMITER + NETWORK_MODIFICATIONS_PATH)
-            .queryParam(UUIDS, compositeModificationUuids)
-            .queryParam("onlyMetadata", onlyMetadata)
-            .build().toUriString();
-        return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, userIdEntity(userId), String.class).getBody();
-    }
-
     public String getNetworkModification(UUID networkModificationUuid, String userId) {
         String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + "/{uuid}").buildAndExpand(networkModificationUuid).toUriString();
         return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, userIdEntity(userId), String.class).getBody();
@@ -154,6 +149,11 @@ public class NetworkModificationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set(HEADER_USER_ID, userId);
         restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, new HttpEntity<>(modificationInfos, headers), Void.class);
+    }
+
+    public void unshareModificationReferences(List<UUID> modificationReferenceUuids, String userId) {
+        String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + "/unshare").build().toUriString();
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, userIdEntity(userId, modificationReferenceUuids), Void.class);
     }
 
     public void updateNetworkModificationsMetadata(List<UUID> networkModificationUuids, String metadata, String userId) {
@@ -198,41 +198,23 @@ public class NetworkModificationService {
         return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, Integer.class).getBody();
     }
 
-    public void deleteModifications(UUID groupUUid) {
+    public void deleteModificationsByGroup(UUID groupUUid, String userId) {
         Objects.requireNonNull(groupUUid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .buildAndExpand(groupUUid)
             .toUriString();
 
-        restTemplate.delete(getNetworkModificationServerURI(false) + path);
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.DELETE, userIdEntity(userId), Void.class);
     }
 
-    public void deleteModificationsGroups(List<UUID> groupUuids) {
-        Objects.requireNonNull(groupUuids);
-        if (groupUuids.isEmpty()) {
-            return;
-        }
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(toJson(groupUuids), headers);
-        var path = UriComponentsBuilder.fromPath(GROUPS)
-                .toUriString();
-
-        restTemplate.exchange(getNetworkModificationServerURI(false) + path,
-                HttpMethod.DELETE,
-                httpEntity,
-                new ParameterizedTypeReference<Map<UUID, UUID>>() { });
-    }
-
-    public void deleteModifications(UUID groupUuid, List<UUID> modificationsUuids) {
-        Objects.requireNonNull(groupUuid);
+    public void deleteModificationsByUuids(List<UUID> modificationsUuids, String userId) {
+        Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
                 .queryParam(UUIDS, modificationsUuids)
-                .queryParam(GROUP_UUID, groupUuid)
                 .buildAndExpand()
                 .toUriString();
-        restTemplate.delete(path);
+        restTemplate.exchange(path, HttpMethod.DELETE, userIdEntity(userId), Void.class);
     }
 
     public NetworkModificationsResult createModification(UUID groupUuid,
@@ -297,15 +279,22 @@ public class NetworkModificationService {
         restTemplate.exchange(path, HttpMethod.PUT, userIdEntity(userId, metadata), Void.class);
     }
 
-    public void restoreModifications(UUID groupUUid, List<UUID> modificationsUuids, UUID studyUuid, UUID nodeUuid, String userId) {
+    public void updateNetworkModificationNameAndDescription(UUID networkModificationUuid, String metadata, String userId) {
+        String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + DELIMITER + networkModificationUuid.toString() + DELIMITER + "name-and-description")
+                .build().toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, new HttpEntity<>(metadata, headers), Void.class);
+    }
+
+    public void restoreModifications(UUID groupUUid, List<UUID> modificationsUuids, String userId) {
         Objects.requireNonNull(groupUUid);
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
                 .queryParam(UUIDS, modificationsUuids)
                 .queryParam(GROUP_UUID, groupUUid)
-                .queryParam(QUERY_PARAM_STUDY_ROOT_CONTAINER_UUID, studyUuid)
-                .queryParam(QUERY_PARAM_NODE_CONTAINER_UUID, nodeUuid)
                 .queryParam(QUERY_PARAM_STASHED, false)
                 .buildAndExpand()
                 .toUriString();
@@ -385,7 +374,7 @@ public class NetworkModificationService {
         ).getBody();
     }
 
-    public void updateRootNetworkApplicability(List<UUID> modificationsUuids, String rootNetworkTag, boolean applicable) {
+    public void updateRootNetworkApplicability(List<UUID> modificationsUuids, String rootNetworkTag, boolean applicable, String userId) {
         Objects.requireNonNull(modificationsUuids);
         Objects.requireNonNull(rootNetworkTag);
         var path = UriComponentsBuilder
@@ -397,32 +386,54 @@ public class NetworkModificationService {
                 .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         restTemplate.exchange(path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
+    public void addRootNetworkTag(List<UUID> groupUuids, String newTag) {
+        Objects.requireNonNull(newTag);
+        if (CollectionUtils.isEmpty(groupUuids)) {
+            return;
+        }
+        var uri = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + ROOT_NETWORK_TAG_PATH)
+                .queryParam(QUERY_PARAM_GROUP_UUIDS, groupUuids)
+                .queryParam(QUERY_PARAM_NEW_TAG, "{newTag}")
+                .encode()
+                .buildAndExpand(newTag)
+                .toUri();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        restTemplate.exchange(uri, HttpMethod.POST, new HttpEntity<>(headers), Void.class);
+    }
+
     /**
      * Renames a root network tag in the applicabilities held by the modifications of the given groups.
      */
-    public void renameRootNetworkTag(List<UUID> groupUuids, String oldTag, String newTag) {
+    public void renameRootNetworkTag(List<UUID> groupUuids, String oldTag, String newTag, String userId) {
         Objects.requireNonNull(oldTag);
         Objects.requireNonNull(newTag);
         if (CollectionUtils.isEmpty(groupUuids)) {
             return;
         }
-        var path = UriComponentsBuilder
+        var uri = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + ROOT_NETWORK_TAG_PATH)
                 .queryParam(QUERY_PARAM_GROUP_UUIDS, groupUuids)
-                .queryParam("oldTag", oldTag)
-                .queryParam("newTag", newTag)
-                .buildAndExpand()
-                .toUriString();
+                .queryParam(QUERY_PARAM_OLD_TAG, "{oldTag}")
+                .queryParam(QUERY_PARAM_NEW_TAG, "{newTag}")
+                .encode()
+                .buildAndExpand(oldTag, newTag)
+                .toUri();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HEADER_USER_ID, userId);
 
-        restTemplate.exchange(path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
+        restTemplate.exchange(uri, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
     /**
@@ -533,7 +544,8 @@ public class NetworkModificationService {
      * @return the reference modification left in place of the composite modification, either in the group of the node
      * or in a parent composite
      */
-    public ModificationReference extractCompositeModificationToShare(@NonNull UUID groupUuid, @NonNull UUID modificationUuid, @NonNull String name) {
+    public ModificationReference extractCompositeModificationToShare(@NonNull UUID groupUuid, @NonNull UUID modificationUuid, @NonNull String name, String description) {
+
         String path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + "{modificationUuid}" + DELIMITER + "share")
                 .queryParam(QUERY_PARAM_NAME, name)
                 .queryParam(QUERY_PARAM_GROUP_UUID, groupUuid)
@@ -543,14 +555,13 @@ public class NetworkModificationService {
         return restTemplate.exchange(
                 getNetworkModificationServerURI(false) + path,
                 HttpMethod.POST,
-                null,
+                new HttpEntity<>(description),
                 ModificationReference.class
         ).getBody();
     }
 
-    public UUID assembleModificationsIntoComposite(@NonNull List<UUID> modificationsUuids, UUID nodeUuid, String userId) {
-        var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH)
-                .queryParam(QUERY_PARAM_NODE_CONTAINER_UUID, nodeUuid);
+    public UUID assembleModificationsIntoComposite(@NonNull List<UUID> modificationsUuids, String userId) {
+        var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -589,22 +600,23 @@ public class NetworkModificationService {
         ).getBody();
     }
 
-    public void duplicateModificationsGroup(UUID sourceGroupUuid, UUID groupUuid, UUID newNodeUuid, UUID studyUuid, String userId) {
+    public void duplicateModificationsGroup(UUID sourceGroupUuid, UUID groupUuid, List<String> rootNetworkTags, String userId) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(sourceGroupUuid);
-        var path = UriComponentsBuilder.fromPath("groups/{uuid}/duplicate")
+        var uri = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + "groups/" + sourceGroupUuid + "/duplicate")
                 .queryParam(QUERY_PARAM_GROUP_UUID, groupUuid)
-                .queryParam(QUERY_PARAM_NODE_CONTAINER_UUID, newNodeUuid)
-                .queryParam(QUERY_PARAM_STUDY_ROOT_CONTAINER_UUID, studyUuid)
-                .buildAndExpand(sourceGroupUuid)
-                .toUriString();
+                .queryParam(QUERY_PARAM_ROOT_NETWORK_TAGS, Collections.nCopies(rootNetworkTags.size(), "{rootNetworkTag}"))
+                .encode()
+                .buildAndExpand(rootNetworkTags.toArray())
+                .toUri();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set(HEADER_USER_ID, userId);
 
         restTemplate.exchange(
-            getNetworkModificationServerURI(false) + path,
+            uri,
             HttpMethod.POST,
             new HttpEntity<>(headers),
             Void.class
@@ -650,20 +662,34 @@ public class NetworkModificationService {
                 new ParameterizedTypeReference<Map<UUID, UUID>>() { });
     }
 
-    public void restoreElementReferences(UUID groupUUid, UUID studyUuid, UUID newNodeUuid, String userId) {
-        Objects.requireNonNull(groupUUid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + "/references")
-                .queryParam(QUERY_PARAM_NODE_CONTAINER_UUID, newNodeUuid)
-                .queryParam(QUERY_PARAM_STUDY_ROOT_CONTAINER_UUID, studyUuid)
-                .buildAndExpand(groupUUid)
+    /**
+     * Asks network-modification-server to notify back the recreation of the references of the group, so that they are created in directory-server.
+     * Called after the commit only, so that the node holding the group is resolvable when the notification is consumed.
+     */
+    public void createSharingLinks(List<UUID> groupUuids, String userId) {
+        Objects.requireNonNull(groupUuids);
+        var path = UriComponentsBuilder.fromPath(GROUPS + "/sharing-links")
                 .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HEADER_USER_ID, userId);
+        restTemplate.exchange(
+            getNetworkModificationServerURI(false) + path,
+            HttpMethod.POST,
+            new HttpEntity<>(groupUuids, headers),
+            Void.class);
+    }
+
+    public void deleteModificationReferences(UUID groupUuid, String userId) {
+        Objects.requireNonNull(groupUuid);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + "/references")
+                .buildAndExpand(groupUuid)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
 
-        HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
-        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, httpEntity, Void.class);
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.DELETE, new HttpEntity<>(headers), Void.class);
     }
 
     public void verifyModifications(UUID groupUuid, Set<UUID> modificationUuids) {
@@ -742,19 +768,44 @@ public class NetworkModificationService {
         return Boolean.TRUE.equals(restTemplate.getForObject(getNetworkModificationServerURI(false) + path, Boolean.class));
     }
 
-    /**
-     * Asserts that the user may write on every shared modification the given containers point to, directly or through
-     * other shared modifications. Throws when they cannot.
-     */
-    public void assertReferencedModificationsAreWritable(List<UUID> containerUuids, String userId) {
+    public Set<UUID> getContainersWithModificationReferences(List<UUID> containerUuids) {
         if (containerUuids.isEmpty()) {
-            return;
+            return Set.of();
         }
-        String path = UriComponentsBuilder.fromPath(CONTAINERS + DELIMITER + "references/authorized")
+        // the uuids go in the body as a large tree would exceed the url length limit
+        String path = UriComponentsBuilder.fromPath(CONTAINERS + DELIMITER + "reference-modifications")
+                .build().toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        List<UUID> containersWithReferenceModifications = restTemplate.exchange(
+                getNetworkModificationServerURI(false) + path,
+                HttpMethod.POST,
+                new HttpEntity<>(containerUuids, headers),
+                new ParameterizedTypeReference<List<UUID>>() { }
+        ).getBody();
+        return containersWithReferenceModifications == null ? Set.of() : new HashSet<>(containersWithReferenceModifications);
+    }
+
+    public SharedModificationsWriteAccess getReferencedModificationsWriteAccess(List<UUID> containerUuids, String userId) {
+        String path = UriComponentsBuilder.fromPath(CONTAINERS + DELIMITER + "references/write-access")
                 .queryParam(UUIDS, containerUuids)
                 .build().toUriString();
+        return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET,
+                userIdEntity(userId), SharedModificationsWriteAccess.class).getBody();
+    }
 
-        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, userIdEntity(userId), Void.class);
+    /**
+     * Throws forbidden when the unwritable shared modifications involved miss some of the tags.
+     */
+    public void assertRootNetworkTagsAllowed(List<UUID> containerUuids, List<UUID> modificationUuids, List<UUID> sharedUuids,
+                                             List<String> rootNetworkTags, String userId) {
+        if (rootNetworkTags.isEmpty() || containerUuids.isEmpty() && modificationUuids.isEmpty() && sharedUuids.isEmpty()) {
+            return;
+        }
+        restTemplate.exchange(getNetworkModificationServerURI(false) + CONTAINERS + DELIMITER + "root-network-tags/authorized",
+                HttpMethod.POST,
+                userIdEntity(userId, new RootNetworkTagsCheckInfos(containerUuids, modificationUuids, sharedUuids, rootNetworkTags)),
+                Void.class);
     }
 
     /**
@@ -762,7 +813,7 @@ public class NetworkModificationService {
      * descend into composites, so a reference sitting inside a copied/inserted composite must be looked up explicitly.
      */
     //TODO fetch references for modifications and its children
-    // Tranfertt this in network modification server
+    // Transfer this in network modification server
     public List<ModificationReference> getChildrenModificationsReferences(List<UUID> modificationUuids) {
         List<UUID> uuids = new ArrayList<>(modificationUuids);
         uuids.addAll(findAllChildrenUuids(modificationUuids));

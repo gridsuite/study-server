@@ -22,6 +22,7 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyCreationRequestEntity;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -35,6 +36,7 @@ import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMargin
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
@@ -65,6 +67,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
+import static org.gridsuite.study.server.service.SupervisionService.SUPERVISION_USER;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.gridsuite.study.server.utils.TestUtils.synchronizeStudyServerExecutionService;
 import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyPostRequest;
@@ -154,6 +157,8 @@ class RootNetworkTest {
     private StudyService studyService;
     @MockitoSpyBean
     private StudyServerExecutionService studyServerExecutionService;
+    @MockitoSpyBean
+    private NotificationService notificationService;
 
     @MockitoBean
     private ReportService reportService;
@@ -184,7 +189,7 @@ class RootNetworkTest {
     @MockitoBean
     private NetworkService networkService;
     @MockitoBean
-    private NetworkModificationService networkModificationService;
+    private NetworkModificationRestService networkModificationService;
     @MockitoBean
     private PccMinRestService pccMinService;
 
@@ -386,11 +391,13 @@ class RootNetworkTest {
     }
 
     @Test
-    void testCreateRootNetworkConsumer() throws Exception {
+    void testCreateRootNetwork() throws Exception {
         // create study with first root network
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         UUID studyUuid = studyEntity.getId();
         studyRepository.save(studyEntity);
+        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
+        NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
 
         UUID newRootNetworkUuid = UUID.randomUUID();
 
@@ -432,6 +439,8 @@ class RootNetworkTest {
 
         // check case expiration has been disabled
         verify(caseService, times(1)).disableCaseExpiration(CASE_UUID2);
+
+        verify(networkModificationService, times(1)).addRootNetworkTag(List.of(firstNode.getModificationGroupUuid()), "rn2");
     }
 
     private void createAndConsumeMessageCaseImport(UUID studyUuid, RootNetworkInfos rootNetworkInfos, CaseImportAction caseImportAction) throws Exception {
@@ -578,7 +587,7 @@ class RootNetworkTest {
         verify(stateEstimationService, times(1)).deleteStateEstimationResults(List.of(STATE_ESTIMATION_RESULT_UUID));
         verify(pccMinService, times(1)).deletePccMinResults(List.of(PCC_MIN_RESULT_UUID));
         verify(sensitivityAnalysisService, times(1)).deleteSensitivityAnalysisResults(List.of(SENSITIVITY_ANALYSIS_RESULT_UUID));
-        verify(voltageInitService, times(1)).deleteVoltageInitResults(List.of(VOLTAGE_INIT_RESULT_UUID));
+        verify(voltageInitService, times(1)).deleteVoltageInitResults(List.of(VOLTAGE_INIT_RESULT_UUID), SUPERVISION_USER);
     }
 
     @Test
@@ -814,6 +823,36 @@ class RootNetworkTest {
     }
 
     @Test
+    void getRootNetworkImportParameters() throws Exception {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        UUID rootNetworkUuid = UUID.randomUUID();
+        Map<String, Object> importParameters = new HashMap<>();
+        importParameters.put("param1", "value1");
+        importParameters.put("param2", true);
+        importParameters.put("param3", List.of("v1", "v2"));
+        importParameters.put("param4", null);
+        createDummyRootNetwork(studyEntity, RootNetworkInfos.builder()
+            .name(CASE_NAME2)
+            .caseInfos(new CaseInfos(CASE_UUID2, CASE_UUID, CASE_NAME2, CASE_FORMAT2))
+            .networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
+            .reportUuid(REPORT_UUID2)
+            .id(rootNetworkUuid)
+            .tag("rn2")
+            .importParameters(importParameters)
+            .build());
+        studyRepository.save(studyEntity);
+
+        String response = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/import-parameters", studyEntity.getId(), rootNetworkUuid))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        Map<String, Object> result = objectMapper.readValue(response, new TypeReference<>() { });
+        assertEquals(importParameters, result);
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/import-parameters", studyEntity.getId(), UUID.randomUUID()))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
     void getOrderedRootNetworksFromController() throws Exception {
         // create study with one root node, two network modification node and a root network
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
@@ -932,6 +971,60 @@ class RootNetworkTest {
         assertEquals(RootNetworkLoadStatus.LOADING, rootNetworkRepository.findById(rootNetworkUuid).orElseThrow().getLoadStatus());
         verifyPostRequest(wireMockServer, stubId, "/v1/networks", true,
             Map.of("caseUuid", WireMock.equalTo(CASE_UUID.toString()), "caseFormat", WireMock.equalTo(CASE_FORMAT2)), 1);
+    }
+
+    @Test
+    void testRecreateRootNetworkLoadedStatusWhenRequestFails() {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNetworkUuid = testUtils.getOneRootNetworkUuid(studyUuid);
+
+        doThrow(new StudyException(NOT_FOUND, "Case not found")).when(caseService).assertCaseExists(CASE_UUID);
+
+        assertThrows(StudyException.class, () -> studyService.recreateNetwork(USER_ID, studyUuid, rootNetworkUuid, CASE_FORMAT2));
+
+        verify(rootNetworkService, times(1)).updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADING);
+        assertEquals(RootNetworkLoadStatus.LOADED, rootNetworkRepository.findById(rootNetworkUuid).orElseThrow().getLoadStatus());
+    }
+
+    @Test
+    void testRecreateRootNetworkUnloadedStatusWhenRequestFailsAndNetworkWasNotLoaded() {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyEntity.getRootNetworks().getFirst().setLoadStatus(RootNetworkLoadStatus.UNLOADING);
+        studyRepository.save(studyEntity);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNetworkUuid = testUtils.getOneRootNetworkUuid(studyUuid);
+
+        doThrow(new StudyException(NOT_FOUND, "Case not found")).when(caseService).assertCaseExists(CASE_UUID);
+
+        assertThrows(StudyException.class, () -> studyService.recreateNetwork(USER_ID, studyUuid, rootNetworkUuid, CASE_FORMAT2));
+
+        verify(rootNetworkService, times(1)).updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADING);
+        assertEquals(RootNetworkLoadStatus.UNLOADED, rootNetworkRepository.findById(rootNetworkUuid).orElseThrow().getLoadStatus());
+    }
+
+    @Test
+    void testRecreateNetworkSetsUnloadedStatusWhenUpdateFails() throws Exception {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNetworkUuid = testUtils.getOneRootNetworkUuid(studyUuid);
+        rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADING);
+
+        String errorMessage = "Network update failed";
+        doThrow(new RuntimeException(errorMessage)).when(studyService).updateNetwork(eq(studyUuid), eq(rootNetworkUuid), any(NetworkInfos.class), eq(USER_ID));
+
+        RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(rootNetworkUuid)
+            .caseInfos(new CaseInfos(CASE_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT2))
+            .networkInfos(new NetworkInfos(NETWORK_UUID, "netId"))
+            .reportUuid(REPORT_UUID)
+            .build();
+        createAndConsumeMessageCaseImport(studyUuid, rootNetworkInfos, CaseImportAction.NETWORK_RECREATION);
+
+        assertEquals(RootNetworkLoadStatus.UNLOADED, rootNetworkRepository.findById(rootNetworkUuid).orElseThrow().getLoadStatus());
+        verify(notificationService, times(1)).emitRootNetworksUpdateFailed(studyUuid, errorMessage);
+        verify(caseService, never()).disableCaseExpiration(CASE_UUID);
     }
 
     private Map<String, Object> createConsumeCaseImportSucceededHeaders(

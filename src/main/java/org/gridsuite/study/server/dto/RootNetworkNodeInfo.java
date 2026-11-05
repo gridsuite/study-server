@@ -56,6 +56,8 @@ public class RootNetworkNodeInfo {
 
     private UUID asymmetricalLoadResultUuid;
 
+    private UUID logicalControlsResultUuid;
+
     private NodeBuildStatus nodeBuildStatus;
 
     private List<NodeExportEmbeddable> nodeExportNetwork;
@@ -77,6 +79,7 @@ public class RootNetworkNodeInfo {
             .dynamicSecurityAnalysisResultUuid(dynamicSecurityAnalysisResultUuid)
             .dynamicMarginCalculationResultUuid(dynamicMarginCalculationResultUuid)
             .stateEstimationResultUuid(stateEstimationResultUuid)
+            .logicalControlsResultUuid(logicalControlsResultUuid)
             .pccMinResultUuid(pccMinResultUuid)
             .nodeBuildStatus(nodeBuildStatus.toEntity())
             .build();

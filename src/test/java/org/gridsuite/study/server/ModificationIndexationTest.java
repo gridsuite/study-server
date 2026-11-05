@@ -17,9 +17,9 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
-import org.gridsuite.study.server.service.NetworkModificationService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.StudyServerExecutionService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,7 +39,8 @@ import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeI
 import static org.gridsuite.study.server.utils.TestUtils.synchronizeStudyServerExecutionService;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -69,7 +70,7 @@ class ModificationIndexationTest {
     private TestUtils testUtils;
 
     @MockitoBean
-    private NetworkModificationService networkModificationService;
+    private NetworkModificationRestService networkModificationService;
     @MockitoBean
     private NetworkStoreService networkStoreService;
     @MockitoBean

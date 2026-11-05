@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.dto.studyexport.ExportedParameters;
 
 import java.io.UncheckedIOException;
 import java.util.List;
@@ -20,8 +21,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.dto.studyexport.parameters.ExportedParameters.nullSafe;
-import static org.gridsuite.study.server.dto.studyexport.parameters.ExportedParameters.toUuidSet;
+import static org.gridsuite.study.server.dto.studyexport.ExportedParameters.nullSafe;
+import static org.gridsuite.study.server.dto.studyexport.ExportedParameters.toUuidSet;
 
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>

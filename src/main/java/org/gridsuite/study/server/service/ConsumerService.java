@@ -25,12 +25,13 @@ import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.nodeactivity.BatchActionType;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
-import org.gridsuite.study.server.nodeactivity.NodeActivityService;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -64,6 +65,9 @@ public class ConsumerService {
     private static final String HEADER_WITH_RATIO_TAP_CHANGERS = "withRatioTapChangers";
     private static final String HEADER_ERROR_MESSAGE = "errorMessage";
     private static final String HEADER_EXPORT_UUID = "exportUuid";
+    static final String HEADER_ACTION = "action";
+    static final String HEADER_GROUP_UUID = "groupUuid";
+    private static final String HEADER_ONLY_METADATA = "onlyMetadata";
 
     private final ObjectMapper objectMapper;
 
@@ -80,8 +84,8 @@ public class ConsumerService {
     private final UserAdminService userAdminService;
     private final LoadFlowService loadFlowService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
-    private final NodeActivityService nodeActivityService;
     private final WorkspaceService workspaceService;
+    private final NetworkModificationService networkModificationService;
 
     @Value("${study.enable-operation-quotas}")
     private boolean shouldCheckOperationQuotas;
@@ -100,8 +104,8 @@ public class ConsumerService {
                            UserAdminService userAdminService,
                            LoadFlowService loadFlowService,
                            NodeActivityRunnerService nodeActivityRunnerService,
-                           NodeActivityService nodeActivityService,
-                           WorkspaceService workspaceService) {
+                           WorkspaceService workspaceService,
+                           NetworkModificationService networkModificationService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -115,9 +119,9 @@ public class ConsumerService {
         this.computationParametersService = computationParametersService;
         this.userAdminService = userAdminService;
         this.loadFlowService = loadFlowService;
-        this.nodeActivityService = nodeActivityService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
         this.workspaceService = workspaceService;
+        this.networkModificationService = networkModificationService;
     }
 
     @Bean
@@ -141,16 +145,16 @@ public class ConsumerService {
         Optional<RerunLoadFlowInfos> rerunLoadFlowInfos = getRerunLoadFlowInfos(message);
         UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
 
+        studyService.handleBuildSuccess(studyUuid, nodeUuid, rootNetworkUuid, message.getPayload());
+
         if (rerunLoadFlowInfos.isPresent()) {
             RerunLoadFlowInfos workflowInfos = rerunLoadFlowInfos.get();
             loadFlowService.sendLoadflowRequestWorflow(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid(),
                 workflowInfos.isWithRatioTapChangers(), workflowInfos.getUserId(), workflowInfos.getQuotaId());
         } else {
             // a rerun's loadflow removes the activity when its own result arrives
-            nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
+            nodeActivityRunnerService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
         }
-
-        studyService.handleBuildSuccess(studyUuid, nodeUuid, rootNetworkUuid, message.getPayload());
     }
 
     private Optional<RerunLoadFlowInfos> getRerunLoadFlowInfos(Message<?> message) throws JsonProcessingException {
@@ -223,7 +227,7 @@ public class ConsumerService {
             userAdminService.releaseQuotaId(infos.getUserId(), infos.getQuotaId());
             loadFlowService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, infos.getLoadflowResultUuid());
         });
-        nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
+        nodeActivityRunnerService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
     }
 
     @Bean
@@ -273,7 +277,7 @@ public class ConsumerService {
                     .networkInfos(networkInfos)
                     .importParameters(importParameters)
                     .build());
-                case NETWORK_RECREATION -> studyService.updateNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
+                case NETWORK_RECREATION -> updateRecreatedNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
                 case ROOT_NETWORK_MODIFICATION -> studyService.modifyRootNetwork(studyUuid, RootNetworkInfos.builder()
                     .id(rootNetworkUuid)
                     .networkInfos(networkInfos)
@@ -295,6 +299,19 @@ public class ConsumerService {
             }
             LOGGER.trace("{} for study uuid '{}' : {} seconds", caseImportAction.getLabel(), studyUuid,
                 TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
+        }
+    }
+
+    private void updateRecreatedNetwork(UUID studyUuid, UUID rootNetworkUuid, NetworkInfos networkInfos, String userId) {
+        try {
+            studyService.updateNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
+        } catch (Exception e) {
+            try {
+                rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.UNLOADED);
+            } finally {
+                notificationService.emitRootNetworksUpdateFailed(studyUuid, e.getMessage());
+            }
+            throw e;
         }
     }
 
@@ -356,7 +373,7 @@ public class ConsumerService {
 
     private void removeReimportCaseActivity(UUID studyUuid, UUID rootNetworkUuid) {
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-        nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, List.of(rootNodeUuid));
+        nodeActivityRunnerService.removeActivities(studyUuid, rootNetworkUuid, List.of(rootNodeUuid));
     }
 
     /**
@@ -402,10 +419,10 @@ public class ConsumerService {
     }
 
     private void handleQuotaEnd(ComputationType computationType, String userId, UUID resultUuid) {
-        if (!shouldCheckOperationQuotas) {
+        QuotaType quotaType = QuotaType.mapFromComputationType(computationType);
+        if (!shouldCheckOperationQuotas || quotaType == null) {
             return;
         }
-        QuotaType quotaType = QuotaType.mapFromComputationType(computationType);
         userAdminService.releaseQuota(userId, resultUuid);
         notificationService.emitQuotaChange(userId, quotaType);
     }
@@ -469,7 +486,7 @@ public class ConsumerService {
     }
 
     private void removeComputationActivity(UUID studyUuid, NodeReceiver receiverObj) {
-        nodeActivityService.removeActivities(studyUuid, receiverObj.getRootNetworkUuid(), List.of(receiverObj.getNodeUuid()));
+        nodeActivityRunnerService.removeActivities(studyUuid, receiverObj.getRootNetworkUuid(), List.of(receiverObj.getNodeUuid()));
     }
 
     public void consumeCalculationDebug(Message<String> msg, ComputationType computationType) {
@@ -536,7 +553,7 @@ public class ConsumerService {
             if (loadFlowStatus == LoadFlowStatus.CONVERGED) {
                 List<UUID> childrenToBuild = studyService.getFirstLevelChildrenToBuild(studyUuid, nodeUuid, rootNetworkUuid, userId);
                 nodeActivityRunnerService.runWith(BUILD, studyUuid, rootNetworkUuid, childrenToBuild,
-                    () -> studyService.buildNodes(studyUuid, childrenToBuild, rootNetworkUuid, userId));
+                    () -> networkModificationService.buildNodes(studyUuid, childrenToBuild, rootNetworkUuid, userId));
             }
         }
     }
@@ -834,6 +851,26 @@ public class ConsumerService {
         return message -> consumeCalculationFailed(message, ASYMMETRICAL_LOAD);
     }
 
+    @Bean
+    public Consumer<Message<String>> consumeLogicalControlsResult() {
+        return message -> consumeCalculationResult(message, LOGICAL_CONTROLS);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeLogicalControlsRunning() {
+        return message -> consumeCalculationRunning(message, LOGICAL_CONTROLS);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeLogicalControlsStopped() {
+        return message -> consumeCalculationStopped(message, LOGICAL_CONTROLS);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeLogicalControlsFailed() {
+        return message -> consumeCalculationFailed(message, LOGICAL_CONTROLS);
+    }
+
     public void consumeNetworkExportFinished(Message<String> msg) {
         String receiverString = msg.getHeaders().get(HEADER_RECEIVER, String.class);
         String s3Key = msg.getHeaders().get(HEADER_S3_KEY, String.class);
@@ -890,17 +927,68 @@ public class ConsumerService {
 
     @Bean
     public Consumer<Message<Map<ReferenceType, List<ReferenceAttributes>>>> consumeSharedElementUpdate() {
-        return message -> handleSharedElementUpdate(message.getPayload());
+        return message -> {
+            boolean onlyMetadata = false;
+            if (message.getHeaders().containsKey(HEADER_ONLY_METADATA)) {
+                onlyMetadata = message.getHeaders().get(HEADER_ONLY_METADATA, Boolean.class);
+            }
+            handleSharedElementUpdate(message.getPayload(), onlyMetadata);
+        };
     }
 
-    private void handleSharedElementUpdate(Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType) {
-        Map<UUID, List<UUID>> modificationUuidsByNode = new HashMap<>();
+    @Bean
+    public Consumer<Message<List<ModificationReference>>> consumeCompositeLinksChanges() {
+        return this::handleCompositeLinksChanges;
+    }
+
+    /**
+     * Keeps the references registered on the shared elements in directory-server in sync with the modification-references
+     * network-modification-server created, moved or deleted in the group of a node.
+     */
+    void handleCompositeLinksChanges(Message<List<ModificationReference>> message) {
+        SharingLinkAction action = SharingLinkAction.valueOf(String.valueOf(message.getHeaders().get(HEADER_ACTION)));
+        UUID groupUuid = UUID.fromString(String.valueOf(message.getHeaders().get(HEADER_GROUP_UUID)));
+        String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
+        List<ModificationReference> references = message.getPayload();
+
+        NodeInfos nodeInfos = networkModificationTreeService.findNodeInfosByModificationGroupUuid(groupUuid);
+        switch (action) {
+            case DELETE -> directoryService.removeSharingLinks(references, userId);
+            case CREATE ->
+                directoryService.createSharingLinks(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), false, userId);
+            case RECREATE ->
+                directoryService.createSharingLinks(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), true, userId);
+            case UPDATE ->
+                directoryService.updateSharingLinks(references, nodeInfos.studyUuid(), nodeInfos.nodeUuid(), userId);
+        }
+    }
+
+    private void handleSharedElementUpdate(Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType, boolean onlyMetadata) {
+        Map<UUID, List<UUID>> modificationUuidsByNodes = new HashMap<>();
         referencesByType.forEach((_, references) -> references.forEach(ref -> {
             UUID nodeId = ref.getReferenceNodeId();
             if (nodeId != null) {
-                modificationUuidsByNode.computeIfAbsent(nodeId, k -> new ArrayList<>()).add(ref.getReferenceId());
+                modificationUuidsByNodes.computeIfAbsent(nodeId, k -> new ArrayList<>()).add(ref.getReferenceId());
             }
         }));
-        modificationUuidsByNode.forEach(studyService::sharedModificationsUpdatedNotification);
+        modificationUuidsByNodes.entrySet().forEach(entry -> {
+                try {
+                    handleSharedModificationsUpdate(entry.getKey(), entry.getValue(), onlyMetadata);
+                } catch (Exception e) {
+                    LOGGER.error(String.format("Could not handle shared modifications update for node %s", entry.getKey()), e);
+                }
+            }
+        );
+    }
+
+    private void handleSharedModificationsUpdate(UUID nodeUuid, List<UUID> networkModificationUuids, boolean onlyMetada) {
+        if (networkModificationUuids.isEmpty()) {
+            return;
+        }
+        UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
+        if (!onlyMetada) {
+            nodeActivityRunnerService.runBatchAction(BatchActionType.INVALIDATE_NODE_TREE, studyUuid, nodeUuid);
+        }
+        notificationService.emitSharedModificationsUpdated(studyUuid, nodeUuid, networkModificationUuids);
     }
 }
