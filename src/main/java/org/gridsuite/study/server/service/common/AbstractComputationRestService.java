@@ -15,6 +15,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RESULTS_UUIDS;
@@ -41,9 +42,9 @@ public abstract class AbstractComputationRestService extends AbstractRestClient 
         return !servicesInspector.isOptionalServiceUpSync(service);
     }
 
-    protected void executeWithOptionalServiceCheck(VoidRestExecutor executor) {
+    protected void executeWithOptionalServiceCheck(Runnable executor) {
         try {
-            executor.execute();
+            executor.run();
         } catch (Exception e) {
             if (isOptionalAndDown()) {
                 // the error is not thrown and won't be displayed in the console :
@@ -55,9 +56,9 @@ public abstract class AbstractComputationRestService extends AbstractRestClient 
         }
     }
 
-    protected <T> T executeWithOptionalServiceFallback(RestExecutor<T> executor, T fallbackReturnValue) {
+    protected <T> T executeWithOptionalServiceFallback(Supplier<T> executor, T fallbackReturnValue) {
         try {
-            return executor.execute();
+            return executor.get();
         } catch (Exception e) {
             if (isOptionalAndDown()) {
                 // the error is not thrown and won't be displayed in the console :
@@ -67,16 +68,6 @@ public abstract class AbstractComputationRestService extends AbstractRestClient 
             }
             throw e;
         }
-    }
-
-    @FunctionalInterface
-    public interface RestExecutor<T> {
-        T execute();
-    }
-
-    @FunctionalInterface
-    public interface VoidRestExecutor {
-        void execute();
     }
 
     public abstract List<String> getEnumValues(String enumName, UUID resultUuidOpt);
