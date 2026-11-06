@@ -13,11 +13,9 @@ package org.gridsuite.study.server.service;
 
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
@@ -28,13 +26,13 @@ import static org.gridsuite.study.server.StudyConstants.*;
 @Service
 public class GeoDataService {
 
-    private final RestTemplate restTemplate;
+    private final RestClient restClient;
 
     private String geoDataServerBaseUri;
 
-    public GeoDataService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
+    public GeoDataService(RemoteServicesProperties remoteServicesProperties, RestClient restClient) {
         this.geoDataServerBaseUri = remoteServicesProperties.getServiceUri("geo-data-server");
-        this.restTemplate = restTemplate;
+        this.restClient = restClient;
     }
 
     public String getLinesGraphics(UUID networkUuid, String variantId, List<String> linesIds) {
@@ -48,10 +46,12 @@ public class GeoDataService {
         var path = uriComponentsBuilder
                 .buildAndExpand()
                 .toUriString();
-        var headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<?> request = new HttpEntity<>(linesIds, headers);
-        return restTemplate.postForObject(geoDataServerBaseUri + path, request, String.class);
+        var requestSpec = restClient.post().uri(geoDataServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (linesIds != null) {
+            requestSpec.body(linesIds);
+        }
+        return requestSpec.retrieve().body(String.class);
     }
 
     public String getSubstationsGraphics(UUID networkUuid, String variantId, List<String> substationsIds) {
@@ -66,11 +66,12 @@ public class GeoDataService {
                 .buildAndExpand()
                 .toUriString();
 
-        var headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<?> request = new HttpEntity<>(substationsIds, headers);
-
-        return restTemplate.postForObject(geoDataServerBaseUri + path, request, String.class);
+        var requestSpec = restClient.post().uri(geoDataServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (substationsIds != null) {
+            requestSpec.body(substationsIds);
+        }
+        return requestSpec.retrieve().body(String.class);
     }
 
     public void setGeoDataServerBaseUri(String geoDataServerBaseUri) {
