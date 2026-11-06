@@ -15,12 +15,9 @@ import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.UncheckedIOException;
@@ -44,8 +41,8 @@ public class LogicalControlsRestService extends AbstractComputationRestService {
     private final ObjectMapper objectMapper;
 
     @Autowired
-    public LogicalControlsRestService(RemoteServicesProperties remoteServicesProperties, ObjectMapper objectMapper, RestTemplate restTemplate) {
-        super(remoteServicesProperties.getServiceUri("state-estimation-server"), restTemplate);
+    public LogicalControlsRestService(RemoteServicesProperties remoteServicesProperties, ObjectMapper objectMapper, RestClient restClient) {
+        super(remoteServicesProperties.getServiceUri("state-estimation-server"), restClient);
         this.objectMapper = objectMapper;
     }
 
@@ -64,13 +61,10 @@ public class LogicalControlsRestService extends AbstractComputationRestService {
         }
         var path = uriComponentsBuilder.queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(networkUuid).toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
-
-        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restClient.post().uri(baseUri + path)
+            .headers(headers -> headers.set(HEADER_USER_ID, userId))
+            .contentType(MediaType.APPLICATION_JSON)
+            .retrieve().body(UUID.class);
     }
 
     public void stopLogicalControls(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid) {
@@ -92,7 +86,8 @@ public class LogicalControlsRestService extends AbstractComputationRestService {
             .fromPath(LOGICAL_CONTROLS_URI + DELIMITER + "results/{resultUuid}/stop")
             .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
 
-        restTemplate.put(baseUri + path, Void.class);
+        restClient.put().uri(baseUri + path)
+            .retrieve().toBodilessEntity();
     }
 
     public String getLogicalControlsStatus(UUID resultUuid) {
@@ -102,7 +97,8 @@ public class LogicalControlsRestService extends AbstractComputationRestService {
         String path = UriComponentsBuilder
             .fromPath(LOGICAL_CONTROLS_URI + DELIMITER + "results/{resultUuid}/status")
             .buildAndExpand(resultUuid).toUriString();
-        return restTemplate.getForObject(baseUri + path, String.class);
+        return restClient.get().uri(baseUri + path)
+            .retrieve().body(String.class);
     }
 
     public void invalidateLogicalControlsStatus(List<UUID> resultUuids) {
@@ -110,12 +106,13 @@ public class LogicalControlsRestService extends AbstractComputationRestService {
             String path = UriComponentsBuilder
                 .fromPath(LOGICAL_CONTROLS_URI + DELIMITER + "results/invalidate-status")
                 .queryParam("resultUuid", resultUuids).build().toUriString();
-            restTemplate.put(baseUri + path, Void.class);
+            restClient.put().uri(baseUri + path)
+                .retrieve().toBodilessEntity();
         }
     }
 
     public void deleteLogicalControlsResults(List<UUID> resultsUuids) {
-        deleteCalculationResults(resultsUuids, LOGICAL_CONTROLS_URI + "/results", restTemplate, baseUri);
+        deleteCalculationResults(resultsUuids, LOGICAL_CONTROLS_URI + "/results", restClient, baseUri);
     }
 
     public void deleteAllLogicalControlsResults() {
@@ -125,7 +122,8 @@ public class LogicalControlsRestService extends AbstractComputationRestService {
     public Integer getLogicalControlsResultsCount() {
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + DELIMITER + "supervision/logical-controls/results-count").toUriString();
-        return restTemplate.getForObject(baseUri + path, Integer.class);
+        return restClient.get().uri(baseUri + path)
+            .retrieve().body(Integer.class);
     }
 
     @Override
@@ -140,6 +138,7 @@ public class LogicalControlsRestService extends AbstractComputationRestService {
         String path = UriComponentsBuilder
             .fromPath(LOGICAL_CONTROLS_URI + DELIMITER + RESULTS + "/{resultUuid}")
             .buildAndExpand(resultUuid).toUriString();
-        return restTemplate.getForObject(baseUri + path, String.class);
+        return restClient.get().uri(baseUri + path)
+            .retrieve().body(String.class);
     }
 }

@@ -906,7 +906,7 @@ public class ConsumerService {
 
     public void createCase(String s3Key, NodeExportInfos nodeExport, String userId, String exportContentType) {
         UUID caseUuid = caseService.createCase(s3Key, exportContentType);
-        directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, nodeExport.fileName(), DirectoryService.CASE, userId);
+        directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, nodeExport.fileName(), DirectoryService.CASE, userId, false);
     }
 
     @Bean
