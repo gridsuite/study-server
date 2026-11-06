@@ -41,13 +41,12 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -61,6 +60,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.utils.TestUtils.ELEMENT_UPDATE_DESTINATION;
 import static org.gridsuite.study.server.utils.TestUtils.checkUpdateStatusMessagesReceived;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Answers.RETURNS_DEEP_STUBS;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -84,8 +84,8 @@ class NetworkModificationUnitTest {
 
     @MockitoBean
     private NetworkService networkService;
-    @MockitoBean
-    private RestTemplate restTemplate;
+    @MockitoBean(answers = RETURNS_DEEP_STUBS)
+    private RestClient restClient;
     @MockitoSpyBean
     private RootNetworkService rootNetworkService;
     @MockitoSpyBean
@@ -135,6 +135,8 @@ class NetworkModificationUnitTest {
 
     @BeforeEach
     void setup() {
+        var requestSpec = restClient.put();
+        doReturn(requestSpec).when(requestSpec).uri(anyString());
         cleanDB();
 
         doAnswer(invocation -> List.of()).when(networkModificationTreeService).getHighestNodeUuids(any(), any());
@@ -225,16 +227,10 @@ class NetworkModificationUnitTest {
         checkModificationUpdatedMessageReceived(studyUuid, node1Uuid, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
 
         NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
-        Mockito.verify(restTemplate, Mockito.times(1)).exchange(
+        verify(restClient.put(), times(1)).uri(
                 matches(".*network-modifications\\?uuids=" + modificationUuid +
-                        "&groupUuid=" + node1Infos.getModificationGroupUuid().toString()),
-                eq(HttpMethod.PUT),
-                argThat(n -> {
-                    assertNotNull(n.getBody());
-                    return n.getBody().equals(metadata);
-                }),
-                eq(Void.class)
-        );
+                        "&groupUuid=" + node1Infos.getModificationGroupUuid().toString()));
+        verify(restClient.put().contentType(MediaType.APPLICATION_JSON), times(1)).body(metadata);
     }
 
     @Test
@@ -268,7 +264,7 @@ class NetworkModificationUnitTest {
         networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos, rerunLoadFlowInfos);
 
         ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
-        Mockito.verify(restTemplate, Mockito.times(1)).exchange(urlCaptor.capture(), eq(HttpMethod.POST), any(HttpEntity.class), eq(Void.class));
+        verify(restClient.post(), times(1)).uri(urlCaptor.capture());
 
         assertTrue(urlCaptor.getValue().contains(QUERY_PARAM_WORKFLOW_TYPE + "=" + rerunLoadFlowInfos.getType().name()));
         assertTrue(urlCaptor.getValue().contains(QUERY_PARAM_WORKFLOW_INFOS + "=" + URLEncoder.encode(objectMapper.writeValueAsString(rerunLoadFlowInfos), StandardCharsets.UTF_8)));
@@ -317,15 +313,10 @@ class NetworkModificationUnitTest {
         checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
 
         NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
-        Mockito.verify(restTemplate, Mockito.times(1)).exchange(
+        verify(restClient.put(), times(1)).uri(
                 matches(".*network-modifications\\?" + networkModificationUuids.stream().map(uuid -> "uuids=" + uuid.toString() + "&").collect(Collectors.joining()) +
-                        "groupUuid=" + node1Infos.getModificationGroupUuid().toString()),
-                eq(HttpMethod.PUT),
-                argThat(n -> {
-                    assertNotNull(n.getBody());
-                    return n.getBody().equals(metadata);
-                }),
-                eq(Void.class));
+                        "groupUuid=" + node1Infos.getModificationGroupUuid().toString()));
+        verify(restClient.put().contentType(MediaType.APPLICATION_JSON), times(1)).body(metadata);
     }
 
     private void checkModificationUpdatedMessageReceived(UUID studyUuid, UUID nodeUuid, List<UUID> childrenNodeUuids, String notificationType) {
