@@ -266,18 +266,16 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
     public UUID createParameters(@Nullable final String parametersInfos) {
         return executeWithOptionalServiceFallback(() -> {
             final UriComponentsBuilder uri = getBaseUriForParameters();
-            
             if (StringUtils.isBlank(parametersInfos)) {
                 return restClient.post().uri(uri.pathSegment("default").build().toUri())
                 .accept(MediaType.APPLICATION_JSON)
-                .retrieve().body( UUID.class);
+                .retrieve().body(UUID.class);
             } else {
-                
                 return restClient.post().uri(uri.build().toUri())
-                .accept(MediaType.APPLICATION_JSON)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(parametersInfos)
-                .retrieve().body( UUID.class);
+                    .accept(MediaType.APPLICATION_JSON)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(parametersInfos)
+                    .retrieve().body(UUID.class);
             }
         }, null);
     }

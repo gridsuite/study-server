@@ -136,10 +136,10 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
                     .toUriString();
 
             var requestSpec = restClient.post().uri(baseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (parameters != null) {
-            requestSpec.body(parameters);
-        }
+                .contentType(MediaType.APPLICATION_JSON);
+            if (parameters != null) {
+                requestSpec.body(parameters);
+            }
             return requestSpec.retrieve().body(UUID.class);
         }, null);
     }

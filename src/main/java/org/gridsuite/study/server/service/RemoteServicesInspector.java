@@ -124,7 +124,11 @@ public class RemoteServicesInspector {
 
     public boolean isOptionalServiceUpSync(@NonNull RemoteServicesProperties.Service service) {
         try {
-            final String result = restTemplate.getForObject(service.getBaseUri() + "/actuator/health", String.class);
+            final String result = restClient
+                    .get()
+                    .uri(service.getBaseUri() + "/actuator/health")
+                    .retrieve()
+                    .body(String.class);
             if (result == null) {
                 return false;
             }

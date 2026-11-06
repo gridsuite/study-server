@@ -237,7 +237,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
                     .toUriString();
 
             return restClient.post().uri(baseUri + path)
-            .retrieve().body(UUID.class);
+                .retrieve().body(UUID.class);
         }, null);
     }
 
@@ -261,7 +261,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
                 .toUriString();
 
             restClient.delete().uri(baseUri + path)
-            .retrieve().toBodilessEntity();
+                .retrieve().toBodilessEntity();
         });
     }
 

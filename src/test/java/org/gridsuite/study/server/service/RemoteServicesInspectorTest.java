@@ -150,7 +150,7 @@ class RemoteServicesInspectorTest implements WithAssertions {
     }
 
     @Test
-    void testOptionalServiceUpSync() {
+    void testOptionalServiceUpSyncCaseInsensitive() {
         assertOptionalServiceUpSync("{\"status\":\"uP\"}", true);
     }
 
