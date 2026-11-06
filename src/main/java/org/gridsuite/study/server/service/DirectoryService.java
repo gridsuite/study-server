@@ -172,8 +172,11 @@ public class DirectoryService {
             .retrieve().toEntity(ElementAttributes.class);
     }
 
-    public void createElement(UUID directoryUuid, String description, UUID elementUuid, String elementName, String type, String userId) {
+    public void createElement(UUID directoryUuid, String description, UUID elementUuid, String elementName, String type, String userId, boolean allowNewName) {
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/directories/{directoryUuid}/elements");
+        if (allowNewName) {
+            pathBuilder.queryParam("allowNewName", true);
+        }
         ElementAttributes elementAttributes = new ElementAttributes(elementUuid, elementName, type, userId, 0, description);
         String path = pathBuilder.buildAndExpand(directoryUuid).toUriString();
 
