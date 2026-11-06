@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.RunSecurityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.SecurityAnalysisStatus;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +36,7 @@ import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 import static org.gridsuite.study.server.service.StudyService.*;
+import static org.gridsuite.study.server.service.client.RemoteServiceName.SECURITY_ANALYSIS_SERVER;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -50,8 +52,9 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
 
     @Autowired
     public SecurityAnalysisRestService(RemoteServicesProperties remoteServicesProperties,
+                                       RemoteServicesInspector remoteServicesInspector,
                                        ObjectMapper objectMapper, RestClient restClient) {
-        super(remoteServicesProperties.getServiceUri("security-analysis-server"), restClient);
+        super(remoteServicesProperties.getServiceUri("security-analysis-server"), restClient, remoteServicesInspector, SECURITY_ANALYSIS_SERVER);
         this.objectMapper = objectMapper;
     }
 
@@ -229,13 +232,15 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
     @Override
     public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
+        return executeWithOptionalServiceFallback(() -> {
+            var path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + DELIMITER + "{uuid}" + DELIMITER + "duplicate")
+                    .buildAndExpand(sourceParametersUuid).toUriString();
 
-        var path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + DELIMITER + "{uuid}" + DELIMITER + "duplicate")
-                .buildAndExpand(sourceParametersUuid).toUriString();
-
-        return restClient.post().uri(baseUri + path)
+            return restClient.post().uri(baseUri + path)
             .contentType(MediaType.APPLICATION_JSON)
+
             .retrieve().body(UUID.class);
+        }, null);
     }
 
     public String getSecurityAnalysisParameters(UUID parametersUuid) {
@@ -259,24 +264,27 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
     @Override
     public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
-                .buildAndExpand(uuid)
-                .toUriString();
+        executeWithOptionalServiceCheck(() -> {
+            String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
+                    .buildAndExpand(uuid)
+                    .toUriString();
 
-        restClient.delete().uri(baseUri + path)
+            restClient.delete().uri(baseUri + path)
             .retrieve().toBodilessEntity();
+        });
     }
 
     @Override
     public UUID createDefaultParameters() {
+        return executeWithOptionalServiceFallback(() -> {
+            var path = UriComponentsBuilder
+                    .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/default")
+                    .buildAndExpand()
+                    .toUriString();
 
-        var path = UriComponentsBuilder
-                .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/default")
-                .buildAndExpand()
-                .toUriString();
-
-        return restClient.post().uri(baseUri + path)
+            return restClient.post().uri(baseUri + path)
             .retrieve().body(UUID.class);
+        }, null);
     }
 
     public UUID createSecurityAnalysisParameters(String parameters) {

@@ -122,6 +122,34 @@ public class RemoteServicesInspector {
         return CompletableFuture.completedFuture(false);
     }
 
+    public boolean isOptionalServiceUpSync(@NonNull RemoteServicesProperties.Service service) {
+        try {
+            final String result = restClient
+                    .get()
+                    .uri(service.getBaseUri() + "/actuator/health")
+                    .retrieve()
+                    .body(String.class);
+            if (result == null) {
+                return false;
+            }
+            final JsonNode node = objectMapper.readTree(result).path(ACTUATOR_HEALTH_STATUS_JSON_FIELD);
+            return "UP".equalsIgnoreCase(node.asText());
+        } catch (RestClientException | JsonProcessingException _) {
+            return false;
+        }
+    }
+
+    public RemoteServicesProperties.Service getService(RemoteServiceName name) {
+        final List<RemoteServicesProperties.Service> services = remoteServicesProperties.getServices();
+        if (services == null) {
+            return null;
+        }
+        return services.stream()
+                .filter(s -> s.getName().equalsIgnoreCase(name.serviceName()))
+                .findFirst()
+                .orElse(null);
+    }
+
     /**
      * Get all {@link RemoteServiceName services} actuator information and aggregate them
      * @param view the view to use to filter the services returned

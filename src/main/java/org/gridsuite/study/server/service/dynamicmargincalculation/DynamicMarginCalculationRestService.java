@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
@@ -39,6 +40,7 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORTER_ID;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_TYPE;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_UUID;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
+import static org.gridsuite.study.server.service.client.RemoteServiceName.DYNAMIC_MARGIN_CALCULATION_SERVER;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 
 /**
@@ -55,8 +57,9 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
     private final ObjectMapper objectMapper;
 
     public DynamicMarginCalculationRestService(
-            RemoteServicesProperties remoteServicesProperties, RestClient restClient, ObjectMapper objectMapper) {
-        super(remoteServicesProperties.getServiceUri("dynamic-margin-calculation-server"), restClient);
+            RemoteServicesProperties remoteServicesProperties,
+            RemoteServicesInspector remoteServicesInspector, RestClient restClient, ObjectMapper objectMapper) {
+        super(remoteServicesProperties.getServiceUri("dynamic-margin-calculation-server"), restClient, remoteServicesInspector, DYNAMIC_MARGIN_CALCULATION_SERVER);
         this.objectMapper = objectMapper;
     }
 
@@ -101,15 +104,17 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
 
     @Override
     public UUID createDefaultParameters() {
-        String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_PARAMETER);
+        return executeWithOptionalServiceFallback(() -> {
+            String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_PARAMETER);
 
-        String url = UriComponentsBuilder
-                .fromUriString(parametersBaseUrl + "/default")
-                .buildAndExpand()
-                .toUriString();
+            String url = UriComponentsBuilder
+                    .fromUriString(parametersBaseUrl + "/default")
+                    .buildAndExpand()
+                    .toUriString();
 
-        return getRestClient().post().uri(url)
+            return getRestClient().post().uri(url)
             .retrieve().body(UUID.class);
+        }, null);
     }
 
     public void updateParameters(UUID parametersUuid, String parametersInfos) {
@@ -127,26 +132,28 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
     @Override
     public UUID duplicateParameters(UUID sourceParameterId) {
         Objects.requireNonNull(sourceParameterId);
+        return executeWithOptionalServiceFallback(() -> {
+            String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_PARAMETER);
 
-        String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_PARAMETER);
+            String url = UriComponentsBuilder
+                    .fromUriString(parametersBaseUrl + "/{uuid}/duplicate")
+                    .buildAndExpand(sourceParameterId)
+                    .toUriString();
 
-        String url = UriComponentsBuilder
-                .fromUriString(parametersBaseUrl + "/{uuid}/duplicate")
-                .buildAndExpand(sourceParameterId)
-                .toUriString();
-
-        return getRestClient().post().uri(url)
+            return getRestClient().post().uri(url)
             .retrieve().body(UUID.class);
+        }, null);
     }
 
     public void deleteParameters(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
+        executeWithOptionalServiceCheck(() -> {
+            String url = getParametersWithUuidUrl(parametersUuid);
 
-        String url = getParametersWithUuidUrl(parametersUuid);
-
-        // call dynamic-margin-calculation REST API
-        getRestClient().delete().uri(url)
+            // call dynamic-margin-calculation REST API
+            getRestClient().delete().uri(url)
             .retrieve().toBodilessEntity();
+        });
     }
 
     public UUID runDynamicMarginCalculation(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid,

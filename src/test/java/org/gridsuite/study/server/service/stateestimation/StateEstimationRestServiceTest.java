@@ -8,6 +8,7 @@ package org.gridsuite.study.server.service.stateestimation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,13 +57,15 @@ class StateEstimationRestServiceTest {
     private RemoteServicesProperties remoteServicesProperties;
     @Mock(answer = RETURNS_DEEP_STUBS)
     private RestClient restClient;
+    @Mock
+    private RemoteServicesInspector remoteServicesInspector;
 
     private StateEstimationRestService stateEstimationRestService;
 
     @BeforeEach
     void setUp() {
         when(remoteServicesProperties.getServiceUri("state-estimation-server")).thenReturn(BASE_URI);
-        stateEstimationRestService = new StateEstimationRestService(remoteServicesProperties, new ObjectMapper(), restClient);
+        stateEstimationRestService = new StateEstimationRestService(remoteServicesProperties, remoteServicesInspector, new ObjectMapper(), restClient);
     }
 
     @Test

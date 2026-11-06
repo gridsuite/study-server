@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.VariantInfos;
 import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
@@ -32,6 +33,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.service.client.RemoteServiceName.VOLTAGE_INIT_SERVER;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
@@ -47,9 +49,10 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
     private final ObjectMapper objectMapper;
 
     public VoltageInitRestService(RemoteServicesProperties remoteServicesProperties,
+                                  RemoteServicesInspector remoteServicesInspector,
                                   RestClient restClient,
                                   ObjectMapper objectMapper) {
-        super(remoteServicesProperties.getServiceUri("voltage-init-server"), restClient);
+        super(remoteServicesProperties.getServiceUri("voltage-init-server"), restClient, remoteServicesInspector, VOLTAGE_INIT_SERVER);
         this.objectMapper = objectMapper;
     }
 
@@ -126,17 +129,19 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
     }
 
     public UUID createVoltageInitParameters(@Nullable VoltageInitParametersInfos parameters) {
-        var path = UriComponentsBuilder
-                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters")
-                .buildAndExpand()
-                .toUriString();
+        return executeWithOptionalServiceFallback(() -> {
+            var path = UriComponentsBuilder
+                    .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters")
+                    .buildAndExpand()
+                    .toUriString();
 
-        var requestSpec = restClient.post().uri(baseUri + path)
-            .contentType(MediaType.APPLICATION_JSON);
-        if (parameters != null) {
-            requestSpec.body(parameters);
-        }
-        return requestSpec.retrieve().body(UUID.class);
+            var requestSpec = restClient.post().uri(baseUri + path)
+                .contentType(MediaType.APPLICATION_JSON);
+            if (parameters != null) {
+                requestSpec.body(parameters);
+            }
+            return requestSpec.retrieve().body(UUID.class);
+        }, null);
     }
 
     @Override
@@ -161,24 +166,27 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
     @Override
     public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
+        return executeWithOptionalServiceFallback(() -> {
+            String path = UriComponentsBuilder
+                    .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + "/{uuid}/duplicate")
+                    .buildAndExpand(sourceParametersUuid)
+                    .toUriString();
 
-        String path = UriComponentsBuilder
-                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + "/{uuid}/duplicate")
-                .buildAndExpand(sourceParametersUuid)
-                .toUriString();
-
-        return restClient.post().uri(baseUri + path)
+            return restClient.post().uri(baseUri + path)
             .contentType(MediaType.APPLICATION_JSON)
             .retrieve().body(UUID.class);
+        }, null);
     }
 
     @Override
     public void deleteParameters(UUID parametersUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)
-            .buildAndExpand(parametersUuid).toUriString();
+        executeWithOptionalServiceCheck(() -> {
+            String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)
+                .buildAndExpand(parametersUuid).toUriString();
 
-        restClient.delete().uri(baseUri + path)
+            restClient.delete().uri(baseUri + path)
             .retrieve().toBodilessEntity();
+        });
     }
 
     public void stopVoltageInit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {

@@ -12,7 +12,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.client.RemoteServiceName;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -41,8 +43,11 @@ public class LogicalControlsRestService extends AbstractComputationRestService {
     private final ObjectMapper objectMapper;
 
     @Autowired
-    public LogicalControlsRestService(RemoteServicesProperties remoteServicesProperties, ObjectMapper objectMapper, RestClient restClient) {
-        super(remoteServicesProperties.getServiceUri("state-estimation-server"), restClient);
+    public LogicalControlsRestService(RemoteServicesProperties remoteServicesProperties,
+                                      RemoteServicesInspector servicesInspector,
+                                      ObjectMapper objectMapper,
+                                      RestClient restClient) {
+        super(remoteServicesProperties.getServiceUri("state-estimation-server"), restClient, servicesInspector, RemoteServiceName.STATE_ESTIMATION_SERVER);
         this.objectMapper = objectMapper;
     }
 

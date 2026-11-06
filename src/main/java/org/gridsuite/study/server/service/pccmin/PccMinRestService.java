@@ -13,6 +13,7 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
@@ -35,6 +36,7 @@ import java.util.Objects;
 import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
+import static org.gridsuite.study.server.service.client.RemoteServiceName.PCC_MIN_SERVER;
 
 /**
  * @author Maissa SOUISSI <maissa.souissi at rte-france.com>
@@ -53,8 +55,9 @@ public class PccMinRestService extends AbstractComputationRestService implements
 
     @Autowired
     public PccMinRestService(RemoteServicesProperties remoteServicesProperties,
+                             RemoteServicesInspector remoteServicesInspector,
                              ObjectMapper objectMapper, RestClient restClient) {
-        super(remoteServicesProperties.getServiceUri("pcc-min-server"), restClient);
+        super(remoteServicesProperties.getServiceUri("pcc-min-server"), restClient, remoteServicesInspector, PCC_MIN_SERVER);
         this.objectMapper = objectMapper;
     }
 
@@ -213,13 +216,15 @@ public class PccMinRestService extends AbstractComputationRestService implements
 
     @Override
     public UUID createDefaultParameters() {
-        var path = UriComponentsBuilder
-            .fromPath(PARAMETERS_URI + DELIMITER + "default")
-            .buildAndExpand()
-            .toUriString();
+        return executeWithOptionalServiceFallback(() -> {
+            var path = UriComponentsBuilder
+                .fromPath(PARAMETERS_URI + DELIMITER + "default")
+                .buildAndExpand()
+                .toUriString();
 
-        return restClient.post().uri(baseUri + path)
+            return restClient.post().uri(baseUri + path)
             .retrieve().body(UUID.class);
+        }, null);
     }
 
     public String getPccMinParameters(UUID parametersUuid) {
@@ -235,28 +240,30 @@ public class PccMinRestService extends AbstractComputationRestService implements
     @Override
     public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
+        executeWithOptionalServiceCheck(() -> {
+            String path = UriComponentsBuilder
+                .fromPath(PARAMETER_URI)
+                .buildAndExpand(uuid)
+                .toUriString();
 
-        String path = UriComponentsBuilder
-            .fromPath(PARAMETER_URI)
-            .buildAndExpand(uuid)
-            .toUriString();
-
-        restClient.delete().uri(baseUri + path)
+            restClient.delete().uri(baseUri + path)
             .retrieve().toBodilessEntity();
+        });
     }
 
     @Override
     public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
+        return executeWithOptionalServiceFallback(() -> {
+            String path = UriComponentsBuilder
+                .fromPath(PARAMETERS_URI + "/{uuid}/duplicate")
+                .buildAndExpand(sourceParametersUuid)
+                .toUriString();
 
-        String path = UriComponentsBuilder
-            .fromPath(PARAMETERS_URI + "/{uuid}/duplicate")
-            .buildAndExpand(sourceParametersUuid)
-            .toUriString();
-
-        return restClient.post().uri(baseUri + path)
+            return restClient.post().uri(baseUri + path)
             .contentType(MediaType.APPLICATION_JSON)
             .retrieve().body(UUID.class);
+        }, null);
     }
 
     public ResponseEntity<byte[]> exportPccMinResultsAsCsv(UUID resultUuid, String csvHeaders, UUID networkUuid, String variantId, Sort sort, String filters, String globalFilters) {
