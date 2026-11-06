@@ -86,7 +86,7 @@ class StateEstimationRestServiceTest {
 
         stateEstimationRestService.resetStateEstimationParameters(parametersUuid);
 
-        verify(restTemplate).put(BASE_URI + "/" + STATE_ESTIMATION_API_VERSION + "/parameters/" + parametersUuid + "/reset", (Object) null);
+        verify(restClient.put().uri(BASE_URI + "/" + STATE_ESTIMATION_API_VERSION + "/parameters/" + parametersUuid + "/reset").retrieve()).toBodilessEntity();
     }
 
     private URI requestedMeasurementsUri(String variantId, String globalFilters) {

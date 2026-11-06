@@ -220,7 +220,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
     public void resetAsymmetricalLoadParameters(UUID parametersUuid) {
         var uriBuilder = UriComponentsBuilder.fromPath(PARAMETER_URI);
         String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
-        restTemplate.put(baseUri + path, null);
+        restClient.put().uri(baseUri + path).retrieve().toBodilessEntity();
     }
 
     public UUID getAsymmetricalLoadParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {

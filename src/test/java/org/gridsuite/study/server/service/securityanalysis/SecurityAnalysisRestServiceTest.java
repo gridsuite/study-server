@@ -87,6 +87,6 @@ class SecurityAnalysisRestServiceTest {
 
         securityAnalysisRestService.resetSecurityAnalysisParameters(parameterUuid);
 
-        verify(restTemplate).put(BASE_URI + "/" + SECURITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid + "/reset", null);
+        verify(restClient.put().uri(BASE_URI + "/" + SECURITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid + "/reset").retrieve()).toBodilessEntity();
     }
 }

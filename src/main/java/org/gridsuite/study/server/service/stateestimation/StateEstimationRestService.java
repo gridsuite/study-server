@@ -219,7 +219,7 @@ public class StateEstimationRestService extends AbstractComputationRestService i
                 .buildAndExpand(parametersUuid)
                 .toUriString();
 
-        restTemplate.put(baseUri + path, null);
+        restClient.put().uri(baseUri + path).retrieve().toBodilessEntity();
     }
 
     public String getStateEstimationParameters(UUID parametersUuid) {

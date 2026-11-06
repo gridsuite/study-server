@@ -70,6 +70,6 @@ class VoltageInitRestServiceTest {
 
         voltageInitRestService.resetVoltageInitParameters(parametersUuid);
 
-        verify(restTemplate).exchange(BASE_URI + "/" + VOLTAGE_INIT_API_VERSION + "/parameters/" + parametersUuid + "/reset", HttpMethod.PUT, null, UUID.class);
+        verify(restClient.put().uri(BASE_URI + "/" + VOLTAGE_INIT_API_VERSION + "/parameters/" + parametersUuid + "/reset").retrieve()).toBodilessEntity();
     }
 }

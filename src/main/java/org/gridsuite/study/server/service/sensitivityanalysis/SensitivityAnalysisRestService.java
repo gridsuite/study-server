@@ -310,7 +310,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
                 .buildAndExpand(parametersUuid)
                 .toUriString();
 
-        restTemplate.put(baseUri + path, null);
+        restClient.put().uri(baseUri + path).retrieve().toBodilessEntity();
     }
 
     @Override

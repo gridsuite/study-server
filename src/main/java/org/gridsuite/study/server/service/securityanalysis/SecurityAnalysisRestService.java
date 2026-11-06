@@ -229,7 +229,7 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
     public void resetSecurityAnalysisParameters(UUID parametersUuid) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{uuid}/reset");
         String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
-        restTemplate.put(baseUri + path, null);
+        restClient.put().uri(baseUri + path).retrieve().toBodilessEntity();
     }
 
     @Override

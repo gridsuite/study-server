@@ -207,7 +207,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
     public void resetPccMinParameters(UUID parametersUuid) {
         var uriBuilder = UriComponentsBuilder.fromPath(RESET_PARAMETER_URI);
         String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
-        restTemplate.put(baseUri + path, null);
+        restClient.put().uri(baseUri + path).retrieve().toBodilessEntity();
     }
 
     public UUID getPccMinParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {

@@ -129,7 +129,7 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
 
         String url = getParametersWithUuidUrl(parametersUuid) + "/reset";
 
-        getRestTemplate().put(url, null);
+        getRestClient().put().uri(url).retrieve().toBodilessEntity();
     }
 
     @Override

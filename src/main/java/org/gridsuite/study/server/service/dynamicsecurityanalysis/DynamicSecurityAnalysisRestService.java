@@ -133,7 +133,7 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
 
         String url = getParametersWithUuidUrl(parametersUuid) + "/reset";
 
-        getRestTemplate().put(url, null);
+        getRestClient().put().uri(url).retrieve().toBodilessEntity();
     }
 
     public UUID duplicateParameters(UUID sourceParameterId) {

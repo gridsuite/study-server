@@ -164,7 +164,7 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
                 .buildAndExpand(parametersUuid)
                 .toUriString();
 
-        restTemplate.exchange(baseUri + path, HttpMethod.PUT, null, UUID.class);
+        restClient.put().uri(baseUri + path).retrieve().toBodilessEntity();
     }
 
     @Override

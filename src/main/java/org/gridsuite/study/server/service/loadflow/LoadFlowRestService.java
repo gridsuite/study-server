@@ -282,7 +282,7 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
                 .buildAndExpand(parametersUuid)
                 .toUriString();
 
-        restTemplate.put(baseUri + path, null);
+        restClient.put().uri(baseUri + path).retrieve().toBodilessEntity();
     }
 
     @Override
