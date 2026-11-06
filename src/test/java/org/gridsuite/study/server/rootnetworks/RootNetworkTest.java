@@ -27,6 +27,7 @@ import org.gridsuite.study.server.repository.StudyCreationRequestEntity;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
@@ -150,6 +151,8 @@ class RootNetworkTest {
     private NetworkModificationTreeService networkModificationTreeService;
     @Autowired
     private RootNetworkRepository rootNetworkRepository;
+    @Autowired
+    private NodeRepository nodeRepository;
     @Autowired
     private TestUtils testUtils;
 
@@ -1060,6 +1063,40 @@ class RootNetworkTest {
             .tag("dum")
             .build().toEntity(objectMapper);
         studyEntity.addRootNetwork(rootNetworkEntity);
+    }
+
+    @Test
+    void testCountStudiesByRootNetworkTag() {
+        UUID groupOfStudyWithTwoTags = createStudyWithNode("R2").getModificationGroupUuid();
+        UUID groupOfStudyWithOneTag = createStudyWithNode(null).getModificationGroupUuid();
+        NetworkModificationNode stashedNode = createStudyWithNode("R3");
+        NodeEntity stashedNodeEntity = nodeRepository.findById(stashedNode.getId()).orElseThrow();
+        stashedNodeEntity.setStashed(true);
+        nodeRepository.save(stashedNodeEntity);
+        createStudyWithNode("R4"); // holds none of the requested groups
+
+        assertEquals(Map.of("dum", 2L, "R2", 1L), rootNetworkService.countStudiesByRootNetworkTag(
+            List.of(groupOfStudyWithTwoTags, groupOfStudyWithOneTag, stashedNode.getModificationGroupUuid(), UUID.randomUUID())));
+        assertEquals(Map.of(), rootNetworkService.countStudiesByRootNetworkTag(List.of(UUID.randomUUID())));
+        assertEquals(Map.of(), rootNetworkService.countStudiesByRootNetworkTag(List.of()));
+    }
+
+    private NetworkModificationNode createStudyWithNode(String extraTag) {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        if (extraTag != null) {
+            createDummyRootNetwork(studyEntity, RootNetworkInfos.builder()
+                .id(UUID.randomUUID())
+                .name(CASE_NAME2)
+                .importParameters(Map.of())
+                .caseInfos(new CaseInfos(CASE_UUID2, CASE_UUID, CASE_NAME2, CASE_FORMAT2))
+                .networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
+                .reportUuid(REPORT_UUID2)
+                .tag(extraTag)
+                .build());
+        }
+        studyRepository.save(studyEntity);
+        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
+        return networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
     }
 
     @AfterEach

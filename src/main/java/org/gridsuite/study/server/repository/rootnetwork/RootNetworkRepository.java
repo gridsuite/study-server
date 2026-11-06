@@ -13,6 +13,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -43,6 +44,17 @@ public interface RootNetworkRepository extends JpaRepository<RootNetworkEntity, 
     List<RootNetworkEntity> findAllByStudyId(UUID studyUuid);
 
     Optional<RootNetworkEntity> findByTagAndStudyId(String tag, UUID studyUuid);
+
+    /**
+     * @return for each root network tag, how many of the studies holding the given modification groups, in a node that is not
+     * stashed, have it
+     */
+    @Query("""
+            select r.tag as tag, count(distinct r.study.id) as studyCount from RootNetworkEntity r
+            where r.study.id in (select n.node.study.id from NetworkModificationNodeInfoEntity n where n.modificationGroupUuid in :groupUuids and n.node.stashed = false)
+            group by r.tag
+            """)
+    List<TagStudyCount> countStudiesByTag(@Param("groupUuids") Collection<UUID> groupUuids);
 
     boolean existsByIdAndName(UUID rootNetworkUuid, String rootNetworkName);
 
