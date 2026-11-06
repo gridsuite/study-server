@@ -63,7 +63,7 @@ class StateEstimationRestServiceTest {
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final String RESULTS_PATH = "/" + STATE_ESTIMATION_API_VERSION + "/results/" + RESULT_UUID + "/measurements";
     private static final String GLOBAL_FILTERS = "{\"label\":\"a+b %41 100% & c=d \\\"q\\\" \\\\ é 中\"}";
-  
+
     @BeforeEach
     void setUp() {
         when(remoteServicesProperties.getServiceUri("state-estimation-server")).thenReturn(BASE_URI);
@@ -79,8 +79,8 @@ class StateEstimationRestServiceTest {
 
         assertThat(stateEstimationRestService.downloadDebugFile(resultUuid)).isEqualTo(response);
     }
-  
-      @Test
+
+    @Test
     void testResetParameters() {
         UUID parametersUuid = UUID.randomUUID();
 
