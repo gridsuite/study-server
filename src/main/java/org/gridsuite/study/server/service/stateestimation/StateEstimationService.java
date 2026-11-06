@@ -132,8 +132,9 @@ public class StateEstimationService extends AbstractComputationService {
                 studyUuid,
                 userId,
                 STATE_ESTIMATION,
-                List.of(this::invalidateStateEstimationStatusOnAllNodes),
-                NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS
+                List.of(this::invalidateStateEstimationStatusOnAllNodes, this::invalidateLogicalControlsStatusOnAllNodes),
+                NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS,
+                NotificationService.UPDATE_TYPE_LOGICAL_CONTROLS_STATUS
         );
     }
 
