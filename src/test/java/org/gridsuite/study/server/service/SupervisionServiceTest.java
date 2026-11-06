@@ -10,6 +10,9 @@ import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -21,9 +24,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
@@ -40,8 +46,33 @@ class SupervisionServiceTest {
     @MockitoBean
     IndexOperations indexOperations;
 
+    @MockitoBean
+    NetworkModificationTreeService networkModificationTreeService;
+
+    @MockitoBean
+    NetworkModificationRestService networkModificationService;
+
     @Autowired
     SupervisionService supervisionService;
+
+    @Test
+    void recreateNetworkModificationSharingLinksSkipsStashedNodesAndGroupsWithoutReferences() {
+        UUID studyUuid = UUID.randomUUID();
+        UUID groupWithReferences = UUID.randomUUID();
+        UUID groupWithoutReferences = UUID.randomUUID();
+        List<UUID> modificationGroupUuids = List.of(groupWithReferences, groupWithoutReferences);
+        String userId = "userId";
+        NodeEntity activeNode = new NodeEntity();
+        NodeEntity secondActiveNode = new NodeEntity();
+
+        when(networkModificationTreeService.getAllNetworkModificationNodeInfos(studyUuid, false)).thenReturn(List.of(
+            NetworkModificationNodeInfoEntity.builder().node(activeNode).modificationGroupUuid(groupWithReferences).build(),
+            NetworkModificationNodeInfoEntity.builder().node(secondActiveNode).modificationGroupUuid(groupWithoutReferences).build()));
+
+        supervisionService.recreateNetworkModificationSharingLinks(studyUuid, userId);
+
+        verify(networkModificationService).createSharingLinks(modificationGroupUuids, true, userId);
+    }
 
     @Test
     void recreateStudyIndicesThrowsExceptionWhenDeleteFails() {
