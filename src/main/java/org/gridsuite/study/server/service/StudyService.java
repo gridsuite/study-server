@@ -1653,20 +1653,8 @@ public class StudyService {
      * and replaced in the node by a reference to this now shared composite modification.
      */
     @Transactional(readOnly = true)
-    public void shareCompositeNetworkModification(
-        UUID studyUuid,
-        UUID nodeUuid,
-        UUID modificationUuid,
-        String name,
-        String description,
-        UUID parentDirectoryUuid,
-        String userId) {
-        // checks we can write in the target directory before touching anything
-        directoryService.checkPermission(List.of(), parentDirectoryUuid, userId, PermissionType.WRITE, false);
-        if (directoryService.elementExists(parentDirectoryUuid, name, DirectoryService.MODIFICATION)) {
-            throw new StudyException(ELEMENT_ALREADY_EXISTS, "composite modification name " + name + " already exists in directory", Map.of("fileName", name));
-        }
-
+    public void shareCompositeNetworkModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, String name,
+                                                  String description, UUID parentDirectoryUuid, String userId) {
         UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         try {
@@ -1674,7 +1662,7 @@ public class StudyService {
             ModificationReference newReference = networkModificationRestService.extractCompositeModificationToShare(groupUuid, modificationUuid, name, description);
             // the composite modification keeps its uuid when extracted, so it is shared under that same uuid
             // description is null as it is provided by the referenced modification
-            directoryService.createElement(parentDirectoryUuid, null, modificationUuid, name, DirectoryService.MODIFICATION, userId);
+            directoryService.createElement(parentDirectoryUuid, null, modificationUuid, name, DirectoryService.MODIFICATION, userId, true);
             // extraction replaced the local composite by a new reference modification, in the node group or in a parent
             // composite: register it on the shared element
             directoryService.createSharingLinks(List.of(newReference), studyUuid, nodeUuid, userId);
