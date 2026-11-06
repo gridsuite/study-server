@@ -8,11 +8,13 @@ package org.gridsuite.study.server.controller;
 
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
@@ -21,9 +23,11 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 @RequestMapping(value = "/" + StudyApi.API_VERSION)
 public class NetworkModificationController {
     private final NetworkModificationRestService networkModificationRestService;
+    private final NetworkModificationService networkModificationService;
 
-    public NetworkModificationController(NetworkModificationRestService networkModificationRestService) {
+    public NetworkModificationController(NetworkModificationRestService networkModificationRestService, NetworkModificationService networkModificationService) {
         this.networkModificationRestService = networkModificationRestService;
+        this.networkModificationService = networkModificationService;
     }
 
     @GetMapping(value = "/network-modifications/catalog/line_types")
@@ -46,6 +50,11 @@ public class NetworkModificationController {
     @GetMapping(value = "/network-modifications/{uuid}")
     public ResponseEntity<String> getNetworkModification(@PathVariable UUID uuid, @RequestHeader(HEADER_USER_ID) String userId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationRestService.getNetworkModification(uuid, userId));
+    }
+
+    @GetMapping(value = "/network-modifications/{uuid}/root-network-tags/study-count")
+    public ResponseEntity<Map<String, Long>> getRootNetworkTagsStudyCount(@PathVariable UUID uuid) {
+        return ResponseEntity.ok(networkModificationService.getRootNetworkTagsStudyCount(uuid));
     }
 
     @GetMapping(value = "/network-modifications/busbar-sections-for-new-coupler")
