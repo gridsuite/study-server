@@ -19,13 +19,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.net.ConnectException;
@@ -43,10 +42,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.gridsuite.study.server.StudyConstants.STATE_ESTIMATION_API_VERSION;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Answers.RETURNS_DEEP_STUBS;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -56,15 +54,15 @@ class StateEstimationRestServiceTest {
 
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
-    @Mock
-    private RestTemplate restTemplate;
+    @Mock(answer = RETURNS_DEEP_STUBS)
+    private RestClient restClient;
 
     private StateEstimationRestService stateEstimationRestService;
 
     @BeforeEach
     void setUp() {
         when(remoteServicesProperties.getServiceUri("state-estimation-server")).thenReturn(BASE_URI);
-        stateEstimationRestService = new StateEstimationRestService(remoteServicesProperties, new ObjectMapper(), restTemplate);
+        stateEstimationRestService = new StateEstimationRestService(remoteServicesProperties, new ObjectMapper(), restClient);
     }
 
     @Test
@@ -72,7 +70,7 @@ class StateEstimationRestServiceTest {
         UUID resultUuid = UUID.randomUUID();
         ResponseEntity<Resource> response = ResponseEntity.ok(new ByteArrayResource("debug".getBytes()));
         String url = BASE_URI + "/" + STATE_ESTIMATION_API_VERSION + "/results/" + resultUuid + "/download-debug-file";
-        when(restTemplate.exchange(url, HttpMethod.GET, null, Resource.class)).thenReturn(response);
+        when(restClient.get().uri(url).retrieve().toEntity(Resource.class)).thenReturn(response);
 
         assertThat(stateEstimationRestService.downloadDebugFile(resultUuid)).isEqualTo(response);
     }
@@ -83,11 +81,11 @@ class StateEstimationRestServiceTest {
     private static final String GLOBAL_FILTERS = "{\"label\":\"a+b %41 100% & c=d \\\"q\\\" \\\\ é 中\"}";
 
     private URI requestedMeasurementsUri(String variantId, String globalFilters) {
-        when(restTemplate.getForObject(any(URI.class), eq(String.class))).thenReturn("[]");
+        when(restClient.get().uri(any(URI.class)).retrieve().body(String.class)).thenReturn("[]");
+        org.mockito.Mockito.clearInvocations(restClient.get());
         assertThat(stateEstimationRestService.getStateEstimationMeasurements(RESULT_UUID, NETWORK_UUID, variantId, globalFilters)).isEqualTo("[]");
         ArgumentCaptor<URI> uri = ArgumentCaptor.forClass(URI.class);
-        verify(restTemplate).getForObject(uri.capture(), eq(String.class));
-        verifyNoMoreInteractions(restTemplate);
+        verify(restClient.get()).uri(uri.capture());
         return uri.getValue();
     }
 
@@ -122,7 +120,7 @@ class StateEstimationRestServiceTest {
     void measurementsDownstreamErrorsAreNotTranslated() {
         HttpClientErrorException badRequest = HttpClientErrorException.create(HttpStatus.BAD_REQUEST, "bad", new HttpHeaders(), "{}".getBytes(), null);
         HttpServerErrorException serverError = HttpServerErrorException.create(HttpStatus.INTERNAL_SERVER_ERROR, "ko", new HttpHeaders(), "{}".getBytes(), null);
-        when(restTemplate.getForObject(any(URI.class), eq(String.class))).thenThrow(badRequest).thenThrow(serverError);
+        when(restClient.get().uri(any(URI.class)).retrieve().body(String.class)).thenThrow(badRequest).thenThrow(serverError);
 
         assertThatThrownBy(() -> stateEstimationRestService.getStateEstimationMeasurements(RESULT_UUID, NETWORK_UUID, "v", GLOBAL_FILTERS)).isSameAs(badRequest);
         assertThatThrownBy(() -> stateEstimationRestService.getStateEstimationMeasurements(RESULT_UUID, NETWORK_UUID, "v", GLOBAL_FILTERS)).isSameAs(serverError);
@@ -130,7 +128,7 @@ class StateEstimationRestServiceTest {
 
     @Test
     void measurementsConnectionFailureIs502AndTimeoutIs504() {
-        when(restTemplate.getForObject(any(URI.class), eq(String.class)))
+        when(restClient.get().uri(any(URI.class)).retrieve().body(String.class))
             .thenThrow(new ResourceAccessException("down", new ConnectException()))
             .thenThrow(new ResourceAccessException("slow", new SocketTimeoutException()))
             .thenThrow(new ResourceAccessException("slow", new HttpConnectTimeoutException("slow")));

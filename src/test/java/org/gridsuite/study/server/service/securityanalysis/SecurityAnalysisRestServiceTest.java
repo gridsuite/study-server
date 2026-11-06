@@ -14,15 +14,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpEntity;
 import org.springframework.http.MediaType;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.SECURITY_ANALYSIS_API_VERSION;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Answers.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -33,21 +32,21 @@ class SecurityAnalysisRestServiceTest {
 
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
-    @Mock
-    private RestTemplate restTemplate;
+    @Mock(answer = RETURNS_DEEP_STUBS)
+    private RestClient restClient;
 
     private SecurityAnalysisRestService securityAnalysisRestService;
 
     @BeforeEach
     void setUp() {
         when(remoteServicesProperties.getServiceUri("security-analysis-server")).thenReturn(BASE_URI);
-        securityAnalysisRestService = new SecurityAnalysisRestService(remoteServicesProperties, new ObjectMapper(), restTemplate);
+        securityAnalysisRestService = new SecurityAnalysisRestService(remoteServicesProperties, new ObjectMapper(), restClient);
     }
 
     @Test
     void testGetProviders() {
         String providers = "[\"OpenLoadFlow\"]";
-        when(restTemplate.getForObject(BASE_URI + "/" + SECURITY_ANALYSIS_API_VERSION + "/providers", String.class)).thenReturn(providers);
+        when(restClient.get().uri(BASE_URI + "/" + SECURITY_ANALYSIS_API_VERSION + "/providers").retrieve().body(String.class)).thenReturn(providers);
 
         assertThat(securityAnalysisRestService.getProviders()).isEqualTo(providers);
     }
@@ -55,7 +54,7 @@ class SecurityAnalysisRestServiceTest {
     @Test
     void testGetDefaultLimitReductions() {
         String defaultLimitReductions = "[]";
-        when(restTemplate.getForObject(BASE_URI + "/" + SECURITY_ANALYSIS_API_VERSION + "/parameters/default-limit-reductions", String.class)).thenReturn(defaultLimitReductions);
+        when(restClient.get().uri(BASE_URI + "/" + SECURITY_ANALYSIS_API_VERSION + "/parameters/default-limit-reductions").retrieve().body(String.class)).thenReturn(defaultLimitReductions);
 
         assertThat(securityAnalysisRestService.getDefaultLimitReductions()).isEqualTo(defaultLimitReductions);
     }
@@ -64,7 +63,7 @@ class SecurityAnalysisRestServiceTest {
     void testGetParameters() {
         UUID parameterUuid = UUID.randomUUID();
         String parameters = "{\"provider\":\"OpenLoadFlow\"}";
-        when(restTemplate.getForObject(BASE_URI + "/" + SECURITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid, String.class)).thenReturn(parameters);
+        when(restClient.get().uri(BASE_URI + "/" + SECURITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid).retrieve().body(String.class)).thenReturn(parameters);
 
         assertThat(securityAnalysisRestService.getParameters(parameterUuid)).isEqualTo(parameters);
     }
@@ -73,12 +72,12 @@ class SecurityAnalysisRestServiceTest {
     void testUpdateParameters() {
         UUID parameterUuid = UUID.randomUUID();
         String parameters = "{\"provider\":\"OpenLoadFlow\"}";
-        ArgumentCaptor<HttpEntity<String>> captor = ArgumentCaptor.forClass(HttpEntity.class);
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
 
         securityAnalysisRestService.updateParameters(parameterUuid, parameters);
 
-        verify(restTemplate).put(eq(BASE_URI + "/" + SECURITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid), captor.capture());
-        assertThat(captor.getValue().getBody()).isEqualTo(parameters);
-        assertThat(captor.getValue().getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
+        verify(restClient.put().uri(BASE_URI + "/" + SECURITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid)).contentType(MediaType.APPLICATION_JSON);
+        verify(restClient.put().uri(BASE_URI + "/" + SECURITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid).contentType(MediaType.APPLICATION_JSON)).body(captor.capture());
+        assertThat(captor.getValue()).isEqualTo(parameters);
     }
 }
