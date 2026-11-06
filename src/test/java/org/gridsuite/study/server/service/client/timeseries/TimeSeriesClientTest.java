@@ -38,7 +38,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.*;
 
@@ -75,7 +75,7 @@ class TimeSeriesClientTest {
     private TimeSeriesClient timeSeriesClient;
 
     @Autowired
-    private RestTemplate restTemplate;
+    private RestClient restClient;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -164,7 +164,7 @@ class TimeSeriesClientTest {
         // get base URL
         HttpUrl baseUrl = server.url("");
         remoteServicesProperties.setServiceUri("timeseries-server", baseUrl.toString());
-        timeSeriesClient = new TimeSeriesClientImpl(remoteServicesProperties, restTemplate);
+        timeSeriesClient = new TimeSeriesClientImpl(remoteServicesProperties, restClient);
     }
 
     @Test

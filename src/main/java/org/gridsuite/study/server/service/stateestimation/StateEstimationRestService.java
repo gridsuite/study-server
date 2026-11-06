@@ -21,7 +21,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 import java.io.InterruptedIOException;
@@ -51,8 +51,8 @@ public class StateEstimationRestService extends AbstractComputationRestService i
 
     @Autowired
     public StateEstimationRestService(RemoteServicesProperties remoteServicesProperties,
-                                      ObjectMapper objectMapper, RestTemplate restTemplate) {
-        super(remoteServicesProperties.getServiceUri("state-estimation-server"), restTemplate);
+                                      ObjectMapper objectMapper, RestClient restClient) {
+        super(remoteServicesProperties.getServiceUri("state-estimation-server"), restClient);
         this.objectMapper = objectMapper;
     }
 
@@ -65,7 +65,8 @@ public class StateEstimationRestService extends AbstractComputationRestService i
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results/{resultUuid}");
         String path = pathBuilder.buildAndExpand(resultUuid).toUriString();
 
-        return restTemplate.getForObject(baseUri + path, String.class);
+        return restClient.get().uri(baseUri + path)
+            .retrieve().body(String.class);
     }
 
     public String getStateEstimationMeasurements(UUID resultUuid, UUID networkUuid, String variantId, String globalFilters) {
@@ -87,7 +88,8 @@ public class StateEstimationRestService extends AbstractComputationRestService i
         URI uri = uriBuilder.encode().buildAndExpand(uriVariables).toUri();
 
         try {
-            return restTemplate.getForObject(uri, String.class);
+            return restClient.get().uri(uri)
+                .retrieve().body(String.class);
         } catch (ResourceAccessException e) {
             boolean timeout = e.getCause() instanceof InterruptedIOException || e.getCause() instanceof HttpTimeoutException;
             throw new ResponseStatusException(timeout ? HttpStatus.GATEWAY_TIMEOUT : HttpStatus.BAD_GATEWAY,
@@ -112,13 +114,10 @@ public class StateEstimationRestService extends AbstractComputationRestService i
         }
         var path = uriComponentsBuilder.queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(networkUuid).toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
-
-        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restClient.post().uri(baseUri + path)
+            .headers(headers -> headers.set(HEADER_USER_ID, userId))
+            .contentType(MediaType.APPLICATION_JSON)
+            .retrieve().body(UUID.class);
     }
 
     public void stopStateEstimation(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid) {
@@ -140,7 +139,8 @@ public class StateEstimationRestService extends AbstractComputationRestService i
                 .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results/{resultUuid}/stop")
                 .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
 
-        restTemplate.put(baseUri + path, Void.class);
+        restClient.put().uri(baseUri + path)
+            .retrieve().toBodilessEntity();
     }
 
     public String getStateEstimationStatus(UUID resultUuid) {
@@ -150,11 +150,12 @@ public class StateEstimationRestService extends AbstractComputationRestService i
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results/{resultUuid}/status")
             .buildAndExpand(resultUuid).toUriString();
-        return restTemplate.getForObject(baseUri + path, String.class);
+        return restClient.get().uri(baseUri + path)
+            .retrieve().body(String.class);
     }
 
     public void deleteStateEstimationResults(List<UUID> resultsUuids) {
-        deleteCalculationResults(resultsUuids, DELIMITER + STATE_ESTIMATION_API_VERSION + "/results", restTemplate, baseUri);
+        deleteCalculationResults(resultsUuids, DELIMITER + STATE_ESTIMATION_API_VERSION + "/results", restClient, baseUri);
     }
 
     public void deleteAllStateEstimationResults() {
@@ -164,7 +165,8 @@ public class StateEstimationRestService extends AbstractComputationRestService i
     public Integer getStateEstimationResultsCount() {
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/supervision/results-count").toUriString();
-        return restTemplate.getForObject(baseUri + path, Integer.class);
+        return restClient.get().uri(baseUri + path)
+            .retrieve().body(Integer.class);
     }
 
     public UUID getStateEstimationParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
@@ -181,7 +183,8 @@ public class StateEstimationRestService extends AbstractComputationRestService i
             .buildAndExpand()
             .toUriString();
 
-        return restTemplate.exchange(baseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+        return restClient.post().uri(baseUri + path)
+            .retrieve().body(UUID.class);
     }
 
     public UUID createStateEstimationParameters(String parameters) {
@@ -190,22 +193,24 @@ public class StateEstimationRestService extends AbstractComputationRestService i
             .buildAndExpand()
             .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
-
-        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        var requestSpec = restClient.post().uri(baseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (parameters != null) {
+            requestSpec.body(parameters);
+        }
+        return requestSpec.retrieve().body(UUID.class);
     }
 
     public void updateStateEstimationParameters(UUID parametersUuid, String parameters) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/parameters/{uuid}");
         String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
-
-        restTemplate.put(baseUri + path, httpEntity);
+        var requestSpec = restClient.put().uri(baseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (parameters != null) {
+            requestSpec.body(parameters);
+        }
+        requestSpec.retrieve().toBodilessEntity();
     }
 
     public void resetStateEstimationParameters(UUID parametersUuid) {
@@ -223,7 +228,8 @@ public class StateEstimationRestService extends AbstractComputationRestService i
         String path = UriComponentsBuilder.fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(parametersUuid).toUriString();
 
-        return restTemplate.getForObject(baseUri + path, String.class);
+        return restClient.get().uri(baseUri + path)
+            .retrieve().body(String.class);
     }
 
     @Override
@@ -235,11 +241,9 @@ public class StateEstimationRestService extends AbstractComputationRestService i
             .buildAndExpand(sourceParametersUuid)
             .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
-
-        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restClient.post().uri(baseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .retrieve().body(UUID.class);
     }
 
     @Override
@@ -251,7 +255,8 @@ public class StateEstimationRestService extends AbstractComputationRestService i
             .buildAndExpand(uuid)
             .toUriString();
 
-        restTemplate.delete(baseUri + path);
+        restClient.delete().uri(baseUri + path)
+            .retrieve().toBodilessEntity();
     }
 
     public void invalidateStateEstimationStatus(List<UUID> uuids) {
@@ -260,7 +265,8 @@ public class StateEstimationRestService extends AbstractComputationRestService i
                 .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results/invalidate-status")
                 .queryParam(RESULT_UUID, uuids).build().toUriString();
 
-            restTemplate.put(baseUri + path, Void.class);
+            restClient.put().uri(baseUri + path)
+                .retrieve().toBodilessEntity();
         }
     }
 
@@ -272,6 +278,7 @@ public class StateEstimationRestService extends AbstractComputationRestService i
     public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results/{resultUuid}/download-debug-file")
             .buildAndExpand(resultUuid).toUriString();
-        return getRestTemplate().exchange(getBaseUri() + path, HttpMethod.GET, null, Resource.class);
+        return getRestClient().get().uri(getBaseUri() + path)
+            .retrieve().toEntity(Resource.class);
     }
 }

@@ -21,7 +21,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.List;
 import java.util.UUID;
@@ -30,7 +30,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.absent;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
-import static org.gridsuite.study.server.service.client.RestClient.DELIMITER;
+import static org.gridsuite.study.server.service.client.RestClientService.DELIMITER;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 import static org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService.*;
 import static org.gridsuite.study.server.utils.assertions.Assertions.assertThat;
@@ -55,7 +55,7 @@ class DynamicMarginCalculationRestServiceTest extends AbstractWireMockRestClient
     private static final String PARAMETERS_JSON = "parametersJson";
     private DynamicMarginCalculationRestService dynamicMarginCalculationRestService;
     @Autowired
-    private RestTemplate restTemplate;
+    private RestClient restClient;
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired
@@ -65,7 +65,7 @@ class DynamicMarginCalculationRestServiceTest extends AbstractWireMockRestClient
     void setup() {
         // config client
         remoteServicesProperties.setServiceUri("dynamic-margin-calculation-server", initMockWebServer());
-        dynamicMarginCalculationRestService = new DynamicMarginCalculationRestService(remoteServicesProperties, restTemplate, objectMapper);
+        dynamicMarginCalculationRestService = new DynamicMarginCalculationRestService(remoteServicesProperties, restClient, objectMapper);
     }
 
     @Test

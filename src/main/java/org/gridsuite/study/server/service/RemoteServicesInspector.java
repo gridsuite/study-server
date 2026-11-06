@@ -27,13 +27,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.info.InfoEndpoint;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.lang.Nullable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
 import java.time.Duration;
@@ -58,7 +58,7 @@ public class RemoteServicesInspector {
     private static final JsonPointer ACTUATOR_INFO_GIT_COMMIT_DESCRIBE = JsonPointer.compile("/git/commit/id/describe-short");
 
     private final ObjectMapper objectMapper;
-    private final RestTemplate restTemplate;
+    private final RestClient restClient;
     private final RemoteServicesProperties remoteServicesProperties;
     private final InfoEndpoint infoEndpoint;
     private final RemoteServicesInspector asyncSelf; //we need to use spring proxy-based bean
@@ -67,14 +67,14 @@ public class RemoteServicesInspector {
     public RemoteServicesInspector(ObjectMapper objectMapper,
                                    RemoteServicesProperties remoteServicesProperties,
                                    @Lazy RemoteServicesInspector asyncRemoteServicesInspector,
-                                   RestTemplateBuilder restTemplateBuilder,
+                                   RestClient.Builder restClientBuilder,
                                    InfoEndpoint infoEndpoint) {
         this.objectMapper = objectMapper;
         this.remoteServicesProperties = remoteServicesProperties;
-        this.restTemplate = restTemplateBuilder
-                .connectTimeout(Duration.ofMillis(REQUEST_TIMEOUT_IN_MS))
-                .readTimeout(Duration.ofMillis(REQUEST_TIMEOUT_IN_MS))
-                .build();
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofMillis(REQUEST_TIMEOUT_IN_MS));
+        requestFactory.setReadTimeout(Duration.ofMillis(REQUEST_TIMEOUT_IN_MS));
+        this.restClient = restClientBuilder.requestFactory(requestFactory).build();
         this.infoEndpoint = infoEndpoint;
         this.asyncSelf = asyncRemoteServicesInspector;
     }
@@ -103,7 +103,11 @@ public class RemoteServicesInspector {
     @Async
     public CompletableFuture<Boolean> isOptionalServiceUp(RemoteServicesProperties.Service service) {
         try {
-            final String result = restTemplate.getForObject(service.getBaseUri() + "/actuator/health", String.class);
+            final String result = restClient
+                .get()
+                .uri(service.getBaseUri() + "/actuator/health")
+                .retrieve()
+                .body(String.class);
             final JsonNode node = objectMapper.readTree(result).path(ACTUATOR_HEALTH_STATUS_JSON_FIELD);
             if (node.isMissingNode()) {
                 LOGGER.debug("Cannot find {} json node while testing '{}'", ACTUATOR_HEALTH_STATUS_JSON_FIELD, service.getName());
@@ -161,9 +165,14 @@ public class RemoteServicesInspector {
             if (service == RemoteServiceName.STUDY_SERVER) {
                 return CompletableFuture.completedFuture(objectMapper.valueToTree(infoEndpoint.info()));
             } else {
-                final String rawJson = this.restTemplate.getForObject(
-                    URI.create(this.remoteServicesProperties.getServiceUri(service.serviceName()) + "/actuator/info")
-                        .normalize(), String.class);
+                final String rawJson = this.restClient
+                    .get()
+                    .uri(
+                        URI.create(this.remoteServicesProperties.getServiceUri(service.serviceName()) + "/actuator/info")
+                        .normalize()
+                    )
+                    .retrieve()
+                    .body(String.class);
                 return CompletableFuture.completedFuture(this.objectMapper.readTree(rawJson));
             }
         } catch (final RuntimeException | JacksonException ex) {

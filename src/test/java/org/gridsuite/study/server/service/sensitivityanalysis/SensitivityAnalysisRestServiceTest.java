@@ -14,15 +14,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpEntity;
 import org.springframework.http.MediaType;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.SENSITIVITY_ANALYSIS_API_VERSION;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Answers.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -33,21 +32,21 @@ class SensitivityAnalysisRestServiceTest {
 
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
-    @Mock
-    private RestTemplate restTemplate;
+    @Mock(answer = RETURNS_DEEP_STUBS)
+    private RestClient restClient;
 
     private SensitivityAnalysisRestService sensitivityAnalysisRestService;
 
     @BeforeEach
     void setUp() {
         when(remoteServicesProperties.getServiceUri("sensitivity-analysis-server")).thenReturn(BASE_URI);
-        sensitivityAnalysisRestService = new SensitivityAnalysisRestService(remoteServicesProperties, restTemplate, new ObjectMapper());
+        sensitivityAnalysisRestService = new SensitivityAnalysisRestService(remoteServicesProperties, restClient, new ObjectMapper());
     }
 
     @Test
     void testGetProviders() {
         String providers = "[\"OpenLoadFlow\"]";
-        when(restTemplate.getForObject(BASE_URI + "/" + SENSITIVITY_ANALYSIS_API_VERSION + "/providers", String.class)).thenReturn(providers);
+        when(restClient.get().uri(BASE_URI + "/" + SENSITIVITY_ANALYSIS_API_VERSION + "/providers").retrieve().body(String.class)).thenReturn(providers);
 
         assertThat(sensitivityAnalysisRestService.getProviders()).isEqualTo(providers);
     }
@@ -56,7 +55,7 @@ class SensitivityAnalysisRestServiceTest {
     void testGetParameters() {
         UUID parameterUuid = UUID.randomUUID();
         String parameters = "{\"provider\":\"OpenLoadFlow\"}";
-        when(restTemplate.getForObject(BASE_URI + "/" + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid, String.class)).thenReturn(parameters);
+        when(restClient.get().uri(BASE_URI + "/" + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid).retrieve().body(String.class)).thenReturn(parameters);
 
         assertThat(sensitivityAnalysisRestService.getParameters(parameterUuid)).isEqualTo(parameters);
     }
@@ -65,13 +64,13 @@ class SensitivityAnalysisRestServiceTest {
     void testUpdateParameters() {
         UUID parameterUuid = UUID.randomUUID();
         String parameters = "{\"provider\":\"OpenLoadFlow\"}";
-        ArgumentCaptor<HttpEntity<String>> captor = ArgumentCaptor.forClass(HttpEntity.class);
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
 
         sensitivityAnalysisRestService.updateParameters(parameterUuid, parameters);
 
-        verify(restTemplate).put(eq(BASE_URI + "/" + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid), captor.capture());
-        assertThat(captor.getValue().getBody()).isEqualTo(parameters);
-        assertThat(captor.getValue().getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
+        verify(restClient.put().uri(BASE_URI + "/" + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid)).contentType(MediaType.APPLICATION_JSON);
+        verify(restClient.put().uri(BASE_URI + "/" + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid).contentType(MediaType.APPLICATION_JSON)).body(captor.capture());
+        assertThat(captor.getValue()).isEqualTo(parameters);
     }
 
     @Test
