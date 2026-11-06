@@ -520,17 +520,12 @@ public class StudyService {
             LOGGER.warn("Root network '{}' is already loading, skipping recreateNetwork", rootNetworkUuid);
             return;
         }
-        RootNetworkLoadStatus previousLoadStatus = rootNetwork.getLoadStatus();
         rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADING);
         UUID caseUuid = rootNetwork.getCaseUuid();
         UUID originalCaseUuid = rootNetwork.getOriginalCaseUuid();
         RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(rootNetworkUuid).caseInfos(new CaseInfos(caseUuid, originalCaseUuid, null, caseFormat)).build();
-        try {
-            recreateNetwork(rootNetworkInfos, studyUuid, userId, null, true, rootNetwork.getReportUuid());
-        } catch (Exception e) {
-            rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, previousLoadStatus == RootNetworkLoadStatus.LOADED ? RootNetworkLoadStatus.LOADED : RootNetworkLoadStatus.UNLOADED);
-            throw e;
-        }
+
+        recreateNetwork(rootNetworkInfos, studyUuid, userId, null, true, rootNetwork.getReportUuid());
     }
 
     private void recreateNetwork(RootNetworkInfos rootNetworkInfos, UUID studyUuid, String userId, Map<String, Object> importParameters, boolean shouldLoadPreviousImportParameters, UUID reportId) {
@@ -709,7 +704,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void updateNetwork(UUID studyUuid, UUID rootNetworkUuid, NetworkInfos networkInfos, String userId) {
+    public CreatedStudyBasicInfos updateNetwork(UUID studyUuid, UUID rootNetworkUuid, NetworkInfos networkInfos, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
         RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
 
@@ -721,6 +716,7 @@ public class StudyService {
 
         notificationService.emitStudyNetworkRecreationDone(studyEntity.getId(), userId);
 
+        return createdStudyBasicInfos;
     }
 
     public UserProfileInfos getUserProfile(String userId) {
