@@ -290,7 +290,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
             .retrieve().body(UUID.class);
     }
 
-    public void updateSensitivityAnalysisParameters(UUID parametersUuid, @Nullable String parameters) {
+    public void updateSensitivityAnalysisParameters(UUID parametersUuid, String parameters) {
         var path = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(parametersUuid)
@@ -302,6 +302,15 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
             requestSpec.body(parameters);
         }
         requestSpec.retrieve().toBodilessEntity();
+    }
+
+    public void resetSensitivityAnalysisParameters(UUID parametersUuid) {
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI + "/reset")
+                .buildAndExpand(parametersUuid)
+                .toUriString();
+
+        restClient.put().uri(baseUri + path).retrieve().toBodilessEntity();
     }
 
     @Override

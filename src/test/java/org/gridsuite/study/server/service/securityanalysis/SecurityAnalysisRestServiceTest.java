@@ -80,4 +80,13 @@ class SecurityAnalysisRestServiceTest {
         verify(restClient.put().uri(BASE_URI + "/" + SECURITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid).contentType(MediaType.APPLICATION_JSON)).body(captor.capture());
         assertThat(captor.getValue()).isEqualTo(parameters);
     }
+
+    @Test
+    void testResetParameters() {
+        UUID parameterUuid = UUID.randomUUID();
+
+        securityAnalysisRestService.resetSecurityAnalysisParameters(parameterUuid);
+
+        verify(restClient.put().uri(BASE_URI + "/" + SECURITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid + "/reset").retrieve()).toBodilessEntity();
+    }
 }
