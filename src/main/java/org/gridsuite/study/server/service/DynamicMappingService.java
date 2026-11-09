@@ -7,13 +7,12 @@
 package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.DYNAMIC_MAPPING_API_VERSION;
@@ -28,12 +27,12 @@ public class DynamicMappingService {
     public static final String DYNAMIC_MAPPING_END_POINT_NETWORK = "/network";
     public static final String NETWORK_MATCHES_URI = "/{networkUuid}/matches/rule";
     public static final String NETWORK_VALUES_URI = "/{networkUuid}/values";
-    private final RestTemplate restTemplate;
+    private final RestClient restClient;
     private String dynamicMappingServerBaseUri;
 
-    public DynamicMappingService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
+    public DynamicMappingService(RemoteServicesProperties remoteServicesProperties, RestClient restClient) {
         this.dynamicMappingServerBaseUri = remoteServicesProperties.getServiceUri("dynamic-mapping-server");
-        this.restTemplate = restTemplate;
+        this.restClient = restClient;
     }
 
     public String getNetworkValues(UUID networkUuid) {
@@ -41,18 +40,20 @@ public class DynamicMappingService {
         String url = UriComponentsBuilder.fromUriString(networkBasePath + NETWORK_VALUES_URI)
                 .buildAndExpand(networkUuid)
                 .toUriString();
-        return restTemplate.getForObject(url, String.class);
+        return restClient.get().uri(url)
+            .retrieve().body(String.class);
     }
 
     public String getNetworkMatches(UUID networkUuid, String ruleToMatch) {
+        Objects.requireNonNull(ruleToMatch);
         String networkBasePath = buildEndPointUrl(dynamicMappingServerBaseUri, API_VERSION, DYNAMIC_MAPPING_END_POINT_NETWORK);
         String url = UriComponentsBuilder.fromUriString(networkBasePath + NETWORK_MATCHES_URI)
                 .buildAndExpand(networkUuid)
                 .toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> httpEntity = new HttpEntity<>(ruleToMatch, headers);
-        return restTemplate.postForObject(url, httpEntity, String.class);
+        return restClient.post().uri(url)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(ruleToMatch)
+            .retrieve().body(String.class);
     }
 }
