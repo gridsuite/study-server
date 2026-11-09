@@ -520,17 +520,12 @@ public class StudyService {
             LOGGER.warn("Root network '{}' is already loading, skipping recreateNetwork", rootNetworkUuid);
             return;
         }
-        RootNetworkLoadStatus previousLoadStatus = rootNetwork.getLoadStatus();
         rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADING);
         UUID caseUuid = rootNetwork.getCaseUuid();
         UUID originalCaseUuid = rootNetwork.getOriginalCaseUuid();
         RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(rootNetworkUuid).caseInfos(new CaseInfos(caseUuid, originalCaseUuid, null, caseFormat)).build();
-        try {
-            recreateNetwork(rootNetworkInfos, studyUuid, userId, null, true, rootNetwork.getReportUuid());
-        } catch (Exception e) {
-            rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, previousLoadStatus == RootNetworkLoadStatus.LOADED ? RootNetworkLoadStatus.LOADED : RootNetworkLoadStatus.UNLOADED);
-            throw e;
-        }
+
+        recreateNetwork(rootNetworkInfos, studyUuid, userId, null, true, rootNetwork.getReportUuid());
     }
 
     private void recreateNetwork(RootNetworkInfos rootNetworkInfos, UUID studyUuid, String userId, Map<String, Object> importParameters, boolean shouldLoadPreviousImportParameters, UUID reportId) {
@@ -709,7 +704,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void updateNetwork(UUID studyUuid, UUID rootNetworkUuid, NetworkInfos networkInfos, String userId) {
+    public CreatedStudyBasicInfos updateNetwork(UUID studyUuid, UUID rootNetworkUuid, NetworkInfos networkInfos, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
         RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
 
@@ -721,6 +716,7 @@ public class StudyService {
 
         notificationService.emitStudyNetworkRecreationDone(studyEntity.getId(), userId);
 
+        return createdStudyBasicInfos;
     }
 
     public UserProfileInfos getUserProfile(String userId) {
@@ -1658,20 +1654,8 @@ public class StudyService {
      * and replaced in the node by a reference to this now shared composite modification.
      */
     @Transactional(readOnly = true)
-    public void shareCompositeNetworkModification(
-        UUID studyUuid,
-        UUID nodeUuid,
-        UUID modificationUuid,
-        String name,
-        String description,
-        UUID parentDirectoryUuid,
-        String userId) {
-        // checks we can write in the target directory before touching anything
-        directoryService.checkPermission(List.of(), parentDirectoryUuid, userId, PermissionType.WRITE, false);
-        if (directoryService.elementExists(parentDirectoryUuid, name, DirectoryService.MODIFICATION)) {
-            throw new StudyException(ELEMENT_ALREADY_EXISTS, "composite modification name " + name + " already exists in directory", Map.of("fileName", name));
-        }
-
+    public void shareCompositeNetworkModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, String name,
+                                                  String description, UUID parentDirectoryUuid, String userId) {
         UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         try {
@@ -1679,7 +1663,7 @@ public class StudyService {
             ModificationReference newReference = networkModificationRestService.extractCompositeModificationToShare(groupUuid, modificationUuid, name, description);
             // the composite modification keeps its uuid when extracted, so it is shared under that same uuid
             // description is null as it is provided by the referenced modification
-            directoryService.createElement(parentDirectoryUuid, null, modificationUuid, name, DirectoryService.MODIFICATION, userId);
+            directoryService.createElement(parentDirectoryUuid, null, modificationUuid, name, DirectoryService.MODIFICATION, userId, true);
             // extraction replaced the local composite by a new reference modification, in the node group or in a parent
             // composite: register it on the shared element
             directoryService.createSharingLinks(List.of(newReference), studyUuid, nodeUuid, userId);
@@ -2357,6 +2341,14 @@ public class StudyService {
     public void updateColumns(UUID studyUuid, String computationType, String computationSubType, String columnInfos) {
         UUID computationResultFiltersId = getComputationResultFiltersId(studyUuid);
         studyConfigService.updateColumns(computationResultFiltersId, computationType, computationSubType, columnInfos);
+        notificationService.emitComputationResultColumnFilterChanged(studyUuid, computationType, computationSubType);
+    }
+
+    @Transactional
+    public void resetComputationResultFilters(UUID studyUuid, String computationType, String computationSubType) {
+        UUID computationResultFiltersId = getComputationResultFiltersId(studyUuid);
+        studyConfigService.resetComputationResultFilters(computationResultFiltersId, computationType, computationSubType);
+        notificationService.emitComputationResultGlobalFilterChanged(studyUuid, computationType);
         notificationService.emitComputationResultColumnFilterChanged(studyUuid, computationType, computationSubType);
     }
 
