@@ -26,6 +26,7 @@ import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
@@ -64,27 +65,26 @@ public abstract class AbstractComputationService {
         return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Study not found"));
     }
 
-    protected <T> boolean setComputationParameters(UUID studyUuid, T parameters, String userId,
-                                                 Function<StudyEntity, UUID> studyParameterGetter,
-                                                 BiConsumer<StudyEntity, UUID> studyParameterSetter,
-                                                 Function<UserProfileInfos, UUID> profileParameterGetter,
-                                                 ComputationParameters computationParameters,
-                                                 Function<T, UUID> createParameters,
-                                                 BiConsumer<UUID, T> updateParameters,
-                                                 ComputationType computationType,
-                                                 List<Consumer<UUID>> statusInvalidations,
-                                                 String... statusUpdateTypes) {
+    protected boolean resetComputationParameters(UUID studyUuid, String userId,
+                                                   Function<StudyEntity, UUID> studyParameterGetter,
+                                                   BiConsumer<StudyEntity, UUID> studyParameterSetter,
+                                                   Function<UserProfileInfos, UUID> profileParameterGetter,
+                                                   ComputationParameters computationParameters,
+                                                   Consumer<UUID> resetParameters,
+                                                   Supplier<UUID> createDefaultParameters,
+                                                   ComputationType computationType,
+                                                   List<Consumer<UUID>> statusInvalidations,
+                                                   String... statusUpdateTypes) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        boolean userProfileIssue = computationParametersService.createOrUpdateParameters(
+        boolean userProfileIssue = computationParametersService.resetParameters(
                 studyEntity,
-                parameters,
                 userId,
                 studyParameterGetter,
                 studyParameterSetter,
                 profileParameterGetter,
                 computationParameters,
-                createParameters,
-                updateParameters,
+                resetParameters,
+                createDefaultParameters,
                 computationType.getLabel()
         );
         emitComputationParametersChanged(studyUuid, userId, computationType, statusInvalidations, statusUpdateTypes);

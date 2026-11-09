@@ -36,7 +36,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -200,25 +202,24 @@ public class ComputationParametersService {
         );
     }
 
-    public <T> boolean createOrUpdateParameters(
+    public boolean resetParameters(
             StudyEntity studyEntity,
-            T parameters,
             String userId,
             Function<StudyEntity, UUID> studyParameterGetter,
             BiConsumer<StudyEntity, UUID> studyParameterSetter,
             Function<UserProfileInfos, UUID> profileParameterGetter,
             ComputationParameters computationParameters,
-            Function<T, UUID> createParameters,
-            BiConsumer<UUID, T> updateParameters,
+            Consumer<UUID> resetParameters,
+            Supplier<UUID> createDefaultParameters,
             String computationType
     ) {
         boolean userProfileIssue = false;
         UUID existingParametersUuid = studyParameterGetter.apply(studyEntity);
 
-        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
+        UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
         UUID profileParameterId = userProfileInfos == null ? null : profileParameterGetter.apply(userProfileInfos);
 
-        if (parameters == null && profileParameterId != null) {
+        if (profileParameterId != null) {
             try {
                 UUID parametersFromProfileUuid = computationParameters.duplicateParameters(profileParameterId);
                 studyParameterSetter.accept(studyEntity, parametersFromProfileUuid);
@@ -237,7 +238,7 @@ public class ComputationParametersService {
             }
         }
 
-        createOrUpdateParameters(studyEntity, parameters, studyParameterGetter, studyParameterSetter, createParameters, updateParameters);
+        resetParameters(studyEntity, studyParameterGetter, studyParameterSetter, resetParameters, createDefaultParameters);
         return userProfileIssue;
     }
 
@@ -255,6 +256,21 @@ public class ComputationParametersService {
             studyParameterSetter.accept(studyEntity, newParametersUuid);
         } else {
             updateParameters.accept(existingParametersUuid, parameters);
+        }
+    }
+
+    public void resetParameters(
+            StudyEntity studyEntity,
+            Function<StudyEntity, UUID> studyParameterGetter,
+            BiConsumer<StudyEntity, UUID> studyParameterSetter,
+            Consumer<UUID> resetParameters,
+            Supplier<UUID> createDefaultParameters) {
+        UUID existingParametersUuid = studyParameterGetter.apply(studyEntity);
+        if (existingParametersUuid == null) {
+            UUID newParametersUuid = createDefaultParameters.get();
+            studyParameterSetter.accept(studyEntity, newParametersUuid);
+        } else {
+            resetParameters.accept(existingParametersUuid);
         }
     }
 
