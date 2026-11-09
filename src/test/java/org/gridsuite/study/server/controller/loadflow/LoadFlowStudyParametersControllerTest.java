@@ -27,6 +27,7 @@ import java.util.function.Supplier;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNBUILD_ALL;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -66,13 +67,19 @@ class LoadFlowStudyParametersControllerTest {
             .thenAnswer(invocation -> invocation.<Supplier<Boolean>>getArgument(3).get());
     }
 
+    private void runTheRunnableOf(List<UUID> invalidatedNodes, UUID studyUuid) {
+        doAnswer(invocation -> {
+            invocation.<Runnable>getArgument(3).run();
+            return null;
+        }).when(nodeActivityService).runWith(eq(UNBUILD_ALL), eq(studyUuid), eq(invalidatedNodes), ArgumentMatchers.<Runnable>any());
+    }
+
     @Test
     void testSetLoadflowParameters() throws Exception {
         UUID studyUuid = UUID.randomUUID();
         List<UUID> invalidatedNodes = List.of(UUID.randomUUID());
         when(loadFlowService.getNodesInvalidatedByLoadFlowParameters(studyUuid)).thenReturn(invalidatedNodes);
-        runTheActionOf(invalidatedNodes, studyUuid);
-        when(loadFlowService.setLoadFlowParameters(studyUuid, PARAMETERS, USER_ID)).thenReturn(false);
+        runTheRunnableOf(invalidatedNodes, studyUuid);
 
         mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
                 .header(HEADER_USER_ID, USER_ID)
@@ -84,26 +91,26 @@ class LoadFlowStudyParametersControllerTest {
         InOrder inOrder = inOrder(loadFlowService, nodeActivityService);
         inOrder.verify(loadFlowService).getNodesInvalidatedByLoadFlowParameters(studyUuid);
         inOrder.verify(nodeActivityService).runWith(eq(UNBUILD_ALL), eq(studyUuid), eq(invalidatedNodes),
-            ArgumentMatchers.<Supplier<Boolean>>any());
+            ArgumentMatchers.<Runnable>any());
         inOrder.verify(loadFlowService).setLoadFlowParameters(studyUuid, PARAMETERS, USER_ID);
     }
 
     @Test
-    void testSetLoadflowParametersReturnsNoContent() throws Exception {
+    void testResetLoadflowParametersReturnsNoContent() throws Exception {
         UUID studyUuid = UUID.randomUUID();
         List<UUID> invalidatedNodes = List.of(UUID.randomUUID());
         when(loadFlowService.getNodesInvalidatedByLoadFlowParameters(studyUuid)).thenReturn(invalidatedNodes);
         runTheActionOf(invalidatedNodes, studyUuid);
-        when(loadFlowService.setLoadFlowParameters(studyUuid, null, USER_ID)).thenReturn(true);
+        when(loadFlowService.resetLoadFlowParameters(studyUuid, USER_ID)).thenReturn(true);
 
-        mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
+        mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid)
                 .header(HEADER_USER_ID, USER_ID))
             .andExpect(status().isNoContent())
             .andExpect(content().string(""));
 
         verify(nodeActivityService).runWith(eq(UNBUILD_ALL), eq(studyUuid), eq(invalidatedNodes),
             ArgumentMatchers.<Supplier<Boolean>>any());
-        verify(loadFlowService).setLoadFlowParameters(studyUuid, null, USER_ID);
+        verify(loadFlowService).resetLoadFlowParameters(studyUuid, USER_ID);
     }
 
     @Test

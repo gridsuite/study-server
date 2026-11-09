@@ -20,6 +20,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.PCC_MIN_API_VERSION;
 import static org.mockito.Answers.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,5 +48,14 @@ class PccMinRestServiceTest {
         when(restClient.get().uri(BASE_URI + "/" + PCC_MIN_API_VERSION + "/parameters/" + parameterUuid).retrieve().body(String.class)).thenReturn(parameters);
 
         assertThat(pccMinRestService.getParameters(parameterUuid)).isEqualTo(parameters);
+    }
+
+    @Test
+    void testResetPccMinParameters() {
+        UUID parameterUuid = UUID.randomUUID();
+
+        pccMinRestService.resetPccMinParameters(parameterUuid);
+
+        verify(restClient.put().uri(BASE_URI + "/" + PCC_MIN_API_VERSION + "/parameters/" + parameterUuid + "/reset").retrieve()).toBodilessEntity();
     }
 }

@@ -101,9 +101,20 @@ public class AsymmetricalLoadService extends AbstractComputationService {
     }
 
     @Transactional
-    public boolean setAsymmetricalLoadParameters(UUID studyUuid, String parameters, String userId) {
+    public void setAsymmetricalLoadParameters(UUID studyUuid, String parameters, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        boolean userProfileIssue = createOrUpdateAsymmetricalLoadParameters(studyEntity, parameters, userId);
+        createOrUpdateAsymmetricalLoadParameters(studyEntity, parameters);
+
+        invalidateAsymmetricalLoadStatusOnAllNodes(studyEntity.getId());
+        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_ASYMMETRICAL_LOAD_STATUS);
+        notificationService.emitElementUpdated(studyUuid, userId);
+        notificationService.emitComputationParamsChanged(studyUuid, ASYMMETRICAL_LOAD);
+    }
+
+    @Transactional
+    public boolean resetAsymmetricalLoadParameters(UUID studyUuid, String userId) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        boolean userProfileIssue = resetAsymmetricalLoadParameters(studyEntity, userId);
 
         invalidateAsymmetricalLoadStatusOnAllNodes(studyEntity.getId());
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_ASYMMETRICAL_LOAD_STATUS);
@@ -112,12 +123,24 @@ public class AsymmetricalLoadService extends AbstractComputationService {
         return userProfileIssue;
     }
 
-    public boolean createOrUpdateAsymmetricalLoadParameters(StudyEntity studyEntity, String parameters, String userId) {
+    public void createOrUpdateAsymmetricalLoadParameters(StudyEntity studyEntity, String parameters) {
+        UUID existingAsymmetricalLoadParametersUuid = studyEntity.getAsymmetricalLoadParametersUuid();
+
+        if (existingAsymmetricalLoadParametersUuid == null) {
+            existingAsymmetricalLoadParametersUuid = asymmetricalLoadRestService.createAsymmetricalLoadParameters(parameters);
+            studyEntity.setAsymmetricalLoadParametersUuid(existingAsymmetricalLoadParametersUuid);
+        } else {
+            asymmetricalLoadRestService.updateAsymmetricalLoadParameters(existingAsymmetricalLoadParametersUuid, parameters);
+        }
+    }
+
+    public boolean resetAsymmetricalLoadParameters(StudyEntity studyEntity, String userId) {
         UUID existingAsymmetricalLoadParametersUuid = studyEntity.getAsymmetricalLoadParametersUuid();
         boolean userProfileIssue = false;
 
-        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
-        if (parameters == null && userProfileInfos.getAsymmetricalLoadParameterId() != null) {
+        UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
+
+        if (userProfileInfos.getAsymmetricalLoadParameterId() != null) {
             // reset case, with existing profile, having default asymmetrical load params
             try {
                 UUID asymmetricalLoadParametersFromProfileUuid = asymmetricalLoadRestService.duplicateParameters(userProfileInfos.getAsymmetricalLoadParameterId());
@@ -131,11 +154,12 @@ public class AsymmetricalLoadService extends AbstractComputationService {
                 // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
             }
         }
+
         if (existingAsymmetricalLoadParametersUuid == null) {
-            existingAsymmetricalLoadParametersUuid = asymmetricalLoadRestService.createAsymmetricalLoadParameters(parameters);
+            existingAsymmetricalLoadParametersUuid = asymmetricalLoadRestService.createAsymmetricalLoadParameters(null);
             studyEntity.setAsymmetricalLoadParametersUuid(existingAsymmetricalLoadParametersUuid);
         } else {
-            asymmetricalLoadRestService.updateAsymmetricalLoadParameters(existingAsymmetricalLoadParametersUuid, parameters);
+            asymmetricalLoadRestService.resetAsymmetricalLoadParameters(existingAsymmetricalLoadParametersUuid);
         }
         return userProfileIssue;
     }
