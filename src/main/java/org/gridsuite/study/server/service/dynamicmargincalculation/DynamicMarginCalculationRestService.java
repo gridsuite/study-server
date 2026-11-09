@@ -20,13 +20,10 @@ import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.UncheckedIOException;
@@ -59,8 +56,8 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
     private final ObjectMapper objectMapper;
 
     public DynamicMarginCalculationRestService(
-            RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate, ObjectMapper objectMapper) {
-        super(remoteServicesProperties.getServiceUri("dynamic-margin-calculation-server"), restTemplate);
+            RemoteServicesProperties remoteServicesProperties, RestClient restClient, ObjectMapper objectMapper) {
+        super(remoteServicesProperties.getServiceUri("dynamic-margin-calculation-server"), restClient);
         this.objectMapper = objectMapper;
     }
 
@@ -69,13 +66,13 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
 
         String url = getParametersWithUuidUrl(parametersUuid);
 
-        HttpHeaders headers = new HttpHeaders();
-        if (StringUtils.isNotBlank(userId)) {
-            headers.set(HEADER_USER_ID, userId);
-        }
-
-        return getRestTemplate()
-                .exchange(url, HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
+        return getRestClient().get().uri(url)
+            .headers(headers -> {
+                if (StringUtils.isNotBlank(userId)) {
+                    headers.set(HEADER_USER_ID, userId);
+                }
+            })
+            .retrieve().body(String.class);
     }
 
     private String getParametersWithUuidUrl(UUID parametersUuid) {
@@ -97,12 +94,10 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
                 .buildAndExpand()
                 .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
-
-        return getRestTemplate().postForObject(url, httpEntity, UUID.class);
+        return getRestClient().post().uri(url)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(parameters)
+            .retrieve().body(UUID.class);
     }
 
     @Override
@@ -114,7 +109,8 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
                 .buildAndExpand()
                 .toUriString();
 
-        return getRestTemplate().postForObject(url, null, UUID.class);
+        return getRestClient().post().uri(url)
+            .retrieve().body(UUID.class);
     }
 
     public void updateParameters(UUID parametersUuid, String parametersInfos) {
@@ -123,12 +119,10 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
 
         String url = getParametersWithUuidUrl(parametersUuid);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<String> httpEntity = new HttpEntity<>(parametersInfos, headers);
-
-        getRestTemplate().put(url, httpEntity);
+        getRestClient().put().uri(url)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(parametersInfos)
+            .retrieve().toBodilessEntity();
     }
 
     @Override
@@ -142,7 +136,8 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
                 .buildAndExpand(sourceParameterId)
                 .toUriString();
 
-        return getRestTemplate().postForObject(url, null, UUID.class);
+        return getRestClient().post().uri(url)
+            .retrieve().body(UUID.class);
     }
 
     public void deleteParameters(UUID parametersUuid) {
@@ -151,7 +146,8 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
         String url = getParametersWithUuidUrl(parametersUuid);
 
         // call dynamic-margin-calculation REST API
-        getRestTemplate().delete(url);
+        getRestClient().delete().uri(url)
+            .retrieve().toBodilessEntity();
     }
 
     public UUID runDynamicMarginCalculation(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid,
@@ -198,14 +194,12 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
                 .buildAndExpand(networkUuid)
                 .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
         // call dynamic-margin-calculation REST API
-        HttpEntity<?> httpEntity = new HttpEntity<>(null, headers);
 
-        return getRestTemplate().postForObject(url, httpEntity, UUID.class);
+        return getRestClient().post().uri(url)
+            .headers(headers -> headers.set(HEADER_USER_ID, userId))
+            .contentType(MediaType.APPLICATION_JSON)
+            .retrieve().body(UUID.class);
     }
 
     public DynamicMarginCalculationStatus getStatus(UUID resultUuid) {
@@ -222,7 +216,8 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
                 .toUriString();
 
         // call dynamic-margin-calculation REST API
-        return getRestTemplate().getForObject(url, DynamicMarginCalculationStatus.class);
+        return getRestClient().get().uri(url)
+            .retrieve().body(DynamicMarginCalculationStatus.class);
     }
 
     public void invalidateStatus(List<UUID> resultUuids) {
@@ -238,7 +233,8 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
                 .build()
                 .toUriString();
 
-        getRestTemplate().put(url, null);
+        getRestClient().put().uri(url)
+            .retrieve().toBodilessEntity();
     }
 
     public void deleteResults(List<UUID> resultUuids) {
@@ -252,11 +248,13 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
                 .build()
                 .toUriString();
         // call dynamic-margin-calculation REST API
-        getRestTemplate().delete(url);
+        getRestClient().delete().uri(url)
+            .retrieve().toBodilessEntity();
     }
 
     public void deleteAllResults() {
-        getRestTemplate().delete(buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_SUPERVISION_RESULT));
+        getRestClient().delete().uri(buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_SUPERVISION_RESULT))
+            .retrieve().toBodilessEntity();
     }
 
     public Integer getResultsCount() {
@@ -266,7 +264,8 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
                 .toUriString();
 
         // call dynamic-margin-calculation REST API
-        return getRestTemplate().getForObject(url, Integer.class);
+        return getRestClient().get().uri(url)
+            .retrieve().body(Integer.class);
     }
 
     public UUID getDynamicMarginCalculationParametersUuidOrElseCreateDefault(StudyEntity studyEntity) {
@@ -286,7 +285,8 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
                 .buildAndExpand(parametersUuid)
                 .toUriString();
 
-        return getRestTemplate().getForObject(url, String.class);
+        return getRestClient().get().uri(url)
+            .retrieve().body(String.class);
     }
 
     @Override
@@ -296,7 +296,8 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
 
     public String getProviders() {
         String url = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, "providers");
-        return getRestTemplate().getForObject(url, String.class);
+        return getRestClient().get().uri(url)
+            .retrieve().body(String.class);
     }
 
     public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
@@ -304,6 +305,7 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
         String url = UriComponentsBuilder.fromUriString(resultBaseUrl + "/{resultUuid}/download-debug-file")
                 .buildAndExpand(resultUuid)
                 .toUriString();
-        return getRestTemplate().exchange(url, HttpMethod.GET, null, Resource.class);
+        return getRestClient().get().uri(url)
+            .retrieve().toEntity(Resource.class);
     }
 }

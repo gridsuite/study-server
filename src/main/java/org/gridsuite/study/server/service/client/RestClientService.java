@@ -7,15 +7,15 @@
 
 package org.gridsuite.study.server.service.client;
 
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
-public interface RestClient {
+public interface RestClientService {
     String DELIMITER = "/";
 
-    RestTemplate getRestTemplate();
+    RestClient getRestClient();
 
     String getBaseUri();
 

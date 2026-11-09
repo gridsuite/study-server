@@ -277,7 +277,7 @@ public class ConsumerService {
                     .networkInfos(networkInfos)
                     .importParameters(importParameters)
                     .build());
-                case NETWORK_RECREATION -> updateRecreatedNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
+                case NETWORK_RECREATION -> studyService.updateNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
                 case ROOT_NETWORK_MODIFICATION -> studyService.modifyRootNetwork(studyUuid, RootNetworkInfos.builder()
                     .id(rootNetworkUuid)
                     .networkInfos(networkInfos)
@@ -302,19 +302,6 @@ public class ConsumerService {
         }
     }
 
-    private void updateRecreatedNetwork(UUID studyUuid, UUID rootNetworkUuid, NetworkInfos networkInfos, String userId) {
-        try {
-            studyService.updateNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
-        } catch (Exception e) {
-            try {
-                rootNetworkService.updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.UNLOADED);
-            } finally {
-                notificationService.emitRootNetworksUpdateFailed(studyUuid, e.getMessage());
-            }
-            throw e;
-        }
-    }
-
     private void insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, CaseInfos caseInfos,
                              Map<String, Object> importParameters, UUID importReportUuid) {
         UserProfileInfos userProfileInfos = studyService.getUserProfile(userId);
@@ -334,7 +321,9 @@ public class ConsumerService {
     public Consumer<Message<String>> consumeCaseImportFailed() {
         return message -> {
             String receiverString = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            String errorMessage = message.getHeaders().get(StudyConstants.HEADER_ERROR_MESSAGE, String.class);
+            Object errorMessage = message.getHeaders().get(StudyConstants.HEADER_ERROR_MESSAGE);
+            // String longer than 1024 bytes are converted to com.rabbitmq.client.LongString (https://docs.spring.io/spring-amqp/docs/3.0.0/reference/html/#message-properties-converters)
+            String errorMessageStr = errorMessage != null ? errorMessage.toString() : null;
 
             if (receiverString != null) {
                 CaseImportReceiver receiver;
@@ -346,9 +335,9 @@ public class ConsumerService {
 
                     if (receiver.getCaseImportAction() == CaseImportAction.STUDY_CREATION) {
                         studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
-                        notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);
+                        notificationService.emitStudyCreationError(studyUuid, userId, errorMessageStr);
                     } else {
-                        handleRootNetworkImportFailed(receiver, errorMessage);
+                        handleRootNetworkImportFailed(receiver, errorMessageStr);
                     }
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);
@@ -917,7 +906,7 @@ public class ConsumerService {
 
     public void createCase(String s3Key, NodeExportInfos nodeExport, String userId, String exportContentType) {
         UUID caseUuid = caseService.createCase(s3Key, exportContentType);
-        directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, nodeExport.fileName(), DirectoryService.CASE, userId);
+        directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, nodeExport.fileName(), DirectoryService.CASE, userId, false);
     }
 
     @Bean
