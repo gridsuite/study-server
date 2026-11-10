@@ -46,8 +46,6 @@ class DynamicSecurityAnalysisStudyParametersControllerTest {
     @Test
     void testSetDynamicSecurityAnalysisParameters() throws Exception {
         UUID studyUuid = UUID.randomUUID();
-        when(dynamicSecurityAnalysisService.setDynamicSecurityAnalysisParameters(studyUuid, PARAMETERS, USER_ID)).thenReturn(false);
-
         mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
                 .header(HEADER_USER_ID, USER_ID)
                 .content(PARAMETERS)
@@ -59,16 +57,29 @@ class DynamicSecurityAnalysisStudyParametersControllerTest {
     }
 
     @Test
-    void testSetDynamicSecurityAnalysisParametersReturnsNoContent() throws Exception {
+    void testResetDynamicSecurityAnalysisParameters() throws Exception {
         UUID studyUuid = UUID.randomUUID();
-        when(dynamicSecurityAnalysisService.setDynamicSecurityAnalysisParameters(studyUuid, null, USER_ID)).thenReturn(true);
+        when(dynamicSecurityAnalysisService.resetDynamicSecurityAnalysisParameters(studyUuid, USER_ID)).thenReturn(false);
 
-        mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
+        mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid)
+                .header(HEADER_USER_ID, USER_ID))
+            .andExpect(status().isOk())
+            .andExpect(content().string(""));
+
+        verify(dynamicSecurityAnalysisService).resetDynamicSecurityAnalysisParameters(studyUuid, USER_ID);
+    }
+
+    @Test
+    void testResetDynamicSecurityAnalysisParametersReturnsNoContent() throws Exception {
+        UUID studyUuid = UUID.randomUUID();
+        when(dynamicSecurityAnalysisService.resetDynamicSecurityAnalysisParameters(studyUuid, USER_ID)).thenReturn(true);
+
+        mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid)
                 .header(HEADER_USER_ID, USER_ID))
             .andExpect(status().isNoContent())
             .andExpect(content().string(""));
 
-        verify(dynamicSecurityAnalysisService).setDynamicSecurityAnalysisParameters(studyUuid, null, USER_ID);
+        verify(dynamicSecurityAnalysisService).resetDynamicSecurityAnalysisParameters(studyUuid, USER_ID);
     }
 
     @Test
