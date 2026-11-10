@@ -31,6 +31,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.SupervisionService;
 import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
@@ -155,6 +156,9 @@ class StudyControllerDynamicSimulationTest {
 
     @MockitoSpyBean
     private DynamicSimulationRestService spyDynamicSimulationRestService;
+
+    @MockitoSpyBean
+    private SupervisionService spySupervisionService;
 
     @Autowired
     private StudyRepository studyRepository;
@@ -427,7 +431,7 @@ class StudyControllerDynamicSimulationTest {
         assertThat(result.getResponse().getContentAsString()).isEqualTo("1");
 
         //Delete Dynamic result init results
-        Mockito.doNothing().when(spyDynamicSimulationRestService).deleteAllResults();
+        Mockito.doNothing().when(spySupervisionService).deleteAllDynamicSimulationResults();
         result = studyClient.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", ComputationType.DYNAMIC_SIMULATION.toString())
                         .queryParam("dryRun", "false"))

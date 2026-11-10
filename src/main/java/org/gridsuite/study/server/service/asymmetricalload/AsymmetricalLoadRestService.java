@@ -130,11 +130,6 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
         deleteCalculationResults(resultsUuids, ASYMMETRICAL_LOAD_URI + "/results", restClient, baseUri);
     }
 
-    public void deleteAllResults() {
-        restClient.delete().uri(baseUri + DELIMITER + PCC_MIN_API_VERSION + "/supervision/asymmetrical-load/results")
-            .retrieve().toBodilessEntity();
-    }
-
     public Integer getAsymmetricalLoadResultsCount() {
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + PCC_MIN_API_VERSION + DELIMITER + "supervision/asymmetrical-load/results-count").toUriString();

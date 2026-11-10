@@ -50,7 +50,6 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
     public static final String DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER = "parameters";
     public static final String DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN = "networks";
     public static final String DYNAMIC_SECURITY_ANALYSIS_END_POINT_RESULT = "results";
-    public static final String DYNAMIC_SECURITY_ANALYSIS_END_POINT_SUPERVISION_RESULT = "supervision/results";
 
     private final ObjectMapper objectMapper;
 
@@ -241,11 +240,6 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
         String path = uriComponentsBuilder.build().toUriString();
         // call dynamic-security-analysis REST API
         getRestClient().delete().uri(path)
-            .retrieve().toBodilessEntity();
-    }
-
-    public void deleteAllResults() {
-        getRestClient().delete().uri(buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_SUPERVISION_RESULT))
             .retrieve().toBodilessEntity();
     }
 

@@ -220,11 +220,6 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
         deleteCalculationResults(resultsUuids, DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results", restClient, baseUri);
     }
 
-    public void deleteAllResults() {
-        restClient.delete().uri(baseUri + DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/supervision/results")
-            .retrieve().toBodilessEntity();
-    }
-
     public Integer getSensitivityAnalysisResultsCount() {
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/supervision/results-count").toUriString();

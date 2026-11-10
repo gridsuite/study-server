@@ -115,11 +115,6 @@ public class LogicalControlsRestService extends AbstractComputationRestService {
         deleteCalculationResults(resultsUuids, LOGICAL_CONTROLS_URI + "/results", restClient, baseUri);
     }
 
-    public void deleteAllResults() {
-        restClient.delete().uri(baseUri + DELIMITER + STATE_ESTIMATION_API_VERSION + "/supervision/logical-controls/results")
-            .retrieve().toBodilessEntity();
-    }
-
     public Integer getLogicalControlsResultsCount() {
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + DELIMITER + "supervision/logical-controls/results-count").toUriString();

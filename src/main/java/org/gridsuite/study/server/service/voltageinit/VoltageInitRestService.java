@@ -211,12 +211,6 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
         deleteCalculationResults(resultsUuids, DELIMITER + VOLTAGE_INIT_API_VERSION + "/results", restClient, baseUri, userId);
     }
 
-    public void deleteAllResults(String userId) {
-        restClient.delete().uri(baseUri + DELIMITER + VOLTAGE_INIT_API_VERSION + "/supervision/results")
-            .headers(headers -> headers.set(HEADER_USER_ID, userId))
-            .retrieve().toBodilessEntity();
-    }
-
     public Integer getVoltageInitResultsCount() {
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/supervision/results-count").toUriString();

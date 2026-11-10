@@ -23,6 +23,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.SupervisionService;
 import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
@@ -120,6 +121,9 @@ class StudyControllerDynamicMarginCalculationTest {
 
     @MockitoSpyBean
     private DynamicMarginCalculationRestService spyDynamicMarginCalculationRestService;
+
+    @MockitoSpyBean
+    private SupervisionService spySupervisionService;
 
     @Autowired
     private StudyRepository studyRepository;
@@ -392,7 +396,7 @@ class StudyControllerDynamicMarginCalculationTest {
         assertThat(result.getResponse().getContentAsString()).isEqualTo("1");
 
         //Delete Dynamic result init results
-        doNothing().when(spyDynamicMarginCalculationRestService).deleteAllResults();
+        doNothing().when(spySupervisionService).deleteAllDynamicMarginCalculationResults();
         result = studyClient.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", ComputationType.DYNAMIC_MARGIN_CALCULATION.toString())
                         .queryParam("dryRun", "false"))

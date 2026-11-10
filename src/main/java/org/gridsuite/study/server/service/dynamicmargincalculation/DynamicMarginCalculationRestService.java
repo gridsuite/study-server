@@ -51,7 +51,6 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
     public static final String DYNAMIC_MARGIN_CALCULATION_END_POINT_PARAMETER = "parameters";
     public static final String DYNAMIC_MARGIN_CALCULATION_END_POINT_RUN = "networks";
     public static final String DYNAMIC_MARGIN_CALCULATION_END_POINT_RESULT = "results";
-    public static final String DYNAMIC_MARGIN_CALCULATION_END_POINT_SUPERVISION_RESULT = "supervision/results";
 
     private final ObjectMapper objectMapper;
 
@@ -249,11 +248,6 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
                 .toUriString();
         // call dynamic-margin-calculation REST API
         getRestClient().delete().uri(url)
-            .retrieve().toBodilessEntity();
-    }
-
-    public void deleteAllResults() {
-        getRestClient().delete().uri(buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_SUPERVISION_RESULT))
             .retrieve().toBodilessEntity();
     }
 

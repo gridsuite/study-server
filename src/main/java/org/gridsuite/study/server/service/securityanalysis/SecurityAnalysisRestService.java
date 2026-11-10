@@ -192,11 +192,6 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
         deleteCalculationResults(resultsUuids, DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results", restClient, baseUri);
     }
 
-    public void deleteAllResults() {
-        restClient.delete().uri(baseUri + DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/supervision/results")
-            .retrieve().toBodilessEntity();
-    }
-
     public Integer getSecurityAnalysisResultsCount() {
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/supervision/results-count").toUriString();

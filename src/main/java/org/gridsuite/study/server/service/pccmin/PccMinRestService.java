@@ -123,11 +123,6 @@ public class PccMinRestService extends AbstractComputationRestService implements
         deleteCalculationResults(resultsUuids, DELIMITER + PCC_MIN_API_VERSION + "/results", restClient, baseUri);
     }
 
-    public void deleteAllResults() {
-        restClient.delete().uri(baseUri + DELIMITER + PCC_MIN_API_VERSION + "/supervision/results")
-            .retrieve().toBodilessEntity();
-    }
-
     public Integer getPccMinResultsCount() {
         String path = UriComponentsBuilder
             .fromPath(PCC_MIN_URI + DELIMITER + "supervision/results-count").toUriString();

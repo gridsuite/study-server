@@ -159,11 +159,6 @@ public class StateEstimationRestService extends AbstractComputationRestService i
         deleteCalculationResults(resultsUuids, DELIMITER + STATE_ESTIMATION_API_VERSION + "/results", restClient, baseUri);
     }
 
-    public void deleteAllResults() {
-        restClient.delete().uri(baseUri + DELIMITER + STATE_ESTIMATION_API_VERSION + "/supervision/results")
-            .retrieve().toBodilessEntity();
-    }
-
     public Integer getStateEstimationResultsCount() {
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/supervision/results-count").toUriString();
