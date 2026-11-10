@@ -209,21 +209,23 @@ class NetworkModificationServiceTest {
     void testCreateSharingLinksWithRecreate() {
         UUID groupUuid = UUID.randomUUID();
         String baseUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/sharing-links";
+        var requestSpec = restClient.post().uri(baseUrl + "?recreate=false");
+        makeFluent(requestSpec);
 
         networkModificationService.createSharingLinks(List.of(groupUuid), USER_ID);
+
+        verify(requestSpec).body(List.of(groupUuid));
+        assertHeaders(requestSpec, Map.of(HEADER_USER_ID, USER_ID));
+        verify(requestSpec.body(List.of(groupUuid)).retrieve()).toBodilessEntity();
+
+        var recreateRequestSpec = restClient.post().uri(baseUrl + "?recreate=true");
+        makeFluent(recreateRequestSpec);
+
         networkModificationService.createSharingLinks(List.of(groupUuid), true, USER_ID);
 
-        verify(restTemplate).exchange(
-            eq(baseUrl + "?recreate=true"),
-            eq(HttpMethod.POST),
-            argThat((HttpEntity<?> entity) -> USER_ID.equals(entity.getHeaders().getFirst(HEADER_USER_ID)) && List.of(groupUuid).equals(entity.getBody())),
-            eq(Void.class)
-        );
-        verify(restTemplate).exchange(
-            eq(baseUrl + "?recreate=true"),
-            eq(HttpMethod.POST),
-            argThat((HttpEntity<?> entity) -> USER_ID.equals(entity.getHeaders().getFirst(HEADER_USER_ID)) && List.of(groupUuid).equals(entity.getBody())),
-            eq(Void.class));
+        verify(recreateRequestSpec).body(List.of(groupUuid));
+        assertHeaders(recreateRequestSpec, Map.of(HEADER_USER_ID, USER_ID));
+        verify(recreateRequestSpec.body(List.of(groupUuid)).retrieve()).toBodilessEntity();
     }
 
     @Test
