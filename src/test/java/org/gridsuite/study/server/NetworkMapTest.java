@@ -687,11 +687,49 @@ class NetworkMapTest {
     }
 
     @Test
+    void testLineBusParameters(final MockWebServer server) throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+        StudyEntity study = insertDummyStudy(server, UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study.getId());
+        UUID nodeUuid = getRootNode(study.getId()).getChildren().stream().findFirst().orElseThrow().getId();
+        String parametersUrl = "/v1/studies/{studyUuid}/spreadsheet/parameters";
+        mockMvc.perform(get(parametersUrl, study.getId()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.LINE.bus").value(false));
+
+        for (boolean enabled : new boolean[]{true, false}) {
+            mockMvc.perform(put(parametersUrl, study.getId())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"LINE\":{\"bus\":" + enabled + "}}"))
+                .andExpect(status().isNoContent());
+            mockMvc.perform(get(parametersUrl, study.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.LINE.bus").value(enabled))
+                .andExpect(jsonPath("$.LINE.operationalLimitsGroups").value(false))
+                .andExpect(jsonPath("$.BATTERY.bus").doesNotExist());
+
+            UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_STRING + "/elements"))
+                .withQueryParam("optionalParameters[loadLineBus]", WireMock.equalTo(String.valueOf(enabled)))
+                .willReturn(WireMock.okJson("[]"))).getId();
+            mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements",
+                    study.getId(), rootNetworkUuid, nodeUuid)
+                    .queryParam("elementType", "LINE")
+                    .queryParam("infoType", "TAB")
+                    .contentType(MediaType.APPLICATION_JSON).content("[]"))
+                .andExpect(status().isOk());
+            WireMockUtils.verifyPostRequest(wireMockServer, stubId, "/v1/networks/" + NETWORK_UUID_STRING + "/elements",
+                Map.of("optionalParameters[loadLineBus]", WireMock.equalTo(String.valueOf(enabled))));
+        }
+        TestUtils.getRequestsDone(2, server);
+    }
+
+    @Test
     void testGetAllNetworkElementsInfos(final MockWebServer server) throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
 
         StudyEntity studyEntity = insertDummyStudy(server, UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         studyEntity.getSpreadsheetParameters().setSpreadsheetLoadBranchOperationalLimitGroup(true);
+        studyEntity.getSpreadsheetParameters().setSpreadsheetLoadLineBus(true);
         studyEntity.getSpreadsheetParameters().setSpreadsheetLoadGeneratorRegulatingTerminal(true);
         studyEntity.getSpreadsheetParameters().setSpreadsheetLoadGeneratorBus(true);
         studyEntity.getSpreadsheetParameters().setSpreadsheetLoadBatteryRegulatingTerminal(true);
@@ -720,6 +758,7 @@ class NetworkMapTest {
     "dcPowerFactor": "1.0"
   },
   "LINE": {
+    "loadLineBus": "true",
     "loadOperationalLimitGroups": "false",
     "dcPowerFactor": "1.0"
   },

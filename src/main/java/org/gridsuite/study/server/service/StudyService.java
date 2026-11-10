@@ -936,9 +936,14 @@ public class StudyService {
             case "branch" -> additionalParameters.put(
                 InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
                 String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadBranchOperationalLimitGroup()));
-            case "line" -> additionalParameters.put(
-                InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
-                String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineOperationalLimitGroup()));
+            case "line" -> {
+                additionalParameters.put(
+                    InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
+                    String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineOperationalLimitGroup()));
+                additionalParameters.put(
+                    InfoTypeParameters.QUERY_PARAM_LOAD_LINE_BUS,
+                    String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineBus()));
+            }
             case "two_windings_transformer" -> additionalParameters.put(
                 InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
                 String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadTwtOperationalLimitGroup()));
@@ -1012,6 +1017,9 @@ public class StudyService {
         optionalParameters.get(String.valueOf(ElementType.LINE)).put(
             InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
             String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineOperationalLimitGroup()));
+        optionalParameters.get(String.valueOf(ElementType.LINE)).put(
+            InfoTypeParameters.QUERY_PARAM_LOAD_LINE_BUS,
+            String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineBus()));
         optionalParameters.get(String.valueOf(ElementType.TWO_WINDINGS_TRANSFORMER)).put(
             InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
             String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadTwtOperationalLimitGroup()));
