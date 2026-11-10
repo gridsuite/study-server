@@ -942,9 +942,14 @@ public class StudyService {
             case "two_windings_transformer" -> additionalParameters.put(
                 InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
                 String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadTwtOperationalLimitGroup()));
-            case "generator" -> additionalParameters.put(
-                InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
-                String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal()));
+            case "generator" -> {
+                additionalParameters.put(
+                    InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
+                    String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal()));
+                additionalParameters.put(
+                    InfoTypeParameters.QUERY_PARAM_LOAD_GENERATOR_BUS,
+                    String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorBus()));
+            }
             case "battery" -> additionalParameters.put(
                     InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
                     String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadBatteryRegulatingTerminal()));
@@ -1013,7 +1018,9 @@ public class StudyService {
         optionalParameters.put(String.valueOf(ElementType.GENERATOR),
             Map.of(
                 InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
-                String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal())));
+                String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal()),
+                InfoTypeParameters.QUERY_PARAM_LOAD_GENERATOR_BUS,
+                String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorBus())));
         optionalParameters.put(String.valueOf(ElementType.BATTERY),
                 Map.of(
                         InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,

@@ -20,6 +20,7 @@ class SpreadsheetParametersEntityTest {
         assertFalse(spreadsheetParametersEntity.isSpreadsheetLoadLineOperationalLimitGroup());
         assertFalse(spreadsheetParametersEntity.isSpreadsheetLoadTwtOperationalLimitGroup());
         assertFalse(spreadsheetParametersEntity.isSpreadsheetLoadGeneratorRegulatingTerminal());
+        assertFalse(spreadsheetParametersEntity.isSpreadsheetLoadGeneratorBus());
         assertFalse(spreadsheetParametersEntity.isSpreadsheetLoadBatteryRegulatingTerminal());
         assertFalse(spreadsheetParametersEntity.isSpreadsheetLoadBusNetworkComponents());
     }
@@ -31,6 +32,7 @@ class SpreadsheetParametersEntityTest {
             .spreadsheetLoadLineOperationalLimitGroup(true)
             .spreadsheetLoadTwtOperationalLimitGroup(true)
             .spreadsheetLoadGeneratorRegulatingTerminal(true)
+            .spreadsheetLoadGeneratorBus(true)
             .spreadsheetLoadBatteryRegulatingTerminal(true)
             .spreadsheetLoadBusNetworkComponents(true)
             .build();
@@ -38,6 +40,7 @@ class SpreadsheetParametersEntityTest {
         assertTrue(spreadsheetParametersEntity.isSpreadsheetLoadLineOperationalLimitGroup());
         assertTrue(spreadsheetParametersEntity.isSpreadsheetLoadTwtOperationalLimitGroup());
         assertTrue(spreadsheetParametersEntity.isSpreadsheetLoadGeneratorRegulatingTerminal());
+        assertTrue(spreadsheetParametersEntity.isSpreadsheetLoadGeneratorBus());
         assertTrue(spreadsheetParametersEntity.isSpreadsheetLoadBatteryRegulatingTerminal());
         assertTrue(spreadsheetParametersEntity.isSpreadsheetLoadBusNetworkComponents());
     }
@@ -49,6 +52,7 @@ class SpreadsheetParametersEntityTest {
             .spreadsheetLoadLineOperationalLimitGroup(true)
             .spreadsheetLoadTwtOperationalLimitGroup(true)
             .spreadsheetLoadGeneratorRegulatingTerminal(true)
+            .spreadsheetLoadGeneratorBus(true)
             .spreadsheetLoadBatteryRegulatingTerminal(true)
             .spreadsheetLoadBusNetworkComponents(true)
             .build();
@@ -58,6 +62,7 @@ class SpreadsheetParametersEntityTest {
         assertTrue(spreadsheetParameters.getLine().getOperationalLimitsGroups());
         assertTrue(spreadsheetParameters.getTwt().getOperationalLimitsGroups());
         assertTrue(spreadsheetParameters.getGenerator().getRegulatingTerminal());
+        assertTrue(spreadsheetParameters.getGenerator().getBus());
         assertTrue(spreadsheetParameters.getBattery().getRegulatingTerminal());
         assertTrue(spreadsheetParameters.getBus().getNetworkComponents());
     }
@@ -67,7 +72,7 @@ class SpreadsheetParametersEntityTest {
         SpreadsheetParametersEntity spreadsheetParametersEntity = SpreadsheetParametersEntity.builder().build();
         SpreadsheetParameters newParameters = SpreadsheetParameters.builder()
             .branch(SpreadsheetParameters.BranchSpreadsheetParameters.builder().operationalLimitsGroups(true).build())
-            .generator(SpreadsheetParameters.RegulatingEquipmentSpreadsheetParameters.builder().regulatingTerminal(true).build())
+            .generator(SpreadsheetParameters.GeneratorSpreadsheetParameters.builder().regulatingTerminal(true).build())
             .battery(SpreadsheetParameters.RegulatingEquipmentSpreadsheetParameters.builder().regulatingTerminal(true).build())
             .build();
 
@@ -87,7 +92,7 @@ class SpreadsheetParametersEntityTest {
             .branch(SpreadsheetParameters.BranchSpreadsheetParameters.builder().operationalLimitsGroups(true).build())
             .line(SpreadsheetParameters.BranchSpreadsheetParameters.builder().operationalLimitsGroups(true).build())
             .twt(SpreadsheetParameters.BranchSpreadsheetParameters.builder().operationalLimitsGroups(true).build())
-            .generator(SpreadsheetParameters.RegulatingEquipmentSpreadsheetParameters.builder().regulatingTerminal(true).build())
+            .generator(SpreadsheetParameters.GeneratorSpreadsheetParameters.builder().regulatingTerminal(true).bus(true).build())
             .battery(SpreadsheetParameters.RegulatingEquipmentSpreadsheetParameters.builder().regulatingTerminal(true).build())
             .bus(SpreadsheetParameters.BusSpreadsheetParameters.builder().networkComponents(true).build())
             .build();
@@ -99,5 +104,34 @@ class SpreadsheetParametersEntityTest {
         assertTrue(spreadsheetParametersEntity.isSpreadsheetLoadGeneratorRegulatingTerminal());
         assertTrue(spreadsheetParametersEntity.isSpreadsheetLoadBatteryRegulatingTerminal());
         assertTrue(spreadsheetParametersEntity.isSpreadsheetLoadBusNetworkComponents());
+        assertTrue(spreadsheetParametersEntity.isSpreadsheetLoadGeneratorBus());
+    }
+
+    @Test
+    void testGeneratorBusPartialUpdates() {
+        SpreadsheetParametersEntity entity = SpreadsheetParametersEntity.builder()
+            .spreadsheetLoadGeneratorRegulatingTerminal(true)
+            .build();
+        SpreadsheetParameters enableBus = SpreadsheetParameters.builder()
+            .generator(SpreadsheetParameters.GeneratorSpreadsheetParameters.builder().bus(true).build())
+            .build();
+        assertTrue(entity.update(enableBus));
+        assertTrue(entity.isSpreadsheetLoadGeneratorBus());
+        assertTrue(entity.isSpreadsheetLoadGeneratorRegulatingTerminal());
+        assertFalse(entity.update(enableBus));
+
+        SpreadsheetParameters disableRegulatingTerminal = SpreadsheetParameters.builder()
+            .generator(SpreadsheetParameters.GeneratorSpreadsheetParameters.builder().regulatingTerminal(false).build())
+            .build();
+        assertTrue(entity.update(disableRegulatingTerminal));
+        assertTrue(entity.isSpreadsheetLoadGeneratorBus());
+        assertFalse(entity.isSpreadsheetLoadGeneratorRegulatingTerminal());
+
+        SpreadsheetParameters disableBus = SpreadsheetParameters.builder()
+            .generator(SpreadsheetParameters.GeneratorSpreadsheetParameters.builder().bus(false).build())
+            .build();
+        assertTrue(entity.update(disableBus));
+        assertFalse(entity.isSpreadsheetLoadGeneratorBus());
+        assertFalse(entity.update(disableBus));
     }
 }

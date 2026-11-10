@@ -38,7 +38,7 @@ public class SpreadsheetParameters {
 
     @JsonProperty("GENERATOR")
     @JsonInclude(Include.NON_EMPTY)
-    private RegulatingEquipmentSpreadsheetParameters generator;
+    private GeneratorSpreadsheetParameters generator;
 
     @JsonProperty("BATTERY")
     @JsonInclude(Include.NON_EMPTY)
@@ -57,6 +57,20 @@ public class SpreadsheetParameters {
     public static class BranchSpreadsheetParameters {
         @JsonInclude(Include.NON_NULL)
         private Boolean operationalLimitsGroups;
+    }
+
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Data
+    @Accessors(chain = true)
+    @Jacksonized
+    @Builder
+    public static class GeneratorSpreadsheetParameters {
+        @JsonInclude(Include.NON_NULL)
+        private Boolean regulatingTerminal;
+
+        @JsonInclude(Include.NON_NULL)
+        private Boolean bus;
     }
 
     @AllArgsConstructor
