@@ -98,8 +98,8 @@ class NetworkModificationServiceTest {
         UUID modificationUuid = UUID.randomUUID();
         List<UUID> groupUuids = List.of(UUID.randomUUID(), UUID.randomUUID());
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid + "/containing-groups";
-        when(restTemplate.exchange(eq(expectedUrl), eq(HttpMethod.GET), isNull(), ArgumentMatchers.<ParameterizedTypeReference<List<UUID>>>any()))
-            .thenReturn(ResponseEntity.ok(groupUuids));
+        when(restClient.get().uri(expectedUrl).retrieve().body(ArgumentMatchers.<ParameterizedTypeReference<List<UUID>>>any()))
+            .thenReturn(groupUuids);
         when(rootNetworkService.countStudiesByRootNetworkTag(groupUuids)).thenReturn(Map.of("R1", 2L));
         // only these two services are needed to count
         NetworkModificationService service = new NetworkModificationService(null, rootNetworkService, null, networkModificationService, null, null, null);
