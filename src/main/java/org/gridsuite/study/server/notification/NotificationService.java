@@ -110,6 +110,9 @@ public class NotificationService {
     public static final String UPDATE_TYPE_ASYMMETRICAL_LOAD_FAILED = "asymmetricalLoad_failed";
     public static final String UPDATE_TYPE_ASYMMETRICAL_LOAD_RESULT = "asymmetricalLoadResult";
     public static final String UPDATE_TYPE_ASYMMETRICAL_LOAD_STATUS = "asymmetricalLoad_status";
+    public static final String UPDATE_TYPE_LOGICAL_CONTROLS_FAILED = "logicalControls_failed";
+    public static final String UPDATE_TYPE_LOGICAL_CONTROLS_RESULT = "logicalControlsResult";
+    public static final String UPDATE_TYPE_LOGICAL_CONTROLS_STATUS = "logicalControls_status";
     public static final String UPDATE_TYPE_COMPUTATION_PARAMETERS = "computationParametersUpdated";
     public static final String UPDATE_COMPUTATION_RESULT_COLUMN_FILTER = "computationResultColumnFilterUpdated";
     public static final String UPDATE_COMPUTATION_RESULT_GLOBAL_FILTER = "computationResultGlobalFilterUpdated";

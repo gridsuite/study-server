@@ -21,7 +21,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.List;
 import java.util.UUID;
@@ -31,7 +31,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyConstants.DYNAWO_PROVIDER;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
-import static org.gridsuite.study.server.service.client.RestClient.DELIMITER;
+import static org.gridsuite.study.server.service.client.RestClientService.DELIMITER;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 import static org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService.*;
 import static org.gridsuite.study.server.utils.assertions.Assertions.assertThat;
@@ -55,7 +55,7 @@ class DynamicSecurityAnalysisRestServiceTest extends AbstractWireMockRestClientT
     private static final String PARAMETERS_JSON = "parametersJson";
     private DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
     @Autowired
-    private RestTemplate restTemplate;
+    private RestClient restClient;
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired
@@ -65,7 +65,7 @@ class DynamicSecurityAnalysisRestServiceTest extends AbstractWireMockRestClientT
     void setup() {
         // config client
         remoteServicesProperties.setServiceUri("dynamic-security-analysis-server", initMockWebServer());
-        dynamicSecurityAnalysisRestService = new DynamicSecurityAnalysisRestService(remoteServicesProperties, restTemplate, objectMapper);
+        dynamicSecurityAnalysisRestService = new DynamicSecurityAnalysisRestService(remoteServicesProperties, restClient, objectMapper);
     }
 
     @Test
@@ -215,6 +215,26 @@ class DynamicSecurityAnalysisRestServiceTest extends AbstractWireMockRestClientT
         assertThrows(
             HttpServerErrorException.class,
             () -> dynamicSecurityAnalysisRestService.updateParameters(PARAMETERS_UUID, parameterJson)
+        );
+    }
+
+    @Test
+    void testResetParameters() {
+        String url = PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID + DELIMITER + "reset";
+
+        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url)).willReturn(WireMock.ok()));
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicSecurityAnalysisRestService.resetParameters(PARAMETERS_UUID));
+
+        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url)).willReturn(WireMock.notFound()));
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSecurityAnalysisRestService.resetParameters(PARAMETERS_UUID)
+        );
+
+        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url)).willReturn(WireMock.serverError()));
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSecurityAnalysisRestService.resetParameters(PARAMETERS_UUID)
         );
     }
 

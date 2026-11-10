@@ -38,6 +38,7 @@ public enum QuotaType {
             case PCC_MIN -> QuotaType.PCC_MIN;
             case SHORT_CIRCUIT, SHORT_CIRCUIT_ONE_BUS -> QuotaType.SHORT_CIRCUIT;
             case ASYMMETRICAL_LOAD -> QuotaType.ASYMMETRICAL_LOAD;
+            case LOGICAL_CONTROLS -> null; // no quota for logical controls
         };
     }
 }

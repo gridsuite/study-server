@@ -16,10 +16,9 @@ import org.gridsuite.study.server.error.StudyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.UUID;
@@ -34,13 +33,13 @@ public class CaseService {
     @Setter
     private String caseServerBaseUri;
 
-    private RestTemplate restTemplate;
+    private RestClient restClient;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CaseService.class);
 
-    public CaseService(@Value("${powsybl.services.case-server.base-uri:http://case-server/}") String caseServerBaseUri, RestTemplate restTemplate) {
+    public CaseService(@Value("${powsybl.services.case-server.base-uri:http://case-server/}") String caseServerBaseUri, RestClient restClient) {
         this.caseServerBaseUri = caseServerBaseUri;
-        this.restTemplate = restTemplate;
+        this.restClient = restClient;
     }
 
     public Boolean caseExists(UUID caseUuid) {
@@ -48,7 +47,8 @@ public class CaseService {
             .buildAndExpand(caseUuid)
             .toUriString();
 
-        return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.GET, null, Boolean.class, caseUuid).getBody();
+        return restClient.get().uri(caseServerBaseUri + path, caseUuid)
+            .retrieve().body(Boolean.class);
     }
 
     /**
@@ -60,7 +60,8 @@ public class CaseService {
                 .buildAndExpand(caseUuid)
                 .toUriString();
 
-        restTemplate.exchange(caseServerBaseUri + path, HttpMethod.PUT, null, Void.class, caseUuid);
+        restClient.put().uri(caseServerBaseUri + path, caseUuid)
+            .retrieve().toBodilessEntity();
     }
 
     public void deleteCase(UUID caseUuid) {
@@ -68,7 +69,9 @@ public class CaseService {
                 .buildAndExpand(caseUuid)
                 .toUriString();
 
-        restTemplate.exchange(caseServerBaseUri + path, HttpMethod.DELETE, null, Void.class, caseUuid);
+        restClient.delete()
+            .uri(caseServerBaseUri + path, caseUuid)
+            .retrieve().toBodilessEntity();
     }
 
     public UUID duplicateCase(UUID caseUuid, Boolean withExpiration) {
@@ -77,7 +80,8 @@ public class CaseService {
                 .buildAndExpand(caseUuid)
                 .toUriString();
 
-        return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.POST, null, UUID.class, caseUuid).getBody();
+        return restClient.post().uri(caseServerBaseUri + path, caseUuid)
+            .retrieve().body(UUID.class);
     }
 
     public void assertCaseExists(UUID caseUuid) {
@@ -93,7 +97,8 @@ public class CaseService {
             .build()
             .toUriString();
 
-        return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+        return restClient.post().uri(caseServerBaseUri + path)
+            .retrieve().body(UUID.class);
     }
 
     public ResponseEntity<byte[]> getCaseContent(UUID caseUuid) {
@@ -101,6 +106,7 @@ public class CaseService {
                 .buildAndExpand(caseUuid)
                 .toUriString();
 
-        return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.GET, null, byte[].class);
+        return restClient.get().uri(caseServerBaseUri + path)
+            .retrieve().toEntity(byte[].class);
     }
 }

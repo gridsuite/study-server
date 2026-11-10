@@ -15,14 +15,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
+import java.net.URI;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.SHORT_CIRCUIT_API_VERSION;
+import static org.mockito.Answers.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,15 +34,15 @@ class ShortCircuitRestServiceTest {
 
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
-    @Mock
-    private RestTemplate restTemplate;
+    @Mock(answer = RETURNS_DEEP_STUBS)
+    private RestClient restClient;
 
     private ShortCircuitRestService shortCircuitRestService;
 
     @BeforeEach
     void setUp() {
         when(remoteServicesProperties.getServiceUri("shortcircuit-server")).thenReturn(BASE_URI);
-        shortCircuitRestService = new ShortCircuitRestService(remoteServicesProperties, restTemplate, new ObjectMapper());
+        shortCircuitRestService = new ShortCircuitRestService(remoteServicesProperties, restClient, new ObjectMapper());
     }
 
     @Test
@@ -48,7 +50,7 @@ class ShortCircuitRestServiceTest {
         UUID resultUuid = UUID.randomUUID();
         ResponseEntity<Resource> response = ResponseEntity.ok(new ByteArrayResource("debug".getBytes()));
         String url = BASE_URI + "/" + SHORT_CIRCUIT_API_VERSION + "/results/" + resultUuid + "/download-debug-file";
-        when(restTemplate.exchange(url, HttpMethod.GET, null, Resource.class)).thenReturn(response);
+        when(restClient.get().uri(url).retrieve().toEntity(Resource.class)).thenReturn(response);
 
         assertThat(shortCircuitRestService.downloadDebugFile(resultUuid)).isEqualTo(response);
     }
@@ -56,8 +58,17 @@ class ShortCircuitRestServiceTest {
     @Test
     void testGetSpecificParameters() {
         String specificParameters = "{\"provider\":\"short-circuit\"}";
-        when(restTemplate.getForObject(BASE_URI + "/" + SHORT_CIRCUIT_API_VERSION + "/parameters/specific-parameters", String.class)).thenReturn(specificParameters);
+        when(restClient.get().uri(BASE_URI + "/" + SHORT_CIRCUIT_API_VERSION + "/parameters/specific-parameters").retrieve().body(String.class)).thenReturn(specificParameters);
 
         assertThat(shortCircuitRestService.getSpecificParameters()).isEqualTo(specificParameters);
+    }
+
+    @Test
+    void testResetParameters() {
+        UUID parametersUuid = UUID.randomUUID();
+
+        shortCircuitRestService.resetParameters(parametersUuid);
+
+        verify(restClient.put().uri(URI.create(BASE_URI + "/" + SHORT_CIRCUIT_API_VERSION + "/parameters/" + parametersUuid + "/reset")).retrieve()).toBodilessEntity();
     }
 }
