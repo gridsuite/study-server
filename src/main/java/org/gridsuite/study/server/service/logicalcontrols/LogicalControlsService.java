@@ -55,6 +55,16 @@ public class LogicalControlsService extends AbstractComputationService {
         this.objectMapper = objectMapper;
     }
 
+    public String getLogicalControlsResult(@NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String globalFilters) {
+        UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOGICAL_CONTROLS);
+        if (resultUuid == null) {
+            return null;
+        }
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
+        return logicalControlsRestService.getLogicalControlsResult(resultUuid, networkUuid, variantId, globalFilters);
+    }
+
     @Transactional
     public UUID runLogicalControls(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);

@@ -57,7 +57,6 @@ import java.util.UUID;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.client.WireMock.delete;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -288,6 +287,10 @@ class LogicalControlsTest {
             .andExpect(status().isNoContent());
         mockMvc.perform(get(LOGICAL_CONTROLS_URL_BASE + "result", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
             .andExpect(status().isNoContent());
+        mockMvc.perform(get(LOGICAL_CONTROLS_URL_BASE + "result", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
+                .param("globalFilters", "{\"countryCode\":[\"FR\"]}"))
+            .andExpect(status().isNoContent());
+        wireMockServer.verify(0, getRequestedFor(urlPathMatching("/v1/logical-controls/results/.*")));
     }
 
     @Test
@@ -433,13 +436,42 @@ class LogicalControlsTest {
             .andExpect(status().isOk())
             .andExpect(content().string(LOGICAL_CONTROLS_RESULT_JSON));
         assertEquals(1, wireMockServer.getAllServeEvents().stream().filter(e -> e.getStubMapping().getId().equals(stubId)).count());
+        wireMockServer.verify(1, getRequestedFor(urlPathEqualTo("/v1/logical-controls/results/" + LOGICAL_CONTROLS_RESULT_UUID))
+            .withQueryParam("networkUuid", equalTo(NETWORK_UUID_STRING))
+            .withQueryParam("variantId", equalTo(VARIANT_ID))
+            .withQueryParam("globalFilters", absent())
+        );
 
         // results NOT FOUND
         UUID resultUuid = UUID.randomUUID();
         wireMockServer.stubFor(WireMock.get(urlPathEqualTo("/v1/logical-controls/results/" + resultUuid))
             .willReturn(WireMock.notFound()));
         assertThrows(HttpClientErrorException.NotFound.class, () ->
-            logicalControlsRestService.getLogicalControlsResult(resultUuid)
+            logicalControlsRestService.getLogicalControlsResult(resultUuid, UUID.fromString(NETWORK_UUID_STRING), VARIANT_ID, null)
         );
+    }
+
+    @Test
+    void testGetLogicalControlsResultsWithGlobalFilters() throws Exception {
+        String variantId = "variant + %41 & é 中";
+        String globalFilters = "{\"label\":\"Café + 100% & 中\",\"countryCode\":[\"FR\"]}";
+        StudyNodeIds ids = createStudyAndNode(variantId, "node 1");
+        rootNetworkNodeInfoService.updateComputationResultUuid(ids.nodeId, ids.rootNetworkUuid,
+            UUID.fromString(LOGICAL_CONTROLS_RESULT_UUID), ComputationType.LOGICAL_CONTROLS);
+        wireMockServer.stubFor(WireMock.get(urlPathEqualTo("/v1/logical-controls/results/" + LOGICAL_CONTROLS_RESULT_UUID))
+            .withQueryParam("networkUuid", equalTo(NETWORK_UUID_STRING))
+            .withQueryParam("variantId", equalTo(variantId))
+            .withQueryParam("globalFilters", equalTo(globalFilters))
+            .willReturn(okJson(LOGICAL_CONTROLS_RESULT_JSON)));
+
+        mockMvc.perform(get(LOGICAL_CONTROLS_URL_BASE + "result", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
+                .param("globalFilters", globalFilters))
+            .andExpect(status().isOk())
+            .andExpect(content().string(LOGICAL_CONTROLS_RESULT_JSON));
+
+        wireMockServer.verify(1, getRequestedFor(urlPathEqualTo("/v1/logical-controls/results/" + LOGICAL_CONTROLS_RESULT_UUID))
+            .withQueryParam("networkUuid", equalTo(NETWORK_UUID_STRING))
+            .withQueryParam("variantId", equalTo(variantId))
+            .withQueryParam("globalFilters", equalTo(globalFilters)));
     }
 }
