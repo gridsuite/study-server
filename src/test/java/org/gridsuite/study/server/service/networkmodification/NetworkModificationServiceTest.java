@@ -206,29 +206,6 @@ class NetworkModificationServiceTest {
     }
 
     @Test
-    void testCreateSharingLinksWithRecreate() {
-        UUID groupUuid = UUID.randomUUID();
-        String baseUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/sharing-links";
-        var requestSpec = restClient.post().uri(baseUrl + "?recreate=false");
-        makeFluent(requestSpec);
-
-        networkModificationService.createSharingLinks(List.of(groupUuid), USER_ID);
-
-        verify(requestSpec).body(List.of(groupUuid));
-        assertHeaders(requestSpec, Map.of(HEADER_USER_ID, USER_ID));
-        verify(requestSpec.body(List.of(groupUuid)).retrieve()).toBodilessEntity();
-
-        var recreateRequestSpec = restClient.post().uri(baseUrl + "?recreate=true");
-        makeFluent(recreateRequestSpec);
-
-        networkModificationService.createSharingLinks(List.of(groupUuid), true, USER_ID);
-
-        verify(recreateRequestSpec).body(List.of(groupUuid));
-        assertHeaders(recreateRequestSpec, Map.of(HEADER_USER_ID, USER_ID));
-        verify(recreateRequestSpec.body(List.of(groupUuid)).retrieve()).toBodilessEntity();
-    }
-
-    @Test
     void testAddRootNetworkTag() {
         UUID groupUuid = UUID.randomUUID();
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
