@@ -30,6 +30,9 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import static org.gridsuite.study.server.StudyConstants.HEADER_ACTION;
+import static org.gridsuite.study.server.StudyConstants.HEADER_GROUP_UUID;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
@@ -40,9 +43,6 @@ import static org.mockito.Mockito.*;
 @SpringBootTest
 @DisableElasticsearch
 class ConsumerCompositeReferenceChangesTest {
-
-    private static final String HEADER_ACTION = "action";
-    private static final String HEADER_GROUP_UUID = "groupUuid";
 
     @MockitoBean
     private NotificationService notificationService;
@@ -138,7 +138,7 @@ class ConsumerCompositeReferenceChangesTest {
         return MessageBuilder.withPayload(references)
                 .setHeader(HEADER_ACTION, action.name())
                 .setHeader(HEADER_GROUP_UUID, groupUuid.toString())
-                .setHeader("userId", USER_ID)
+                .setHeader(HEADER_USER_ID, USER_ID)
                 .build();
     }
 }
