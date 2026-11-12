@@ -8,6 +8,8 @@ package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeReceiver;
@@ -24,7 +26,6 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
-import org.gridsuite.study.server.service.SupervisionService;
 import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
@@ -32,7 +33,9 @@ import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRes
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.gridsuite.study.server.utils.wiremock.ComputationServerStubs;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -127,9 +130,6 @@ class StudyControllerDynamicSecurityAnalysisTest {
     @MockitoSpyBean
     private DynamicSecurityAnalysisRestService spyDynamicSecurityAnalysisRestService;
 
-    @MockitoSpyBean
-    private SupervisionService spySupervisionService;
-
     @Autowired
     private StudyRepository studyRepository;
 
@@ -156,6 +156,17 @@ class StudyControllerDynamicSecurityAnalysisTest {
     private static final String DSA_STOPPED_DESTINATION = "dsa.stopped";
     private static final String DSA_FAILED_DESTINATION = "dsa.run.dlx";
 
+    private WireMockServer wireMockServer;
+
+    private ComputationServerStubs computationServerStubs;
+
+    @BeforeEach
+    void setUp() {
+        wireMockServer = new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
+        wireMockServer.start();
+        computationServerStubs = new ComputationServerStubs(wireMockServer);
+    }
+
     @AfterEach
     void tearDown() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
@@ -163,6 +174,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
         List<String> destinations = List.of(STUDY_UPDATE_DESTINATION, DSA_FAILED_DESTINATION, DSA_RESULT_DESTINATION, DSA_STOPPED_DESTINATION);
         TestUtils.assertQueuesEmptyThenClear(destinations, output);
+        wireMockServer.stop();
     }
 
     private RootNode getRootNode(UUID study) throws Exception {
@@ -403,13 +415,15 @@ class StudyControllerDynamicSecurityAnalysisTest {
         assertThat(result.getResponse().getContentAsString()).isEqualTo("1");
 
         //Delete Dynamic result init results
-        Mockito.doNothing().when(spySupervisionService).deleteAllDynamicSecurityAnalysisResults();
+        doReturn(wireMockServer.baseUrl()).when(spyDynamicSecurityAnalysisRestService).getBaseUri();
+        computationServerStubs.stubDeleteAllResults();
         result = studyClient.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", ComputationType.DYNAMIC_SECURITY_ANALYSIS.toString())
                         .queryParam("dryRun", "false"))
                 .andExpect(status().isOk())
                 .andReturn();
         assertThat(result.getResponse().getContentAsString()).isEqualTo("1");
+        computationServerStubs.verifyDeleteAllResults();
     }
 
     @Test

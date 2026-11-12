@@ -62,6 +62,7 @@ public class SupervisionService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SupervisionService.class);
     private static final String DELETION_LOG_MESSAGE = "{} results deletion for all studies : {} seconds";
+    private static final String SUPERVISION_RESULTS_PATH = "/supervision/results";
 
     private final StudyService studyService;
 
@@ -438,48 +439,48 @@ public class SupervisionService {
     }
 
     public void deleteAllDynamicSimulationResults() {
-        restClient.delete().uri(dynamicSimulationRestService.getBaseUri() + DELIMITER + DYNAMIC_SIMULATION_API_VERSION + "/supervision/results")
+        restClient.delete().uri(dynamicSimulationRestService.getBaseUri() + DELIMITER + DYNAMIC_SIMULATION_API_VERSION + SUPERVISION_RESULTS_PATH)
             .retrieve().toBodilessEntity();
     }
 
     public void deleteAllDynamicSecurityAnalysisResults() {
-        restClient.delete().uri(dynamicSecurityAnalysisRestService.getBaseUri() + DELIMITER + DYNAMIC_SECURITY_ANALYSIS_API_VERSION + "/supervision/results")
+        restClient.delete().uri(dynamicSecurityAnalysisRestService.getBaseUri() + DELIMITER + DYNAMIC_SECURITY_ANALYSIS_API_VERSION + SUPERVISION_RESULTS_PATH)
             .retrieve().toBodilessEntity();
     }
 
     public void deleteAllDynamicMarginCalculationResults() {
-        restClient.delete().uri(dynamicMarginCalculationRestService.getBaseUri() + DELIMITER + DYNAMIC_MARGIN_CALCULATION_API_VERSION + "/supervision/results")
+        restClient.delete().uri(dynamicMarginCalculationRestService.getBaseUri() + DELIMITER + DYNAMIC_MARGIN_CALCULATION_API_VERSION + SUPERVISION_RESULTS_PATH)
             .retrieve().toBodilessEntity();
     }
 
     public void deleteAllSecurityAnalysisResults() {
-        restClient.delete().uri(securityAnalysisService.getBaseUri() + DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/supervision/results")
+        restClient.delete().uri(securityAnalysisService.getBaseUri() + DELIMITER + SECURITY_ANALYSIS_API_VERSION + SUPERVISION_RESULTS_PATH)
             .retrieve().toBodilessEntity();
     }
 
     public void deleteAllSensitivityAnalysisResults() {
-        restClient.delete().uri(sensitivityAnalysisService.getBaseUri() + DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/supervision/results")
+        restClient.delete().uri(sensitivityAnalysisService.getBaseUri() + DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + SUPERVISION_RESULTS_PATH)
             .retrieve().toBodilessEntity();
     }
 
     public void deleteAllShortCircuitAnalysisResults() {
-        restClient.delete().uri(shortCircuitService.getBaseUri() + DELIMITER + SHORT_CIRCUIT_API_VERSION + "/supervision/results")
+        restClient.delete().uri(shortCircuitService.getBaseUri() + DELIMITER + SHORT_CIRCUIT_API_VERSION + SUPERVISION_RESULTS_PATH)
             .retrieve().toBodilessEntity();
     }
 
     public void deleteAllVoltageInitResults(String userId) {
-        restClient.delete().uri(voltageInitService.getBaseUri() + DELIMITER + VOLTAGE_INIT_API_VERSION + "/supervision/results")
+        restClient.delete().uri(voltageInitService.getBaseUri() + DELIMITER + VOLTAGE_INIT_API_VERSION + SUPERVISION_RESULTS_PATH)
             .headers(headers -> headers.set(HEADER_USER_ID, userId))
             .retrieve().toBodilessEntity();
     }
 
     public void deleteAllStateEstimationResults() {
-        restClient.delete().uri(stateEstimationService.getBaseUri() + DELIMITER + STATE_ESTIMATION_API_VERSION + "/supervision/results")
+        restClient.delete().uri(stateEstimationService.getBaseUri() + DELIMITER + STATE_ESTIMATION_API_VERSION + SUPERVISION_RESULTS_PATH)
             .retrieve().toBodilessEntity();
     }
 
     public void deleteAllPccMinResults() {
-        restClient.delete().uri(pccMinService.getBaseUri() + DELIMITER + PCC_MIN_API_VERSION + "/supervision/results")
+        restClient.delete().uri(pccMinService.getBaseUri() + DELIMITER + PCC_MIN_API_VERSION + SUPERVISION_RESULTS_PATH)
             .retrieve().toBodilessEntity();
     }
 
