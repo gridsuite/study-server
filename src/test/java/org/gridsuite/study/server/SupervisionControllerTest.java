@@ -28,6 +28,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,6 +57,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -127,6 +129,9 @@ class SupervisionControllerTest {
 
     @Autowired
     private OutputDestination output;
+
+    @MockitoBean
+    private NetworkModificationRestService networkModificationService;
 
     private static EquipmentInfos toEquipmentInfos(Identifiable<?> i) {
         return EquipmentInfos.builder()
@@ -395,9 +400,15 @@ class SupervisionControllerTest {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
+        verify(networkModificationService, times(1)).createSharingLinks(any(), eq(true), eq("userId"));
+
+        Mockito.clearInvocations(networkModificationService);
+
         mockMvc.perform(post("/v1/supervision/studies/{studyUuid}/network-modifications/sharing-links/recreate", NOT_FOUND_STUDY_UUID)
                         .header("userId", "userId"))
                 .andExpect(status().isNotFound());
+        verify(networkModificationService, Mockito.never()).createSharingLinks(any(), eq(true), any());
+
     }
 
     @Test
