@@ -148,13 +148,13 @@ public class LogicalControlsRestService extends AbstractComputationRestService {
         uriVariables.put("resultUuid", resultUuid);
         uriVariables.put(QUERY_PARAM_NETWORK_UUID, networkUuid);
 
-        if (!StringUtils.isBlank(globalFilters)) {
-            uriBuilder.queryParam(QUERY_PARAM_GLOBAL_FILTERS, "{globalFilters}");
-            uriVariables.put(QUERY_PARAM_GLOBAL_FILTERS, globalFilters);
-        }
         if (!StringUtils.isBlank(variantId)) {
             uriBuilder.queryParam(QUERY_PARAM_VARIANT_ID, "{variantId}");
             uriVariables.put(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        if (!StringUtils.isBlank(globalFilters)) {
+            uriBuilder.queryParam(QUERY_PARAM_GLOBAL_FILTERS, "{globalFilters}");
+            uriVariables.put(QUERY_PARAM_GLOBAL_FILTERS, globalFilters);
         }
         // template variables are strictly encoded once, and the URI overload avoids encoding a second time
         URI uri = uriBuilder.encode().buildAndExpand(uriVariables).toUri();

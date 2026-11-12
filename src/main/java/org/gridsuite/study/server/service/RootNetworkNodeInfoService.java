@@ -772,17 +772,6 @@ public class RootNetworkNodeInfoService {
         return asymmetricalLoadRestService.getAsymmetricalLoadResultsPage(asymmetricalLoadParameters, filters, globalFilters, pageable);
     }
 
-    @Transactional(readOnly = true)
-    public String getLogicalControlsResult(UUID nodeUuid, UUID rootNetworkUuid, String globalFilters) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOGICAL_CONTROLS);
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(()
-                -> new StudyException(NOT_FOUND, ROOT_NETWORK_NOT_FOUND));
-
-        String variantId = rootNetworkNodeInfoEntity.getVariantId();
-        UUID networkUuid = rootNetworkNodeInfoEntity.getRootNetwork().getNetworkUuid();
-        return logicalControlsRestService.getLogicalControlsResult(resultUuid, networkUuid, variantId, globalFilters);
-    }
-
     /**************************
      * GET COMPUTATION STATUS *
      **************************/
