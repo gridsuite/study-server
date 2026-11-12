@@ -40,9 +40,6 @@ class SupervisionServiceTest {
     @MockitoBean
     IndexOperations indexOperations;
 
-    @MockitoBean
-    NetworkModificationTreeService networkModificationTreeService;
-
     @Autowired
     SupervisionService supervisionService;
 
