@@ -105,7 +105,6 @@ public final class StudyConstants {
     public static final String HEADER_ERROR_MESSAGE = "x-exception-message";
     public static final String HEADER_ACTION = "action";
     public static final String HEADER_GROUP_UUID = "groupUuid";
-    public static final String HEADER_ONLY_METADATA = "onlyMetadata";
     public static final String QUERY_PARAM_ONLY_STASHED = "onlyStashed";
     public static final String QUERY_PARAM_STASHED = "stashed";
     public static final String QUERY_PARAM_APPLICABLE = "applicable";
