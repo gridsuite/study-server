@@ -276,16 +276,23 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
         return createParameters(null);
     }
 
-    public void updateParameters(final UUID parametersUuid, @Nullable final String parametersInfos) {
+    public void updateParameters(final UUID parametersUuid, final String parametersInfos) {
         var requestSpec = restClient.put().uri(getBaseUriForParameters()
                 .pathSegment("{parametersUuid}")
                 .buildAndExpand(parametersUuid)
                 .toUri())
             .contentType(MediaType.APPLICATION_JSON);
-        if (parametersInfos != null) {
-            requestSpec.body(parametersInfos);
-        }
+
+        requestSpec.body(parametersInfos);
         requestSpec.retrieve().toBodilessEntity();
+    }
+
+    public void resetParameters(final UUID parametersUuid) {
+        restClient.put().uri(getBaseUriForParameters()
+                .pathSegment("{parametersUuid}", "reset")
+                .buildAndExpand(parametersUuid)
+                .toUri())
+                .retrieve().toBodilessEntity();
     }
 
     public String getParameters(UUID parametersUuid) {

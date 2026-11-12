@@ -128,6 +128,14 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
             .retrieve().toBodilessEntity();
     }
 
+    public void resetParameters(UUID parametersUuid) {
+        Objects.requireNonNull(parametersUuid);
+
+        String url = getParametersWithUuidUrl(parametersUuid) + "/reset";
+
+        getRestClient().put().uri(url).retrieve().toBodilessEntity();
+    }
+
     public UUID duplicateParameters(UUID sourceParameterId) {
         Objects.requireNonNull(sourceParameterId);
 

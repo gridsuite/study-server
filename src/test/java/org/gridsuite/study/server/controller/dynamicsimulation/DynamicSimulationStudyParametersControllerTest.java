@@ -58,6 +58,32 @@ class DynamicSimulationStudyParametersControllerTest {
     }
 
     @Test
+    void testResetDynamicSimulationParameters() throws Exception {
+        UUID studyUuid = UUID.randomUUID();
+        when(dynamicSimulationService.resetDynamicSimulationParameters(studyUuid, USER_ID)).thenReturn(false);
+
+        mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid)
+                .header(HEADER_USER_ID, USER_ID))
+            .andExpect(status().isOk())
+            .andExpect(content().string(""));
+
+        verify(dynamicSimulationService).resetDynamicSimulationParameters(studyUuid, USER_ID);
+    }
+
+    @Test
+    void testResetDynamicSimulationParametersReturnsNoContent() throws Exception {
+        UUID studyUuid = UUID.randomUUID();
+        when(dynamicSimulationService.resetDynamicSimulationParameters(studyUuid, USER_ID)).thenReturn(true);
+
+        mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid)
+                .header(HEADER_USER_ID, USER_ID))
+            .andExpect(status().isNoContent())
+            .andExpect(content().string(""));
+
+        verify(dynamicSimulationService).resetDynamicSimulationParameters(studyUuid, USER_ID);
+    }
+
+    @Test
     void testGetDynamicSimulationParameters() throws Exception {
         UUID studyUuid = UUID.randomUUID();
         when(dynamicSimulationService.getDynamicSimulationParameters(studyUuid)).thenReturn(PARAMETERS);

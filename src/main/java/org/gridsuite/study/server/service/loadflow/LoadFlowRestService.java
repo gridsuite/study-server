@@ -262,7 +262,7 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
             .retrieve().body(UUID.class);
     }
 
-    public void updateLoadFlowParameters(UUID parametersUuid, @Nullable String parameters) {
+    public void updateLoadFlowParameters(UUID parametersUuid, String parameters) {
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(parametersUuid)
@@ -274,6 +274,15 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
             requestSpec.body(parameters);
         }
         requestSpec.retrieve().toBodilessEntity();
+    }
+
+    public void resetLoadFlowParameters(UUID parametersUuid) {
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI + "/reset")
+                .buildAndExpand(parametersUuid)
+                .toUriString();
+
+        restClient.put().uri(baseUri + path).retrieve().toBodilessEntity();
     }
 
     @Override

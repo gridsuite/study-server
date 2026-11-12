@@ -37,13 +37,24 @@ public class VoltageInitStudyParametersController {
 
     @PostMapping(value = "/parameters")
     @Operation(summary = "Set voltage init parameters on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters are set"),
-        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters are set")})
     public ResponseEntity<Void> setVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) StudyVoltageInitParameters voltageInitParameters,
+            @RequestBody StudyVoltageInitParameters voltageInitParameters,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        return voltageInitService.setVoltageInitParameters(studyUuid, voltageInitParameters, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
+        voltageInitService.setVoltageInitParameters(studyUuid, voltageInitParameters, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/parameters/reset")
+    @Operation(summary = "Reset voltage init parameters on study to the user profile or default ones")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters are reset"),
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    public ResponseEntity<Void> resetVoltageInitParameters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestHeader(HEADER_USER_ID) String userId,
+            @RequestParam(value = "applyModifications", defaultValue = "true", required = false) boolean applyModifications) {
+        return voltageInitService.resetVoltageInitParameters(studyUuid, userId, applyModifications) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/parameters")
@@ -53,5 +64,4 @@ public class VoltageInitStudyParametersController {
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(voltageInitService.getVoltageInitParameters(studyUuid));
     }
-
 }

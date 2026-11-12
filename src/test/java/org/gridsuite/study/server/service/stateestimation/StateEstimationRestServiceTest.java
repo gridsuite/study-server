@@ -59,6 +59,11 @@ class StateEstimationRestServiceTest {
 
     private StateEstimationRestService stateEstimationRestService;
 
+    private static final UUID RESULT_UUID = UUID.randomUUID();
+    private static final UUID NETWORK_UUID = UUID.randomUUID();
+    private static final String RESULTS_PATH = "/" + STATE_ESTIMATION_API_VERSION + "/results/" + RESULT_UUID + "/measurements";
+    private static final String GLOBAL_FILTERS = "{\"label\":\"a+b %41 100% & c=d \\\"q\\\" \\\\ é 中\"}";
+
     @BeforeEach
     void setUp() {
         when(remoteServicesProperties.getServiceUri("state-estimation-server")).thenReturn(BASE_URI);
@@ -75,10 +80,14 @@ class StateEstimationRestServiceTest {
         assertThat(stateEstimationRestService.downloadDebugFile(resultUuid)).isEqualTo(response);
     }
 
-    private static final UUID RESULT_UUID = UUID.randomUUID();
-    private static final UUID NETWORK_UUID = UUID.randomUUID();
-    private static final String RESULTS_PATH = "/" + STATE_ESTIMATION_API_VERSION + "/results/" + RESULT_UUID + "/measurements";
-    private static final String GLOBAL_FILTERS = "{\"label\":\"a+b %41 100% & c=d \\\"q\\\" \\\\ é 中\"}";
+    @Test
+    void testResetParameters() {
+        UUID parametersUuid = UUID.randomUUID();
+
+        stateEstimationRestService.resetStateEstimationParameters(parametersUuid);
+
+        verify(restClient.put().uri(BASE_URI + "/" + STATE_ESTIMATION_API_VERSION + "/parameters/" + parametersUuid + "/reset").retrieve()).toBodilessEntity();
+    }
 
     private URI requestedMeasurementsUri(String variantId, String globalFilters) {
         when(restClient.get().uri(any(URI.class)).retrieve().body(String.class)).thenReturn("[]");
