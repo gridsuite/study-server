@@ -79,6 +79,7 @@ class SupervisionControllerTest {
     private static final UUID CASE_UUID = UUID.randomUUID();
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final UUID STUDY_UUID = UUID.randomUUID();
+    private static final UUID NOT_FOUND_STUDY_UUID = UUID.randomUUID();
     private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
     private static final long TIMEOUT = 1000;
 
@@ -105,9 +106,6 @@ class SupervisionControllerTest {
 
     @MockitoSpyBean
     private StudyService studyService;
-
-    @MockitoSpyBean
-    private SupervisionService supervisionService;
 
     @Autowired
     private RestClient restClient;
@@ -392,13 +390,14 @@ class SupervisionControllerTest {
 
     @Test
     void testrecreateNetworkModificationSharingLinks() throws Exception {
-        doNothing().when(supervisionService).recreateNetworkModificationSharingLinks(STUDY_UUID, "userId");
-
+        initStudy();
         mockMvc.perform(post("/v1/supervision/studies/{studyUuid}/network-modifications/sharing-links/recreate", STUDY_UUID)
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        verify(supervisionService).recreateNetworkModificationSharingLinks(STUDY_UUID, "userId");
+        mockMvc.perform(post("/v1/supervision/studies/{studyUuid}/network-modifications/sharing-links/recreate", NOT_FOUND_STUDY_UUID)
+                        .header("userId", "userId"))
+                .andExpect(status().isNotFound());
     }
 
     @Test
