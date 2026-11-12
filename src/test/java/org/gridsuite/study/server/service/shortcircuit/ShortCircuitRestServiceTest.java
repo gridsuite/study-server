@@ -19,11 +19,13 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClient;
 
+import java.net.URI;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.SHORT_CIRCUIT_API_VERSION;
 import static org.mockito.Answers.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -62,5 +64,14 @@ class ShortCircuitRestServiceTest {
         when(restClient.get().uri(BASE_URI + "/" + SHORT_CIRCUIT_API_VERSION + "/parameters/specific-parameters").retrieve().body(String.class)).thenReturn(specificParameters);
 
         assertThat(shortCircuitRestService.getSpecificParameters()).isEqualTo(specificParameters);
+    }
+
+    @Test
+    void testResetParameters() {
+        UUID parametersUuid = UUID.randomUUID();
+
+        shortCircuitRestService.resetParameters(parametersUuid);
+
+        verify(restClient.put().uri(URI.create(BASE_URI + "/" + SHORT_CIRCUIT_API_VERSION + "/parameters/" + parametersUuid + "/reset")).retrieve()).toBodilessEntity();
     }
 }

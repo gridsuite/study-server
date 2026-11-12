@@ -75,4 +75,13 @@ class SensitivityAnalysisRestServiceTest {
         verify(restClient.put().uri(BASE_URI + "/" + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid).contentType(MediaType.APPLICATION_JSON)).body(captor.capture());
         assertThat(captor.getValue()).isEqualTo(parameters);
     }
+
+    @Test
+    void testResetParameters() {
+        UUID parameterUuid = UUID.randomUUID();
+
+        sensitivityAnalysisRestService.resetSensitivityAnalysisParameters(parameterUuid);
+
+        verify(restClient.put().uri(BASE_URI + "/" + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/" + parameterUuid + "/reset").retrieve()).toBodilessEntity();
+    }
 }

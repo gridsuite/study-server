@@ -217,7 +217,7 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
         }
     }
 
-    public void updateSecurityAnalysisParameters(UUID parametersUuid, @Nullable String parameters) {
+    public void updateSecurityAnalysisParameters(UUID parametersUuid, String parameters) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{uuid}");
         String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
 
@@ -227,6 +227,12 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
             requestSpec.body(parameters);
         }
         requestSpec.retrieve().toBodilessEntity();
+    }
+
+    public void resetSecurityAnalysisParameters(UUID parametersUuid) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{uuid}/reset");
+        String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
+        restClient.put().uri(baseUri + path).retrieve().toBodilessEntity();
     }
 
     @Override

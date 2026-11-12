@@ -184,6 +184,15 @@ public class ComputationServerStubs {
         WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/" + prefix + "parameters/" + paramUuid, Map.of(), null);
     }
 
+    public void stubParametersReset(String paramUuid) {
+        wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/parameters/" + paramUuid + "/reset"))
+                .willReturn(WireMock.ok()));
+    }
+
+    public void verifyParametersReset(String paramUuid) {
+        WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/parameters/" + paramUuid + "/reset", Map.of(), null);
+    }
+
     public void stubParametersGet(String paramUuid, String responseBody) {
         stubParametersGet(paramUuid, responseBody, "");
     }

@@ -149,7 +149,7 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
         return createVoltageInitParameters(null);
     }
 
-    public void updateVoltageInitParameters(UUID parametersUuid, @Nullable VoltageInitParametersInfos parameters) {
+    public void updateVoltageInitParameters(UUID parametersUuid, VoltageInitParametersInfos parameters) {
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(parametersUuid)
@@ -161,6 +161,15 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
             requestSpec.body(parameters);
         }
         requestSpec.retrieve().toEntity(UUID.class);
+    }
+
+    public void resetVoltageInitParameters(UUID parametersUuid) {
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI + "/reset")
+                .buildAndExpand(parametersUuid)
+                .toUriString();
+
+        restClient.put().uri(baseUri + path).retrieve().toBodilessEntity();
     }
 
     @Override

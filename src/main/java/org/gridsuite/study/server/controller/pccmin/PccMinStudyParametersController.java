@@ -43,13 +43,23 @@ public class PccMinStudyParametersController {
     }
 
     @PostMapping(value = "/parameters")
-    @Operation(summary = "set pcc min parameters on study, reset to default ones if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min parameters are set"),
-        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    @Operation(summary = "set pcc min parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min parameters are set")})
     public ResponseEntity<Void> setPccMinParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String pccMinParametersInfos,
+            @RequestBody String pccMinParametersInfos,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        return pccMinService.setPccMinParameters(studyUuid, pccMinParametersInfos, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
+        pccMinService.setPccMinParameters(studyUuid, pccMinParametersInfos, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/parameters/reset")
+    @Operation(summary = "reset pcc min parameters on study to user profile or default ones")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min parameters are reset"),
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    public ResponseEntity<Void> resetPccMinParameters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        return pccMinService.resetPccMinParameters(studyUuid, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 }
