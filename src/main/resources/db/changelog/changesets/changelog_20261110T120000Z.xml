@@ -1,0 +1,13 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="braquartdav" id="20261110-bus-loading">
+        <addColumn tableName="study">
+            <column defaultValueBoolean="false" name="sp_load_generator_bus" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column defaultValueBoolean="false" name="sp_load_line_bus" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>
