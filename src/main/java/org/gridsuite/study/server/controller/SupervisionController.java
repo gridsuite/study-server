@@ -172,6 +172,15 @@ public class SupervisionController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/network-modifications/sharing-links/recreate")
+    @Operation(summary = "Trigger recreation of network-modification sharing links for a study")
+    @ApiResponse(responseCode = "200", description = "Network-modification sharing links recreation requested")
+    public ResponseEntity<Void> recreateNetworkModificationSharingLinks(@PathVariable("studyUuid") UUID studyUuid,
+                                                                    @RequestHeader("userId") String userId) {
+        supervisionService.recreateNetworkModificationSharingLinks(studyUuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
     @DeleteMapping(value = "/studies/{studyUuid}/nodes/builds")
     @Operation(summary = "Invalidate node builds for the given study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all built nodes for the given study have been invalidated")})
