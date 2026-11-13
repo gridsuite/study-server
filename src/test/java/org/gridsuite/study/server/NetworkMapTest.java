@@ -672,7 +672,7 @@ class NetworkMapTest {
                 .andExpect(jsonPath("$.BATTERY.bus").doesNotExist());
 
             UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_STRING + "/elements"))
-                .withQueryParam("optionalParameters[loadGeneratorBus]", WireMock.equalTo(String.valueOf(enabled)))
+                .withQueryParam("optionalParameters[loadBus]", WireMock.equalTo(String.valueOf(enabled)))
                 .willReturn(WireMock.okJson("[]"))).getId();
             mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements",
                     study.getId(), rootNetworkUuid, nodeUuid)
@@ -681,7 +681,7 @@ class NetworkMapTest {
                     .contentType(MediaType.APPLICATION_JSON).content("[]"))
                 .andExpect(status().isOk());
             WireMockUtils.verifyPostRequest(wireMockServer, stubId, "/v1/networks/" + NETWORK_UUID_STRING + "/elements",
-                Map.of("optionalParameters[loadGeneratorBus]", WireMock.equalTo(String.valueOf(enabled))));
+                Map.of("optionalParameters[loadBus]", WireMock.equalTo(String.valueOf(enabled))));
         }
         TestUtils.getRequestsDone(2, server);
     }
@@ -709,7 +709,7 @@ class NetworkMapTest {
                 .andExpect(jsonPath("$.BATTERY.bus").doesNotExist());
 
             UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_STRING + "/elements"))
-                .withQueryParam("optionalParameters[loadLineBus]", WireMock.equalTo(String.valueOf(enabled)))
+                .withQueryParam("optionalParameters[loadBus]", WireMock.equalTo(String.valueOf(enabled)))
                 .willReturn(WireMock.okJson("[]"))).getId();
             mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements",
                     study.getId(), rootNetworkUuid, nodeUuid)
@@ -718,7 +718,7 @@ class NetworkMapTest {
                     .contentType(MediaType.APPLICATION_JSON).content("[]"))
                 .andExpect(status().isOk());
             WireMockUtils.verifyPostRequest(wireMockServer, stubId, "/v1/networks/" + NETWORK_UUID_STRING + "/elements",
-                Map.of("optionalParameters[loadLineBus]", WireMock.equalTo(String.valueOf(enabled))));
+                Map.of("optionalParameters[loadBus]", WireMock.equalTo(String.valueOf(enabled))));
         }
         TestUtils.getRequestsDone(2, server);
     }
@@ -749,7 +749,7 @@ class NetworkMapTest {
   },
   "GENERATOR": {
     "loadRegulatingTerminals": "true",
-    "loadGeneratorBus": "true"
+    "loadBus": "true"
   },
   "BUS" : {
     "loadNetworkComponents" : "false"
@@ -758,7 +758,7 @@ class NetworkMapTest {
     "dcPowerFactor": "1.0"
   },
   "LINE": {
-    "loadLineBus": "true",
+    "loadBus": "true",
     "loadOperationalLimitGroups": "false",
     "dcPowerFactor": "1.0"
   },
