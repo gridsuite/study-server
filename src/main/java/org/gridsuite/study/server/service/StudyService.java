@@ -941,7 +941,7 @@ public class StudyService {
                     InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
                     String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineOperationalLimitGroup()));
                 additionalParameters.put(
-                    InfoTypeParameters.QUERY_PARAM_LOAD_LINE_BUS,
+                    InfoTypeParameters.QUERY_PARAM_LOAD_BUS,
                     String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineBus()));
             }
             case "two_windings_transformer" -> additionalParameters.put(
@@ -952,7 +952,7 @@ public class StudyService {
                     InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
                     String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal()));
                 additionalParameters.put(
-                    InfoTypeParameters.QUERY_PARAM_LOAD_GENERATOR_BUS,
+                    InfoTypeParameters.QUERY_PARAM_LOAD_BUS,
                     String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorBus()));
             }
             case "battery" -> additionalParameters.put(
@@ -1018,7 +1018,7 @@ public class StudyService {
             InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
             String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineOperationalLimitGroup()));
         optionalParameters.get(String.valueOf(ElementType.LINE)).put(
-            InfoTypeParameters.QUERY_PARAM_LOAD_LINE_BUS,
+            InfoTypeParameters.QUERY_PARAM_LOAD_BUS,
             String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineBus()));
         optionalParameters.get(String.valueOf(ElementType.TWO_WINDINGS_TRANSFORMER)).put(
             InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
@@ -1027,7 +1027,7 @@ public class StudyService {
             Map.of(
                 InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
                 String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal()),
-                InfoTypeParameters.QUERY_PARAM_LOAD_GENERATOR_BUS,
+                InfoTypeParameters.QUERY_PARAM_LOAD_BUS,
                 String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorBus())));
         optionalParameters.put(String.valueOf(ElementType.BATTERY),
                 Map.of(
