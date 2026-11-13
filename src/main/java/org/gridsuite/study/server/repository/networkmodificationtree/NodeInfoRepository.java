@@ -23,4 +23,6 @@ public interface NodeInfoRepository<T extends AbstractNodeInfoEntity> extends Jp
     void deleteByIdNodeIn(Collection<UUID> ids);
 
     List<T> findAllByNodeStudyId(UUID studyId);
+
+    List<T> findAllByNodeStudyIdAndNodeStashed(UUID studyId, boolean nodeStashed);
 }
