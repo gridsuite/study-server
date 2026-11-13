@@ -13,7 +13,7 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.service.StudyService;
-import org.gridsuite.study.server.service.common.AbstractComputationRestService;
+import org.gridsuite.study.server.service.common.AbstractStateEstimationRestService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -33,16 +33,14 @@ import static org.gridsuite.study.server.StudyConstants.*;
  * @author David Braquart <david.braquart at rte-france.com>
  */
 @Service
-public class LogicalControlsRestService extends AbstractComputationRestService {
-    private static final String RESULTS = "results";
-    private static final String LOGICAL_CONTROLS = "logical-controls";
-    private static final String LOGICAL_CONTROLS_URI = DELIMITER + STATE_ESTIMATION_API_VERSION + DELIMITER + LOGICAL_CONTROLS;
+public class LogicalControlsRestService extends AbstractStateEstimationRestService {
+    private static final String LOGICAL_CONTROLS_URI = DELIMITER + STATE_ESTIMATION_API_VERSION + DELIMITER + LogicalControlsService.LOGICAL_CONTROLS_STR;
 
     private final ObjectMapper objectMapper;
 
     @Autowired
     public LogicalControlsRestService(RemoteServicesProperties remoteServicesProperties, ObjectMapper objectMapper, RestClient restClient) {
-        super(remoteServicesProperties.getServiceUri("state-estimation-server"), restClient);
+        super(remoteServicesProperties, restClient);
         this.objectMapper = objectMapper;
     }
 
@@ -131,14 +129,8 @@ public class LogicalControlsRestService extends AbstractComputationRestService {
         return List.of();
     }
 
-    public String getLogicalControlsResult(UUID resultUuid) {
-        if (resultUuid == null) {
-            return null;
-        }
-        String path = UriComponentsBuilder
-            .fromPath(LOGICAL_CONTROLS_URI + DELIMITER + RESULTS + "/{resultUuid}")
-            .buildAndExpand(resultUuid).toUriString();
-        return restClient.get().uri(baseUri + path)
-            .retrieve().body(String.class);
+    public String getLogicalControlsResult(UUID resultUuid, UUID networkUuid, String variantId, String globalFilters) {
+        return getStateEstimationServerResult(resultUuid, networkUuid, variantId, globalFilters,
+            STATE_ESTIMATION_API_VERSION, LogicalControlsService.LOGICAL_CONTROLS_STR, RESULTS, "{resultUuid}");
     }
 }

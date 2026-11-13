@@ -35,10 +35,14 @@ import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
@@ -46,21 +50,33 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.net.ConnectException;
+import java.net.URI;
 import java.net.URLEncoder;
+import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.client.WireMock.delete;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Answers.RETURNS_DEEP_STUBS;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -288,6 +304,10 @@ class LogicalControlsTest {
             .andExpect(status().isNoContent());
         mockMvc.perform(get(LOGICAL_CONTROLS_URL_BASE + "result", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
             .andExpect(status().isNoContent());
+        mockMvc.perform(get(LOGICAL_CONTROLS_URL_BASE + "result", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
+                .param("globalFilters", "{\"countryCode\":[\"FR\"]}"))
+            .andExpect(status().isNoContent());
+        wireMockServer.verify(0, getRequestedFor(urlPathMatching("/v1/logical-controls/results/.*")));
     }
 
     @Test
@@ -433,13 +453,69 @@ class LogicalControlsTest {
             .andExpect(status().isOk())
             .andExpect(content().string(LOGICAL_CONTROLS_RESULT_JSON));
         assertEquals(1, wireMockServer.getAllServeEvents().stream().filter(e -> e.getStubMapping().getId().equals(stubId)).count());
+        wireMockServer.verify(1, getRequestedFor(urlPathEqualTo("/v1/logical-controls/results/" + LOGICAL_CONTROLS_RESULT_UUID))
+            .withQueryParam("networkUuid", equalTo(NETWORK_UUID_STRING))
+            .withQueryParam("variantId", equalTo(VARIANT_ID))
+            .withQueryParam("globalFilters", absent())
+        );
 
         // results NOT FOUND
         UUID resultUuid = UUID.randomUUID();
         wireMockServer.stubFor(WireMock.get(urlPathEqualTo("/v1/logical-controls/results/" + resultUuid))
             .willReturn(WireMock.notFound()));
         assertThrows(HttpClientErrorException.NotFound.class, () ->
-            logicalControlsRestService.getLogicalControlsResult(resultUuid)
+            logicalControlsRestService.getLogicalControlsResult(resultUuid, UUID.fromString(NETWORK_UUID_STRING), VARIANT_ID, null)
         );
+    }
+
+    @ParameterizedTest
+    @MethodSource("logicalControlsFetchErrors")
+    void testGetLogicalControlFetchError(IOException cause, HttpStatus expectedStatus, String expectedReason) {
+        UUID resultUuid = UUID.randomUUID();
+        RemoteServicesProperties remoteServicesProperties = mock(RemoteServicesProperties.class);
+        when(remoteServicesProperties.getServiceUri("state-estimation-server")).thenReturn(wireMockServer.baseUrl());
+        RestClient restClient = mock(RestClient.class, RETURNS_DEEP_STUBS);
+        ResourceAccessException error = new ResourceAccessException("Fetch failed", cause);
+        when(restClient.get().uri(any(URI.class)).retrieve().body(String.class)).thenThrow(error);
+        LogicalControlsRestService service = new LogicalControlsRestService(remoteServicesProperties, objectMapper, restClient);
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            () -> service.getLogicalControlsResult(resultUuid, UUID.fromString(NETWORK_UUID_STRING), VARIANT_ID, null));
+
+        assertEquals(expectedStatus, exception.getStatusCode());
+        assertEquals(expectedReason, exception.getReason());
+        assertSame(error, exception.getCause());
+    }
+
+    private static Stream<Arguments> logicalControlsFetchErrors() {
+        return Stream.of(
+            Arguments.of(new InterruptedIOException("slow"), HttpStatus.GATEWAY_TIMEOUT, "State estimation server timed out"),
+            Arguments.of(new HttpTimeoutException("slow"), HttpStatus.GATEWAY_TIMEOUT, "State estimation server timed out"),
+            Arguments.of(new ConnectException("down"), HttpStatus.BAD_GATEWAY, "State estimation server is unreachable")
+        );
+    }
+
+    @Test
+    void testGetLogicalControlsResultsWithGlobalFilters() throws Exception {
+        String variantId = "variant + %41 & é 中";
+        String globalFilters = "{\"label\":\"Café + 100% & 中\",\"countryCode\":[\"FR\"]}";
+        StudyNodeIds ids = createStudyAndNode(variantId, "node 1");
+        rootNetworkNodeInfoService.updateComputationResultUuid(ids.nodeId, ids.rootNetworkUuid,
+            UUID.fromString(LOGICAL_CONTROLS_RESULT_UUID), ComputationType.LOGICAL_CONTROLS);
+        wireMockServer.stubFor(WireMock.get(urlPathEqualTo("/v1/logical-controls/results/" + LOGICAL_CONTROLS_RESULT_UUID))
+            .withQueryParam("networkUuid", equalTo(NETWORK_UUID_STRING))
+            .withQueryParam("variantId", equalTo(variantId))
+            .withQueryParam("globalFilters", equalTo(globalFilters))
+            .willReturn(okJson(LOGICAL_CONTROLS_RESULT_JSON)));
+
+        mockMvc.perform(get(LOGICAL_CONTROLS_URL_BASE + "result", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
+                .param("globalFilters", globalFilters))
+            .andExpect(status().isOk())
+            .andExpect(content().string(LOGICAL_CONTROLS_RESULT_JSON));
+
+        wireMockServer.verify(1, getRequestedFor(urlPathEqualTo("/v1/logical-controls/results/" + LOGICAL_CONTROLS_RESULT_UUID))
+            .withQueryParam("networkUuid", equalTo(NETWORK_UUID_STRING))
+            .withQueryParam("variantId", equalTo(variantId))
+            .withQueryParam("globalFilters", equalTo(globalFilters)));
     }
 }
