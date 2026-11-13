@@ -125,6 +125,15 @@ public class NetworkModificationRestService {
             .retrieve().body(String.class);
     }
 
+    /**
+     * @return the modification groups containing the given modification, including through references and composites
+     */
+    public List<UUID> getGroupsContainingModification(UUID networkModificationUuid) {
+        String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + "/{uuid}/containing-groups").buildAndExpand(networkModificationUuid).toUriString();
+        return restClient.get().uri(getNetworkModificationServerURI(false) + path)
+            .retrieve().body(new ParameterizedTypeReference<List<UUID>>() { });
+    }
+
     public String getBusBarSectionsForNewCoupler(String voltageLevelId, Integer busBarCount, Integer sectionCount, List<String> switchKindList) {
         String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + "/busbar-sections-for-new-coupler")
             .queryParam("voltageLevelId", voltageLevelId)

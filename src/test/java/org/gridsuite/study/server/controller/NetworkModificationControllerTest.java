@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.controller;
 
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
@@ -36,11 +38,24 @@ class NetworkModificationControllerTest {
     @Mock
     private NetworkModificationRestService networkModificationService;
 
+    @Mock
+    private NetworkModificationService modificationService;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setup() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new NetworkModificationController(networkModificationService)).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(new NetworkModificationController(networkModificationService, modificationService)).build();
+    }
+
+    @Test
+    void testGetRootNetworkTagsStudyCount() throws Exception {
+        UUID uuid = UUID.randomUUID();
+        when(modificationService.getRootNetworkTagsStudyCount(uuid)).thenReturn(Map.of("R1", 2L));
+
+        mockMvc.perform(get(BASE_URL + "/network-modifications/{uuid}/root-network-tags/study-count", uuid))
+            .andExpect(status().isOk())
+            .andExpect(content().json("{\"R1\":2}"));
     }
 
     @Test

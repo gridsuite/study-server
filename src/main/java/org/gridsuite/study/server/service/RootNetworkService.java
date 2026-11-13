@@ -21,6 +21,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
+import org.gridsuite.study.server.repository.rootnetwork.TagStudyCount;
 import org.gridsuite.study.server.utils.JsonUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -198,6 +199,19 @@ public class RootNetworkService {
     public List<RootNetworkInfos> getRootNetworkInfosWithLinksInfos(UUID studyUuid) {
         return rootNetworkRepository.findAllWithInfosByStudyId(studyUuid).stream()
                 .map(rootNetworkEntity -> rootNetworkEntity.toDto(objectMapper)).toList();
+    }
+
+    /**
+     * @return for each root network tag, how many of the studies holding the given modification groups have it; a tag
+     * no such study has is absent
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Long> countStudiesByRootNetworkTag(List<UUID> modificationGroupUuids) {
+        if (modificationGroupUuids.isEmpty()) {
+            return Map.of();
+        }
+        return rootNetworkRepository.countStudiesByTag(modificationGroupUuids).stream()
+                .collect(Collectors.toMap(TagStudyCount::getTag, TagStudyCount::getStudyCount));
     }
 
     @Transactional

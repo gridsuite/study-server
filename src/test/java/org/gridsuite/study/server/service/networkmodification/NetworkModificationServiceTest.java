@@ -15,6 +15,7 @@ import org.gridsuite.study.server.service.RootNetworkService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.ParameterizedTypeReference;
@@ -90,6 +91,20 @@ class NetworkModificationServiceTest {
         expectUserIdIsForwarded(expectedUrl);
 
         assertThat(networkModificationService.getNetworkModification(modificationUuid, USER_ID)).isEqualTo(RESPONSE);
+    }
+
+    @Test
+    void testGetRootNetworkTagsStudyCount() {
+        UUID modificationUuid = UUID.randomUUID();
+        List<UUID> groupUuids = List.of(UUID.randomUUID(), UUID.randomUUID());
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid + "/containing-groups";
+        when(restClient.get().uri(expectedUrl).retrieve().body(ArgumentMatchers.<ParameterizedTypeReference<List<UUID>>>any()))
+            .thenReturn(groupUuids);
+        when(rootNetworkService.countStudiesByRootNetworkTag(groupUuids)).thenReturn(Map.of("R1", 2L));
+        // only these two services are needed to count
+        NetworkModificationService service = new NetworkModificationService(null, rootNetworkService, null, networkModificationService, null, null, null);
+
+        assertThat(service.getRootNetworkTagsStudyCount(modificationUuid)).isEqualTo(Map.of("R1", 2L));
     }
 
     @Test

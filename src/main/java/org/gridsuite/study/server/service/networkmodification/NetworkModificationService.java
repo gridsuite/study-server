@@ -63,6 +63,13 @@ public class NetworkModificationService {
         this.nodeActivityRunnerService = nodeActivityRunnerService;
     }
 
+    /**
+     * @return for each root network tag, how many of the studies using the given modification have it
+     */
+    public Map<String, Long> getRootNetworkTagsStudyCount(UUID networkModificationUuid) {
+        return rootNetworkService.countStudiesByRootNetworkTag(networkModificationRestService.getGroupsContainingModification(networkModificationUuid));
+    }
+
     public void updateNetworkModificationNameAndDescription(UUID studyUuid, UUID nodeUuid, UUID networkModificationUuid, String metadata, String userId) {
         networkModificationRestService.updateNetworkModificationNameAndDescription(networkModificationUuid, metadata, userId);
         notificationService.emitModificationsUpdated(studyUuid, nodeUuid, List.of(networkModificationUuid));
