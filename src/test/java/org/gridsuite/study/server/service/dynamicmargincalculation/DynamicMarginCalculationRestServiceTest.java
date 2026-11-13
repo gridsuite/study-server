@@ -11,11 +11,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
 import org.gridsuite.study.server.utils.assertions.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -60,12 +62,14 @@ class DynamicMarginCalculationRestServiceTest extends AbstractWireMockRestClient
     private ObjectMapper objectMapper;
     @Autowired
     private RemoteServicesProperties remoteServicesProperties;
+    @Mock
+    private RemoteServicesInspector remoteServicesInspector;
 
     @BeforeEach
     void setup() {
         // config client
         remoteServicesProperties.setServiceUri("dynamic-margin-calculation-server", initMockWebServer());
-        dynamicMarginCalculationRestService = new DynamicMarginCalculationRestService(remoteServicesProperties, restClient, objectMapper);
+        dynamicMarginCalculationRestService = new DynamicMarginCalculationRestService(remoteServicesProperties, remoteServicesInspector, restClient, objectMapper);
     }
 
     @Test

@@ -24,6 +24,7 @@ import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
@@ -48,6 +49,7 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_TYPE;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_UUID;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.TIME_SERIES_BAD_TYPE;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
+import static org.gridsuite.study.server.service.client.RemoteServiceName.DYNAMIC_SIMULATION_SERVER;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 
 /**
@@ -66,10 +68,11 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
     private final TimeSeriesClient timeSeriesClient;
 
     public DynamicSimulationRestService(RemoteServicesProperties remoteServicesProperties,
+                                        RemoteServicesInspector remoteServicesInspector,
                                         RestClient restClient,
                                         ObjectMapper objectMapper,
                                         TimeSeriesClient timeSeriesClient) {
-        super(remoteServicesProperties.getServiceUri("dynamic-simulation-server"), restClient);
+        super(remoteServicesProperties.getServiceUri("dynamic-simulation-server"), restClient, remoteServicesInspector, DYNAMIC_SIMULATION_SERVER);
         this.objectMapper = objectMapper;
         this.timeSeriesClient = timeSeriesClient;
     }
@@ -129,15 +132,17 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
     }
 
     public UUID createDefaultParameters() {
-        String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SIMULATION_API_VERSION, DYNAMIC_SIMULATION_END_POINT_PARAMETER);
+        return callWithOptionalServerAndDefaultValue(() -> {
+            String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SIMULATION_API_VERSION, DYNAMIC_SIMULATION_END_POINT_PARAMETER);
 
-        String url = UriComponentsBuilder
-                .fromUriString(parametersBaseUrl + "/default")
-                .buildAndExpand()
-                .toUriString();
+            String url = UriComponentsBuilder
+                    .fromUriString(parametersBaseUrl + "/default")
+                    .buildAndExpand()
+                    .toUriString();
 
-        return getRestClient().post().uri(url)
+            return getRestClient().post().uri(url)
             .retrieve().body(UUID.class);
+        });
     }
 
     public void updateParameters(UUID parametersUuid, String parametersInfos) {
@@ -162,26 +167,28 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
 
     public UUID duplicateParameters(UUID sourceParameterId) {
         Objects.requireNonNull(sourceParameterId);
+        return callWithOptionalServerAndDefaultValue(() -> {
+            String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SIMULATION_API_VERSION, DYNAMIC_SIMULATION_END_POINT_PARAMETER);
 
-        String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SIMULATION_API_VERSION, DYNAMIC_SIMULATION_END_POINT_PARAMETER);
+            String url = UriComponentsBuilder
+                    .fromUriString(parametersBaseUrl + "/{uuid}/duplicate")
+                    .buildAndExpand(sourceParameterId)
+                    .toUriString();
 
-        String url = UriComponentsBuilder
-                .fromUriString(parametersBaseUrl + "/{uuid}/duplicate")
-                .buildAndExpand(sourceParameterId)
-                .toUriString();
-
-        return getRestClient().post().uri(url)
+            return getRestClient().post().uri(url)
             .retrieve().body(UUID.class);
+        });
     }
 
     public void deleteParameters(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
+        callWithOptionalServer(() -> {
+            String url = getParametersWithUuidUrl(parametersUuid);
 
-        String url = getParametersWithUuidUrl(parametersUuid);
-
-        // call dynamic-simulation REST API
-        getRestClient().delete().uri(url)
+            // call dynamic-simulation REST API
+            getRestClient().delete().uri(url)
             .retrieve().toBodilessEntity();
+        });
     }
 
     public UUID getDynamicSimulationParametersUuidOrElseCreateDefault(StudyEntity studyEntity) {

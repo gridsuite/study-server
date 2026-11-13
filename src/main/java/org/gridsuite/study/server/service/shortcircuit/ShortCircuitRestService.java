@@ -15,6 +15,7 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.VariantInfos;
 import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
@@ -39,6 +40,7 @@ import java.util.Objects;
 import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
+import static org.gridsuite.study.server.service.client.RemoteServiceName.SHORTCIRCUIT_SERVER;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 import static org.gridsuite.study.server.utils.StudyUtils.*;
 
@@ -56,9 +58,10 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
 
     @Autowired
     public ShortCircuitRestService(RemoteServicesProperties remoteServicesProperties,
+                                   RemoteServicesInspector remoteServicesInspector,
                                    RestClient restClient,
                                    ObjectMapper objectMapper) {
-        super(remoteServicesProperties.getServiceUri("shortcircuit-server"), restClient);
+        super(remoteServicesProperties.getServiceUri("shortcircuit-server"), restClient, remoteServicesInspector, SHORTCIRCUIT_SERVER);
         this.objectMapper = objectMapper;
     }
 
@@ -261,18 +264,20 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
     }
 
     public UUID createParameters(@Nullable final String parametersInfos) {
-        final UriComponentsBuilder uri = getBaseUriForParameters();
-        if (StringUtils.isBlank(parametersInfos)) {
-            return restClient.post().uri(uri.pathSegment("default").build().toUri())
+        return callWithOptionalServerAndDefaultValue(() -> {
+            final UriComponentsBuilder uri = getBaseUriForParameters();
+            if (StringUtils.isBlank(parametersInfos)) {
+                return restClient.post().uri(uri.pathSegment("default").build().toUri())
                 .accept(MediaType.APPLICATION_JSON)
                 .retrieve().body(UUID.class);
-        } else {
-            return restClient.post().uri(uri.build().toUri())
-                .accept(MediaType.APPLICATION_JSON)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(parametersInfos)
-                .retrieve().body(UUID.class);
-        }
+            } else {
+                return restClient.post().uri(uri.build().toUri())
+                    .accept(MediaType.APPLICATION_JSON)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(parametersInfos)
+                    .retrieve().body(UUID.class);
+            }
+        });
     }
 
     @Override
@@ -281,14 +286,17 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
     }
 
     public void updateParameters(final UUID parametersUuid, final String parametersInfos) {
-        var requestSpec = restClient.put().uri(getBaseUriForParameters()
-                .pathSegment("{parametersUuid}")
-                .buildAndExpand(parametersUuid)
-                .toUri())
-            .contentType(MediaType.APPLICATION_JSON);
+        callWithOptionalServer(() -> {
+            var requestSpec = restClient.put().uri(getBaseUriForParameters()
+                    .pathSegment("{parametersUuid}")
+                    .buildAndExpand(parametersUuid)
+                    .toUri())
+                .contentType(MediaType.APPLICATION_JSON);
 
-        requestSpec.body(parametersInfos);
-        requestSpec.retrieve().toBodilessEntity();
+            requestSpec.body(parametersInfos);
+
+            requestSpec.retrieve().toBodilessEntity();
+        });
     }
 
     public void resetParameters(final UUID parametersUuid) {
@@ -300,33 +308,35 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
     }
 
     public String getParameters(UUID parametersUuid) {
-        return restClient.get().uri(getBaseUriForParameters()
-                .pathSegment("{parametersUuid}")
-                .buildAndExpand(parametersUuid)
-                .toUri())
-            .accept(MediaType.APPLICATION_JSON)
-            .retrieve().body(String.class);
+        return callWithOptionalServerAndDefaultValue(() -> restClient.get().uri(getBaseUriForParameters()
+                        .pathSegment("{parametersUuid}")
+                        .buildAndExpand(parametersUuid)
+                        .toUri())
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve().body(String.class));
     }
 
     @Override
     public UUID duplicateParameters(UUID parametersUuid) {
-        return restClient.post().uri(getBaseUriForParameters()
-                .pathSegment("{parametersUuid}", "duplicate")
-                .buildAndExpand(parametersUuid)
-                .toUri())
-            .accept(MediaType.APPLICATION_JSON)
-            .retrieve().body(UUID.class);
+        return callWithOptionalServerAndDefaultValue(() -> restClient.post().uri(getBaseUriForParameters()
+                        .pathSegment("{parametersUuid}", "duplicate")
+                        .buildAndExpand(parametersUuid)
+                        .toUri())
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve().body(UUID.class));
     }
 
     @Override
     public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + PARAMETERS_URI)
-            .buildAndExpand(uuid)
-            .toUriString();
+        callWithOptionalServer(() -> {
+            String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + PARAMETERS_URI)
+                .buildAndExpand(uuid)
+                .toUriString();
 
-        restClient.delete().uri(baseUri + path)
+            restClient.delete().uri(baseUri + path)
             .retrieve().toBodilessEntity();
+        });
     }
 
     public Map<String, Double> getVoltageLevelIccValues(UUID resultUuid, String voltageLevelId) {
@@ -349,9 +359,11 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
     }
 
     public String getSpecificParameters() {
-        String parametersBaseUrl = buildEndPointUrl(getBaseUri(), SHORT_CIRCUIT_API_VERSION, "parameters");
+        return callWithOptionalServerAndDefaultValue(() -> {
+            String parametersBaseUrl = buildEndPointUrl(getBaseUri(), SHORT_CIRCUIT_API_VERSION, "parameters");
 
-        return getRestClient().get().uri(parametersBaseUrl + "/specific-parameters")
+            return getRestClient().get().uri(parametersBaseUrl + "/specific-parameters")
             .retrieve().body(String.class);
+        });
     }
 }

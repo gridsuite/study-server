@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
@@ -38,6 +39,7 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORTER_ID;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_TYPE;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_UUID;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
+import static org.gridsuite.study.server.service.client.RemoteServiceName.DYNAMIC_SECURITY_ANALYSIS_SERVER;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 
 /**
@@ -53,8 +55,9 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
 
     private final ObjectMapper objectMapper;
 
-    public DynamicSecurityAnalysisRestService(RemoteServicesProperties remoteServicesProperties, RestClient restClient, ObjectMapper objectMapper) {
-        super(remoteServicesProperties.getServiceUri("dynamic-security-analysis-server"), restClient);
+    public DynamicSecurityAnalysisRestService(RemoteServicesProperties remoteServicesProperties,
+                                              RemoteServicesInspector remoteServicesInspector, RestClient restClient, ObjectMapper objectMapper) {
+        super(remoteServicesProperties.getServiceUri("dynamic-security-analysis-server"), restClient, remoteServicesInspector, DYNAMIC_SECURITY_ANALYSIS_SERVER);
         this.objectMapper = objectMapper;
     }
 
@@ -106,14 +109,16 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
     }
 
     public UUID createDefaultParameters() {
-        String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
+        return callWithOptionalServerAndDefaultValue(() -> {
+            String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
 
-        String url = UriComponentsBuilder.fromUriString(parametersBaseUrl + "/default")
-                .buildAndExpand()
-                .toUriString();
+            String url = UriComponentsBuilder.fromUriString(parametersBaseUrl + "/default")
+                    .buildAndExpand()
+                    .toUriString();
 
-        return getRestClient().post().uri(url)
+            return getRestClient().post().uri(url)
             .retrieve().body(UUID.class);
+        });
     }
 
     public void updateParameters(UUID parametersUuid, String parametersInfos) {
@@ -138,25 +143,27 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
 
     public UUID duplicateParameters(UUID sourceParameterId) {
         Objects.requireNonNull(sourceParameterId);
+        return callWithOptionalServerAndDefaultValue(() -> {
+            String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
 
-        String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
+            String url = UriComponentsBuilder.fromUriString(parametersBaseUrl + "/{uuid}/duplicate")
+                    .buildAndExpand(sourceParameterId)
+                    .toUriString();
 
-        String url = UriComponentsBuilder.fromUriString(parametersBaseUrl + "/{uuid}/duplicate")
-                .buildAndExpand(sourceParameterId)
-                .toUriString();
-
-        return getRestClient().post().uri(url)
+            return getRestClient().post().uri(url)
             .retrieve().body(UUID.class);
+        });
     }
 
     public void deleteParameters(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
+        callWithOptionalServer(() -> {
+            String url = getParametersWithUuidUrl(parametersUuid);
 
-        String url = getParametersWithUuidUrl(parametersUuid);
-
-        // call dynamic-security-analysis REST API
-        getRestClient().delete().uri(url)
+            // call dynamic-security-analysis REST API
+            getRestClient().delete().uri(url)
             .retrieve().toBodilessEntity();
+        });
     }
 
     public UUID runDynamicSecurityAnalysis(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid,
