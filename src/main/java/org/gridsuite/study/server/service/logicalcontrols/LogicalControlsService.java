@@ -37,6 +37,7 @@ import static org.gridsuite.study.server.dto.ComputationType.LOGICAL_CONTROLS;
 @Service
 public class LogicalControlsService extends AbstractComputationService {
 
+    protected static final String LOGICAL_CONTROLS_STR = "logical-controls";
     private final LogicalControlsRestService logicalControlsRestService;
     private final ObjectMapper objectMapper;
 

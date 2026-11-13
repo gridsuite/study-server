@@ -13,7 +13,7 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.service.AbstractStateEstimationServerService;
+import org.gridsuite.study.server.service.AbstractStateEstimationRestService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,7 +34,7 @@ import static org.gridsuite.study.server.StudyConstants.*;
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Service
-public class StateEstimationRestService extends AbstractStateEstimationServerService implements ComputationParameters {
+public class StateEstimationRestService extends AbstractStateEstimationRestService implements ComputationParameters {
 
     static final String RESULT_UUID = "resultUuid";
 

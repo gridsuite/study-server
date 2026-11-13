@@ -30,12 +30,11 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
  */
-public abstract class AbstractStateEstimationServerService extends AbstractComputationRestService {
+public abstract class AbstractStateEstimationRestService extends AbstractComputationRestService {
 
-    protected static final String LOGICAL_CONTROLS = "logical-controls";
     protected static final String RESULTS = "results";
 
-    protected AbstractStateEstimationServerService(RemoteServicesProperties remoteServicesProperties, RestClient restClient) {
+    protected AbstractStateEstimationRestService(RemoteServicesProperties remoteServicesProperties, RestClient restClient) {
         super(remoteServicesProperties.getServiceUri("state-estimation-server"), restClient);
     }
 

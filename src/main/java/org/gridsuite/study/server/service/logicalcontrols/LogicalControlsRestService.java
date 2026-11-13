@@ -12,7 +12,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
-import org.gridsuite.study.server.service.AbstractStateEstimationServerService;
+import org.gridsuite.study.server.service.AbstractStateEstimationRestService;
 import org.gridsuite.study.server.service.StudyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -33,8 +33,8 @@ import static org.gridsuite.study.server.StudyConstants.*;
  * @author David Braquart <david.braquart at rte-france.com>
  */
 @Service
-public class LogicalControlsRestService extends AbstractStateEstimationServerService {
-    private static final String LOGICAL_CONTROLS_URI = DELIMITER + STATE_ESTIMATION_API_VERSION + DELIMITER + LOGICAL_CONTROLS;
+public class LogicalControlsRestService extends AbstractStateEstimationRestService {
+    private static final String LOGICAL_CONTROLS_URI = DELIMITER + STATE_ESTIMATION_API_VERSION + DELIMITER + LogicalControlsService.LOGICAL_CONTROLS_STR;
 
     private final ObjectMapper objectMapper;
 
@@ -131,6 +131,6 @@ public class LogicalControlsRestService extends AbstractStateEstimationServerSer
 
     public String getLogicalControlsResult(UUID resultUuid, UUID networkUuid, String variantId, String globalFilters) {
         return getStateEstimationServerResult(resultUuid, networkUuid, variantId, globalFilters,
-            STATE_ESTIMATION_API_VERSION, LOGICAL_CONTROLS, RESULTS, "{resultUuid}");
+            STATE_ESTIMATION_API_VERSION, LogicalControlsService.LOGICAL_CONTROLS_STR, RESULTS, "{resultUuid}");
     }
 }

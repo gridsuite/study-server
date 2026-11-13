@@ -29,6 +29,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.gridsuite.study.server.dto.ComputationType.LOGICAL_CONTROLS;
 import static org.mockito.Mockito.*;
 
+/**
+ * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
+ */
+
 @ExtendWith(MockitoExtension.class)
 class LogicalControlsServiceTest {
 
