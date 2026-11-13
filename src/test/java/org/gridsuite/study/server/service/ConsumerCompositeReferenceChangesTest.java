@@ -30,6 +30,9 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import static org.gridsuite.study.server.StudyConstants.HEADER_ACTION;
+import static org.gridsuite.study.server.StudyConstants.HEADER_GROUP_UUID;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
@@ -133,9 +136,9 @@ class ConsumerCompositeReferenceChangesTest {
     private Message<List<ModificationReference>> compositeReferenceMessage(SharingLinkAction action) {
         // headers are received as strings from the broker
         return MessageBuilder.withPayload(references)
-                .setHeader(ConsumerService.HEADER_ACTION, action.name())
-                .setHeader(ConsumerService.HEADER_GROUP_UUID, groupUuid.toString())
-                .setHeader("userId", USER_ID)
+                .setHeader(HEADER_ACTION, action.name())
+                .setHeader(HEADER_GROUP_UUID, groupUuid.toString())
+                .setHeader(HEADER_USER_ID, USER_ID)
                 .build();
     }
 }
