@@ -27,10 +27,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.info.InfoEndpoint;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.lang.Nullable;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -61,12 +59,12 @@ public class RemoteServicesInspector {
     private final RestClient restClient;
     private final RemoteServicesProperties remoteServicesProperties;
     private final InfoEndpoint infoEndpoint;
-    private final RemoteServicesInspector asyncSelf; //we need to use spring proxy-based bean
+    private final StudyServerExecutionService studyServerExecutionService;
 
     @Autowired
     public RemoteServicesInspector(ObjectMapper objectMapper,
                                    RemoteServicesProperties remoteServicesProperties,
-                                   @Lazy RemoteServicesInspector asyncRemoteServicesInspector,
+                                   StudyServerExecutionService studyServerExecutionService,
                                    RestClient.Builder restClientBuilder,
                                    InfoEndpoint infoEndpoint) {
         this.objectMapper = objectMapper;
@@ -76,20 +74,19 @@ public class RemoteServicesInspector {
         requestFactory.setReadTimeout(Duration.ofMillis(REQUEST_TIMEOUT_IN_MS));
         this.restClient = restClientBuilder.requestFactory(requestFactory).build();
         this.infoEndpoint = infoEndpoint;
-        this.asyncSelf = asyncRemoteServicesInspector;
+        this.studyServerExecutionService = studyServerExecutionService;
     }
 
     public List<ServiceStatusInfos> getOptionalServices() {
         // parallel health status check for all services marked as "optional: true" in application.yaml
-        List<CompletableFuture<ServiceStatusInfos>> results = remoteServicesProperties.getServices().stream()
+        List<CompletableFuture<ServiceStatusInfos>> futures = remoteServicesProperties.getServices().stream()
             .filter(RemoteServicesProperties.Service::isOptional)
-            .map(service -> asyncSelf.isOptionalServiceUp(service).thenApply(isUp -> ServiceStatusInfos.builder()
-                    .name(service.getName())
-                    .status(Boolean.TRUE.equals(isUp) ? ServiceStatus.UP : ServiceStatus.DOWN)
-                    .build()))
+            .map(service -> studyServerExecutionService.supplyAsync(() -> ServiceStatusInfos.builder()
+                .name(service.getName())
+                .status(isServiceUp(service) ? ServiceStatus.UP : ServiceStatus.DOWN)
+                .build()))
             .toList();
-        CompletableFuture.allOf(results.toArray(CompletableFuture[]::new)).join();
-        return results.stream().map(CompletableFuture::join).toList();
+        return futures.stream().map(CompletableFuture::join).toList();
     }
 
     /**
@@ -98,10 +95,8 @@ public class RemoteServicesInspector {
      * to avoid polluting stdout with expected failures.
      *
      * @param service the optional service to check
-     * @return CompletableFuture<Boolean> true if service is UP, false otherwise
      */
-    @Async
-    public CompletableFuture<Boolean> isOptionalServiceUp(RemoteServicesProperties.Service service) {
+    public boolean isServiceUp(@NonNull RemoteServicesProperties.Service service) {
         try {
             final String result = restClient
                 .get()
@@ -112,31 +107,14 @@ public class RemoteServicesInspector {
             if (node.isMissingNode()) {
                 LOGGER.debug("Cannot find {} json node while testing '{}'", ACTUATOR_HEALTH_STATUS_JSON_FIELD, service.getName());
             } else {
-                return CompletableFuture.completedFuture("UP".equalsIgnoreCase(node.asText()));
+                return "UP".equalsIgnoreCase(node.asText());
             }
         } catch (RestClientException e) {
             LOGGER.debug("Network error while testing {}", service.getName(), e);
         } catch (JsonProcessingException e) {
             LOGGER.debug("Json parsing error while testing {}", service.getName(), e);
         }
-        return CompletableFuture.completedFuture(false);
-    }
-
-    public boolean isOptionalServiceUpSync(@NonNull RemoteServicesProperties.Service service) {
-        try {
-            final String result = restClient
-                    .get()
-                    .uri(service.getBaseUri() + "/actuator/health")
-                    .retrieve()
-                    .body(String.class);
-            if (result == null) {
-                return false;
-            }
-            final JsonNode node = objectMapper.readTree(result).path(ACTUATOR_HEALTH_STATUS_JSON_FIELD);
-            return "UP".equalsIgnoreCase(node.asText());
-        } catch (RestClientException | JsonProcessingException _) {
-            return false;
-        }
+        return false;
     }
 
     public RemoteServicesProperties.Service getService(RemoteServiceName name) {
@@ -163,15 +141,14 @@ public class RemoteServicesInspector {
                 .map(viewFilter -> remoteServicesProperties.getRemoteServiceViewFilter().get(viewFilter))
                 .orElse(remoteServicesProperties.getRemoteServiceViewDefault())
                 .stream()
-                .map(srv -> asyncSelf.getServiceInfo(srv).thenApply(json -> Map.entry(srv.serviceName(), json)))
+                .map(serviceName -> studyServerExecutionService.supplyAsync(() -> Map.entry(serviceName.serviceName(), getServiceInfo(serviceName))))
                 .toList();
-        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+        List<Entry<String, JsonNode>> infos = futures.stream().map(CompletableFuture::join).toList();
         final HashMap<String, JsonNode> result = new HashMap<>();
         boolean isPartial = false;
-        for (CompletableFuture<Entry<String, JsonNode>> future : futures) {
-            final Entry<String, JsonNode> entry = future.join();
-            result.put(entry.getKey(), entry.getValue());
-            if (NullNode.instance.equals(entry.getValue())) {
+        for (Entry<String, JsonNode> info : infos) {
+            result.put(info.getKey(), info.getValue());
+            if (NullNode.instance.equals(info.getValue())) {
                 isPartial = true;
             }
         }
@@ -183,29 +160,28 @@ public class RemoteServicesInspector {
 
     /**
      * Retrieve {@code <service>/actuator/info} data
-     * @param service the service name to request to
+     * @param serviceName the service name to request to
      * @return {@code Map<String, Object>} in JSON format
      */
-    @Async
     @SuppressWarnings("checkstyle:IllegalCatch")
-    public CompletableFuture<JsonNode> getServiceInfo(@NonNull final RemoteServiceName service) {
+    private JsonNode getServiceInfo(@NonNull final RemoteServiceName serviceName) {
         try {
-            if (service == RemoteServiceName.STUDY_SERVER) {
-                return CompletableFuture.completedFuture(objectMapper.valueToTree(infoEndpoint.info()));
+            if (serviceName == RemoteServiceName.STUDY_SERVER) {
+                return objectMapper.valueToTree(infoEndpoint.info());
             } else {
                 final String rawJson = this.restClient
                     .get()
                     .uri(
-                        URI.create(this.remoteServicesProperties.getServiceUri(service.serviceName()) + "/actuator/info")
+                        URI.create(this.remoteServicesProperties.getServiceUri(serviceName.serviceName()) + "/actuator/info")
                         .normalize()
                     )
                     .retrieve()
                     .body(String.class);
-                return CompletableFuture.completedFuture(this.objectMapper.readTree(rawJson));
+                return this.objectMapper.readTree(rawJson);
             }
         } catch (final RuntimeException | JacksonException ex) {
-            LOGGER.debug("Error while retrieving informations for {}", service, ex);
-            return CompletableFuture.completedFuture(NullNode.instance);
+            LOGGER.debug("Error while retrieving informations for {}", serviceName, ex);
+            return NullNode.instance;
         }
     }
 

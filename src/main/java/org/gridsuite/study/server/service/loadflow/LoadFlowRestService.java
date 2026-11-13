@@ -256,14 +256,14 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
     @Override
     public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
-        return executeWithOptionalServiceFallback(() -> {
+        return callWithOptionalServerAndDefaultValue(() -> {
             var path = UriComponentsBuilder
                     .fromPath(DELIMITER + LOADFLOW_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + DELIMITER + "{uuid}" + DELIMITER + "duplicate")
                     .buildAndExpand(sourceParametersUuid).toUriString();
 
             return restClient.post().uri(baseUri + path)
             .retrieve().body(UUID.class);
-        }, null);
+        });
     }
 
     public void updateLoadFlowParameters(UUID parametersUuid, String parameters) {
@@ -292,7 +292,7 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
     @Override
     public void deleteParameters(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
-        executeWithOptionalServiceCheck(() -> {
+        callWithOptionalServer(() -> {
             String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
                     .buildAndExpand(parametersUuid)
                     .toUriString();
@@ -304,7 +304,7 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
 
     @Override
     public UUID createDefaultParameters() {
-        return executeWithOptionalServiceFallback(() -> {
+        return callWithOptionalServerAndDefaultValue(() -> {
             var path = UriComponentsBuilder
                     .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters/default")
                     .buildAndExpand()
@@ -312,7 +312,7 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
 
             return restClient.post().uri(baseUri + path)
             .retrieve().body(UUID.class);
-        }, null);
+        });
     }
 
     public UUID getLoadFlowParametersOrDefaultsUuid(StudyEntity studyEntity) {

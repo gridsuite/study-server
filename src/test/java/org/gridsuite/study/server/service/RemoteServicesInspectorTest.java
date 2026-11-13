@@ -59,7 +59,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 @DisableCloudStream
 @DisableJpa
 @Import({StudyAppConfig.class, RemoteServicesProperties.class})
-@RestClientTest({RemoteServicesInspector.class})
+@RestClientTest({RemoteServicesInspector.class, StudyServerExecutionService.class})
 @ExtendWith({MockitoExtension.class})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.MethodName.class)
@@ -176,12 +176,12 @@ class RemoteServicesInspectorTest implements WithAssertions {
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withException(new SocketException("Test no server")));
 
-        assertThat(remoteServicesInspector.isOptionalServiceUpSync(service)).isFalse();
+        assertThat(remoteServicesInspector.isServiceUp(service)).isFalse();
     }
 
     @Test
     void testOptionalServiceUpSyncWithNullService() {
-        assertThatNullPointerException().isThrownBy(() -> remoteServicesInspector.isOptionalServiceUpSync(null))
+        assertThatNullPointerException().isThrownBy(() -> remoteServicesInspector.isServiceUp(null))
                 .withMessage("service is marked non-null but is null");
     }
 
@@ -191,7 +191,7 @@ class RemoteServicesInspectorTest implements WithAssertions {
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(jsonResponse, MediaType.APPLICATION_JSON));
 
-        assertThat(remoteServicesInspector.isOptionalServiceUpSync(service)).isEqualTo(expected);
+        assertThat(remoteServicesInspector.isServiceUp(service)).isEqualTo(expected);
     }
 
     @Test

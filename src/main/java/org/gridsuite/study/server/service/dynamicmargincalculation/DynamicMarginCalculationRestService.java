@@ -104,7 +104,7 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
 
     @Override
     public UUID createDefaultParameters() {
-        return executeWithOptionalServiceFallback(() -> {
+        return callWithOptionalServerAndDefaultValue(() -> {
             String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_PARAMETER);
 
             String url = UriComponentsBuilder
@@ -114,7 +114,7 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
 
             return getRestClient().post().uri(url)
             .retrieve().body(UUID.class);
-        }, null);
+        });
     }
 
     public void updateParameters(UUID parametersUuid, String parametersInfos) {
@@ -140,7 +140,7 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
     @Override
     public UUID duplicateParameters(UUID sourceParameterId) {
         Objects.requireNonNull(sourceParameterId);
-        return executeWithOptionalServiceFallback(() -> {
+        return callWithOptionalServerAndDefaultValue(() -> {
             String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_PARAMETER);
 
             String url = UriComponentsBuilder
@@ -150,12 +150,12 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
 
             return getRestClient().post().uri(url)
             .retrieve().body(UUID.class);
-        }, null);
+        });
     }
 
     public void deleteParameters(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
-        executeWithOptionalServiceCheck(() -> {
+        callWithOptionalServer(() -> {
             String url = getParametersWithUuidUrl(parametersUuid);
 
             // call dynamic-margin-calculation REST API

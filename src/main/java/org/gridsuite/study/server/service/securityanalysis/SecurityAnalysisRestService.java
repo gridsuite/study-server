@@ -238,7 +238,7 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
     @Override
     public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
-        return executeWithOptionalServiceFallback(() -> {
+        return callWithOptionalServerAndDefaultValue(() -> {
             var path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + DELIMITER + "{uuid}" + DELIMITER + "duplicate")
                     .buildAndExpand(sourceParametersUuid).toUriString();
 
@@ -246,7 +246,7 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
             .contentType(MediaType.APPLICATION_JSON)
 
             .retrieve().body(UUID.class);
-        }, null);
+        });
     }
 
     public String getSecurityAnalysisParameters(UUID parametersUuid) {
@@ -270,7 +270,7 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
     @Override
     public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
-        executeWithOptionalServiceCheck(() -> {
+        callWithOptionalServer(() -> {
             String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
                     .buildAndExpand(uuid)
                     .toUriString();
@@ -282,7 +282,7 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
 
     @Override
     public UUID createDefaultParameters() {
-        return executeWithOptionalServiceFallback(() -> {
+        return callWithOptionalServerAndDefaultValue(() -> {
             var path = UriComponentsBuilder
                     .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/default")
                     .buildAndExpand()
@@ -290,7 +290,7 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
 
             return restClient.post().uri(baseUri + path)
             .retrieve().body(UUID.class);
-        }, null);
+        });
     }
 
     public UUID createSecurityAnalysisParameters(String parameters) {

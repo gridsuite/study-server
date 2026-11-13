@@ -222,7 +222,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
 
     @Override
     public UUID createDefaultParameters() {
-        return executeWithOptionalServiceFallback(() -> {
+        return callWithOptionalServerAndDefaultValue(() -> {
             var path = UriComponentsBuilder
                 .fromPath(PARAMETERS_URI + DELIMITER + "default")
                 .buildAndExpand()
@@ -230,7 +230,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
 
             return restClient.post().uri(baseUri + path)
             .retrieve().body(UUID.class);
-        }, null);
+        });
     }
 
     public String getPccMinParameters(UUID parametersUuid) {
@@ -246,7 +246,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
     @Override
     public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
-        executeWithOptionalServiceCheck(() -> {
+        callWithOptionalServer(() -> {
             String path = UriComponentsBuilder
                 .fromPath(PARAMETER_URI)
                 .buildAndExpand(uuid)
@@ -260,7 +260,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
     @Override
     public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
-        return executeWithOptionalServiceFallback(() -> {
+        return callWithOptionalServerAndDefaultValue(() -> {
             String path = UriComponentsBuilder
                 .fromPath(PARAMETERS_URI + "/{uuid}/duplicate")
                 .buildAndExpand(sourceParametersUuid)
@@ -269,7 +269,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
             return restClient.post().uri(baseUri + path)
             .contentType(MediaType.APPLICATION_JSON)
             .retrieve().body(UUID.class);
-        }, null);
+        });
     }
 
     public ResponseEntity<byte[]> exportPccMinResultsAsCsv(UUID resultUuid, String csvHeaders, UUID networkUuid, String variantId, Sort sort, String filters, String globalFilters) {

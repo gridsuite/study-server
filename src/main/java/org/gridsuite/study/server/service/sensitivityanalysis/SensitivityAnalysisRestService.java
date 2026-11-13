@@ -255,7 +255,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
 
     @Override
     public UUID createDefaultParameters() {
-        return executeWithOptionalServiceFallback(() -> {
+        return callWithOptionalServerAndDefaultValue(() -> {
             var path = UriComponentsBuilder
                 .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/default")
                 .buildAndExpand()
@@ -263,7 +263,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
 
             return restClient.post().uri(baseUri + path)
             .retrieve().body(UUID.class);
-        }, null);
+        });
     }
 
     public UUID createSensitivityAnalysisParameters(String parameters) {
@@ -283,7 +283,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
     @Override
     public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
-        return executeWithOptionalServiceFallback(() -> {
+        return callWithOptionalServerAndDefaultValue(() -> {
             var path = UriComponentsBuilder
                 .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + "/{uuid}/duplicate")
                 .buildAndExpand(sourceParametersUuid)
@@ -291,7 +291,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
 
             return restClient.post().uri(baseUri + path)
             .retrieve().body(UUID.class);
-        }, null);
+        });
     }
 
     public void updateSensitivityAnalysisParameters(UUID parametersUuid, String parameters) {
@@ -320,7 +320,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
     @Override
     public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
-        executeWithOptionalServiceCheck(() -> {
+        callWithOptionalServer(() -> {
             String path = UriComponentsBuilder
                 .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(uuid)

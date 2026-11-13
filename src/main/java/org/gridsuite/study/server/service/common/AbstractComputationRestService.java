@@ -1,3 +1,9 @@
+/*
+  Copyright (c) 2024, RTE (http://www.rte-france.com)
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 package org.gridsuite.study.server.service.common;
 
 import org.gridsuite.study.server.RemoteServicesProperties;
@@ -36,35 +42,36 @@ public abstract class AbstractComputationRestService extends AbstractRestClientS
         if (service == null || !service.isOptional()) {
             return false;
         }
-        return !servicesInspector.isOptionalServiceUpSync(service);
+        return !servicesInspector.isServiceUp(service);
     }
 
-    protected void executeWithOptionalServiceCheck(Runnable executor) {
+    protected void callWithOptionalServer(Runnable request) {
+        callWithOptionalServer(asSupplier(request), null);
+    }
+
+    protected <T> T callWithOptionalServerAndDefaultValue(Supplier<T> request) {
+        return callWithOptionalServer(request, null);
+    }
+
+    private <T> T callWithOptionalServer(Supplier<T> request, T defaultValue) {
         try {
-            executor.run();
+            return request.get();
         } catch (Exception e) {
             if (isOptionalAndDown()) {
                 // the error is not thrown and won't be displayed in the console :
                 // because this is an optional service, it may be down and ignored
                 LOGGER.debug("The service '{}' threw the error '{}'. It is silenced because this service is optional.", serviceName, e.toString());
-            } else {
-                throw e;
-            }
-        }
-    }
-
-    protected <T> T executeWithOptionalServiceFallback(Supplier<T> executor, T fallbackReturnValue) {
-        try {
-            return executor.get();
-        } catch (Exception e) {
-            if (isOptionalAndDown()) {
-                // the error is not thrown and won't be displayed in the console :
-                // because this is an optional service, it may be down and ignored
-                LOGGER.debug("The service '{}' threw the error '{}'. It is silenced because this service is optional.", serviceName, e.toString());
-                return fallbackReturnValue;
+                return defaultValue;
             }
             throw e;
         }
+    }
+
+    private static <T> Supplier<T> asSupplier(Runnable request) {
+        return () -> {
+            request.run();
+            return null;
+        };
     }
 
     public abstract List<String> getEnumValues(String enumName, UUID resultUuidOpt);

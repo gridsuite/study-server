@@ -235,7 +235,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
 
     @Override
     public UUID createDefaultParameters() {
-        return executeWithOptionalServiceFallback(() -> {
+        return callWithOptionalServerAndDefaultValue(() -> {
             var path = UriComponentsBuilder
                     .fromPath(ASYMMETRICAL_LOAD_PARAMETERS_URI + DELIMITER + "default")
                     .buildAndExpand()
@@ -243,7 +243,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
 
             return restClient.post().uri(baseUri + path)
                 .retrieve().body(UUID.class);
-        }, null);
+        });
     }
 
     public String getAsymmetricalLoadParameters(UUID parametersUuid) {
@@ -259,7 +259,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
     @Override
     public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
-        executeWithOptionalServiceCheck(() -> {
+        callWithOptionalServer(() -> {
             String path = UriComponentsBuilder
                 .fromPath(ASYMMETRICAL_LOAD_PARAMETER_URI)
                 .buildAndExpand(uuid)
@@ -273,7 +273,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
     @Override
     public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
-        return executeWithOptionalServiceFallback(() -> {
+        return callWithOptionalServerAndDefaultValue(() -> {
             String path = UriComponentsBuilder
                     .fromPath(ASYMMETRICAL_LOAD_PARAMETERS_URI + "/{uuid}/duplicate")
                     .buildAndExpand(sourceParametersUuid)
@@ -282,7 +282,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
             return restClient.post().uri(baseUri + path)
             .contentType(MediaType.APPLICATION_JSON)
             .retrieve().body(UUID.class);
-        }, null);
+        });
     }
 
     public ResponseEntity<byte[]> exportAsymmetricalLoadResultsAsCsv(UUID resultUuid, String csvHeaders, UUID networkUuid, String variantId, Sort sort, String filters, String globalFilters) {

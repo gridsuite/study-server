@@ -132,7 +132,7 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
     }
 
     public UUID createDefaultParameters() {
-        return executeWithOptionalServiceFallback(() -> {
+        return callWithOptionalServerAndDefaultValue(() -> {
             String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SIMULATION_API_VERSION, DYNAMIC_SIMULATION_END_POINT_PARAMETER);
 
             String url = UriComponentsBuilder
@@ -142,7 +142,7 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
 
             return getRestClient().post().uri(url)
             .retrieve().body(UUID.class);
-        }, null);
+        });
     }
 
     public void updateParameters(UUID parametersUuid, String parametersInfos) {
@@ -167,7 +167,7 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
 
     public UUID duplicateParameters(UUID sourceParameterId) {
         Objects.requireNonNull(sourceParameterId);
-        return executeWithOptionalServiceFallback(() -> {
+        return callWithOptionalServerAndDefaultValue(() -> {
             String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SIMULATION_API_VERSION, DYNAMIC_SIMULATION_END_POINT_PARAMETER);
 
             String url = UriComponentsBuilder
@@ -177,12 +177,12 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
 
             return getRestClient().post().uri(url)
             .retrieve().body(UUID.class);
-        }, null);
+        });
     }
 
     public void deleteParameters(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
-        executeWithOptionalServiceCheck(() -> {
+        callWithOptionalServer(() -> {
             String url = getParametersWithUuidUrl(parametersUuid);
 
             // call dynamic-simulation REST API

@@ -109,7 +109,7 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
     }
 
     public UUID createDefaultParameters() {
-        return executeWithOptionalServiceFallback(() -> {
+        return callWithOptionalServerAndDefaultValue(() -> {
             String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
 
             String url = UriComponentsBuilder.fromUriString(parametersBaseUrl + "/default")
@@ -118,7 +118,7 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
 
             return getRestClient().post().uri(url)
             .retrieve().body(UUID.class);
-        }, null);
+        });
     }
 
     public void updateParameters(UUID parametersUuid, String parametersInfos) {
@@ -143,7 +143,7 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
 
     public UUID duplicateParameters(UUID sourceParameterId) {
         Objects.requireNonNull(sourceParameterId);
-        return executeWithOptionalServiceFallback(() -> {
+        return callWithOptionalServerAndDefaultValue(() -> {
             String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
 
             String url = UriComponentsBuilder.fromUriString(parametersBaseUrl + "/{uuid}/duplicate")
@@ -152,12 +152,12 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
 
             return getRestClient().post().uri(url)
             .retrieve().body(UUID.class);
-        }, null);
+        });
     }
 
     public void deleteParameters(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
-        executeWithOptionalServiceCheck(() -> {
+        callWithOptionalServer(() -> {
             String url = getParametersWithUuidUrl(parametersUuid);
 
             // call dynamic-security-analysis REST API
