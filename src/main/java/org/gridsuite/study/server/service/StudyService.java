@@ -445,7 +445,7 @@ public class StudyService {
     }
 
     private List<UUID> getStudyModificationGroupUuids(UUID studyUuid) {
-        return networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid).stream()
+        return networkModificationTreeService.getAllNetworkModificationNodeInfos(studyUuid).stream()
                 .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
                 .toList();
     }
@@ -621,7 +621,7 @@ public class StudyService {
         if (studyCreationRequestEntity.isEmpty() && studyEntity.isPresent()) {
             List<RootNetworkInfos> rootNetworkInfos = getStudyRootNetworksInfos(studyUuid);
             // get all modification groups and nodes related to the study
-            List<NetworkModificationNodeInfoEntity> allStudyNetworkModificationNodeInfo = networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid);
+            List<NetworkModificationNodeInfoEntity> allStudyNetworkModificationNodeInfo = networkModificationTreeService.getAllNetworkModificationNodeInfos(studyUuid);
             List<Pair<UUID, UUID>> modificationGroupUuidsNodeUuids = allStudyNetworkModificationNodeInfo.stream()
                     .map(nodeInfoEntity -> Pair.of(nodeInfoEntity.getModificationGroupUuid(), nodeInfoEntity.getIdNode()))
                     .toList();

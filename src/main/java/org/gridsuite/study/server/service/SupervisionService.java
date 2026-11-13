@@ -438,6 +438,15 @@ public class SupervisionService {
         LOGGER.trace("Study {} nodes builds deleted and root node invalidated in : {} milliseconds", studyUuid, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime.get()));
     }
 
+    public void recreateNetworkModificationSharingLinks(UUID studyUuid, String userId) {
+        studyService.assertIsStudyExist(studyUuid);
+        List<UUID> modificationGroupUuids = networkModificationTreeService.getAllNetworkModificationNodeInfos(studyUuid, false)
+            .stream()
+            .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
+            .toList();
+        networkModificationService.createSharingLinks(modificationGroupUuids, true, userId);
+    }
+
     public void deleteAllStashedElements(UUID studyId) {
         List<NodeEntity> nodes = nodeRepository.findAllByStudyId(studyId);
         List<NodeEntity> stashedNodes = new ArrayList<>();
