@@ -490,14 +490,14 @@ class DynamicSimulationRestServiceTest extends AbstractWireMockRestClientTest {
     }
 
     @Test
-    void testDeleteResults() throws Exception {
-        // configure mock server response for test delete all results - results/
-        wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + "?resultsUuids"))
-            .willReturn(WireMock.ok()
-                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-            ));
-        dynamicSimulationRestService.deleteAllResults();
+    void testDeleteResultsWithoutUuids() {
+        assertThrows(NullPointerException.class, () -> dynamicSimulationRestService.deleteResults(null));
+        assertDoesNotThrow(() -> dynamicSimulationRestService.deleteResults(List.of()));
+        wireMockServer.verify(0, WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL)));
+    }
 
+    @Test
+    void testResultsCount() throws Exception {
         // configure mock server response for test result count - supervision/results-count
         String resultCountEndPointUrl = buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT_COUNT);
         wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(resultCountEndPointUrl))

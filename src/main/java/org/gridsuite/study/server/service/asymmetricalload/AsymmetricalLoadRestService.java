@@ -125,12 +125,8 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
             .retrieve().body(String.class);
     }
 
-    public void deleteAsymmetricalLoadResults(List<UUID> resultsUuids) {
+    public void deleteResults(List<UUID> resultsUuids) {
         deleteCalculationResults(resultsUuids, ASYMMETRICAL_LOAD_URI + "/results", restClient, baseUri);
-    }
-
-    public void deleteAllAsymmetricalLoadResults() {
-        deleteAsymmetricalLoadResults(null);
     }
 
     public Integer getAsymmetricalLoadResultsCount() {

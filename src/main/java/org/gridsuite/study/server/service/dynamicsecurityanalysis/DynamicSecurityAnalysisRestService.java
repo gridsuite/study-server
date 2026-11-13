@@ -240,7 +240,7 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
     }
 
     public void deleteResults(List<UUID> resultUuids) {
-        if (CollectionUtils.isEmpty(resultUuids)) {
+        if (Objects.requireNonNull(resultUuids, "resultUuids must not be null").isEmpty()) {
             return;
         }
         String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RESULT);
@@ -249,10 +249,6 @@ public class DynamicSecurityAnalysisRestService extends AbstractComputationRestS
         // call dynamic-security-analysis REST API
         getRestClient().delete().uri(path)
             .retrieve().toBodilessEntity();
-    }
-
-    public void deleteAllResults() {
-        deleteResults(null);
     }
 
     public Integer getResultsCount() {

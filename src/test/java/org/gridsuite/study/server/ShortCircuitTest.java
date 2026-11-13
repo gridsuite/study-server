@@ -53,7 +53,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.*;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.matching;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.HEADER_BUS_ID;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
@@ -357,13 +356,13 @@ class ShortCircuitTest implements WithAssertions {
 
         // Delete Shortcircuit results
         assertEquals(1, rootNetworkNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
-        computationServerStubs.stubDeleteResults("/v1/results");
+        computationServerStubs.stubDeleteAllResults();
         reportServerStubs.stubDeleteReport();
         mockMvc.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", ComputationType.SHORT_CIRCUIT.toString())
                         .queryParam("dryRun", "false"))
                 .andExpect(status().isOk());
-        WireMockUtilsCriteria.verifyDeleteRequest(wireMockServer, "/v1/results", Map.of("resultsUuids", matching(".*")));
+        computationServerStubs.verifyDeleteAllResults();
         reportServerStubs.verifyDeleteReport();
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
     }
@@ -583,13 +582,13 @@ class ShortCircuitTest implements WithAssertions {
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/supervision/results-count", Map.of());
 
         // Delete Shortcircuit results
-        computationServerStubs.stubDeleteResults("/v1/results");
+        computationServerStubs.stubDeleteAllResults();
         reportServerStubs.stubDeleteReport();
         mockMvc.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", ComputationType.SHORT_CIRCUIT.toString())
                         .queryParam("dryRun", "false"))
                 .andExpect(status().isOk());
-        WireMockUtilsCriteria.verifyDeleteRequest(wireMockServer, "/v1/results", Map.of("resultsUuids", matching(".*")));
+        computationServerStubs.verifyDeleteAllResults();
         reportServerStubs.verifyDeleteReport();
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull().size());
     }

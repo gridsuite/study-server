@@ -94,7 +94,7 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
             .retrieve().body(UUID.class);
     }
 
-    public void deleteLoadFlowResults(List<UUID> resultsUuids) {
+    public void deleteResults(List<UUID> resultsUuids) {
         deleteCalculationResults(resultsUuids, DELIMITER + LOADFLOW_API_VERSION + "/results", restClient, baseUri);
     }
 

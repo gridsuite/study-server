@@ -102,7 +102,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
     private UUID handleSensitivityAnalysisRequest(StudyEntity study, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
         if (prevResultUuid != null) {
-            sensitivityAnalysisRestService.deleteSensitivityAnalysisResults(List.of(prevResultUuid));
+            sensitivityAnalysisRestService.deleteResults(List.of(prevResultUuid));
         }
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);

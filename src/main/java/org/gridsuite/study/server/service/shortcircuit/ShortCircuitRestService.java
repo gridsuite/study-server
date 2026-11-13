@@ -225,12 +225,8 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
             .retrieve().toBodilessEntity();
     }
 
-    public void deleteShortCircuitAnalysisResults(List<UUID> resultsUuids) {
+    public void deleteResults(List<UUID> resultsUuids) {
         deleteCalculationResults(resultsUuids, DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results", restClient, baseUri);
-    }
-
-    public void deleteAllShortCircuitAnalysisResults() {
-        deleteShortCircuitAnalysisResults(null);
     }
 
     public Integer getShortCircuitResultsCount() {

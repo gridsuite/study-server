@@ -80,7 +80,7 @@ public class StateEstimationService extends AbstractComputationService {
 
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION);
         if (prevResultUuid != null) {
-            stateEstimationRestService.deleteStateEstimationResults(List.of(prevResultUuid));
+            stateEstimationRestService.deleteResults(List.of(prevResultUuid));
         }
 
         UUID result = stateEstimationRestService.runStateEstimation(networkUuid, variantId, studyEntity.getStateEstimationParametersUuid(),

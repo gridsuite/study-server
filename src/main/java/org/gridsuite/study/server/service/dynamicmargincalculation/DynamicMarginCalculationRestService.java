@@ -245,7 +245,7 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
     }
 
     public void deleteResults(List<UUID> resultUuids) {
-        if (CollectionUtils.isEmpty(resultUuids)) {
+        if (Objects.requireNonNull(resultUuids, "resultUuids must not be null").isEmpty()) {
             return;
         }
         String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_RESULT);
@@ -257,10 +257,6 @@ public class DynamicMarginCalculationRestService extends AbstractComputationRest
         // call dynamic-margin-calculation REST API
         getRestClient().delete().uri(url)
             .retrieve().toBodilessEntity();
-    }
-
-    public void deleteAllResults() {
-        deleteResults(null);
     }
 
     public Integer getResultsCount() {

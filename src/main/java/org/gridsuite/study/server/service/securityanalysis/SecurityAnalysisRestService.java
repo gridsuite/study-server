@@ -188,12 +188,8 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
             .retrieve().body(SecurityAnalysisStatus.class);
     }
 
-    public void deleteSecurityAnalysisResults(List<UUID> resultsUuids) {
+    public void deleteResults(List<UUID> resultsUuids) {
         deleteCalculationResults(resultsUuids, DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results", restClient, baseUri);
-    }
-
-    public void deleteAllSecurityAnalysisResults() {
-        deleteSecurityAnalysisResults(null);
     }
 
     public Integer getSecurityAnalysisResultsCount() {

@@ -119,12 +119,8 @@ public class PccMinRestService extends AbstractComputationRestService implements
             .retrieve().body(String.class);
     }
 
-    public void deletePccMinResults(List<UUID> resultsUuids) {
+    public void deleteResults(List<UUID> resultsUuids) {
         deleteCalculationResults(resultsUuids, DELIMITER + PCC_MIN_API_VERSION + "/results", restClient, baseUri);
-    }
-
-    public void deleteAllPccMinResults() {
-        deletePccMinResults(null);
     }
 
     public Integer getPccMinResultsCount() {

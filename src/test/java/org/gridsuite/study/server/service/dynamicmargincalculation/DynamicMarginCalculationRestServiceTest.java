@@ -421,12 +421,10 @@ class DynamicMarginCalculationRestServiceTest extends AbstractWireMockRestClient
     }
 
     @Test
-    void testDeleteResults() {
-        // configure mock server response
-        wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(RESULT_BASE_URL + "?resultsUuids"))
-                .willReturn(WireMock.ok()));
-        // call service to test
-        Assertions.assertThatNoException().isThrownBy(() -> dynamicMarginCalculationRestService.deleteResults(null));
+    void testDeleteResultsWithoutUuids() {
+        assertThrows(NullPointerException.class, () -> dynamicMarginCalculationRestService.deleteResults(null));
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicMarginCalculationRestService.deleteResults(List.of()));
+        wireMockServer.verify(0, WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(RESULT_BASE_URL)));
     }
 
     @Test

@@ -85,7 +85,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
 
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS);
         if (prevResultUuid != null) {
-            securityAnalysisRestService.deleteSecurityAnalysisResults(List.of(prevResultUuid));
+            securityAnalysisRestService.deleteResults(List.of(prevResultUuid));
         }
 
         var runSecurityAnalysisParametersInfos = new RunSecurityAnalysisParametersInfos(study.getSecurityAnalysisParametersUuid(), study.getLoadFlowParametersUuid());

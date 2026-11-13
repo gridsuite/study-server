@@ -577,14 +577,14 @@ class RootNetworkTest {
         verify(dynamicSecurityAnalysisRestService, times(1)).deleteResults(List.of(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID));
         verify(dynamicMarginCalculationRestService, times(1)).deleteResults(List.of(DYNAMIC_MARGIN_CALCULATION_RESULT_UUID));
         // check LOADFLOW_RESULT_UUID2 is also deleted
-        verify(loadFlowRestService, times(1)).deleteLoadFlowResults(argThat(list -> new HashSet<>(list).equals(Set.of(LOADFLOW_RESULT_UUID, LOADFLOW_RESULT_UUID2))));
-        verify(securityAnalysisService, times(1)).deleteSecurityAnalysisResults(List.of(SECURITY_ANALYSIS_RESULT_UUID));
-        verify(shortCircuitService, times(1)).deleteShortCircuitAnalysisResults(List.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
-        verify(shortCircuitService, times(1)).deleteShortCircuitAnalysisResults(List.of(ONE_BUS_SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
-        verify(stateEstimationService, times(1)).deleteStateEstimationResults(List.of(STATE_ESTIMATION_RESULT_UUID));
-        verify(pccMinService, times(1)).deletePccMinResults(List.of(PCC_MIN_RESULT_UUID));
-        verify(sensitivityAnalysisService, times(1)).deleteSensitivityAnalysisResults(List.of(SENSITIVITY_ANALYSIS_RESULT_UUID));
-        verify(voltageInitService, times(1)).deleteVoltageInitResults(List.of(VOLTAGE_INIT_RESULT_UUID), SUPERVISION_USER);
+        verify(loadFlowRestService, times(1)).deleteResults(argThat(list -> new HashSet<>(list).equals(Set.of(LOADFLOW_RESULT_UUID, LOADFLOW_RESULT_UUID2))));
+        verify(securityAnalysisService, times(1)).deleteResults(List.of(SECURITY_ANALYSIS_RESULT_UUID));
+        verify(shortCircuitService, times(1)).deleteResults(List.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
+        verify(shortCircuitService, times(1)).deleteResults(List.of(ONE_BUS_SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
+        verify(stateEstimationService, times(1)).deleteResults(List.of(STATE_ESTIMATION_RESULT_UUID));
+        verify(pccMinService, times(1)).deleteResults(List.of(PCC_MIN_RESULT_UUID));
+        verify(sensitivityAnalysisService, times(1)).deleteResults(List.of(SENSITIVITY_ANALYSIS_RESULT_UUID));
+        verify(voltageInitService, times(1)).deleteResults(List.of(VOLTAGE_INIT_RESULT_UUID), SUPERVISION_USER);
     }
 
     @Test
