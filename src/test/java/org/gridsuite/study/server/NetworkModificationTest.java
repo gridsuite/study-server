@@ -288,8 +288,6 @@ class NetworkModificationTest {
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
     private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
 
-    private UUID buildOkStubId;
-    private UUID buildStopStubId;
     private UUID buildFailedStubId;
     private UUID buildErrorStubId;
     private UUID userProfileQuotaStubId;
@@ -301,9 +299,6 @@ class NetworkModificationTest {
     private PccMinRestService pccMinService;
     @MockitoSpyBean
     private StudyService studyService;
-
-    private CountDownLatch countDownLatchForBuild;
-    private CountDownLatch countDownLatchForBuildStop;
 
     @BeforeEach
     void setup() {
@@ -346,20 +341,11 @@ class NetworkModificationTest {
         userAdminService.setUserAdminServerBaseUri(baseUrl);
         wireMockStubs.stubRootNetworkTagsAllowed();
 
-        countDownLatchForBuild = new CountDownLatch(1);
-        countDownLatchForBuildStop = new CountDownLatch(1);
-
-        buildOkStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_STRING + "/build"))
-            .withPostServeAction(POST_ACTION_SEND_INPUT, Parameters.from(Map.of("payload", DEFAULT_BUILD_RESULT, "destination", "build.result", "latch", countDownLatchForBuild)))
-            .willReturn(WireMock.ok())).getId();
         buildFailedStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_2_STRING + "/build"))
             .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", "", "destination", "build.run.dlx", HEADER_ERROR_MESSAGE, ERROR_MESSAGE))
             .willReturn(WireMock.ok())).getId();
         buildErrorStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_3_STRING + "/build"))
             .willReturn(WireMock.serverError())).getId();
-        buildStopStubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/build/stop"))
-            .withPostServeAction(POST_ACTION_SEND_INPUT, Parameters.from(Map.of("payload", "", "destination", "build.stopped", "latch", countDownLatchForBuildStop)))
-            .willReturn(WireMock.ok())).getId();
         userProfileQuotaStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/users/" + USER_ID + "/quota/state"))
             .willReturn(WireMock.ok()
                 .withBody("{\"BUILD\": {\"current\": 0, \"max\": 10}}")
@@ -3120,6 +3106,9 @@ class NetworkModificationTest {
 
     private void testBuildWithNodeUuid(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId, UUID profileStubId) throws Exception {
         // build node
+        UUID buildOkStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_STRING + "/build"))
+            .withPostServeAction(POST_ACTION_SEND_INPUT, Parameters.from(Map.of("payload", DEFAULT_BUILD_RESULT, "destination", "build.result")))
+            .willReturn(WireMock.ok())).getId();
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyUuid, rootNetworkUuid, nodeUuid)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
@@ -3143,12 +3132,16 @@ class NetworkModificationTest {
 
     private void testBuildAndStopWithNodeUuid(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId, UUID profileStubId) throws Exception {
         // build node
+        CountDownLatch countDown = new CountDownLatch(1);
+        UUID buildOkStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_STRING + "/build"))
+            .withPostServeAction(POST_ACTION_SEND_INPUT, Parameters.from(Map.of("payload", DEFAULT_BUILD_RESULT, "destination", "build.result", "latch", countDown)))
+            .willReturn(WireMock.ok())).getId();
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyUuid, rootNetworkUuid, nodeUuid)
                         .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
 
         // await the end of build
-        countDownLatchForBuild.await();
+        countDown.await();
 
         // node update -> BUILT
         Message<byte[]> buildStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
@@ -3168,11 +3161,15 @@ class NetworkModificationTest {
         markNodeBuilding(studyUuid, rootNetworkUuid, nodeUuid);
 
         // stop build
+        countDown = new CountDownLatch(1);
+        UUID buildStopStubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/build/stop"))
+            .withPostServeAction(POST_ACTION_SEND_INPUT, Parameters.from(Map.of("payload", "", "destination", "build.stopped", "latch", countDown)))
+            .willReturn(WireMock.ok())).getId();
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build/stop", studyUuid, rootNetworkUuid, nodeUuid))
             .andExpect(status().isOk());
 
         // await the end of stop build
-        countDownLatchForBuildStop.await();
+        countDown.await();
 
         buildStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
