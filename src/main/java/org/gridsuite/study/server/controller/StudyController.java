@@ -319,6 +319,19 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/unshare")
+    @Operation(summary = "Unshare all the reference modifications of a node and copy the referenced composites in their place")
+    @ApiResponse(responseCode = "200", description = "All the reference modifications from the node have been replaced by copies of their referenced composites")
+    public ResponseEntity<Void> unshareAllModificationReferencesInNode(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        networkModificationService.unshareAllReferencesInNode(studyUuid, nodeUuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
     @PutMapping(value = "/studies/{studyUuid}/unshare")
     @Operation(summary = "Unshare all the reference modifications and copy the referenced composites in their place")
     @ApiResponse(responseCode = "200", description = "All the reference modifications from the study have been replaced by copies of their referenced composites")

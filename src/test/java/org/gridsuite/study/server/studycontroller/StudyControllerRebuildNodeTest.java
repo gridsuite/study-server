@@ -176,6 +176,16 @@ class StudyControllerRebuildNodeTest {
     }
 
     @Test
+    void testUnshareAllReferencesInNode() {
+        ResponseEntity<Void> response = studyController.unshareAllModificationReferencesInNode(studyUuid, nodeUuid, userId);
+
+        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(studyService, times(1)).assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        verify(studyService, times(1)).assertIsNodeNotReadOnly(nodeUuid);
+        verify(networkModificationService, times(1)).unshareAllReferencesInNode(studyUuid, nodeUuid, userId);
+    }
+
+    @Test
     void testUnshareAllReferencesInStudy() {
         ResponseEntity<Void> response = studyController.unshareAllModificationReferences(studyUuid, userId);
 

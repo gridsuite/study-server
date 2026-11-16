@@ -355,14 +355,30 @@ public class NetworkModificationService {
         Map<UUID, List<UUID>> referencesAffectedByNode = new HashMap<>();
         networkModificationTreeService.getAllNotStashedNetworkModificationNodes(studyUuid).stream()
                 .map(NodeEntity::getIdNode)
-                .forEach(nodeUuid -> {
-                    UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-                    List<UUID> modificationReferences = networkModificationRestService.getModificationReferences(groupUuid)
-                            .stream().map(ModificationReference::modificationUuid).toList();
-                    if (!modificationReferences.isEmpty()) {
-                        referencesAffectedByNode.put(nodeUuid, modificationReferences);
-                    }
-                });
+                .forEach(nodeUuid -> collectNodeModificationReferences(referencesAffectedByNode, nodeUuid));
+        runUnshareModificationReferences(studyUuid, referencesAffectedByNode, userId);
+    }
+
+    public void unshareAllReferencesInNode(
+            @NonNull final UUID studyUuid,
+            @NonNull final UUID nodeUuid,
+            String userId) {
+        Map<UUID, List<UUID>> referencesAffectedByNode = new HashMap<>();
+        collectNodeModificationReferences(referencesAffectedByNode, nodeUuid);
+        runUnshareModificationReferences(studyUuid, referencesAffectedByNode, userId);
+    }
+
+    private void collectNodeModificationReferences(Map<UUID, List<UUID>> referencesAffectedByNode, UUID nodeUuid) {
+        // references of the node's group, including the ones nested in its composites
+        UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+        List<UUID> modificationReferences = networkModificationRestService.getModificationReferences(groupUuid)
+                .stream().map(ModificationReference::modificationUuid).toList();
+        if (!modificationReferences.isEmpty()) {
+            referencesAffectedByNode.put(nodeUuid, modificationReferences);
+        }
+    }
+
+    private void runUnshareModificationReferences(UUID studyUuid, Map<UUID, List<UUID>> referencesAffectedByNode, String userId) {
         if (referencesAffectedByNode.isEmpty()) {
             return;
         }
