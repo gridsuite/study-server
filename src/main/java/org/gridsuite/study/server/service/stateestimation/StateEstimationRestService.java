@@ -13,35 +13,32 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
-import org.gridsuite.study.server.service.common.AbstractComputationRestService;
+import org.gridsuite.study.server.service.common.AbstractStateEstimationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
-import org.springframework.http.*;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
-import java.io.InterruptedIOException;
+
 import java.io.UncheckedIOException;
-import java.net.URI;
 import java.net.URLEncoder;
-import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+
 import static org.gridsuite.study.server.StudyConstants.*;
 
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Service
-public class StateEstimationRestService extends AbstractComputationRestService implements ComputationParameters {
+public class StateEstimationRestService extends AbstractStateEstimationRestService implements ComputationParameters {
 
     static final String RESULT_UUID = "resultUuid";
 
@@ -51,8 +48,9 @@ public class StateEstimationRestService extends AbstractComputationRestService i
 
     @Autowired
     public StateEstimationRestService(RemoteServicesProperties remoteServicesProperties,
+                                      RemoteServicesInspector remoteServicesInspector,
                                       ObjectMapper objectMapper, RestClient restClient) {
-        super(remoteServicesProperties.getServiceUri("state-estimation-server"), restClient);
+        super(remoteServicesProperties, remoteServicesInspector, restClient);
         this.objectMapper = objectMapper;
     }
 
@@ -70,31 +68,8 @@ public class StateEstimationRestService extends AbstractComputationRestService i
     }
 
     public String getStateEstimationMeasurements(UUID resultUuid, UUID networkUuid, String variantId, String globalFilters) {
-        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(baseUri)
-            .pathSegment(STATE_ESTIMATION_API_VERSION, "results", "{resultUuid}", "measurements")
-            .queryParam(QUERY_PARAM_NETWORK_UUID, "{networkUuid}");
-        Map<String, Object> uriVariables = new HashMap<>();
-        uriVariables.put(RESULT_UUID, resultUuid);
-        uriVariables.put(QUERY_PARAM_NETWORK_UUID, networkUuid);
-        if (!StringUtils.isBlank(globalFilters)) {
-            uriBuilder.queryParam(QUERY_PARAM_GLOBAL_FILTERS, "{globalFilters}");
-            uriVariables.put(QUERY_PARAM_GLOBAL_FILTERS, globalFilters);
-        }
-        if (!StringUtils.isBlank(variantId)) {
-            uriBuilder.queryParam(QUERY_PARAM_VARIANT_ID, "{variantId}");
-            uriVariables.put(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        // template variables are strictly encoded once, and the URI overload avoids encoding a second time
-        URI uri = uriBuilder.encode().buildAndExpand(uriVariables).toUri();
-
-        try {
-            return restClient.get().uri(uri)
-                .retrieve().body(String.class);
-        } catch (ResourceAccessException e) {
-            boolean timeout = e.getCause() instanceof InterruptedIOException || e.getCause() instanceof HttpTimeoutException;
-            throw new ResponseStatusException(timeout ? HttpStatus.GATEWAY_TIMEOUT : HttpStatus.BAD_GATEWAY,
-                "State estimation server " + (timeout ? "timed out" : "is unreachable"), e);
-        }
+        return getStateEstimationServerResult(resultUuid, networkUuid, variantId, globalFilters,
+            STATE_ESTIMATION_API_VERSION, RESULTS, "{resultUuid}", "measurements");
     }
 
     public UUID runStateEstimation(UUID networkUuid, String variantId, UUID parametersUuid, ReportInfos reportInfos, String receiver, String userId, boolean debug) {
@@ -178,13 +153,14 @@ public class StateEstimationRestService extends AbstractComputationRestService i
 
     @Override
     public UUID createDefaultParameters() {
-        var path = UriComponentsBuilder
-            .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/parameters/default")
-            .buildAndExpand()
-            .toUriString();
-
-        return restClient.post().uri(baseUri + path)
+        return callWithOptionalServerAndDefaultValue(() -> {
+            var path = UriComponentsBuilder
+                    .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/parameters/default")
+                    .buildAndExpand()
+                    .toUriString();
+            return restClient.post().uri(baseUri + path)
             .retrieve().body(UUID.class);
+        });
     }
 
     public UUID createStateEstimationParameters(String parameters) {
@@ -235,28 +211,30 @@ public class StateEstimationRestService extends AbstractComputationRestService i
     @Override
     public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
+        return callWithOptionalServerAndDefaultValue(() -> {
+            String path = UriComponentsBuilder
+                .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + DELIMITER + "{uuid}" + DELIMITER + "duplicate")
+                .buildAndExpand(sourceParametersUuid)
+                .toUriString();
 
-        String path = UriComponentsBuilder
-            .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + DELIMITER + "{uuid}" + DELIMITER + "duplicate")
-            .buildAndExpand(sourceParametersUuid)
-            .toUriString();
-
-        return restClient.post().uri(baseUri + path)
+            return restClient.post().uri(baseUri + path)
             .contentType(MediaType.APPLICATION_JSON)
             .retrieve().body(UUID.class);
+        });
     }
 
     @Override
     public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
+        callWithOptionalServer(() -> {
+            String path = UriComponentsBuilder
+                .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + PARAMETERS_URI)
+                .buildAndExpand(uuid)
+                .toUriString();
 
-        String path = UriComponentsBuilder
-            .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + PARAMETERS_URI)
-            .buildAndExpand(uuid)
-            .toUriString();
-
-        restClient.delete().uri(baseUri + path)
+            restClient.delete().uri(baseUri + path)
             .retrieve().toBodilessEntity();
+        });
     }
 
     public void invalidateStateEstimationStatus(List<UUID> uuids) {

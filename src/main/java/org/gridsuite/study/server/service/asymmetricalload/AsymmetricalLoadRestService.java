@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.RunAsymmetricalLoadParametersInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
@@ -40,6 +41,7 @@ import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
+import static org.gridsuite.study.server.service.client.RemoteServiceName.*;
 
 /**
  * @author Etienne Lesot <etienne.lesot at rte-france.com>
@@ -52,15 +54,16 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
     private static final String PARAMETER_UUID = "{parametersUuid}";
     private static final String ASYMMETRICAL_LOAD = "asymmetrical-load";
     private static final String ASYMMETRICAL_LOAD_URI = DELIMITER + PCC_MIN_API_VERSION + DELIMITER + ASYMMETRICAL_LOAD;
-    private static final String PARAMETERS_URI = ASYMMETRICAL_LOAD_URI + DELIMITER + PATH_PARAM_PARAMETERS;
-    private static final String PARAMETER_URI = PARAMETERS_URI + DELIMITER + PARAMETER_UUID;
+    private static final String ASYMMETRICAL_LOAD_PARAMETERS_URI = ASYMMETRICAL_LOAD_URI + DELIMITER + PATH_PARAM_PARAMETERS;
+    private static final String ASYMMETRICAL_LOAD_PARAMETER_URI = ASYMMETRICAL_LOAD_PARAMETERS_URI + DELIMITER + PARAMETER_UUID;
 
     private final ObjectMapper objectMapper;
 
     @Autowired
     public AsymmetricalLoadRestService(RemoteServicesProperties remoteServicesProperties,
+                                       RemoteServicesInspector remoteServicesInspector,
                                        ObjectMapper objectMapper, RestClient restClient) {
-        super(remoteServicesProperties.getServiceUri("pcc-min-server"), restClient);
+        super(remoteServicesProperties.getServiceUri("pcc-min-server"), restClient, remoteServicesInspector, PCC_MIN_SERVER);
         this.objectMapper = objectMapper;
     }
 
@@ -193,7 +196,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
 
     public UUID createAsymmetricalLoadParameters(String parameters) {
         var path = UriComponentsBuilder
-            .fromPath(PARAMETERS_URI)
+            .fromPath(ASYMMETRICAL_LOAD_PARAMETERS_URI)
             .buildAndExpand()
             .toUriString();
 
@@ -206,7 +209,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
     }
 
     public void updateAsymmetricalLoadParameters(UUID parametersUuid, String parameters) {
-        var uriBuilder = UriComponentsBuilder.fromPath(PARAMETER_URI);
+        var uriBuilder = UriComponentsBuilder.fromPath(ASYMMETRICAL_LOAD_PARAMETER_URI);
         String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
 
         var requestSpec = restClient.put().uri(baseUri + path)
@@ -218,7 +221,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
     }
 
     public void resetAsymmetricalLoadParameters(UUID parametersUuid) {
-        var uriBuilder = UriComponentsBuilder.fromPath(PARAMETER_URI);
+        var uriBuilder = UriComponentsBuilder.fromPath(ASYMMETRICAL_LOAD_PARAMETER_URI);
         String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
         restClient.put().uri(baseUri + path).retrieve().toBodilessEntity();
     }
@@ -232,19 +235,21 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
 
     @Override
     public UUID createDefaultParameters() {
-        var path = UriComponentsBuilder
-            .fromPath(PARAMETERS_URI + DELIMITER + "default")
-            .buildAndExpand()
-            .toUriString();
+        return callWithOptionalServerAndDefaultValue(() -> {
+            var path = UriComponentsBuilder
+                    .fromPath(ASYMMETRICAL_LOAD_PARAMETERS_URI + DELIMITER + "default")
+                    .buildAndExpand()
+                    .toUriString();
 
-        return restClient.post().uri(baseUri + path)
-            .retrieve().body(UUID.class);
+            return restClient.post().uri(baseUri + path)
+                .retrieve().body(UUID.class);
+        });
     }
 
     public String getAsymmetricalLoadParameters(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
 
-        String path = UriComponentsBuilder.fromPath(PARAMETER_URI)
+        String path = UriComponentsBuilder.fromPath(ASYMMETRICAL_LOAD_PARAMETER_URI)
             .buildAndExpand(parametersUuid).toUriString();
 
         return restClient.get().uri(baseUri + path)
@@ -254,28 +259,30 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
     @Override
     public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
+        callWithOptionalServer(() -> {
+            String path = UriComponentsBuilder
+                .fromPath(ASYMMETRICAL_LOAD_PARAMETER_URI)
+                .buildAndExpand(uuid)
+                .toUriString();
 
-        String path = UriComponentsBuilder
-            .fromPath(PARAMETER_URI)
-            .buildAndExpand(uuid)
-            .toUriString();
-
-        restClient.delete().uri(baseUri + path)
-            .retrieve().toBodilessEntity();
+            restClient.delete().uri(baseUri + path)
+                .retrieve().toBodilessEntity();
+        });
     }
 
     @Override
     public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
+        return callWithOptionalServerAndDefaultValue(() -> {
+            String path = UriComponentsBuilder
+                    .fromPath(ASYMMETRICAL_LOAD_PARAMETERS_URI + "/{uuid}/duplicate")
+                    .buildAndExpand(sourceParametersUuid)
+                    .toUriString();
 
-        String path = UriComponentsBuilder
-                .fromPath(PARAMETERS_URI + "/{uuid}/duplicate")
-                .buildAndExpand(sourceParametersUuid)
-                .toUriString();
-
-        return restClient.post().uri(baseUri + path)
+            return restClient.post().uri(baseUri + path)
             .contentType(MediaType.APPLICATION_JSON)
             .retrieve().body(UUID.class);
+        });
     }
 
     public ResponseEntity<byte[]> exportAsymmetricalLoadResultsAsCsv(UUID resultUuid, String csvHeaders, UUID networkUuid, String variantId, Sort sort, String filters, String globalFilters) {

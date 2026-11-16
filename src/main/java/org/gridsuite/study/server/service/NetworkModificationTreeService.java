@@ -918,8 +918,12 @@ public class NetworkModificationTreeService {
         }
     }
 
-    public List<NetworkModificationNodeInfoEntity> getAllStudyNetworkModificationNodeInfo(UUID studyUuid) {
+    public List<NetworkModificationNodeInfoEntity> getAllNetworkModificationNodeInfos(UUID studyUuid) {
         return networkModificationNodeInfoRepository.findAllByNodeStudyId(studyUuid);
+    }
+
+    public List<NetworkModificationNodeInfoEntity> getAllNetworkModificationNodeInfos(UUID studyUuid, boolean stashedNodes) {
+        return networkModificationNodeInfoRepository.findAllByNodeStudyIdAndNodeStashed(studyUuid, stashedNodes);
     }
 
     public List<Pair<AbstractNode, Integer>> getStashedNodes(UUID studyUuid) {
