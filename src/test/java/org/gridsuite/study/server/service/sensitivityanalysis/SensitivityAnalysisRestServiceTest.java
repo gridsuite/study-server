@@ -8,6 +8,7 @@ package org.gridsuite.study.server.service.sensitivityanalysis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,13 +35,15 @@ class SensitivityAnalysisRestServiceTest {
     private RemoteServicesProperties remoteServicesProperties;
     @Mock(answer = RETURNS_DEEP_STUBS)
     private RestClient restClient;
+    @Mock
+    private RemoteServicesInspector remoteServicesInspector;
 
     private SensitivityAnalysisRestService sensitivityAnalysisRestService;
 
     @BeforeEach
     void setUp() {
         when(remoteServicesProperties.getServiceUri("sensitivity-analysis-server")).thenReturn(BASE_URI);
-        sensitivityAnalysisRestService = new SensitivityAnalysisRestService(remoteServicesProperties, restClient, new ObjectMapper());
+        sensitivityAnalysisRestService = new SensitivityAnalysisRestService(remoteServicesProperties, remoteServicesInspector, restClient, new ObjectMapper());
     }
 
     @Test

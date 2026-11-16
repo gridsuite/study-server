@@ -13,6 +13,7 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractStateEstimationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
@@ -47,8 +48,9 @@ public class StateEstimationRestService extends AbstractStateEstimationRestServi
 
     @Autowired
     public StateEstimationRestService(RemoteServicesProperties remoteServicesProperties,
+                                      RemoteServicesInspector remoteServicesInspector,
                                       ObjectMapper objectMapper, RestClient restClient) {
-        super(remoteServicesProperties, restClient);
+        super(remoteServicesProperties, remoteServicesInspector, restClient);
         this.objectMapper = objectMapper;
     }
 
@@ -151,13 +153,14 @@ public class StateEstimationRestService extends AbstractStateEstimationRestServi
 
     @Override
     public UUID createDefaultParameters() {
-        var path = UriComponentsBuilder
-            .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/parameters/default")
-            .buildAndExpand()
-            .toUriString();
-
-        return restClient.post().uri(baseUri + path)
+        return callWithOptionalServerAndDefaultValue(() -> {
+            var path = UriComponentsBuilder
+                    .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/parameters/default")
+                    .buildAndExpand()
+                    .toUriString();
+            return restClient.post().uri(baseUri + path)
             .retrieve().body(UUID.class);
+        });
     }
 
     public UUID createStateEstimationParameters(String parameters) {
@@ -208,28 +211,30 @@ public class StateEstimationRestService extends AbstractStateEstimationRestServi
     @Override
     public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
+        return callWithOptionalServerAndDefaultValue(() -> {
+            String path = UriComponentsBuilder
+                .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + DELIMITER + "{uuid}" + DELIMITER + "duplicate")
+                .buildAndExpand(sourceParametersUuid)
+                .toUriString();
 
-        String path = UriComponentsBuilder
-            .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + DELIMITER + "{uuid}" + DELIMITER + "duplicate")
-            .buildAndExpand(sourceParametersUuid)
-            .toUriString();
-
-        return restClient.post().uri(baseUri + path)
+            return restClient.post().uri(baseUri + path)
             .contentType(MediaType.APPLICATION_JSON)
             .retrieve().body(UUID.class);
+        });
     }
 
     @Override
     public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
+        callWithOptionalServer(() -> {
+            String path = UriComponentsBuilder
+                .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + PARAMETERS_URI)
+                .buildAndExpand(uuid)
+                .toUriString();
 
-        String path = UriComponentsBuilder
-            .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + PARAMETERS_URI)
-            .buildAndExpand(uuid)
-            .toUriString();
-
-        restClient.delete().uri(baseUri + path)
+            restClient.delete().uri(baseUri + path)
             .retrieve().toBodilessEntity();
+        });
     }
 
     public void invalidateStateEstimationStatus(List<UUID> uuids) {

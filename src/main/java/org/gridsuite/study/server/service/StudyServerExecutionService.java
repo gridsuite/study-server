@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Supplier;
 
 @Service
 public class StudyServerExecutionService {
@@ -41,6 +42,16 @@ public class StudyServerExecutionService {
     public CompletableFuture<Void> runAsync(Runnable runnable) {
         return CompletableFuture
             .runAsync(runnable, executorService)
+            .whenComplete((r, t) -> {
+                if (LOGGER.isErrorEnabled() && t != null) {
+                    LOGGER.error(t.toString(), t);
+                }
+            });
+    }
+
+    public <T> CompletableFuture<T> supplyAsync(Supplier<T> supplier) {
+        return CompletableFuture
+            .supplyAsync(supplier, executorService)
             .whenComplete((r, t) -> {
                 if (LOGGER.isErrorEnabled() && t != null) {
                     LOGGER.error(t.toString(), t);

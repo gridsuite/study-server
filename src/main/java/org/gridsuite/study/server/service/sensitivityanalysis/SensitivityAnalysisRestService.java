@@ -14,6 +14,7 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
@@ -36,6 +37,7 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
+import static org.gridsuite.study.server.service.client.RemoteServiceName.SENSITIVITY_ANALYSIS_SERVER;
 
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
@@ -51,9 +53,10 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
     private final ObjectMapper objectMapper;
 
     SensitivityAnalysisRestService(RemoteServicesProperties remoteServicesProperties,
+                                   RemoteServicesInspector remoteServicesInspector,
                                    RestClient restClient,
                                    ObjectMapper objectMapper) {
-        super(remoteServicesProperties.getServiceUri("sensitivity-analysis-server"), restClient);
+        super(remoteServicesProperties.getServiceUri("sensitivity-analysis-server"), restClient, remoteServicesInspector, SENSITIVITY_ANALYSIS_SERVER);
         this.objectMapper = objectMapper;
     }
 
@@ -252,14 +255,15 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
 
     @Override
     public UUID createDefaultParameters() {
+        return callWithOptionalServerAndDefaultValue(() -> {
+            var path = UriComponentsBuilder
+                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/default")
+                .buildAndExpand()
+                .toUriString();
 
-        var path = UriComponentsBuilder
-            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/default")
-            .buildAndExpand()
-            .toUriString();
-
-        return restClient.post().uri(baseUri + path)
+            return restClient.post().uri(baseUri + path)
             .retrieve().body(UUID.class);
+        });
     }
 
     public UUID createSensitivityAnalysisParameters(String parameters) {
@@ -278,16 +282,16 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
 
     @Override
     public UUID duplicateParameters(UUID sourceParametersUuid) {
-
         Objects.requireNonNull(sourceParametersUuid);
+        return callWithOptionalServerAndDefaultValue(() -> {
+            var path = UriComponentsBuilder
+                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + "/{uuid}/duplicate")
+                .buildAndExpand(sourceParametersUuid)
+                .toUriString();
 
-        var path = UriComponentsBuilder
-            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + "/{uuid}/duplicate")
-            .buildAndExpand(sourceParametersUuid)
-            .toUriString();
-
-        return restClient.post().uri(baseUri + path)
+            return restClient.post().uri(baseUri + path)
             .retrieve().body(UUID.class);
+        });
     }
 
     public void updateSensitivityAnalysisParameters(UUID parametersUuid, String parameters) {
@@ -316,14 +320,15 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
     @Override
     public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
+        callWithOptionalServer(() -> {
+            String path = UriComponentsBuilder
+                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
+                .buildAndExpand(uuid)
+                .toUriString();
 
-        String path = UriComponentsBuilder
-            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
-            .buildAndExpand(uuid)
-            .toUriString();
-
-        restClient.delete().uri(baseUri + path)
+            restClient.delete().uri(baseUri + path)
             .retrieve().toBodilessEntity();
+        });
     }
 
     public String getSensitivityAnalysisFactorCount(UUID networkUuid, String variantId, String sensitivityAnalysisParameters) {

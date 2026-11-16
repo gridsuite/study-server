@@ -12,6 +12,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractStateEstimationRestService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,8 +40,11 @@ public class LogicalControlsRestService extends AbstractStateEstimationRestServi
     private final ObjectMapper objectMapper;
 
     @Autowired
-    public LogicalControlsRestService(RemoteServicesProperties remoteServicesProperties, ObjectMapper objectMapper, RestClient restClient) {
-        super(remoteServicesProperties, restClient);
+    public LogicalControlsRestService(RemoteServicesProperties remoteServicesProperties,
+                                      RemoteServicesInspector servicesInspector,
+                                      ObjectMapper objectMapper,
+                                      RestClient restClient) {
+        super(remoteServicesProperties, servicesInspector, restClient);
         this.objectMapper = objectMapper;
     }
 

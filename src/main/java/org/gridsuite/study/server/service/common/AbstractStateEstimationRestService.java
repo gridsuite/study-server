@@ -9,6 +9,8 @@ package org.gridsuite.study.server.service.common;
 
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
+import org.gridsuite.study.server.service.client.RemoteServiceName;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
@@ -33,8 +35,10 @@ public abstract class AbstractStateEstimationRestService extends AbstractComputa
 
     protected static final String RESULTS = "results";
 
-    protected AbstractStateEstimationRestService(RemoteServicesProperties remoteServicesProperties, RestClient restClient) {
-        super(remoteServicesProperties.getServiceUri("state-estimation-server"), restClient);
+    protected AbstractStateEstimationRestService(RemoteServicesProperties remoteServicesProperties,
+                                                 RemoteServicesInspector servicesInspector,
+                                                 RestClient restClient) {
+        super(remoteServicesProperties.getServiceUri("state-estimation-server"), restClient, servicesInspector, RemoteServiceName.STATE_ESTIMATION_SERVER);
     }
 
     protected String getStateEstimationServerResult(UUID resultUuid, UUID networkUuid, String variantId, String globalFilters, String... pathSegments) {
