@@ -38,6 +38,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -142,6 +143,8 @@ class LogicalControlsTest {
     private TestUtils studyTestUtils;
     @Autowired
     private ConsumerService consumerService;
+    @Mock
+    private RemoteServicesInspector remoteServicesInspector;
 
     private WireMockServer wireMockServer;
     private ComputationServerStubs computationServerStubs;
@@ -477,7 +480,7 @@ class LogicalControlsTest {
         RestClient restClient = mock(RestClient.class, RETURNS_DEEP_STUBS);
         ResourceAccessException error = new ResourceAccessException("Fetch failed", cause);
         when(restClient.get().uri(any(URI.class)).retrieve().body(String.class)).thenThrow(error);
-        LogicalControlsRestService service = new LogicalControlsRestService(remoteServicesProperties, objectMapper, restClient);
+        LogicalControlsRestService service = new LogicalControlsRestService(remoteServicesProperties, remoteServicesInspector, objectMapper, restClient);
 
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
             () -> service.getLogicalControlsResult(resultUuid, UUID.fromString(NETWORK_UUID_STRING), VARIANT_ID, null));

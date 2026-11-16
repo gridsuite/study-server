@@ -14,8 +14,6 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
-import org.gridsuite.study.server.service.client.RemoteServiceName;
-import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.AbstractStateEstimationRestService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -46,7 +44,7 @@ public class LogicalControlsRestService extends AbstractStateEstimationRestServi
                                       RemoteServicesInspector servicesInspector,
                                       ObjectMapper objectMapper,
                                       RestClient restClient) {
-        super(remoteServicesProperties, restClient);
+        super(remoteServicesProperties, servicesInspector, restClient);
         this.objectMapper = objectMapper;
     }
 

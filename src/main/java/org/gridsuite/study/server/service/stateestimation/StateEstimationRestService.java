@@ -33,7 +33,6 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.service.client.RemoteServiceName.STATE_ESTIMATION_SERVER;
 
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
@@ -51,7 +50,7 @@ public class StateEstimationRestService extends AbstractStateEstimationRestServi
     public StateEstimationRestService(RemoteServicesProperties remoteServicesProperties,
                                       RemoteServicesInspector remoteServicesInspector,
                                       ObjectMapper objectMapper, RestClient restClient) {
-        super(remoteServicesProperties, restClient);
+        super(remoteServicesProperties, remoteServicesInspector, restClient);
         this.objectMapper = objectMapper;
     }
 
