@@ -8,6 +8,7 @@ package org.gridsuite.study.server.service.securityanalysis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,13 +35,15 @@ class SecurityAnalysisRestServiceTest {
     private RemoteServicesProperties remoteServicesProperties;
     @Mock(answer = RETURNS_DEEP_STUBS)
     private RestClient restClient;
+    @Mock
+    private RemoteServicesInspector remoteServicesInspector;
 
     private SecurityAnalysisRestService securityAnalysisRestService;
 
     @BeforeEach
     void setUp() {
         when(remoteServicesProperties.getServiceUri("security-analysis-server")).thenReturn(BASE_URI);
-        securityAnalysisRestService = new SecurityAnalysisRestService(remoteServicesProperties, new ObjectMapper(), restClient);
+        securityAnalysisRestService = new SecurityAnalysisRestService(remoteServicesProperties, remoteServicesInspector, new ObjectMapper(), restClient);
     }
 
     @Test
