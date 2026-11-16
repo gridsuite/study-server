@@ -772,12 +772,6 @@ public class RootNetworkNodeInfoService {
         return asymmetricalLoadRestService.getAsymmetricalLoadResultsPage(asymmetricalLoadParameters, filters, globalFilters, pageable);
     }
 
-    @Transactional(readOnly = true)
-    public String getLogicalControlsResult(UUID nodeUuid, UUID rootNetworkUuid) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOGICAL_CONTROLS);
-        return logicalControlsRestService.getLogicalControlsResult(resultUuid);
-    }
-
     /**************************
      * GET COMPUTATION STATUS *
      **************************/
