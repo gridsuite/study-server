@@ -19,6 +19,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.stateestimation.StateEstimationRestService;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -30,15 +31,17 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.net.ServerSocket;
@@ -98,6 +101,8 @@ class StateEstimationMeasurementsEncodingTest {
     private TestUtils studyTestUtils;
     @Autowired
     private RemoteServicesProperties remoteServicesProperties;
+    @Mock
+    private RemoteServicesInspector remoteServicesInspector;
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private UUID studyUuid;
@@ -252,8 +257,10 @@ class StateEstimationMeasurementsEncodingTest {
 
     @Test
     void slowStateEstimationServerIsGatewayTimeoutWithTheApplicationHttpClient(MockWebServer server) {
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory();
+        requestFactory.setReadTimeout(Duration.ofMillis(300));
         StateEstimationRestService withTimeout = new StateEstimationRestService(
-            remoteServicesProperties, objectMapper, new RestTemplateBuilder().readTimeout(Duration.ofMillis(300)).build());
+            remoteServicesProperties, remoteServicesInspector, objectMapper, RestClient.builder().requestFactory(requestFactory).build());
         withTimeout.setBaseUri(server.url("").toString().replaceAll("/$", ""));
         server.enqueue(new MockResponse.Builder().code(200).body("[]").headersDelay(3, TimeUnit.SECONDS).build());
 

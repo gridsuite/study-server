@@ -11,17 +11,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
 import org.gridsuite.study.server.utils.assertions.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.List;
 import java.util.UUID;
@@ -30,7 +32,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.absent;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
-import static org.gridsuite.study.server.service.client.RestClient.DELIMITER;
+import static org.gridsuite.study.server.service.client.RestClientService.DELIMITER;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 import static org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService.*;
 import static org.gridsuite.study.server.utils.assertions.Assertions.assertThat;
@@ -55,17 +57,19 @@ class DynamicMarginCalculationRestServiceTest extends AbstractWireMockRestClient
     private static final String PARAMETERS_JSON = "parametersJson";
     private DynamicMarginCalculationRestService dynamicMarginCalculationRestService;
     @Autowired
-    private RestTemplate restTemplate;
+    private RestClient restClient;
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired
     private RemoteServicesProperties remoteServicesProperties;
+    @Mock
+    private RemoteServicesInspector remoteServicesInspector;
 
     @BeforeEach
     void setup() {
         // config client
         remoteServicesProperties.setServiceUri("dynamic-margin-calculation-server", initMockWebServer());
-        dynamicMarginCalculationRestService = new DynamicMarginCalculationRestService(remoteServicesProperties, restTemplate, objectMapper);
+        dynamicMarginCalculationRestService = new DynamicMarginCalculationRestService(remoteServicesProperties, remoteServicesInspector, restClient, objectMapper);
     }
 
     @Test
@@ -254,6 +258,20 @@ class DynamicMarginCalculationRestServiceTest extends AbstractWireMockRestClient
         assertThrows(
             HttpServerErrorException.class,
             () -> dynamicMarginCalculationRestService.duplicateParameters(PARAMETERS_UUID)
+        );
+    }
+
+    @Test
+    void testResetParameters() {
+        String url = PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID + DELIMITER + "reset";
+
+        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url)).willReturn(WireMock.ok()));
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicMarginCalculationRestService.resetParameters(PARAMETERS_UUID));
+
+        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url)).willReturn(WireMock.notFound()));
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicMarginCalculationRestService.resetParameters(PARAMETERS_UUID)
         );
     }
 

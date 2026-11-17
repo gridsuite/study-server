@@ -95,6 +95,11 @@ class ComputationResultFiltersTest {
                         COMPUTATION_TYPE + "/" + COMPUTATION_SUB_TYPE + "/columns")).willReturn(noContent()));
     }
 
+    private void stubResetFilters() {
+        wireMockServer.stubFor(WireMock.put(urlEqualTo(BASE_URI + COMPUTATION_FILTERS_UUID + "/" +
+                COMPUTATION_TYPE + "/" + COMPUTATION_SUB_TYPE + "/reset-filters")).willReturn(noContent()));
+    }
+
     private void verifyDefaultFiltersCalledOnce() {
         wireMockServer.verify(1, postRequestedFor(urlEqualTo(BASE_URI + DEFAULT)));
     }
@@ -117,6 +122,7 @@ class ComputationResultFiltersTest {
         stubGetColumnFilters();
         stubSetGlobalFilters();
         stubUpdateColumns();
+        stubResetFilters();
     }
 
     @Test
@@ -172,6 +178,19 @@ class ComputationResultFiltersTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/computation-result-filters/{computationType}/{computationSubType}/columns", study.getId(),
                 COMPUTATION_TYPE, COMPUTATION_SUB_TYPE).contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isNoContent());
         verifyDefaultFiltersNotCalled();
+        checkComputationResultTabUpdateMessageReceived(study.getId(), NotificationService.UPDATE_COMPUTATION_RESULT_COLUMN_FILTER, COMPUTATION_TYPE, COMPUTATION_SUB_TYPE);
+        wireMockServer.resetRequests();
+    }
+
+    @Test
+    void resetFilters() throws Exception {
+        StudyEntity study = insertDummyStudy(COMPUTATION_FILTERS_UUID);
+        mockMvc.perform(put("/v1/studies/{studyUuid}/computation-result-filters/{computationType}/{computationSubType}/reset-filters", study.getId(),
+                COMPUTATION_TYPE, COMPUTATION_SUB_TYPE)).andExpect(status().isNoContent());
+        verifyDefaultFiltersNotCalled();
+        wireMockServer.verify(1, putRequestedFor(urlEqualTo(BASE_URI + COMPUTATION_FILTERS_UUID + "/" +
+                COMPUTATION_TYPE + "/" + COMPUTATION_SUB_TYPE + "/reset-filters")));
+        checkComputationResultTabUpdateMessageReceived(study.getId(), NotificationService.UPDATE_COMPUTATION_RESULT_GLOBAL_FILTER, COMPUTATION_TYPE, null);
         checkComputationResultTabUpdateMessageReceived(study.getId(), NotificationService.UPDATE_COMPUTATION_RESULT_COLUMN_FILTER, COMPUTATION_TYPE, COMPUTATION_SUB_TYPE);
         wireMockServer.resetRequests();
     }

@@ -148,7 +148,8 @@ public class StudyService {
         VOLTAGE_INITIALIZATION("VoltageInit"),
         STATE_ESTIMATION("StateEstimation"),
         PCC_MIN("PccMin"),
-        ASYMMETRICAL_LOAD("AsymmetricalLoad");
+        ASYMMETRICAL_LOAD("AsymmetricalLoad"),
+        LOGICAL_CONTROLS("LogicalControls");
 
         public final String reportKey;
 
@@ -445,7 +446,7 @@ public class StudyService {
     }
 
     private List<UUID> getStudyModificationGroupUuids(UUID studyUuid) {
-        return networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid).stream()
+        return networkModificationTreeService.getAllNetworkModificationNodeInfos(studyUuid).stream()
                 .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
                 .toList();
     }
@@ -621,7 +622,7 @@ public class StudyService {
         if (studyCreationRequestEntity.isEmpty() && studyEntity.isPresent()) {
             List<RootNetworkInfos> rootNetworkInfos = getStudyRootNetworksInfos(studyUuid);
             // get all modification groups and nodes related to the study
-            List<NetworkModificationNodeInfoEntity> allStudyNetworkModificationNodeInfo = networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid);
+            List<NetworkModificationNodeInfoEntity> allStudyNetworkModificationNodeInfo = networkModificationTreeService.getAllNetworkModificationNodeInfos(studyUuid);
             List<Pair<UUID, UUID>> modificationGroupUuidsNodeUuids = allStudyNetworkModificationNodeInfo.stream()
                     .map(nodeInfoEntity -> Pair.of(nodeInfoEntity.getModificationGroupUuid(), nodeInfoEntity.getIdNode()))
                     .toList();
@@ -935,15 +936,25 @@ public class StudyService {
             case "branch" -> additionalParameters.put(
                 InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
                 String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadBranchOperationalLimitGroup()));
-            case "line" -> additionalParameters.put(
-                InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
-                String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineOperationalLimitGroup()));
+            case "line" -> {
+                additionalParameters.put(
+                    InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
+                    String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineOperationalLimitGroup()));
+                additionalParameters.put(
+                    InfoTypeParameters.QUERY_PARAM_LOAD_BUS,
+                    String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineBus()));
+            }
             case "two_windings_transformer" -> additionalParameters.put(
                 InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
                 String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadTwtOperationalLimitGroup()));
-            case "generator" -> additionalParameters.put(
-                InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
-                String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal()));
+            case "generator" -> {
+                additionalParameters.put(
+                    InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
+                    String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal()));
+                additionalParameters.put(
+                    InfoTypeParameters.QUERY_PARAM_LOAD_BUS,
+                    String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorBus()));
+            }
             case "battery" -> additionalParameters.put(
                     InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
                     String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadBatteryRegulatingTerminal()));
@@ -1006,13 +1017,18 @@ public class StudyService {
         optionalParameters.get(String.valueOf(ElementType.LINE)).put(
             InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
             String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineOperationalLimitGroup()));
+        optionalParameters.get(String.valueOf(ElementType.LINE)).put(
+            InfoTypeParameters.QUERY_PARAM_LOAD_BUS,
+            String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineBus()));
         optionalParameters.get(String.valueOf(ElementType.TWO_WINDINGS_TRANSFORMER)).put(
             InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
             String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadTwtOperationalLimitGroup()));
         optionalParameters.put(String.valueOf(ElementType.GENERATOR),
             Map.of(
                 InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
-                String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal())));
+                String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal()),
+                InfoTypeParameters.QUERY_PARAM_LOAD_BUS,
+                String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorBus())));
         optionalParameters.put(String.valueOf(ElementType.BATTERY),
                 Map.of(
                         InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
@@ -1653,20 +1669,8 @@ public class StudyService {
      * and replaced in the node by a reference to this now shared composite modification.
      */
     @Transactional(readOnly = true)
-    public void shareCompositeNetworkModification(
-        UUID studyUuid,
-        UUID nodeUuid,
-        UUID modificationUuid,
-        String name,
-        String description,
-        UUID parentDirectoryUuid,
-        String userId) {
-        // checks we can write in the target directory before touching anything
-        directoryService.checkPermission(List.of(), parentDirectoryUuid, userId, PermissionType.WRITE, false);
-        if (directoryService.elementExists(parentDirectoryUuid, name, DirectoryService.MODIFICATION)) {
-            throw new StudyException(ELEMENT_ALREADY_EXISTS, "composite modification name " + name + " already exists in directory", Map.of("fileName", name));
-        }
-
+    public void shareCompositeNetworkModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, String name,
+                                                  String description, UUID parentDirectoryUuid, String userId) {
         UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         try {
@@ -1674,7 +1678,7 @@ public class StudyService {
             ModificationReference newReference = networkModificationRestService.extractCompositeModificationToShare(groupUuid, modificationUuid, name, description);
             // the composite modification keeps its uuid when extracted, so it is shared under that same uuid
             // description is null as it is provided by the referenced modification
-            directoryService.createElement(parentDirectoryUuid, null, modificationUuid, name, DirectoryService.MODIFICATION, userId);
+            directoryService.createElement(parentDirectoryUuid, null, modificationUuid, name, DirectoryService.MODIFICATION, userId, true);
             // extraction replaced the local composite by a new reference modification, in the node group or in a parent
             // composite: register it on the shared element
             directoryService.createSharingLinks(List.of(newReference), studyUuid, nodeUuid, userId);
@@ -2355,6 +2359,14 @@ public class StudyService {
         notificationService.emitComputationResultColumnFilterChanged(studyUuid, computationType, computationSubType);
     }
 
+    @Transactional
+    public void resetComputationResultFilters(UUID studyUuid, String computationType, String computationSubType) {
+        UUID computationResultFiltersId = getComputationResultFiltersId(studyUuid);
+        studyConfigService.resetComputationResultFilters(computationResultFiltersId, computationType, computationSubType);
+        notificationService.emitComputationResultGlobalFilterChanged(studyUuid, computationType);
+        notificationService.emitComputationResultColumnFilterChanged(studyUuid, computationType, computationSubType);
+    }
+
     public UUID getComputationResultFiltersId(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
         UUID computationResultFiltersId = studyEntity.getComputationResultFiltersUuid();
@@ -2448,6 +2460,7 @@ public class StudyService {
         allComputationStatus.put(SECURITY_ANALYSIS, rootNetworkNodeInfoService.getSecurityAnalysisStatus(nodeUuid, rootNetworkUuid));
         allComputationStatus.put(PCC_MIN, rootNetworkNodeInfoService.getPccMinStatus(nodeUuid, rootNetworkUuid));
         allComputationStatus.put(ASYMMETRICAL_LOAD, rootNetworkNodeInfoService.getAsymmetricalLoadStatus(nodeUuid, rootNetworkUuid));
+        allComputationStatus.put(LOGICAL_CONTROLS, rootNetworkNodeInfoService.getLogicalControlsStatus(nodeUuid, rootNetworkUuid));
         allComputationStatus.put(DYNAMIC_MARGIN_CALCULATION, rootNetworkNodeInfoService.getDynamicMarginCalculationStatus(nodeUuid, rootNetworkUuid));
         allComputationStatus.put(DYNAMIC_SECURITY_ANALYSIS, rootNetworkNodeInfoService.getDynamicSecurityAnalysisStatus(nodeUuid, rootNetworkUuid));
         allComputationStatus.put(DYNAMIC_SIMULATION, rootNetworkNodeInfoService.getDynamicSimulationStatus(nodeUuid, rootNetworkUuid));

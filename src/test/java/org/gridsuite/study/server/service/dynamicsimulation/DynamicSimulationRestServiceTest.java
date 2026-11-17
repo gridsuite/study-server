@@ -11,6 +11,7 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
@@ -18,12 +19,13 @@ import org.gridsuite.study.server.service.client.util.ParameterTestUtils;
 import org.gridsuite.study.server.utils.assertions.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.List;
 import java.util.UUID;
@@ -32,7 +34,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
-import static org.gridsuite.study.server.service.client.RestClient.DELIMITER;
+import static org.gridsuite.study.server.service.client.RestClientService.DELIMITER;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 import static org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService.*;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -61,13 +63,16 @@ class DynamicSimulationRestServiceTest extends AbstractWireMockRestClientTest {
     private DynamicSimulationRestService dynamicSimulationRestService;
 
     @Autowired
-    private RestTemplate restTemplate;
+    private RestClient restClient;
 
     @Autowired
     private ObjectMapper objectMapper;
 
     @Autowired
     private RemoteServicesProperties remoteServicesProperties;
+
+    @Mock
+    private RemoteServicesInspector remoteServicesInspector;
 
     @Autowired
     private TimeSeriesClient timeSeriesClient;
@@ -76,7 +81,7 @@ class DynamicSimulationRestServiceTest extends AbstractWireMockRestClientTest {
     void setup() {
         // config client
         remoteServicesProperties.setServiceUri("dynamic-simulation-server", initMockWebServer());
-        dynamicSimulationRestService = new DynamicSimulationRestService(remoteServicesProperties, restTemplate, objectMapper, timeSeriesClient);
+        dynamicSimulationRestService = new DynamicSimulationRestService(remoteServicesProperties, remoteServicesInspector, restClient, objectMapper, timeSeriesClient);
     }
 
     @Test
@@ -226,6 +231,26 @@ class DynamicSimulationRestServiceTest extends AbstractWireMockRestClientTest {
         assertThrows(
             HttpServerErrorException.class,
             () -> dynamicSimulationRestService.updateParameters(PARAMETERS_UUID, parameterJson)
+        );
+    }
+
+    @Test
+    void testResetParameters() {
+        String url = PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID + DELIMITER + "reset";
+
+        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url)).willReturn(WireMock.ok()));
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicSimulationRestService.resetParameters(PARAMETERS_UUID));
+
+        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url)).willReturn(WireMock.notFound()));
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSimulationRestService.resetParameters(PARAMETERS_UUID)
+        );
+
+        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url)).willReturn(WireMock.serverError()));
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSimulationRestService.resetParameters(PARAMETERS_UUID)
         );
     }
 

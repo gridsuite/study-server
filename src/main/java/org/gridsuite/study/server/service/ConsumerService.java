@@ -65,8 +65,6 @@ public class ConsumerService {
     private static final String HEADER_WITH_RATIO_TAP_CHANGERS = "withRatioTapChangers";
     private static final String HEADER_ERROR_MESSAGE = "errorMessage";
     private static final String HEADER_EXPORT_UUID = "exportUuid";
-    static final String HEADER_ACTION = "action";
-    static final String HEADER_GROUP_UUID = "groupUuid";
     private static final String HEADER_ONLY_METADATA = "onlyMetadata";
 
     private final ObjectMapper objectMapper;
@@ -321,7 +319,9 @@ public class ConsumerService {
     public Consumer<Message<String>> consumeCaseImportFailed() {
         return message -> {
             String receiverString = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            String errorMessage = message.getHeaders().get(StudyConstants.HEADER_ERROR_MESSAGE, String.class);
+            Object errorMessage = message.getHeaders().get(StudyConstants.HEADER_ERROR_MESSAGE);
+            // String longer than 1024 bytes are converted to com.rabbitmq.client.LongString (https://docs.spring.io/spring-amqp/docs/3.0.0/reference/html/#message-properties-converters)
+            String errorMessageStr = errorMessage != null ? errorMessage.toString() : null;
 
             if (receiverString != null) {
                 CaseImportReceiver receiver;
@@ -333,9 +333,9 @@ public class ConsumerService {
 
                     if (receiver.getCaseImportAction() == CaseImportAction.STUDY_CREATION) {
                         studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
-                        notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);
+                        notificationService.emitStudyCreationError(studyUuid, userId, errorMessageStr);
                     } else {
-                        handleRootNetworkImportFailed(receiver, errorMessage);
+                        handleRootNetworkImportFailed(receiver, errorMessageStr);
                     }
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);
@@ -406,10 +406,10 @@ public class ConsumerService {
     }
 
     private void handleQuotaEnd(ComputationType computationType, String userId, UUID resultUuid) {
-        if (!shouldCheckOperationQuotas) {
+        QuotaType quotaType = QuotaType.mapFromComputationType(computationType);
+        if (!shouldCheckOperationQuotas || quotaType == null) {
             return;
         }
-        QuotaType quotaType = QuotaType.mapFromComputationType(computationType);
         userAdminService.releaseQuota(userId, resultUuid);
         notificationService.emitQuotaChange(userId, quotaType);
     }
@@ -838,6 +838,26 @@ public class ConsumerService {
         return message -> consumeCalculationFailed(message, ASYMMETRICAL_LOAD);
     }
 
+    @Bean
+    public Consumer<Message<String>> consumeLogicalControlsResult() {
+        return message -> consumeCalculationResult(message, LOGICAL_CONTROLS);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeLogicalControlsRunning() {
+        return message -> consumeCalculationRunning(message, LOGICAL_CONTROLS);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeLogicalControlsStopped() {
+        return message -> consumeCalculationStopped(message, LOGICAL_CONTROLS);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeLogicalControlsFailed() {
+        return message -> consumeCalculationFailed(message, LOGICAL_CONTROLS);
+    }
+
     public void consumeNetworkExportFinished(Message<String> msg) {
         String receiverString = msg.getHeaders().get(HEADER_RECEIVER, String.class);
         String s3Key = msg.getHeaders().get(HEADER_S3_KEY, String.class);
@@ -884,7 +904,7 @@ public class ConsumerService {
 
     public void createCase(String s3Key, NodeExportInfos nodeExport, String userId, String exportContentType) {
         UUID caseUuid = caseService.createCase(s3Key, exportContentType);
-        directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, nodeExport.fileName(), DirectoryService.CASE, userId);
+        directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, nodeExport.fileName(), DirectoryService.CASE, userId, false);
     }
 
     @Bean

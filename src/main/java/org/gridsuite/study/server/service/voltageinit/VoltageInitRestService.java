@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.VariantInfos;
 import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
@@ -23,7 +24,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
@@ -32,6 +33,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.service.client.RemoteServiceName.VOLTAGE_INIT_SERVER;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
@@ -47,9 +49,10 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
     private final ObjectMapper objectMapper;
 
     public VoltageInitRestService(RemoteServicesProperties remoteServicesProperties,
-                                  RestTemplate restTemplate,
+                                  RemoteServicesInspector remoteServicesInspector,
+                                  RestClient restClient,
                                   ObjectMapper objectMapper) {
-        super(remoteServicesProperties.getServiceUri("voltage-init-server"), restTemplate);
+        super(remoteServicesProperties.getServiceUri("voltage-init-server"), restClient, remoteServicesInspector, VOLTAGE_INIT_SERVER);
         this.objectMapper = objectMapper;
     }
 
@@ -85,11 +88,10 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
 
         var path = uriComponentsBuilder.buildAndExpand(variantInfos.getNetworkUuid()).toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        return restTemplate.exchange(baseUri + path, HttpMethod.POST, new HttpEntity<>(headers), UUID.class).getBody();
+        return restClient.post().uri(baseUri + path)
+            .headers(headers -> headers.set(HEADER_USER_ID, userId))
+            .contentType(MediaType.APPLICATION_JSON)
+            .retrieve().body(UUID.class);
     }
 
     private String getVoltageInitResultOrStatus(UUID resultUuid, String suffix, UUID networkUuid, String variantId, String globalFilters) {
@@ -107,7 +109,8 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
             }
         }
         String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
-        return restTemplate.getForObject(baseUri + path, String.class);
+        return restClient.get().uri(baseUri + path)
+            .retrieve().body(String.class);
     }
 
     public String getVoltageInitResult(UUID resultUuid, UUID networkUuid, String variantId, String globalFilters) {
@@ -121,21 +124,24 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
     public VoltageInitParametersInfos getVoltageInitParameters(UUID parametersUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(parametersUuid).toUriString();
-        return restTemplate.getForObject(baseUri + path, VoltageInitParametersInfos.class);
+        return restClient.get().uri(baseUri + path)
+            .retrieve().body(VoltageInitParametersInfos.class);
     }
 
     public UUID createVoltageInitParameters(@Nullable VoltageInitParametersInfos parameters) {
-        var path = UriComponentsBuilder
-                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters")
-                .buildAndExpand()
-                .toUriString();
+        return callWithOptionalServerAndDefaultValue(() -> {
+            var path = UriComponentsBuilder
+                    .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters")
+                    .buildAndExpand()
+                    .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<VoltageInitParametersInfos> httpEntity = new HttpEntity<>(parameters, headers);
-
-        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+            var requestSpec = restClient.post().uri(baseUri + path)
+                .contentType(MediaType.APPLICATION_JSON);
+            if (parameters != null) {
+                requestSpec.body(parameters);
+            }
+            return requestSpec.retrieve().body(UUID.class);
+        });
     }
 
     @Override
@@ -143,42 +149,53 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
         return createVoltageInitParameters(null);
     }
 
-    public void updateVoltageInitParameters(UUID parametersUuid, @Nullable VoltageInitParametersInfos parameters) {
+    public void updateVoltageInitParameters(UUID parametersUuid, VoltageInitParametersInfos parameters) {
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(parametersUuid)
                 .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        var requestSpec = restClient.put().uri(baseUri + path)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (parameters != null) {
+            requestSpec.body(parameters);
+        }
+        requestSpec.retrieve().toEntity(UUID.class);
+    }
 
-        HttpEntity<VoltageInitParametersInfos> httpEntity = new HttpEntity<>(parameters, headers);
+    public void resetVoltageInitParameters(UUID parametersUuid) {
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI + "/reset")
+                .buildAndExpand(parametersUuid)
+                .toUriString();
 
-        restTemplate.exchange(baseUri + path, HttpMethod.PUT, httpEntity, UUID.class);
+        restClient.put().uri(baseUri + path).retrieve().toBodilessEntity();
     }
 
     @Override
     public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
+        return callWithOptionalServerAndDefaultValue(() -> {
+            String path = UriComponentsBuilder
+                    .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + "/{uuid}/duplicate")
+                    .buildAndExpand(sourceParametersUuid)
+                    .toUriString();
 
-        String path = UriComponentsBuilder
-                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + "/{uuid}/duplicate")
-                .buildAndExpand(sourceParametersUuid)
-                .toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
-
-        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+            return restClient.post().uri(baseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .retrieve().body(UUID.class);
+        });
     }
 
     @Override
     public void deleteParameters(UUID parametersUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)
-            .buildAndExpand(parametersUuid).toUriString();
+        callWithOptionalServer(() -> {
+            String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)
+                .buildAndExpand(parametersUuid).toUriString();
 
-        restTemplate.delete(baseUri + path);
+            restClient.delete().uri(baseUri + path)
+            .retrieve().toBodilessEntity();
+        });
     }
 
     public void stopVoltageInit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
@@ -197,19 +214,18 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
             throw new UncheckedIOException(e);
         }
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
         String path = UriComponentsBuilder
                 .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/stop")
                 .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
 
-        restTemplate.exchange(baseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
+        restClient.put().uri(baseUri + path)
+            .headers(headers -> headers.set(HEADER_USER_ID, userId))
+            .contentType(MediaType.APPLICATION_JSON)
+            .retrieve().toBodilessEntity();
     }
 
     public void deleteVoltageInitResults(List<UUID> resultsUuids, String userId) {
-        deleteCalculationResults(resultsUuids, DELIMITER + VOLTAGE_INIT_API_VERSION + "/results", restTemplate, baseUri, userId);
+        deleteCalculationResults(resultsUuids, DELIMITER + VOLTAGE_INIT_API_VERSION + "/results", restClient, baseUri, userId);
     }
 
     public void deleteAllVoltageInitResults(String userId) {
@@ -219,13 +235,15 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
     public Integer getVoltageInitResultsCount() {
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/supervision/results-count").toUriString();
-        return restTemplate.getForObject(baseUri + path, Integer.class);
+        return restClient.get().uri(baseUri + path)
+            .retrieve().body(Integer.class);
     }
 
     public UUID getModificationsGroupUuid(UUID nodeUuid, UUID resultUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/modifications-group-uuid")
             .buildAndExpand(resultUuid).toUriString();
-        return restTemplate.getForObject(baseUri + path, UUID.class);
+        return restClient.get().uri(baseUri + path)
+            .retrieve().body(UUID.class);
     }
 
     public void invalidateVoltageInitStatus(List<UUID> uuids) {
@@ -234,7 +252,8 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
                     .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/invalidate-status")
                     .queryParam(RESULT_UUID, uuids).build().toUriString();
 
-            restTemplate.put(baseUri + path, Void.class);
+            restClient.put().uri(baseUri + path)
+                .retrieve().toBodilessEntity();
         }
     }
 
@@ -242,18 +261,21 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
         String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/modifications-group-uuid")
             .buildAndExpand(resultUuid).toUriString();
 
-        restTemplate.put(baseUri + path, Void.class);
+        restClient.put().uri(baseUri + path)
+            .retrieve().toBodilessEntity();
     }
 
     public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/download-debug-file")
             .buildAndExpand(resultUuid).toUriString();
-        return restTemplate.exchange(getBaseUri() + path, HttpMethod.GET, null, Resource.class);
+        return restClient.get().uri(getBaseUri() + path)
+            .retrieve().toEntity(Resource.class);
     }
 
     public VoltageInitParametersInfos getParameters(UUID parameterUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
-        return restTemplate.getForObject(getBaseUri() + path, VoltageInitParametersInfos.class);
+        return restClient.get().uri(getBaseUri() + path)
+            .retrieve().body(VoltageInitParametersInfos.class);
     }
 
     @Override

@@ -43,13 +43,24 @@ public class AsymmetricalLoadParametersController {
     }
 
     @PostMapping(value = "/parameters")
-    @Operation(summary = "set asymmetrical load parameters on study, reset to default ones if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The asymmetrical load parameters are set"),
-        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    @Operation(summary = "set asymmetrical load parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The asymmetrical load parameters are set")})
     public ResponseEntity<Void> setAsymmetricalLoadParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String asymmetricalLoadParametersInfos,
+            @RequestBody String asymmetricalLoadParametersInfos,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        return asymmetricalLoadService.setAsymmetricalLoadParameters(studyUuid, asymmetricalLoadParametersInfos, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
+        asymmetricalLoadService.setAsymmetricalLoadParameters(studyUuid, asymmetricalLoadParametersInfos, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/parameters/reset")
+    @Operation(summary = "Reset asymmetrical load parameters on study to the user profile or default ones")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The asymmetrical load parameters were reset"),
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    public ResponseEntity<Void> resetAsymmetricalLoadParameters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        return asymmetricalLoadService.resetAsymmetricalLoadParameters(studyUuid, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 }

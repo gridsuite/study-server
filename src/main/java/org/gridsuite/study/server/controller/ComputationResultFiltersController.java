@@ -79,4 +79,16 @@ public class ComputationResultFiltersController {
         studyService.updateColumns(studyUuid, computationType, computationSubType, columnInfos);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/{computationType}/{computationSubType}/reset-filters")
+    @Operation(summary = "Reset global and column filters",
+            description = "Resets the global filters of a computation type and the column filters of one of its subtypes")
+    @ApiResponse(responseCode = "204", description = "Filters reset successfully")
+    public ResponseEntity<Void> resetFilters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable String computationType,
+            @PathVariable String computationSubType) {
+        studyService.resetComputationResultFilters(studyUuid, computationType, computationSubType);
+        return ResponseEntity.noContent().build();
+    }
 }
