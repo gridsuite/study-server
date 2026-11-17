@@ -39,6 +39,7 @@ import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.GenericMessage;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.net.URLEncoder;
@@ -83,7 +84,7 @@ class StudyTest extends StudyTestBase {
         assertTrue(createdStudyBasicInfosList.isEmpty());
 
         //empty list
-        mockMvc.perform(get("/v1/study_creation_requests").header(USER_ID_HEADER, "userId")).andExpectAll(status().isOk(),
+        mockMvc.perform(get("/v1/study_creation_requests")).andExpectAll(status().isOk(),
             content().contentType(MediaType.APPLICATION_JSON), content().string("[]"));
 
         //insert a study
@@ -91,7 +92,7 @@ class StudyTest extends StudyTestBase {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
 
         // check the study
-        result = mockMvc.perform(get("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
+        result = mockMvc.perform(get("/v1/studies/{studyUuid}", studyUuid))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
 
         resultAsString = result.getResponse().getContentAsString();
@@ -102,7 +103,7 @@ class StudyTest extends StudyTestBase {
         //insert a study with a non-existing case and except exception
         UUID stubCaseNotExistsId = wireMockStubs.caseServer.stubCaseExists(NOT_EXISTING_CASE_UUID, false);
         result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}",
-                NOT_EXISTING_CASE_UUID, "false").header(USER_ID_HEADER, "userId").param(CASE_FORMAT, "XIIDM"))
+                NOT_EXISTING_CASE_UUID, "false").param(CASE_FORMAT, "XIIDM"))
             .andExpectAll(status().isNotFound(), content().contentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE)).andReturn();
         var problemDetail = mapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
         assertEquals("The case '" + NOT_EXISTING_CASE_UUID + "' does not exist", problemDetail.getDetail());
@@ -124,7 +125,7 @@ class StudyTest extends StudyTestBase {
 
         UUID randomUuid = UUID.randomUUID();
         //get a non-existing study -> 404 not found
-        result = mockMvc.perform(get("/v1/studies/{studyUuid}", randomUuid).header(USER_ID_HEADER, "userId"))
+        result = mockMvc.perform(get("/v1/studies/{studyUuid}", randomUuid))
             .andExpectAll(status().isNotFound(),
                 content().contentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE))
             .andReturn();
@@ -149,13 +150,13 @@ class StudyTest extends StudyTestBase {
         UUID stubNetworkExportId = wireMockStubs.networkConversionServer.stubNetworkExport(NETWORK_UUID_STRING, "XIIDM", UUID.randomUUID().toString());
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName",
-            studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isOk());
+            studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM")).andExpect(status().isOk());
         wireMockStubs.networkConversionServer.verifyNetworkExport(stubNetworkExportId, NETWORK_UUID_STRING, "XIIDM",
             Map.of("fileName", WireMock.equalTo("myFileName")));
 
         stubNetworkExportId = wireMockStubs.networkConversionServer.stubNetworkExport(NETWORK_UUID_STRING, "XIIDM", UUID.randomUUID().toString());
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?compression=GZIP&fileName=myFileName",
-            studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isOk());
+            studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM")).andExpect(status().isOk());
         wireMockStubs.networkConversionServer.verifyNetworkExport(stubNetworkExportId, NETWORK_UUID_STRING, "XIIDM",
             Map.of("compression", WireMock.equalTo(CompressionType.GZIP.name()), "fileName", WireMock.equalTo("myFileName")));
 
@@ -163,7 +164,7 @@ class StudyTest extends StudyTestBase {
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName&formatParameters=%7B%22iidm.export.xml.indent%22%3Afalse%7D",
                         studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM")
-            .header(HEADER_USER_ID, userId)).andExpect(status().isOk());
+            ).andExpect(status().isOk());
         wireMockStubs.networkConversionServer.verifyNetworkExport(stubNetworkExportId, NETWORK_UUID_STRING, "XIIDM",
             Map.of("fileName", WireMock.equalTo("myFileName")));
 
@@ -172,7 +173,7 @@ class StudyTest extends StudyTestBase {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName", studyNameUserIdUuid, firstRootNetworkUuid,
                 modificationNode1Uuid, "XIIDM")
-            .header(HEADER_USER_ID, userId)).andExpect(status().isInternalServerError());
+            ).andExpect(status().isInternalServerError());
 
         rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode1.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid),
             RootNetworkNodeInfo.builder().nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).build());
@@ -183,7 +184,7 @@ class StudyTest extends StudyTestBase {
                 studyNameUserIdUuid,
                 firstRootNetworkUuid,
                 modificationNode1Uuid,
-                "XIIDM").header(HEADER_USER_ID, userId))
+                "XIIDM"))
             .andExpect(status().isOk());
 
         wireMockStubs.networkConversionServer.verifyNetworkExport(stubNetworkExportId, NETWORK_UUID_STRING, "XIIDM",
@@ -202,7 +203,7 @@ class StudyTest extends StudyTestBase {
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}",
                 studyUuid, firstRootNetworkUuid, rootNodeUuid, "ERROR")
                 .param("fileName", "myFileName")
-                .header(HEADER_USER_ID, "userId"))
+                )
             .andExpect(status().is5xxServerError());
 
         wireMockStubs.networkConversionServer.verifyNetworkExport(stubNetworkExportErrorId, NETWORK_UUID_STRING, "ERROR",
@@ -247,7 +248,7 @@ class StudyTest extends StudyTestBase {
         UUID stubDeleteCaseId = wireMockStubs.caseServer.stubDeleteCase(CASE_UUID_STRING);
         DeleteStudyStubs deleteStudyStubs = setupDeleteStudyStubs();
 
-        mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
+        mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid))
             .andExpect(status().isOk());
 
         assertTrue(studyRepository.findById(studyUuid).isEmpty());
@@ -281,7 +282,7 @@ class StudyTest extends StudyTestBase {
         UUID stubUuid = wireMockStubs.stubNetworkModificationDeleteGroup();
         DeleteStudyStubs deleteStudyStubs = setupDeleteStudyStubs();
 
-        mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
+        mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid))
             .andExpectAll(status().isOk());
         assertTrue(capturedOutput.getOut().contains(StudyServerExecutionService.class.getName() + " - " + CompletionException.class.getName() + ": " + InterruptedException.class.getName()));
 
@@ -306,7 +307,7 @@ class StudyTest extends StudyTestBase {
         UUID stubDeleteCaseId = wireMockStubs.caseServer.stubDeleteCase(nonExistingCaseUuid.toString());
         DeleteStudyStubs deleteStudyStubs = setupDeleteStudyStubs();
 
-        mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
+        mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid))
             .andExpect(status().isOk());
 
         assertTrue(studyRepository.findById(studyUuid).isEmpty());
@@ -366,7 +367,7 @@ class StudyTest extends StudyTestBase {
         MvcResult mvcResult = mockMvc
                 .perform(get("/v1/studies/metadata?ids="
                         + Stream.of(oldStudyUuid, studyUuid).map(Object::toString).collect(Collectors.joining(",")))
-                        .header(USER_ID_HEADER, "userId"))
+                        )
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
         List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
@@ -386,7 +387,7 @@ class StudyTest extends StudyTestBase {
     void testNotifyStudyMetadataUpdated() throws Exception {
         UUID studyUuid = UUID.randomUUID();
         mockMvc.perform(post("/v1/studies/{studyUuid}/notification", studyUuid)
-                .header(USER_ID_HEADER, "userId"))
+                )
             .andExpect(status().isOk());
         checkStudyMetadataUpdatedMessagesReceived();
     }
@@ -402,7 +403,7 @@ class StudyTest extends StudyTestBase {
                 .withBody(mapper.writeValueAsString(REPORT_TEST))));
 
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/parent-nodes-report?reportType=NETWORK_MODIFICATION", studyUuid,
-                firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
+                firstRootNetworkUuid, rootNodeUuid))
             .andExpect(status().isOk()).andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
         List<Report> reports = mapper.readValue(resultAsString, new TypeReference<>() { });
@@ -420,13 +421,13 @@ class StudyTest extends StudyTestBase {
         wireMockStubs.stubGetReportsLogs(mapper.writeValueAsString(REPORT_PAGE));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs/search?reportId=" + REPORT_ID + "&searchTerm=testTerm&pageSize=10", studyUuid,
-                firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
+                firstRootNetworkUuid, rootNodeUuid))
             .andExpect(status().isOk());
         wireMockStubs.verifyGetReportLogsSearchWithReportId(REPORT_ID.toString(), "testTerm", 10);
 
         //test with severityFilter and messageFilter param
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs/search?reportId=" + REPORT_ID
-                + "&searchTerm=testTerm&pageSize=10&severityLevels=WARN&message=testMsgFilter", studyUuid, firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
+                + "&searchTerm=testTerm&pageSize=10&severityLevels=WARN&message=testMsgFilter", studyUuid, firstRootNetworkUuid, rootNodeUuid))
             .andExpect(status().isOk());
         wireMockStubs.verifyGetReportLogsSearchWithReportId(REPORT_ID.toString(), "testTerm", 10, "WARN", "testMsgFilter");
     }
@@ -445,7 +446,7 @@ class StudyTest extends StudyTestBase {
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
                 .param("duplicateCase", "true")
                 .param(CASE_FORMAT, "UCTE")
-                .header("userId", userId))
+                )
             .andExpect(status().isOk())
             .andReturn();
         String resultAsString = result.getResponse().getContentAsString();
@@ -480,7 +481,7 @@ class StudyTest extends StudyTestBase {
         UUID stubCaseExistsId = wireMockStubs.caseServer.stubCaseExists(CASE_UUID_CAUSING_IMPORT_ERROR, true);
 
         mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_IMPORT_ERROR)
-                .header("userId", userId)
+
                 .param(CASE_FORMAT, "UCTE"))
             .andExpect(status().isOk());
 
@@ -499,7 +500,7 @@ class StudyTest extends StudyTestBase {
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_FINISHED, headers.get(HEADER_UPDATE_TYPE));
 
-        MvcResult mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header(USER_ID_HEADER, "userId")).andExpectAll(
+        MvcResult mvcResult = mockMvc.perform(get("/v1/study_creation_requests")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
@@ -521,7 +522,7 @@ class StudyTest extends StudyTestBase {
         UUID stubCaseExistsId = wireMockStubs.caseServer.stubCaseExists(CASE_UUID_CAUSING_CONVERSION_ERROR, true);
 
         mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_CONVERSION_ERROR)
-                .header("userId", userId)
+
                 .param(CASE_FORMAT, "XIIDM"))
             .andExpect(status().isOk());
 
@@ -553,7 +554,7 @@ class StudyTest extends StudyTestBase {
         UUID stubCaseExistsId = wireMockStubs.caseServer.stubCaseExists(CASE_UUID_CAUSING_STUDY_CREATION_ERROR, true);
 
         mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_STUDY_CREATION_ERROR)
-                .header("userId", userId)
+
                 .param(CASE_FORMAT, "UCTE"))
             .andExpect(status().isOk());
 
@@ -590,7 +591,7 @@ class StudyTest extends StudyTestBase {
             .stubImportNetworkWithPostAction(NEW_STUDY_CASE_UUID, FIRST_VARIANT_ID, NETWORK_INFOS, "UCTE", countDownLatch);
         UUID stubDisableCaseExpirationId = wireMockStubs.caseServer.stubDisableCaseExpiration(NEW_STUDY_CASE_UUID);
 
-        mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header(USER_ID_HEADER, "userId")).andExpectAll(
+        mvcResult = mockMvc.perform(get("/v1/study_creation_requests")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
@@ -609,7 +610,7 @@ class StudyTest extends StudyTestBase {
         // drop the broker message for study creation request (deletion)
         TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
 
-        mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header(USER_ID_HEADER, "userId")).andExpectAll(
+        mvcResult = mockMvc.perform(get("/v1/study_creation_requests")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
@@ -627,7 +628,7 @@ class StudyTest extends StudyTestBase {
 
         //insert a study
         mvcResult = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", NEW_STUDY_CASE_UUID, "false")
-                .header(USER_ID_HEADER, "userId")
+
                 .param(CASE_FORMAT, "XIIDM"))
             .andExpect(status().isOk())
             .andReturn();
@@ -638,7 +639,7 @@ class StudyTest extends StudyTestBase {
         assertThat(bsiResult, createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId()));
 
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests", NEW_STUDY_CASE_UUID, "false")
-                .header(USER_ID_HEADER, "userId")).andExpectAll(
+                ).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
@@ -658,7 +659,7 @@ class StudyTest extends StudyTestBase {
         TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
 
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests")
-                .header(USER_ID_HEADER, "userId")).andExpectAll(
+                ).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
@@ -696,6 +697,7 @@ class StudyTest extends StudyTestBase {
     }
 
     @Test
+    @WithMockUser(username = NO_PARAMS_IN_PROFILE_USER_ID)
     void testCreateStudyWithDefaultLoadflowUserHasNoParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = setupCreateStudyStubs(NO_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON, CASE_UUID_STRING);
         setupCreateParametersStubs();
@@ -707,6 +709,7 @@ class StudyTest extends StudyTestBase {
     }
 
     @Test
+    @WithMockUser(username = INVALID_PARAMS_IN_PROFILE_USER_ID)
     void testCreateStudyWithDefaultLoadflowUserHasInvalidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = setupCreateStudyStubs(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
         setupCreateParametersStubs();
@@ -723,6 +726,7 @@ class StudyTest extends StudyTestBase {
     }
 
     @Test
+    @WithMockUser(username = VALID_PARAMS_IN_PROFILE_USER_ID)
     void testCreateStudyWithDefaultLoadflowUserHasValidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = setupCreateStudyStubs(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
         setupCreateParametersStubs();
@@ -739,6 +743,7 @@ class StudyTest extends StudyTestBase {
     }
 
     @Test
+    @WithMockUser(username = INVALID_PARAMS_IN_PROFILE_USER_ID)
     void testCreateStudyWithDefaultSecurityAnalysisUserHasInvalidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = setupCreateStudyStubs(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
         setupCreateParametersStubs();
@@ -755,6 +760,7 @@ class StudyTest extends StudyTestBase {
     }
 
     @Test
+    @WithMockUser(username = VALID_PARAMS_IN_PROFILE_USER_ID)
     void testCreateStudyWithDefaultSecurityAnalysisUserHasValidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = setupCreateStudyStubs(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
         setupCreateParametersStubs();
@@ -771,6 +777,7 @@ class StudyTest extends StudyTestBase {
     }
 
     @Test
+    @WithMockUser(username = INVALID_PARAMS_IN_PROFILE_USER_ID)
     void testCreateStudyWithDefaultSensitivityAnalysisUserHasInvalidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = setupCreateStudyStubs(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
         setupCreateParametersStubs();
@@ -787,6 +794,7 @@ class StudyTest extends StudyTestBase {
     }
 
     @Test
+    @WithMockUser(username = VALID_PARAMS_IN_PROFILE_USER_ID)
     void testCreateStudyWithDefaultSensitivityAnalysisUserHasValidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = setupCreateStudyStubs(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
         setupCreateParametersStubs();
@@ -803,6 +811,7 @@ class StudyTest extends StudyTestBase {
     }
 
     @Test
+    @WithMockUser(username = INVALID_PARAMS_IN_PROFILE_USER_ID)
     void testCreateStudyWithDefaultShortcircuitUserHasInvalidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = setupCreateStudyStubs(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
         setupCreateParametersStubs();
@@ -819,6 +828,7 @@ class StudyTest extends StudyTestBase {
     }
 
     @Test
+    @WithMockUser(username = VALID_PARAMS_IN_PROFILE_USER_ID)
     void testCreateStudyWithDefaultShortcircuitUserHasValidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = setupCreateStudyStubs(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
         setupCreateParametersStubs();
@@ -835,6 +845,7 @@ class StudyTest extends StudyTestBase {
     }
 
     @Test
+    @WithMockUser(username = INVALID_PARAMS_IN_PROFILE_USER_ID)
     void testCreateStudyWithDefaultSpreadsheetConfigCollectionUserHasInvalidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = setupCreateStudyStubs(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
         setupCreateParametersStubs();
@@ -851,6 +862,7 @@ class StudyTest extends StudyTestBase {
     }
 
     @Test
+    @WithMockUser(username = VALID_PARAMS_IN_PROFILE_USER_ID)
     void testCreateStudyWithDefaultSpreadsheetConfigCollectionUserHasValidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = setupCreateStudyStubs(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
         setupCreateParametersStubs();
@@ -868,6 +880,7 @@ class StudyTest extends StudyTestBase {
     }
 
     @Test
+    @WithMockUser(username = INVALID_PARAMS_IN_PROFILE_USER_ID)
     void testCreateStudyWithDefaultNetworkVisualizationsParametersUserHasInvalidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = setupCreateStudyStubs(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
         setupCreateParametersStubs();
@@ -884,6 +897,7 @@ class StudyTest extends StudyTestBase {
     }
 
     @Test
+    @WithMockUser(username = VALID_PARAMS_IN_PROFILE_USER_ID)
     void testCreateStudyWithDefaultNetworkVisualizationsParametersUserHasValidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = setupCreateStudyStubs(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
         setupCreateParametersStubs();
@@ -901,6 +915,7 @@ class StudyTest extends StudyTestBase {
     }
 
     @Test
+    @WithMockUser(username = INVALID_PARAMS_IN_PROFILE_USER_ID)
     void testCreateStudyWithDefaultVoltageInitUserHasInvalidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = setupCreateStudyStubs(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
         setupCreateParametersStubs();
@@ -917,6 +932,7 @@ class StudyTest extends StudyTestBase {
     }
 
     @Test
+    @WithMockUser(username = VALID_PARAMS_IN_PROFILE_USER_ID)
     void testCreateStudyWithDefaultVoltageInitUserHasValidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = setupCreateStudyStubs(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
         setupCreateParametersStubs();
@@ -948,7 +964,7 @@ class StudyTest extends StudyTestBase {
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId(), rootNetworkUuid)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createTwoWindingsTransformerAttributes)
-                .header(USER_ID_HEADER, userId))
+                )
             .andExpect(status().isOk());
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
@@ -966,7 +982,7 @@ class StudyTest extends StudyTestBase {
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId(), rootNetworkUuid)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createLoadAttributes)
-                .header(USER_ID_HEADER, userId))
+                )
             .andExpect(status().isOk());
         checkUpdateStatusMessagesReceived(study1Uuid, node2.getId(), output);
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
@@ -997,7 +1013,7 @@ class StudyTest extends StudyTestBase {
         mockMvc.perform(post("/v1/studies/{studyUuid}/node-aliases", study1Uuid)
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectWriter.writeValueAsString(aliases))
-            .header(USER_ID_HEADER, userId)
+
         ).andExpect(status().isOk());
         checkNodeAliasUpdateMessageReceived(study1Uuid);
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -1028,7 +1044,7 @@ class StudyTest extends StudyTestBase {
 
         //Test duplication from a non-existing source study
         mockMvc.perform(post(STUDIES_URL + "/{studyUuid}/duplicate", UUID.randomUUID())
-                .header(USER_ID_HEADER, userId))
+                )
             .andExpect(status().isNotFound());
     }
 
@@ -1091,7 +1107,7 @@ class StudyTest extends StudyTestBase {
 
         String response = mockMvc.perform(post(STUDIES_URL + "/{studyUuid}/duplicate", studyUuid)
                 .param(CASE_FORMAT, "XIIDM")
-                .header(USER_ID_HEADER, "userId"))
+                )
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 
         String duplicatedStudyUuid = mapper.readValue(response, String.class);
@@ -1126,7 +1142,7 @@ class StudyTest extends StudyTestBase {
         UUID stubWorkspacesConfigDuplicateFromId = wireMockStubs.stubWorkspacesConfigDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
 
         String response = mockMvc.perform(post(STUDIES_URL + "/{studyUuid}/duplicate", studyUuid)
-                .header(USER_ID_HEADER, userId))
+                )
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         String newUuid = mapper.readValue(response, String.class);
         StudyEntity sourceStudy = studyRepository.findById(studyUuid).orElseThrow();
@@ -1381,7 +1397,7 @@ class StudyTest extends StudyTestBase {
             .param("exportToGridExplore", Boolean.TRUE.toString())
             .param("parentDirectoryUuid", directoryUuid.toString())
             .param("description", description)
-            .header(USER_ID_HEADER, userId)).andExpect(status().isOk());
+            ).andExpect(status().isOk());
 
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(), directoryUuid, PermissionType.WRITE, false);
         wireMockStubs.directoryServer.verifyElementExists(directoryUuid, fileName, DirectoryService.CASE);
@@ -1410,7 +1426,7 @@ class StudyTest extends StudyTestBase {
             .param("exportToGridExplore", Boolean.TRUE.toString())
             .param("parentDirectoryUuid", directoryUuid.toString())
             .param("description", description)
-            .header(USER_ID_HEADER, "userId")).andExpect(status().isInternalServerError());
+            ).andExpect(status().isInternalServerError());
 
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(), directoryUuid, PermissionType.WRITE, false);
         wireMockStubs.directoryServer.verifyElementExists(directoryUuid, fileName, DirectoryService.CASE);
@@ -1437,7 +1453,7 @@ class StudyTest extends StudyTestBase {
             .param("exportToGridExplore", Boolean.TRUE.toString())
             .param("parentDirectoryUuid", directoryUuid.toString())
             .param("description", description)
-            .header(USER_ID_HEADER, "userId")).andExpect(status().isInternalServerError());
+            ).andExpect(status().isInternalServerError());
 
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(), directoryUuid, PermissionType.WRITE, false);
     }
@@ -1456,7 +1472,7 @@ class StudyTest extends StudyTestBase {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuid}/name-and-description",
                 studyUuid, nodeUuid, modificationUuid)
                 .content(metadataJson)
-                .header(USER_ID_HEADER, "userId"))
+                )
                 .andExpect(status().isOk());
 
         wireMockStubs.verifyNetworkModificationUpdateNameAndDescription(stubId, modificationUuid.toString(), metadataJson);

@@ -22,6 +22,7 @@ import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.SupervisionService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -56,6 +57,7 @@ public class SupervisionController {
     @GetMapping(value = "/root-networks")
     @Operation(summary = "Get all the root networks uuids")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of all the root networks uuids")})
+    @PreAuthorize("true")
     public ResponseEntity<List<UUID>> getAllRootNetworks() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.getAllRootNetworksUuids());
     }
@@ -63,6 +65,7 @@ public class SupervisionController {
     @DeleteMapping(value = "/root-networks/{rootNetworkUuid}")
     @Operation(summary = "Delete a root network")
     @ApiResponse(responseCode = "200", description = "Root network deleted")
+    @PreAuthorize("true")
     public ResponseEntity<Void> deleteRootNetwork(@PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
         rootNetworkService.deleteRootNetwork(rootNetworkUuid);
         return ResponseEntity.ok().build();
@@ -71,6 +74,7 @@ public class SupervisionController {
     @GetMapping(value = "/studies")
     @Operation(summary = "Get supervision information for all studies")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of supervision information for all studies")})
+    @PreAuthorize("true")
     public ResponseEntity<List<SupervisionStudyInfos>> getAllStudiesBasicData() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.getSupervisionStudiesInfos());
     }
@@ -78,6 +82,7 @@ public class SupervisionController {
     @DeleteMapping(value = "/computation/results")
     @Operation(summary = "delete all results of a given computation")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all computation results have been deleted")})
+    @PreAuthorize("true")
     public ResponseEntity<Integer> deleteComputationResults(@Parameter(description = "Computation type") @RequestParam("type") ComputationType computationType,
                                                            @Parameter(description = "Dry run") @RequestParam("dryRun") boolean dryRun) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.deleteComputationResults(computationType, dryRun));
@@ -86,6 +91,7 @@ public class SupervisionController {
     @GetMapping(value = "/elasticsearch-host")
     @Operation(summary = "get the elasticsearch address")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "the elasticsearch address")})
+    @PreAuthorize("true")
     public ResponseEntity<String> getElasticsearchHost() {
         HttpHost httpHost = restClient.getNodes().get(0).getHost();
         String host = httpHost.getHostName()
@@ -97,6 +103,7 @@ public class SupervisionController {
     @GetMapping(value = "/studies/index-name")
     @Operation(summary = "get the indexed studies index name")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Indexed studies index name")})
+    @PreAuthorize("true")
     public ResponseEntity<String> getIndexedStudiesIndexName() {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(equipmentInfosService.getStudyIndexName());
     }
@@ -104,6 +111,7 @@ public class SupervisionController {
     @GetMapping(value = "/equipments/index-name")
     @Operation(summary = "get the indexed equipments index name")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Indexed equipments index name")})
+    @PreAuthorize("true")
     public ResponseEntity<String> getIndexedEquipmentsIndexName() {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(equipmentInfosService.getEquipmentsIndexName());
     }
@@ -111,6 +119,7 @@ public class SupervisionController {
     @GetMapping(value = "/tombstoned-equipments/index-name")
     @Operation(summary = "get the indexed tombstoned equipments index name")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Indexed tombstoned equipments index name")})
+    @PreAuthorize("true")
     public ResponseEntity<String> getIndexedTombstonedEquipmentsIndexName() {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(equipmentInfosService.getTombstonedEquipmentsIndexName());
     }
@@ -118,6 +127,7 @@ public class SupervisionController {
     @GetMapping(value = "/studies/indexation-count")
     @Operation(summary = "get indexed studies count")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Indexed studies count")})
+    @PreAuthorize("true")
     public ResponseEntity<String> getIndexedStudiesCount() {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(supervisionService.getIndexedStudiesCount()));
     }
@@ -125,6 +135,7 @@ public class SupervisionController {
     @GetMapping(value = "/equipments/indexation-count")
     @Operation(summary = "get indexed equipments count for all studies")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Indexed equipments count")})
+    @PreAuthorize("true")
     public ResponseEntity<String> getIndexedEquipmentsCount() {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(supervisionService.getIndexedEquipmentsCount()));
     }
@@ -132,6 +143,7 @@ public class SupervisionController {
     @GetMapping(value = "/tombstoned-equipments/indexation-count")
     @Operation(summary = "get indexed tombstoned equipments count for all studies")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Tombstoned equipments count")})
+    @PreAuthorize("true")
     public ResponseEntity<String> getIndexedTombstonedEquipmentsCount() {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(supervisionService.getIndexedTombstonedEquipmentsCount()));
     }
@@ -139,6 +151,7 @@ public class SupervisionController {
     @GetMapping(value = "/orphan_indexed_network_uuids")
     @Operation(summary = "Get all orphan indexed equipments network uuids")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of orphan indexed equipments network uuids")})
+    @PreAuthorize("true")
     public ResponseEntity<List<UUID>> getOrphanIndexedEquipments() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllOrphanIndexedEquipmentsNetworkUuids());
     }
@@ -146,6 +159,7 @@ public class SupervisionController {
     @DeleteMapping(value = "/studies/{networkUuid}/indexed-equipments-by-network-uuid")
     @Operation(summary = "delete indexed equipments and tombstoned equipments for the given networkUuid")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all indexed equipments and tombstoned equipments for the given networkUuid have been deleted")})
+    @PreAuthorize("true")
     public ResponseEntity<Long> deleteNetworkUuidIndexedEquipmentsAndTombstoned(@PathVariable("networkUuid") UUID networkUuid) {
         equipmentInfosService.deleteEquipmentIndexes(networkUuid);
         return ResponseEntity.ok().build();
@@ -157,6 +171,7 @@ public class SupervisionController {
         @ApiResponse(responseCode = "200", description = "Elasticsearch study indices recreated successfully"),
         @ApiResponse(responseCode = "500", description = "Failed to recreate Elasticsearch indices")
     })
+    @PreAuthorize("true")
     public ResponseEntity<Void> recreateStudyIndices() {
         supervisionService.recreateStudyIndices();
         return ResponseEntity.ok().build();
@@ -165,6 +180,7 @@ public class SupervisionController {
     @PostMapping(value = "/studies/{studyUuid}/reindex")
     @Operation(summary = "reindex the study")
     @ApiResponse(responseCode = "200", description = "Study reindexed")
+    @PreAuthorize("true")
     public ResponseEntity<Void> reindexStudy(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
         studyService.getExistingBasicRootNetworkInfos(studyUuid).forEach(
                 rootNetwork -> studyService.reindexRootNetwork(studyUuid, rootNetwork.rootNetworkUuid())
@@ -175,6 +191,7 @@ public class SupervisionController {
     @PostMapping(value = "/studies/{studyUuid}/network-modifications/sharing-links/recreate")
     @Operation(summary = "Trigger recreation of network-modification sharing links for a study")
     @ApiResponse(responseCode = "200", description = "Network-modification sharing links recreation requested")
+    @PreAuthorize("true")
     public ResponseEntity<Void> recreateNetworkModificationSharingLinks(@PathVariable("studyUuid") UUID studyUuid,
                                                                     @RequestHeader("userId") String userId) {
         supervisionService.recreateNetworkModificationSharingLinks(studyUuid, userId);
@@ -184,6 +201,7 @@ public class SupervisionController {
     @DeleteMapping(value = "/studies/{studyUuid}/nodes/builds")
     @Operation(summary = "Invalidate node builds for the given study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all built nodes for the given study have been invalidated")})
+    @PreAuthorize("true")
     public ResponseEntity<Void> invalidateAllNodesBuilds(@PathVariable("studyUuid") UUID studyUuid) {
         supervisionService.unbuildAllNodes(studyUuid);
         return ResponseEntity.ok().build();
@@ -192,6 +210,7 @@ public class SupervisionController {
     @DeleteMapping(value = "/studies/{studyUuid}/unload")
     @Operation(summary = "Invalidate all node tree, clean stashed elements and delete root networks")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "study has been unloaded")})
+    @PreAuthorize("true")
     public ResponseEntity<Void> unloadStudy(@PathVariable("studyUuid") UUID studyUuid) {
         supervisionService.unloadStudy(studyUuid);
         return ResponseEntity.ok().build();
@@ -200,6 +219,7 @@ public class SupervisionController {
     @GetMapping(value = "/studies/loaded")
     @Operation(summary = "Get the study uuids whose network is currently loaded")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of the study uuids whose network is currently loaded")})
+    @PreAuthorize("true")
     public ResponseEntity<List<UUID>> getLoadedStudies(@Parameter(description = "Study uuids to filter") @RequestParam("ids") List<UUID> studyUuids) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.getLoadedStudyUuids(studyUuids));
     }

@@ -13,6 +13,7 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
 import com.powsybl.sensitivity.SensitivityFunctionType;
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
@@ -39,6 +40,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -46,6 +48,7 @@ import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
@@ -77,6 +80,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
+@Import(AllowAllAuthTestConfiguration.class)
+@WithMockUser(username = "userId")
 class SensitivityAnalysisTest {
 
     private static final String SENSITIVITY_ANALYSIS_RESULT_UUID = "b3a84c9b-9594-4e85-8ec7-07ea965d24eb";
@@ -313,8 +318,7 @@ class SensitivityAnalysisTest {
         UUID modificationNode3Uuid = modificationNode3.getId();
 
         // run sensitivity analysis on root node (not allowed)
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
-            .header(HEADER_USER_ID, "testUserId"))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid))
             .andExpect(status().isForbidden());
 
         testSensitivityAnalysisWithRootNetworkUuidAndNodeUuid(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, SENSITIVITY_ANALYSIS_RESULT_UUID);
@@ -342,8 +346,7 @@ class SensitivityAnalysisTest {
         computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, SENSITIVITY_ANALYSIS_RESULT_UUID);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run",
-                studyNameUserIdUuid, firstRootNetworkUuid, modificationNode2Uuid)
-                .header(HEADER_USER_ID, "testUserId"))
+                studyNameUserIdUuid, firstRootNetworkUuid, modificationNode2Uuid))
             .andExpect(status().isOk());
 
         consumeSensitivityAnalysisResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode2Uuid, SENSITIVITY_ANALYSIS_RESULT_UUID);
@@ -397,8 +400,7 @@ class SensitivityAnalysisTest {
         directoryServerStubs.stubGetElementNames(objectMapper.writeValueAsString(ELEMENTS_ID_NAME_MAP));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run",
-                studyUuid, rootNetworkUuid, nodeUuid)
-                .header(HEADER_USER_ID, "testUserId"))
+                studyUuid, rootNetworkUuid, nodeUuid))
             .andExpect(status().isOk());
 
         consumeSensitivityAnalysisResult(studyUuid, rootNetworkUuid, nodeUuid, resultUuid);
@@ -631,8 +633,7 @@ class SensitivityAnalysisTest {
 
         // Run failing sensitivity analysis
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run",
-                studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
-                .header(HEADER_USER_ID, "testUserId"))
+                studyUuid, firstRootNetworkUuid, modificationNode1Uuid))
             .andExpect(status().isOk());
 
         // Simulate failed result message
@@ -673,8 +674,7 @@ class SensitivityAnalysisTest {
         directoryServerStubs.stubGetElementNames(objectMapper.writeValueAsString(Map.of()));
         // Run failing sensitivity analysis without receiver
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run",
-                studyUuid2, firstRootNetworkUuid2, modificationNode1Uuid2)
-                .header(HEADER_USER_ID, "testUserId"))
+                studyUuid2, firstRootNetworkUuid2, modificationNode1Uuid2))
             .andExpect(status().isOk());
 
         // Consume failed message without receiver -> ignored
@@ -842,8 +842,7 @@ class SensitivityAnalysisTest {
 
         // ---------------- Run sensitivity analysis ----------------
         mockMvc.perform(post(
-                "/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid, firstRootNetworkUuid, modificationNode1.getId())
-                .header(HEADER_USER_ID, "testUserId"))
+                "/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid, firstRootNetworkUuid, modificationNode1.getId()))
             .andExpect(status().isOk());
 
         // consume sensitivity status event (REQUIRED)

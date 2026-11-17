@@ -13,6 +13,7 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import lombok.AllArgsConstructor;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
@@ -41,6 +42,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
@@ -50,6 +52,7 @@ import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.HttpClientErrorException;
@@ -65,6 +68,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
+@Import(AllowAllAuthTestConfiguration.class)
+@WithMockUser(username = "userId")
 class PccMinTest {
 
     private static final String PCC_MIN_URL_BASE = "/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/";
@@ -221,8 +226,7 @@ class PccMinTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid)
                 .content(mnBodyJson)
-                .contentType(MediaType.APPLICATION_JSON)
-                .header("userId", "userId"))
+                .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());
 
         Message<?> msg = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
@@ -261,8 +265,7 @@ class PccMinTest {
     private void runPccMin(StudyNodeIds ids) throws Exception {
         computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, PCC_MIN_RESULT_UUID);
 
-        mockMvc.perform(post(PCC_MIN_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
-                .header("userId", "userId"))
+        mockMvc.perform(post(PCC_MIN_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
             .andExpect(status().isOk());
 
         consumePccMinResult(ids, PCC_MIN_RESULT_UUID);
@@ -276,8 +279,7 @@ class PccMinTest {
 
         // Run Pcc min
         UUID stubRun = wireMockStubs.stubPccMinRun(NETWORK_UUID_STRING, VARIANT_ID, PCC_MIN_RESULT_UUID);
-        mockMvc.perform(post(PCC_MIN_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
-                .header("userId", "userId"))
+        mockMvc.perform(post(PCC_MIN_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
             .andExpect(status().isOk());
 
         consumePccMinResult(ids, PCC_MIN_RESULT_UUID);
@@ -305,8 +307,7 @@ class PccMinTest {
             .willReturn(ok()));
 
         // stop pcc min
-        mockMvc.perform(put(PCC_MIN_URL_BASE + "stop", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
-                .header("userId", "userId"))
+        mockMvc.perform(put(PCC_MIN_URL_BASE + "stop", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
             .andExpect(status().isOk());
 
         String receiverJson = objectMapper.writeValueAsString(new NodeReceiver(ids.nodeId, ids.rootNetworkUuid));
@@ -324,8 +325,7 @@ class PccMinTest {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID_2, "node 2", PCCMIN_PARAMETERS_UUID);
         UUID stubFail = wireMockStubs.stubPccMinFailed(NETWORK_UUID_STRING, VARIANT_ID_2, PCC_MIN_ERROR_RESULT_UUID);
 
-        mockMvc.perform(post(PCC_MIN_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
-                .header("userId", "userId"))
+        mockMvc.perform(post(PCC_MIN_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
             .andExpect(status().isOk());
 
         // pcc min failed
@@ -343,6 +343,7 @@ class PccMinTest {
     }
 
     @Test
+    @WithMockUser(username = VALID_PARAMS_IN_PROFILE_USER_ID)
     void testResetPccMinParametersUserHasValidParamsInProfileButNoExistingPccMinParams() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null);
         UUID studyUuid = studyEntity.getId();
@@ -362,6 +363,7 @@ class PccMinTest {
     }
 
     @Test
+    @WithMockUser(username = NO_PROFILE_USER_ID)
     void testResetPccMinParametersUserHasNoProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), UUID.randomUUID(), PCC_MIN_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -372,6 +374,7 @@ class PccMinTest {
     }
 
     @Test
+    @WithMockUser(username = NO_PARAMS_IN_PROFILE_USER_ID)
     void testResetPccMinParametersUserHasNoParamsInProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, PCC_MIN_PARAMETERS_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -386,6 +389,7 @@ class PccMinTest {
     }
 
     @Test
+    @WithMockUser(username = NO_PARAMS_IN_PROFILE_USER_ID)
     void testResetPccMinParametersUserHasNoParamsInProfileAndNoExistingPccMinParams() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null);
         UUID studyUuid = studyEntity.getId();
@@ -399,6 +403,7 @@ class PccMinTest {
     }
 
     @Test
+    @WithMockUser(username = INVALID_PARAMS_IN_PROFILE_USER_ID)
     void testResetPccMinParametersUserHasInvalidParamsInProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, PCC_MIN_PARAMETERS_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -415,6 +420,7 @@ class PccMinTest {
     }
 
     @Test
+    @WithMockUser(username = VALID_PARAMS_IN_PROFILE_USER_ID)
     void testResetPccMinParametersUserHasValidParamsInProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, PCC_MIN_PARAMETERS_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -431,8 +437,7 @@ class PccMinTest {
             .willReturn(ok()));
         computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, PCC_MIN_RESULT_UUID);
         mockMvc.perform(post(PCC_MIN_URL_BASE + "run", studyUuid, firstRootNetworkUuid, modificationNode1.getId())
-                .contentType(MediaType.APPLICATION_JSON)
-                .header("userId", "userId"))
+                .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());
 
         Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
@@ -527,7 +532,6 @@ class PccMinTest {
     private void createOrUpdateParametersAndDoChecks(UUID studyUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/pcc-min/parameters", studyUuid)
-                    .header("userId", userId)
                     .contentType(MediaType.ALL)
                     .content(parameters))
             .andExpect(status().is(status.value()));
@@ -537,8 +541,7 @@ class PccMinTest {
 
     private void resetParametersAndDoChecks(UUID studyUuid, String userId, HttpStatusCode status) throws Exception {
         mockMvc.perform(
-                post("/v1/studies/{studyUuid}/pcc-min/parameters/reset", studyUuid)
-                    .header("userId", userId))
+                post("/v1/studies/{studyUuid}/pcc-min/parameters/reset", studyUuid))
             .andExpect(status().is(status.value()));
 
         checkParametersChangedMessagesReceived(studyUuid);
@@ -701,8 +704,7 @@ class PccMinTest {
                 .param("filters", "fakeFilters")
                 .param("globalFilters", "fakeGlobalFilters")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(content)
-                .header("userId", "userId"))
+                .content(content))
             .andExpect(status().isOk())
             .andExpect(content().bytes(PCC_MIN_RESULTS_AS_ZIPPED_CSV));
 

@@ -12,21 +12,24 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@SpringBootTest
 @ExtendWith(MockitoExtension.class)
+@WithMockUser(username = "userId")
 class NetworkModificationControllerTest {
 
     private static final String BASE_URL = "/v1";
@@ -90,20 +93,12 @@ class NetworkModificationControllerTest {
         UUID modificationUuid = UUID.randomUUID();
         when(networkModificationService.getNetworkModification(modificationUuid, USER_ID)).thenReturn(RESPONSE);
 
-        mockMvc.perform(get(BASE_URL + "/network-modifications/{uuid}", modificationUuid).header(HEADER_USER_ID, USER_ID))
+        mockMvc.perform(get(BASE_URL + "/network-modifications/{uuid}", modificationUuid))
             .andExpect(status().isOk())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
             .andExpect(content().json(RESPONSE));
 
         verify(networkModificationService).getNetworkModification(modificationUuid, USER_ID);
-    }
-
-    @Test
-    void testReadingAModificationWithoutUserIsRejected() throws Exception {
-        mockMvc.perform(get(BASE_URL + "/network-modifications/{uuid}", UUID.randomUUID()))
-            .andExpect(status().isBadRequest());
-
-        verifyNoInteractions(networkModificationService);
     }
 
     @Test
@@ -128,7 +123,6 @@ class NetworkModificationControllerTest {
         UUID modificationUuid = UUID.randomUUID();
 
         mockMvc.perform(put(BASE_URL + "/network-modifications/{uuid}", modificationUuid)
-                .header(HEADER_USER_ID, USER_ID)
                 .content(RESPONSE)
                 .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
@@ -146,8 +140,7 @@ class NetworkModificationControllerTest {
         mockMvc.perform(put(BASE_URL + "/network-modifications")
                 .param("uuids", firstUuid.toString(), secondUuid.toString())
                 .content(metadata)
-                .contentType(MediaType.APPLICATION_JSON)
-                .header("userId", "userId"))
+                .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(content().string(""));
 

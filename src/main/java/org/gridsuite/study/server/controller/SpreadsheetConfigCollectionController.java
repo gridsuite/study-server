@@ -16,12 +16,12 @@ import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
-
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/spreadsheet-config-collection")
@@ -36,6 +36,7 @@ public class SpreadsheetConfigCollectionController {
     @GetMapping()
     @Operation(summary = "Get study's spreadsheet config collection")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The spreadsheet config collection")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getSpreadsheetConfigCollection(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getSpreadsheetConfigCollection(studyUuid));
@@ -47,6 +48,7 @@ public class SpreadsheetConfigCollectionController {
         @ApiResponse(responseCode = "200", description = "The updated spreadsheet config collection"),
         @ApiResponse(responseCode = "404", description = "The study or the collection doesn't exist")
     })
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<String> updateSpreadsheetConfigCollection(
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestParam("collectionUuid") UUID collectionUuid,
@@ -60,10 +62,11 @@ public class SpreadsheetConfigCollectionController {
         @ApiResponse(responseCode = "200", description = "The spreadsheet config collection is set"),
         @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")
     })
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> setSpreadsheetConfigCollection(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String configCollection,
-            @RequestHeader(HEADER_USER_ID) String userId) {
+            @RequestBody(required = false) String configCollection) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         return studyService.setSpreadsheetConfigCollection(studyUuid, configCollection, userId) ?
                 ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
@@ -73,6 +76,7 @@ public class SpreadsheetConfigCollectionController {
             description = "Adds a new spreadsheet configuration to a collection")
     @ApiResponse(responseCode = "201", description = "Configuration added")
     @ApiResponse(responseCode = "404", description = "Configuration collection not found")
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<UUID> addSpreadsheetConfigToCollection(
             @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "ID of the configuration collection") @PathVariable UUID id,
@@ -85,6 +89,7 @@ public class SpreadsheetConfigCollectionController {
             description = "Removes an existing spreadsheet configuration from a collection")
     @ApiResponse(responseCode = "204", description = "Configuration removed")
     @ApiResponse(responseCode = "404", description = "Configuration collection or configuration not found")
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> removeSpreadsheetConfigFromCollection(
             @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "ID of the configuration collection") @PathVariable UUID id,
@@ -98,6 +103,7 @@ public class SpreadsheetConfigCollectionController {
             description = "Updates the order of spreadsheet configs within a collection")
     @ApiResponse(responseCode = "204", description = "Order updated")
     @ApiResponse(responseCode = "404", description = "Collection not found")
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> reorderSpreadsheetConfigs(
             @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "ID of the configuration collection") @PathVariable UUID id,

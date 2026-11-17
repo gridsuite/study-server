@@ -8,6 +8,7 @@ package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeReceiver;
@@ -39,9 +40,11 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -71,6 +74,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
+@Import(AllowAllAuthTestConfiguration.class)
+@WithMockUser(username = "userId")
 class StudyControllerDynamicMarginCalculationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyControllerDynamicMarginCalculationTest.class);
 
@@ -202,8 +207,7 @@ class StudyControllerDynamicMarginCalculationTest {
 
         studyClient.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid)
                         .content(objectMapper.writeValueAsString(modificationNode))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("userId", "userId"))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
         var mess = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
@@ -241,8 +245,7 @@ class StudyControllerDynamicMarginCalculationTest {
         // run in debug mode on a security node which allows a run
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_RUN,
                         studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
-                        .param(QUERY_PARAM_DEBUG, "true")
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+                        .param(QUERY_PARAM_DEBUG, "true"))
                 .andExpect(status().isOk());
 
         // --- check async messages emitted by runDynamicMarginCalculation of StudyService --- //
@@ -299,8 +302,7 @@ class StudyControllerDynamicMarginCalculationTest {
         // --- call endpoint to be tested --- //
         // run on root node => forbidden
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_RUN,
-                studyUuid, firstRootNetworkUuid, rootNodeUuid)
-                .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+                studyUuid, firstRootNetworkUuid, rootNodeUuid))
                 .andExpect(status().isForbidden());
     }
 
@@ -320,8 +322,7 @@ class StudyControllerDynamicMarginCalculationTest {
         // --- call endpoint to be tested --- //
         // run on root node => forbidden
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_RUN,
-                studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
-                .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+                studyUuid, firstRootNetworkUuid, modificationNode1Uuid))
                 .andExpect(status().isForbidden());
     }
 
@@ -345,8 +346,7 @@ class StudyControllerDynamicMarginCalculationTest {
         // --- call endpoint to be tested --- //
         // run on a security node which allows a run
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_RUN,
-                        studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+                        studyUuid, firstRootNetworkUuid, modificationNode1Uuid))
                 .andExpect(status().isOk());
 
         // --- check async messages emitted by runDynamicMarginCalculation of StudyService --- //
@@ -420,8 +420,7 @@ class StudyControllerDynamicMarginCalculationTest {
         // --- call endpoint to be tested --- //
         // run on a security node which allows a run
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_RUN,
-                        studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+                        studyUuid, firstRootNetworkUuid, modificationNode1Uuid))
                 .andExpect(status().isOk());
 
         // --- check async messages emitted by runDynamicMarginCalculation of StudyService --- //
@@ -460,8 +459,7 @@ class StudyControllerDynamicMarginCalculationTest {
         // --- call endpoint to be tested --- //
         // get result from a node not yet run
         studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_STATUS,
-                        STUDY_UUID, ROOT_NETWORK_UUID, NODE_NOT_RUN_UUID)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+                        STUDY_UUID, ROOT_NETWORK_UUID, NODE_NOT_RUN_UUID))
                 .andExpect(status().isNoContent());
     }
 
@@ -475,8 +473,7 @@ class StudyControllerDynamicMarginCalculationTest {
         // --- call endpoint to be tested --- //
         // get status from a node done
         MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_STATUS,
-                        STUDY_UUID, ROOT_NETWORK_UUID, NODE_UUID)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+                        STUDY_UUID, ROOT_NETWORK_UUID, NODE_UUID))
                 .andExpect(status().isOk()).andReturn();
         DynamicMarginCalculationStatus statusResult = DynamicMarginCalculationStatus.valueOf(result.getResponse().getContentAsString());
 
@@ -507,7 +504,6 @@ class StudyControllerDynamicMarginCalculationTest {
         // --- call endpoint to be tested --- //
         // set parameters
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_PARAMETERS, studyUuid)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonParameters))
                     .andExpect(status().isOk()).andReturn();
@@ -518,7 +514,6 @@ class StudyControllerDynamicMarginCalculationTest {
 
         // get parameters
         result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_PARAMETERS, studyUuid)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk()).andReturn();
 

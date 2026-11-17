@@ -6,6 +6,7 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.VariantInfos;
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.CurrentLimitViolationInfos;
 import org.gridsuite.study.server.dto.LimitViolationInfos;
@@ -21,8 +22,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import java.util.LinkedHashMap;
@@ -41,6 +44,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ContextConfigurationWithTestChannel
+@Import(AllowAllAuthTestConfiguration.class)
+@WithMockUser(username = "user1")
 class NetworkAreaDiagramTest {
 
     @Autowired
@@ -107,8 +112,7 @@ class NetworkAreaDiagramTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
                         NETWORK_UUID, ROOTNETWORK_UUID, NODE_UUID)
-                        .content(mapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)
-                        .header("userId", USER1))
+                        .content(mapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
                 .andExpectAll(status().isOk(), content().string("nad-svg-from-config"))
                 .andReturn();
         WireMockUtils.verifyPostRequest(
@@ -123,8 +127,7 @@ class NetworkAreaDiagramTest {
         when(networkModificationTreeService.getVariantId(NODE_UUID, ROOTNETWORK_UUID)).thenReturn("Another_variant");
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
                         NETWORK_UUID, ROOTNETWORK_UUID, NODE_UUID)
-                        .content(mapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)
-                        .header("userId", USER1))
+                        .content(mapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
                 .andExpectAll(status().isNoContent());
     }
 
@@ -132,8 +135,7 @@ class NetworkAreaDiagramTest {
     void testGetNetworkAreaDiagramFromConfigRootNetworkError() throws Exception {
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
                         UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID())
-                        .content(mapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)
-                        .header("userId", USER1))
+                        .content(mapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
                 .andExpectAll(status().isNotFound());
     }
 
@@ -145,8 +147,7 @@ class NetworkAreaDiagramTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
                         NETWORK_UUID, ROOTNETWORK_UUID, NODE_UUID)
-                        .content(mapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)
-                        .header("userId", USER1))
+                        .content(mapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
                 .andExpectAll(status().isNotFound());
 
         WireMockUtils.verifyPostRequest(wireMockServer, stubId, SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + NETWORK_UUID, Map.of(

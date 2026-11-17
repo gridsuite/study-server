@@ -9,6 +9,7 @@ package org.gridsuite.study.server.loadflow;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.BuildInfos;
@@ -49,8 +50,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.context.annotation.Import;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -71,6 +74,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
+@Import(AllowAllAuthTestConfiguration.class)
+@WithMockUser(username = "userId")
 class LoadFLowIntegrationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(LoadFLowIntegrationTest.class);
 
@@ -197,14 +202,12 @@ class LoadFLowIntegrationTest {
         doNothing().when(loadFlowService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString(), any());
 
         // Construction node : forbidden
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyUuid, rootNetworkUuid, constructionNodeUuid, userId)
-                        .header("userId", userId))
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyUuid, rootNetworkUuid, constructionNodeUuid, userId))
                 .andExpect(status().isForbidden());
         wireMockStubs.verifyLoadFlowProviderGet(loadFlowProviderStubUuid, parametersUuid);
 
         // Security node : ok
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyUuid, rootNetworkUuid, securityNodeUuid, userId)
-                .header("userId", userId))
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyUuid, rootNetworkUuid, securityNodeUuid, userId))
             .andExpect(status().isOk());
     }
 
@@ -214,8 +217,7 @@ class LoadFLowIntegrationTest {
         UUID loadFlowProviderStubUuid = wireMockStubs.stubLoadFlowProvider(parametersUuid, testProvider);
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyUuid, rootNetworkUuid, nodeUuid, userId)
-                .param(QUERY_WITH_TAP_CHANGER, withRatioTapChangers ? "true" : "false")
-                .header("userId", userId))
+                .param(QUERY_WITH_TAP_CHANGER, withRatioTapChangers ? "true" : "false"))
             .andExpect(status().isOk());
         wireMockStubs.verifyRunLoadflow(runLoadflowStubUuid, networkUuid, withRatioTapChangers, null);
         if (isSecurityNode) {
@@ -227,7 +229,7 @@ class LoadFLowIntegrationTest {
         verify(networkModificationService, times(isSecurityNode ? 1 : 0)).deleteIndexedModifications(any(), any(UUID.class));
 
         // the loadflow holds the node until its result arrives, so unbuilding the whole tree is refused
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/unbuild-all", studyUuid).header(HEADER_USER_ID, userId))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/unbuild-all", studyUuid))
             .andExpect(status().isForbidden());
 
         // consume loadflow result
@@ -249,8 +251,7 @@ class LoadFLowIntegrationTest {
         doReturn(parametersUuid).when(loadFlowRestService).createDefaultParameters();
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyUuid, rootNetworkUuid, nodeUuid, userId)
-                .param(QUERY_WITH_TAP_CHANGER, withRatioTapChangers ? "true" : "false")
-                .header("userId", userId))
+                .param(QUERY_WITH_TAP_CHANGER, withRatioTapChangers ? "true" : "false"))
             .andExpect(status().isOk());
 
         wireMockStubs.verifyDeleteLoadFlowResults(stubDeleteLoadflowResultUuid, List.of(loadflowResultUuid));
@@ -268,7 +269,7 @@ class LoadFLowIntegrationTest {
         }
 
         // the loadflow holds the node until its result arrives, so unbuilding the whole tree is refused
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/unbuild-all", studyUuid).header(HEADER_USER_ID, userId))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/unbuild-all", studyUuid))
             .andExpect(status().isForbidden());
 
         // consume loadflow result

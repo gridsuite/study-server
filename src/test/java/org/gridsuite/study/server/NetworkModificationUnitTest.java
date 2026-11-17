@@ -8,6 +8,7 @@ package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import org.gridsuite.study.server.controller.StudyController;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
@@ -41,9 +42,11 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.web.client.RestClient;
@@ -70,6 +73,8 @@ import static org.mockito.Mockito.*;
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
+@Import(AllowAllAuthTestConfiguration.class)
+@WithMockUser(username = "userId")
 class NetworkModificationUnitTest {
     @Autowired
     private NodeRepository nodeRepository;
@@ -170,7 +175,7 @@ class NetworkModificationUnitTest {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
 
         // Unbuild security node without LF -> no children invalidation
-        studyController.unbuildNode(studyUuid, firstRootNetworkUuid, node1Uuid, USER_ID_HEADER);
+        studyController.unbuildNode(studyUuid, firstRootNetworkUuid, node1Uuid);
         /*       rootNode
          *          |
          *        node1
@@ -190,7 +195,7 @@ class NetworkModificationUnitTest {
 
         // Unbuild security node with LF -> children invalidation
         when(rootNetworkNodeInfoService.isLoadflowDone(node2Uuid, firstRootNetworkUuid)).thenReturn(true);
-        studyController.unbuildNode(studyUuid, firstRootNetworkUuid, node2Uuid, USER_ID_HEADER);
+        studyController.unbuildNode(studyUuid, firstRootNetworkUuid, node2Uuid);
         /*       rootNode
          *          |
          *        node1
@@ -222,7 +227,7 @@ class NetworkModificationUnitTest {
         List<UUID> childrenNodes = List.of(node2Uuid, node4Uuid, node3Uuid);
 
         NetworkModificationMetadata metadata = new NetworkModificationMetadata(null, "new description", null, null);
-        studyController.updateNetworkModificationsMetadata(studyUuid, node1Uuid, List.of(modificationUuid), metadata, USER_ID_HEADER);
+        studyController.updateNetworkModificationsMetadata(studyUuid, node1Uuid, List.of(modificationUuid), metadata);
 
         checkModificationUpdatedMessageReceived(studyUuid, node1Uuid, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
 
@@ -276,7 +281,7 @@ class NetworkModificationUnitTest {
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
         List<UUID> rootNetworkUuids = rootNetworkRepository.findAllWithInfosByStudyId(studyUuid).stream().map(RootNetworkEntity::getId).toList();
 
-        studyController.unbuildAllNodes(studyUuid, USER_ID_HEADER);
+        studyController.unbuildAllNodes(studyUuid);
 
         ArgumentCaptor<UUID> rootNetworkUuidCaptor = ArgumentCaptor.forClass(UUID.class);
         verify(networkModificationTreeService, times(2))
@@ -306,7 +311,7 @@ class NetworkModificationUnitTest {
 
     private void updateNetworkModificationActivationStatus(List<UUID> networkModificationUuids, UUID nodeWithModification, List<UUID> childrenNodes, List<UUID> nodesToUnbuild, boolean activated) {
         NetworkModificationMetadata metadata = new NetworkModificationMetadata(activated, null, null, null);
-        studyController.updateNetworkModificationsMetadata(studyUuid, node1Uuid, networkModificationUuids, metadata, USER_ID_HEADER);
+        studyController.updateNetworkModificationsMetadata(studyUuid, node1Uuid, networkModificationUuids, metadata);
 
         checkUpdateBuildStateMessageReceived(studyUuid, nodesToUnbuild);
         checkUpdateStatusMessagesReceived(studyUuid, nodeWithModification, output);

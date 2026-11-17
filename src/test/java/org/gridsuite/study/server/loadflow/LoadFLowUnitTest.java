@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.loadflow;
 
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.controller.loadflow.LoadFlowController;
 import org.gridsuite.study.server.dto.ComputationType;
@@ -34,6 +35,8 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -55,6 +58,8 @@ import static org.mockito.Mockito.*;
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
+@Import(AllowAllAuthTestConfiguration.class)
+@WithMockUser(username = "userId")
 class LoadFLowUnitTest {
 
     @Autowired
@@ -115,7 +120,7 @@ class LoadFLowUnitTest {
         doNothing().when(loadFlowService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString(), any());
         doNothing().when(studyService).assertCanRunOnConstructionNode(any(), any(), any(), any());
 
-        controller.runLoadFlow(studyUuid, rootNetworkUuid, nodeUuid, false, userId);
+        controller.runLoadFlow(studyUuid, rootNetworkUuid, nodeUuid, false);
 
         verify(loadFlowService, times(1)).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString(), any());
         verify(studyService, times(1)).assertCanRunOnConstructionNode(any(), any(), any(), any());
@@ -133,7 +138,7 @@ class LoadFLowUnitTest {
 
         doReturn(Boolean.FALSE).when(networkModificationTreeService).isReadOnly(nodeUuid);
 
-        controller.runLoadFlow(studyUuid, rootNetworkUuid, nodeUuid, false, userId);
+        controller.runLoadFlow(studyUuid, rootNetworkUuid, nodeUuid, false);
 
         verify(loadFlowService, times(1)).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, previousResultUuid);
         verify(loadFlowService, times(1)).createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, false);

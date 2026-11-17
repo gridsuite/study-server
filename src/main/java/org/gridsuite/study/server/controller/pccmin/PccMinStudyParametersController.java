@@ -13,11 +13,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.pccmin.PccMinService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
-
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -37,6 +37,7 @@ public class PccMinStudyParametersController {
     @GetMapping(value = "/parameters")
     @Operation(summary = "Get pcc min parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min parameters")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getPccMinParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(pccMinService.getPccMinParameters(studyUuid));
@@ -45,10 +46,11 @@ public class PccMinStudyParametersController {
     @PostMapping(value = "/parameters")
     @Operation(summary = "set pcc min parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min parameters are set")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> setPccMinParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody String pccMinParametersInfos,
-            @RequestHeader(HEADER_USER_ID) String userId) {
+            @RequestBody String pccMinParametersInfos) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         pccMinService.setPccMinParameters(studyUuid, pccMinParametersInfos, userId);
         return ResponseEntity.ok().build();
     }
@@ -57,9 +59,10 @@ public class PccMinStudyParametersController {
     @Operation(summary = "reset pcc min parameters on study to user profile or default ones")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min parameters are reset"),
         @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> resetPccMinParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestHeader(HEADER_USER_ID) String userId) {
+            @PathVariable("studyUuid") UUID studyUuid) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         return pccMinService.resetPccMinParameters(studyUuid, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 }

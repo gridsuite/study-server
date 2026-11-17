@@ -8,6 +8,7 @@ package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
@@ -36,11 +37,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -63,6 +66,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
+@Import(AllowAllAuthTestConfiguration.class)
 class SpreadsheetConfigCollectionTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(SpreadsheetConfigCollectionTest.class);
 
@@ -334,6 +338,7 @@ class SpreadsheetConfigCollectionTest {
     }
 
     @Test
+    @WithMockUser(username = NO_PROFILE_USER_ID)
     void testSetSpreadsheetConfigCollection(final MockWebServer server) throws Exception {
         // Create a study with an existing spreadsheet config collection
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, SPREADSHEET_CONFIG_COLLECTION_UUID);
@@ -342,8 +347,7 @@ class SpreadsheetConfigCollectionTest {
         // Test setting a new spreadsheet config collection with body
         mockMvc.perform(post("/v1/studies/{studyUuid}/spreadsheet-config-collection", studyUuid)
                         .content(NEW_SPREADSHEET_CONFIG_COLLECTION_JSON)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header(StudyConstants.HEADER_USER_ID, NO_PROFILE_USER_ID))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkSpreadsheetCollectionUpdateMessageReceived(studyUuid);
 
@@ -366,8 +370,7 @@ class SpreadsheetConfigCollectionTest {
         // Test setting a new spreadsheet config collection with body
         mockMvc.perform(post("/v1/studies/{studyUuid}/spreadsheet-config-collection", studyUuid)
                         .content(NEW_SPREADSHEET_CONFIG_COLLECTION_JSON)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header(StudyConstants.HEADER_USER_ID, NO_PROFILE_USER_ID))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkSpreadsheetCollectionUpdateMessageReceived(studyUuid);
 
@@ -381,6 +384,7 @@ class SpreadsheetConfigCollectionTest {
     }
 
     @Test
+    @WithMockUser(username = VALID_PROFILE_USER_ID)
     void testResetToDefaultWithUserProfile(final MockWebServer server) throws Exception {
         // Create a study with an existing spreadsheet config collection
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, SPREADSHEET_CONFIG_COLLECTION_UUID);
@@ -388,8 +392,7 @@ class SpreadsheetConfigCollectionTest {
 
         // Test resetting to default (empty body)
         mockMvc.perform(post("/v1/studies/{studyUuid}/spreadsheet-config-collection", studyUuid)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header(StudyConstants.HEADER_USER_ID, VALID_PROFILE_USER_ID))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkSpreadsheetCollectionUpdateMessageReceived(studyUuid);
 
@@ -406,6 +409,7 @@ class SpreadsheetConfigCollectionTest {
     }
 
     @Test
+    @WithMockUser(username = NO_PROFILE_USER_ID)
     void testResetToDefaultWithoutUserProfile(final MockWebServer server) throws Exception {
         // Create a study with an existing spreadsheet config collection
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, NEW_SPREADSHEET_CONFIG_COLLECTION_UUID);
@@ -413,8 +417,7 @@ class SpreadsheetConfigCollectionTest {
 
         // Test resetting to default when user profile attempt fails (empty body)
         mockMvc.perform(post("/v1/studies/{studyUuid}/spreadsheet-config-collection", studyUuid)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header(StudyConstants.HEADER_USER_ID, NO_PROFILE_USER_ID))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkSpreadsheetCollectionUpdateMessageReceived(studyUuid);
 

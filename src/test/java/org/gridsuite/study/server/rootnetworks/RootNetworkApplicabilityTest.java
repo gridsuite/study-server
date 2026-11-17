@@ -8,6 +8,7 @@ package org.gridsuite.study.server.rootnetworks;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.network.store.client.NetworkStoreService;
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
@@ -32,8 +33,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.HttpClientErrorException;
@@ -41,7 +44,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -68,6 +70,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
+@Import(AllowAllAuthTestConfiguration.class)
+@WithMockUser(username = "userId")
 class RootNetworkApplicabilityTest {
     private static final String USER_ID = "userId";
 
@@ -137,8 +141,7 @@ class RootNetworkApplicabilityTest {
         doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND)).when(networkModificationRestService).verifyModifications(firstNode.getModificationGroupUuid(), Set.of(invalidModificationUuid));
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkUuid, firstNode.getId())
                 .param("uuids", invalidModificationUuid.toString())
-                .param("applicable", Boolean.FALSE.toString())
-                .header(USER_ID, USER_ID))
+                .param("applicable", Boolean.FALSE.toString()))
             .andExpect(status().isNotFound());
         verify(networkModificationRestService, never()).updateRootNetworkApplicability(anyList(), anyString(), anyBoolean(), eq("userId"));
 
@@ -147,8 +150,7 @@ class RootNetworkApplicabilityTest {
         // deactivating the modification on that root network is forwarded with its tag
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkUuid, firstNode.getId())
                 .param("uuids", MODIFICATION_1.toString())
-                .param("applicable", Boolean.FALSE.toString())
-                .header(USER_ID, USER_ID))
+                .param("applicable", Boolean.FALSE.toString()))
             .andExpect(status().isOk());
         verify(networkModificationRestService, times(1))
                 .updateRootNetworkApplicability(List.of(MODIFICATION_1), ROOT_NETWORK_TAG_1, false, "userId");
@@ -156,8 +158,7 @@ class RootNetworkApplicabilityTest {
         // and so is activating it back
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkUuid, firstNode.getId())
                 .param("uuids", MODIFICATION_1.toString())
-                .param("applicable", Boolean.TRUE.toString())
-                .header(USER_ID, USER_ID))
+                .param("applicable", Boolean.TRUE.toString()))
             .andExpect(status().isOk());
         verify(networkModificationRestService, times(1))
                 .updateRootNetworkApplicability(List.of(MODIFICATION_1), ROOT_NETWORK_TAG_1, true, "userId");
@@ -339,8 +340,7 @@ class RootNetworkApplicabilityTest {
     }
 
     private SharedModificationsWriteAccess getSharedModificationsWriteAccess(UUID studyUuid) throws Exception {
-        return objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/network-modifications/references/write-access", studyUuid)
-                .header(HEADER_USER_ID, USER_ID))
+        return objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/network-modifications/references/write-access", studyUuid))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(), SharedModificationsWriteAccess.class);
     }
 
@@ -369,8 +369,7 @@ class RootNetworkApplicabilityTest {
     private void updateRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String tag) throws Exception {
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}", studyUuid, rootNetworkUuid)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(RootNetworkInfos.builder().id(rootNetworkUuid).tag(tag).build()))
-                .header(USER_ID, USER_ID))
+                .content(objectMapper.writeValueAsString(RootNetworkInfos.builder().id(rootNetworkUuid).tag(tag).build())))
             .andExpect(status().isOk());
     }
 

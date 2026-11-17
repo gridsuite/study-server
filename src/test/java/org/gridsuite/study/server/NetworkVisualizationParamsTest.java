@@ -7,6 +7,7 @@
 package org.gridsuite.study.server;
 
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
@@ -34,10 +35,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -60,6 +63,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
+@Import(AllowAllAuthTestConfiguration.class)
+@WithMockUser(username = "noProfileUser")
 class NetworkVisualizationParamsTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(NetworkVisualizationParamsTest.class);
 
@@ -150,7 +155,6 @@ class NetworkVisualizationParamsTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
         mockMvc.perform(
                         post("/v1/studies/{studyUuid}/network-visualizations/parameters", studyNameUserIdUuid)
-                                .header("userId", NO_PROFILE_USER_ID)
                                 .contentType(MediaType.ALL)
                                 .content(NETWORK_VISU_DEFAULT_PARAMETERS_JSON))
                 .andExpect(status().is(HttpStatus.OK.value()));

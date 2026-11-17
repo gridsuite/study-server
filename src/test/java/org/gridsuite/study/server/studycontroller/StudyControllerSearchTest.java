@@ -98,7 +98,7 @@ class StudyControllerSearchTest {
             .then((Answer<List<CreatedStudyBasicInfos>>) invocation -> studiesInfos);
 
         mvcResult = mockMvc
-            .perform(get("/v1/search?q={request}", "userId:%s".formatted("userId")).header(USER_ID_HEADER, "userId"))
+            .perform(get("/v1/search?q={request}", "userId:%s".formatted("userId")))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
@@ -126,7 +126,7 @@ class StudyControllerSearchTest {
 
         mvcResult = mockMvc
             .perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=NAME",
-                studyUuid, firstRootNetworkUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
+                studyUuid, firstRootNetworkUuid, rootNodeId, "B"))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         List<EquipmentInfos> equipmentInfos = mapper.readValue(resultAsString, new TypeReference<>() { });
@@ -134,7 +134,7 @@ class StudyControllerSearchTest {
 
         mvcResult = mockMvc
             .perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=NAME",
-                studyUuid, firstRootNetworkUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
+                studyUuid, firstRootNetworkUuid, rootNodeId, "B"))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         equipmentInfos = mapper.readValue(resultAsString, new TypeReference<>() { });
@@ -142,14 +142,14 @@ class StudyControllerSearchTest {
 
         mvcResult = mockMvc
             .perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=ID",
-                studyUuid, firstRootNetworkUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
+                studyUuid, firstRootNetworkUuid, rootNodeId, "B"))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         equipmentInfos = mapper.readValue(resultAsString, new TypeReference<>() { });
         assertThat(equipmentInfos, new MatcherJson<>(mapper, linesInfos));
 
         var result = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=bogus",
-                studyUuid, firstRootNetworkUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
+                studyUuid, firstRootNetworkUuid, rootNodeId, "B"))
             .andExpect(status().isInternalServerError())
             .andReturn();
         var problemDetail = mapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
