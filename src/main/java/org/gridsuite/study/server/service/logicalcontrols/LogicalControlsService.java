@@ -37,6 +37,7 @@ import static org.gridsuite.study.server.dto.ComputationType.LOGICAL_CONTROLS;
 @Service
 public class LogicalControlsService extends AbstractComputationService {
 
+    protected static final String LOGICAL_CONTROLS_STR = "logical-controls";
     private final LogicalControlsRestService logicalControlsRestService;
     private final ObjectMapper objectMapper;
 
@@ -53,6 +54,16 @@ public class LogicalControlsService extends AbstractComputationService {
             computationParametersService, userAdminService);
         this.logicalControlsRestService = logicalControlsRestService;
         this.objectMapper = objectMapper;
+    }
+
+    public String getLogicalControlsResult(@NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String globalFilters) {
+        UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOGICAL_CONTROLS);
+        if (resultUuid == null) {
+            return null;
+        }
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
+        return logicalControlsRestService.getLogicalControlsResult(resultUuid, networkUuid, variantId, globalFilters);
     }
 
     @Transactional

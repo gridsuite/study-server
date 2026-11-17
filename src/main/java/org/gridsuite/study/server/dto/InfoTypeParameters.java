@@ -18,6 +18,7 @@ public class InfoTypeParameters {
     public static final String QUERY_PARAM_DC_POWERFACTOR = "dcPowerFactor";
     public static final String QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS = "loadOperationalLimitGroups";
     public static final String QUERY_PARAM_LOAD_REGULATING_TERMINALS = "loadRegulatingTerminals";
+    public static final String QUERY_PARAM_LOAD_BUS = "loadBus";
     public static final String QUERY_PARAM_LOAD_NETWORK_COMPONENTS = "loadNetworkComponents";
     public static final String QUERY_PARAM_BUS_ID_TO_ICC_VALUES = "busIdToIccValues";
 

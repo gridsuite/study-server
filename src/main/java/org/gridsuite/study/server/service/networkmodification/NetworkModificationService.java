@@ -265,14 +265,14 @@ public class NetworkModificationService {
         }
 
         if (targetCompositeUuid != null) {
-            updateElementsReferences(modificationReferences, targetNodeUuid, targetCompositeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION, userId);
+            updateElementsSharingLinks(modificationReferences, targetNodeUuid, targetCompositeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION, userId);
         } else {
-            updateElementsReferences(modificationReferences, studyUuid, targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE, userId);
+            updateElementsSharingLinks(modificationReferences, studyUuid, targetNodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE, userId);
         }
     }
 
-    private void updateElementsReferences(List<ModificationReference> modificationReferences, UUID rootContainerId, UUID containerId,
-                                          ReferenceAttributes.ReferenceType targetReferenceType, String userId) {
+    private void updateElementsSharingLinks(List<ModificationReference> modificationReferences, UUID rootContainerId, UUID containerId,
+                                           ReferenceAttributes.ReferenceType targetReferenceType, String userId) {
         modificationReferences.forEach(ref -> directoryService.updateSharingLink(
             ref.referencedId(),
             ReferenceAttributes.createReferenceAttributes(ref.modificationUuid(), rootContainerId, containerId, targetReferenceType), userId)

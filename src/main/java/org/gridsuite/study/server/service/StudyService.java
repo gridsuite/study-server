@@ -446,7 +446,7 @@ public class StudyService {
     }
 
     private List<UUID> getStudyModificationGroupUuids(UUID studyUuid) {
-        return networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid).stream()
+        return networkModificationTreeService.getAllNetworkModificationNodeInfos(studyUuid).stream()
                 .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
                 .toList();
     }
@@ -622,7 +622,7 @@ public class StudyService {
         if (studyCreationRequestEntity.isEmpty() && studyEntity.isPresent()) {
             List<RootNetworkInfos> rootNetworkInfos = getStudyRootNetworksInfos(studyUuid);
             // get all modification groups and nodes related to the study
-            List<NetworkModificationNodeInfoEntity> allStudyNetworkModificationNodeInfo = networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid);
+            List<NetworkModificationNodeInfoEntity> allStudyNetworkModificationNodeInfo = networkModificationTreeService.getAllNetworkModificationNodeInfos(studyUuid);
             List<Pair<UUID, UUID>> modificationGroupUuidsNodeUuids = allStudyNetworkModificationNodeInfo.stream()
                     .map(nodeInfoEntity -> Pair.of(nodeInfoEntity.getModificationGroupUuid(), nodeInfoEntity.getIdNode()))
                     .toList();
@@ -936,15 +936,25 @@ public class StudyService {
             case "branch" -> additionalParameters.put(
                 InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
                 String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadBranchOperationalLimitGroup()));
-            case "line" -> additionalParameters.put(
-                InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
-                String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineOperationalLimitGroup()));
+            case "line" -> {
+                additionalParameters.put(
+                    InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
+                    String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineOperationalLimitGroup()));
+                additionalParameters.put(
+                    InfoTypeParameters.QUERY_PARAM_LOAD_BUS,
+                    String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineBus()));
+            }
             case "two_windings_transformer" -> additionalParameters.put(
                 InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
                 String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadTwtOperationalLimitGroup()));
-            case "generator" -> additionalParameters.put(
-                InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
-                String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal()));
+            case "generator" -> {
+                additionalParameters.put(
+                    InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
+                    String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal()));
+                additionalParameters.put(
+                    InfoTypeParameters.QUERY_PARAM_LOAD_BUS,
+                    String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorBus()));
+            }
             case "battery" -> additionalParameters.put(
                     InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
                     String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadBatteryRegulatingTerminal()));
@@ -1007,13 +1017,18 @@ public class StudyService {
         optionalParameters.get(String.valueOf(ElementType.LINE)).put(
             InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
             String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineOperationalLimitGroup()));
+        optionalParameters.get(String.valueOf(ElementType.LINE)).put(
+            InfoTypeParameters.QUERY_PARAM_LOAD_BUS,
+            String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineBus()));
         optionalParameters.get(String.valueOf(ElementType.TWO_WINDINGS_TRANSFORMER)).put(
             InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
             String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadTwtOperationalLimitGroup()));
         optionalParameters.put(String.valueOf(ElementType.GENERATOR),
             Map.of(
                 InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
-                String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal())));
+                String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal()),
+                InfoTypeParameters.QUERY_PARAM_LOAD_BUS,
+                String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorBus())));
         optionalParameters.put(String.valueOf(ElementType.BATTERY),
                 Map.of(
                         InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
