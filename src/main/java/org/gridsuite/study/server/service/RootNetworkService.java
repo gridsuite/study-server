@@ -202,15 +202,15 @@ public class RootNetworkService {
     }
 
     /**
-     * @return for each root network tag, how many of the studies holding the given modification groups have it; a tag
-     * no such study has is absent
+     * @return for each root network tag, how many of the studies of the given nodes have it; stashed or unknown nodes
+     * are ignored, and a tag no such study has is absent
      */
     @Transactional(readOnly = true)
-    public Map<String, Long> countStudiesByRootNetworkTag(List<UUID> modificationGroupUuids) {
-        if (modificationGroupUuids.isEmpty()) {
+    public Map<String, Long> countStudiesByRootNetworkTag(List<UUID> nodeUuids) {
+        if (nodeUuids.isEmpty()) {
             return Map.of();
         }
-        return rootNetworkRepository.countStudiesByTag(modificationGroupUuids).stream()
+        return rootNetworkRepository.countStudiesByTag(nodeUuids).stream()
                 .collect(Collectors.toMap(TagStudyCount::getTag, TagStudyCount::getStudyCount));
     }
 

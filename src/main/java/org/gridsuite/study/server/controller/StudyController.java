@@ -1193,6 +1193,18 @@ public class StudyController {
                 .body(networkModificationTreeService.getNodesInfos(nodeUuids));
     }
 
+    // POST: the node list can be too long for a query string
+    @PostMapping(value = "/nodes/root-network-tags/study-count", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "For each root network tag, count the studies of the given nodes having it")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Number of studies by root network tag, stashed or unknown nodes are ignored"),
+    })
+    public ResponseEntity<Map<String, Long>> getRootNetworkTagsStudyCount(
+            @Parameter(description = "Node UUIDs") @RequestBody List<UUID> nodeUuids) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
+                .body(rootNetworkService.countStudiesByRootNetworkTag(nodeUuids));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
     @Operation(summary = "Create a node as before / after the given node ID")
     @ApiResponses(value = {

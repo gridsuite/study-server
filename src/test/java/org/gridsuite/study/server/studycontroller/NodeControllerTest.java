@@ -18,6 +18,7 @@ import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.utils.MatcherReportLog;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
@@ -34,6 +35,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.utils.JsonUtils.getModificationContextJsonString;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -1136,5 +1138,28 @@ class NodeControllerTest extends StudyTestBase {
         Map<UUID, NodeInfos> infosByNodeUuid = nodesInfos.stream().collect(Collectors.toMap(NodeInfos::nodeUuid, Function.identity()));
         assertEquals(new NodeInfos(node1.getId(), "node1", study1Uuid), infosByNodeUuid.get(node1.getId()));
         assertEquals(new NodeInfos(node2.getId(), "node2", study2Uuid), infosByNodeUuid.get(node2.getId()));
+    }
+
+    @Test
+    void testGetRootNetworkTagsStudyCount() throws Exception {
+        String userId = "userId";
+        UUID study1Uuid = createStudyWithStubs(userId, CASE_UUID);
+        UUID study2Uuid = createStudyWithStubs(userId, CASE_UUID);
+        UUID root1Uuid = networkModificationTreeService.getStudyTree(study1Uuid, null).getId();
+        UUID root2Uuid = networkModificationTreeService.getStudyTree(study2Uuid, null).getId();
+        NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, root1Uuid, VARIANT_ID, "node1", userId);
+        NetworkModificationNode node2 = createNetworkModificationNode(study2Uuid, root2Uuid, VARIANT_ID_2, "node2", userId);
+
+        MvcResult result = mockMvc.perform(post("/v1/nodes/root-network-tags/study-count")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(List.of(node1.getId(), node2.getId(), UUID.randomUUID()))))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Map<String, Long> studyCountByTag = mapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() { });
+        Map<String, Long> expected = Stream.of(study1Uuid, study2Uuid)
+                .flatMap(studyUuid -> rootNetworkRepository.findAllByStudyId(studyUuid).stream())
+                .collect(Collectors.groupingBy(RootNetworkEntity::getTag, Collectors.counting()));
+        assertEquals(expected, studyCountByTag);
     }
 }

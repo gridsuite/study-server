@@ -1010,16 +1010,17 @@ class RootNetworkTest {
 
     @Test
     void testCountStudiesByRootNetworkTag() {
-        UUID groupOfStudyWithTwoTags = createStudyWithNode("R2").getModificationGroupUuid();
-        UUID groupOfStudyWithOneTag = createStudyWithNode(null).getModificationGroupUuid();
+        UUID nodeOfStudyWithTwoTags = createStudyWithNode("R2").getId();
+        UUID nodeOfStudyWithOneTag = createStudyWithNode(null).getId();
         NetworkModificationNode stashedNode = createStudyWithNode("R3");
         NodeEntity stashedNodeEntity = nodeRepository.findById(stashedNode.getId()).orElseThrow();
         stashedNodeEntity.setStashed(true);
         nodeRepository.save(stashedNodeEntity);
-        createStudyWithNode("R4"); // holds none of the requested groups
+        createStudyWithNode("R4"); // none of its nodes is requested
 
+        // a study is counted once per tag even when several of its nodes are given
         assertEquals(Map.of("dum", 2L, "R2", 1L), rootNetworkService.countStudiesByRootNetworkTag(
-            List.of(groupOfStudyWithTwoTags, groupOfStudyWithOneTag, stashedNode.getModificationGroupUuid(), UUID.randomUUID())));
+            List.of(nodeOfStudyWithTwoTags, nodeOfStudyWithTwoTags, nodeOfStudyWithOneTag, stashedNode.getId(), UUID.randomUUID())));
         assertEquals(Map.of(), rootNetworkService.countStudiesByRootNetworkTag(List.of(UUID.randomUUID())));
         assertEquals(Map.of(), rootNetworkService.countStudiesByRootNetworkTag(List.of()));
     }
