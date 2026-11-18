@@ -41,7 +41,6 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
-import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -226,11 +225,8 @@ class NetworkModificationUnitTest {
 
         checkModificationUpdatedMessageReceived(studyUuid, node1Uuid, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
 
-        NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
-        verify(restClient.put(), times(1)).uri(
-                matches(".*network-modifications\\?uuids=" + modificationUuid +
-                        "&groupUuid=" + node1Infos.getModificationGroupUuid().toString()));
-        verify(restClient.put().contentType(MediaType.APPLICATION_JSON), times(1)).body(metadata);
+        // only the activation is held by these metadata on the network modification server
+        verify(restClient.put(), never()).uri(matches(".*network-modifications\\?uuids=" + modificationUuid + ".*"));
     }
 
     @Test
@@ -312,11 +308,9 @@ class NetworkModificationUnitTest {
         checkUpdateStatusMessagesReceived(studyUuid, nodeWithModification, output);
         checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
 
-        NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
         verify(restClient.put(), times(1)).uri(
                 matches(".*network-modifications\\?" + networkModificationUuids.stream().map(uuid -> "uuids=" + uuid.toString() + "&").collect(Collectors.joining()) +
-                        "groupUuid=" + node1Infos.getModificationGroupUuid().toString()));
-        verify(restClient.put().contentType(MediaType.APPLICATION_JSON), times(1)).body(metadata);
+                        "active=" + activated));
     }
 
     private void checkModificationUpdatedMessageReceived(UUID studyUuid, UUID nodeUuid, List<UUID> childrenNodeUuids, String notificationType) {

@@ -157,9 +157,9 @@ public class NetworkModificationService {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
             }
-            UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationRestService.updateModificationsMetadata(groupId, modificationsUuids, metadata, userId);
-            if (metadata.getActivated() != null || metadata.getName() != null) {
+            // only the activation is held by these metadata on the network modification server
+            if (metadata.getActivated() != null) {
+                networkModificationRestService.updateModificationsActivation(modificationsUuids, metadata.getActivated(), userId);
                 networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid);
             }
         } finally {
