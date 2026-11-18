@@ -18,6 +18,7 @@ import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.utils.MatcherReportLog;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -1145,14 +1146,14 @@ class NodeControllerTest extends StudyTestBase {
         String userId = "userId";
         UUID study1Uuid = createStudyWithStubs(userId, CASE_UUID);
         UUID study2Uuid = createStudyWithStubs(userId, CASE_UUID);
-        UUID root1Uuid = networkModificationTreeService.getStudyTree(study1Uuid, null).getId();
-        UUID root2Uuid = networkModificationTreeService.getStudyTree(study2Uuid, null).getId();
-        NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, root1Uuid, VARIANT_ID, "node1", userId);
-        NetworkModificationNode node2 = createNetworkModificationNode(study2Uuid, root2Uuid, VARIANT_ID_2, "node2", userId);
+        // study 1 is multi-root, study 2 stays mono-root: both are counted
+        StudyEntity study1 = studyRepository.findById(study1Uuid).orElseThrow();
+        study1.setMonoRoot(false);
+        studyRepository.save(study1);
 
-        MvcResult result = mockMvc.perform(post("/v1/nodes/root-network-tags/study-count")
+        MvcResult result = mockMvc.perform(post("/v1/studies/root-network-tags/study-count")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(List.of(node1.getId(), node2.getId(), UUID.randomUUID()))))
+                        .content(mapper.writeValueAsString(List.of(study1Uuid, study2Uuid, UUID.randomUUID()))))
                 .andExpect(status().isOk())
                 .andReturn();
 

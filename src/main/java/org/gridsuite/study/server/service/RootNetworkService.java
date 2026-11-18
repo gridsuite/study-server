@@ -201,16 +201,12 @@ public class RootNetworkService {
                 .map(rootNetworkEntity -> rootNetworkEntity.toDto(objectMapper)).toList();
     }
 
-    /**
-     * @return for each root network tag, how many of the studies of the given nodes have it; stashed or unknown nodes
-     * are ignored, and a tag no such study has is absent
-     */
     @Transactional(readOnly = true)
-    public Map<String, Long> countStudiesByRootNetworkTag(List<UUID> nodeUuids) {
-        if (nodeUuids.isEmpty()) {
+    public Map<String, Long> countStudiesByRootNetworkTag(List<UUID> studyUuids) {
+        if (studyUuids.isEmpty()) {
             return Map.of();
         }
-        return rootNetworkRepository.countStudiesByTag(nodeUuids).stream()
+        return rootNetworkRepository.countStudiesByTag(studyUuids).stream()
                 .collect(Collectors.toMap(TagStudyCount::getTag, TagStudyCount::getStudyCount));
     }
 

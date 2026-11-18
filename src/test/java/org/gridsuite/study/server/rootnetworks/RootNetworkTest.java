@@ -26,7 +26,6 @@ import org.gridsuite.study.server.repository.StudyCreationRequestEntity;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
@@ -150,8 +149,6 @@ class RootNetworkTest {
     private NetworkModificationTreeService networkModificationTreeService;
     @Autowired
     private RootNetworkRepository rootNetworkRepository;
-    @Autowired
-    private NodeRepository nodeRepository;
     @Autowired
     private TestUtils testUtils;
 
@@ -1010,22 +1007,22 @@ class RootNetworkTest {
 
     @Test
     void testCountStudiesByRootNetworkTag() {
-        UUID nodeOfStudyWithTwoTags = createStudyWithNode("R2").getId();
-        UUID nodeOfStudyWithOneTag = createStudyWithNode(null).getId();
-        NetworkModificationNode stashedNode = createStudyWithNode("R3");
-        NodeEntity stashedNodeEntity = nodeRepository.findById(stashedNode.getId()).orElseThrow();
-        stashedNodeEntity.setStashed(true);
-        nodeRepository.save(stashedNodeEntity);
-        createStudyWithNode("R4"); // none of its nodes is requested
+        UUID studyWithTwoTags = createStudy("R2");
+        UUID studyWithOneTag = createStudy(null);
+        createStudy("R4"); // not requested
+        UUID monoRootStudyUuid = createStudy(null);
+        StudyEntity monoRootStudy = studyRepository.findById(monoRootStudyUuid).orElseThrow();
+        monoRootStudy.setMonoRoot(true);
+        studyRepository.save(monoRootStudy);
 
-        // a study is counted once per tag even when several of its nodes are given
-        assertEquals(Map.of("dum", 2L, "R2", 1L), rootNetworkService.countStudiesByRootNetworkTag(
-            List.of(nodeOfStudyWithTwoTags, nodeOfStudyWithTwoTags, nodeOfStudyWithOneTag, stashedNode.getId(), UUID.randomUUID())));
+        // a study is counted once per tag even when given twice, mono-root ones included, and an unknown study is ignored
+        assertEquals(Map.of("dum", 3L, "R2", 1L), rootNetworkService.countStudiesByRootNetworkTag(
+            List.of(studyWithTwoTags, studyWithTwoTags, studyWithOneTag, monoRootStudyUuid, UUID.randomUUID())));
         assertEquals(Map.of(), rootNetworkService.countStudiesByRootNetworkTag(List.of(UUID.randomUUID())));
         assertEquals(Map.of(), rootNetworkService.countStudiesByRootNetworkTag(List.of()));
     }
 
-    private NetworkModificationNode createStudyWithNode(String extraTag) {
+    private UUID createStudy(String extraTag) {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         if (extraTag != null) {
             createDummyRootNetwork(studyEntity, RootNetworkInfos.builder()
@@ -1038,9 +1035,7 @@ class RootNetworkTest {
                 .tag(extraTag)
                 .build());
         }
-        studyRepository.save(studyEntity);
-        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
-        return networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
+        return studyRepository.save(studyEntity).getId();
     }
 
     @AfterEach
