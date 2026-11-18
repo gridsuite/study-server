@@ -13,7 +13,6 @@ import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
 import org.gridsuite.study.server.dto.NodeInfos;
 import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
-import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -215,21 +214,6 @@ class NetworkModificationUnitTest {
     }
 
     @Test
-    void updateDescription() {
-        setupWithOneRootNetwork();
-        UUID modificationUuid = UUID.randomUUID();
-        List<UUID> childrenNodes = List.of(node2Uuid, node4Uuid, node3Uuid);
-
-        NetworkModificationMetadata metadata = new NetworkModificationMetadata(null, "new description", null, null);
-        studyController.updateNetworkModificationsMetadata(studyUuid, node1Uuid, List.of(modificationUuid), metadata, USER_ID_HEADER);
-
-        checkModificationUpdatedMessageReceived(studyUuid, node1Uuid, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
-
-        // only the activation is held by these metadata on the network modification server
-        verify(restClient.put(), never()).uri(matches(".*network-modifications\\?uuids=" + modificationUuid + ".*"));
-    }
-
-    @Test
     void activateNetworkModificationTest() {
         setupWithOneRootNetwork();
         List<UUID> modificationToDeactivateUuids = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
@@ -301,8 +285,7 @@ class NetworkModificationUnitTest {
     }
 
     private void updateNetworkModificationActivationStatus(List<UUID> networkModificationUuids, UUID nodeWithModification, List<UUID> childrenNodes, List<UUID> nodesToUnbuild, boolean activated) {
-        NetworkModificationMetadata metadata = new NetworkModificationMetadata(activated, null, null, null);
-        studyController.updateNetworkModificationsMetadata(studyUuid, node1Uuid, networkModificationUuids, metadata, USER_ID_HEADER);
+        studyController.updateNetworkModificationsActivation(studyUuid, node1Uuid, networkModificationUuids, activated, USER_ID_HEADER);
 
         checkUpdateBuildStateMessageReceived(studyUuid, nodesToUnbuild);
         checkUpdateStatusMessagesReceived(studyUuid, nodeWithModification, output);

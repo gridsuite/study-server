@@ -1086,19 +1086,19 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications")
-    @Operation(summary = "Updates the metadata of a network modification")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Update the metadata of a network modification"), @ApiResponse(responseCode = "404",
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", params = "active")
+    @Operation(summary = "Activates or deactivates network modifications of a node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The activation of the network modifications has been updated"), @ApiResponse(responseCode = "404",
             description = "The study/node is not found")})
-    public ResponseEntity<Void> updateNetworkModificationsMetadata(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                   @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                   @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
-                                                                   @RequestBody NetworkModificationMetadata metadata,
-                                                                   @RequestHeader(HEADER_USER_ID) String userId) {
+    public ResponseEntity<Void> updateNetworkModificationsActivation(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                     @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                     @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
+                                                                     @Parameter(description = "Activate or deactivate the modifications") @RequestParam("active") boolean active,
+                                                                     @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         networkModificationActivityRunnerService.runWith(studyUuid, nodeUuid, userId,
             () -> {
-                networkModificationService.updateNetworkModificationsMetadata(studyUuid, nodeUuid, networkModificationUuids, userId, metadata);
+                networkModificationService.updateNetworkModificationsActivation(studyUuid, nodeUuid, networkModificationUuids, userId, active);
             });
         return ResponseEntity.ok().build();
     }
