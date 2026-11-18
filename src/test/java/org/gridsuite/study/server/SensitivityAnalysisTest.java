@@ -364,7 +364,7 @@ class SensitivityAnalysisTest {
         // --- 4. Delete Sensitivity analysis results ---
         assertEquals(1, rootNetworkNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull().size());
 
-        computationServerStubs.stubDeleteResults("/v1/results");
+        computationServerStubs.stubDeleteAllResults();
         reportServerStubs.stubDeleteReport();
 
         mockMvc.perform(delete("/v1/supervision/computation/results")
@@ -373,7 +373,7 @@ class SensitivityAnalysisTest {
             .andExpect(status().isOk());
 
         // Verify delete requests
-        WireMockUtilsCriteria.verifyDeleteRequest(wireMockServer, "/v1/results", Map.of("resultsUuids", WireMock.matching(".*")));
+        computationServerStubs.verifyDeleteAllResults();
         reportServerStubs.verifyDeleteReport();
 
         // Verify repository is empty after deletion
