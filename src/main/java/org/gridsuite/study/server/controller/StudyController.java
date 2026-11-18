@@ -202,7 +202,7 @@ public class StudyController {
     public ResponseEntity<RootNetworkRequestInfos> createRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
                                                                      @RequestBody RootNetworkInfos rootNetworkInfos,
                                                                      @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, rootNetworkInfos, userId));
+        return ResponseEntity.ok().body(nodeService.createRootNetworkRequest(studyUuid, rootNetworkInfos, userId));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}")
@@ -217,10 +217,10 @@ public class StudyController {
             // the reimport unbuilds the whole tree of this root network, so it is held on the root node
             UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
             nodeActivityRunnerService.runWith(REIMPORT_CASE, studyUuid, rootNetworkUuid, List.of(rootNodeUuid),
-                () -> studyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, userId));
+                () -> nodeService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, userId));
         } else {
             // only the basic infos (name, tag) are updated, the tree is left untouched
-            studyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, userId);
+            nodeService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, userId);
         }
         return ResponseEntity.ok().build();
     }
@@ -270,7 +270,7 @@ public class StudyController {
                                               @RequestHeader(HEADER_USER_ID) String userId) {
         //if the source study is not set we assume it's the same as the target study
         nodeActivityRunnerService.runWith(EDIT_TREE, targetStudyUuid, insertMode.isChild() ? List.of() : List.of(referenceNodeUuid),
-            () -> studyService.duplicateStudyNode(sourceStudyUuid == null ? targetStudyUuid : sourceStudyUuid, targetStudyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode, userId));
+            () -> nodeService.duplicateStudyNode(sourceStudyUuid == null ? targetStudyUuid : sourceStudyUuid, targetStudyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode, userId));
         return ResponseEntity.ok().build();
     }
 
@@ -387,7 +387,7 @@ public class StudyController {
                                                  @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
                                                  @RequestHeader(HEADER_USER_ID) String userId) {
         // added as a child of the reference, and the origin subtree is only read: nothing to hold
-        studyService.duplicateStudySubtree(sourceStudyUuid, targetStudyUuid, subtreeToCopyParentNodeUuid, referenceNodeUuid, userId);
+        nodeService.duplicateStudySubtree(sourceStudyUuid, targetStudyUuid, subtreeToCopyParentNodeUuid, referenceNodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -813,7 +813,7 @@ public class StudyController {
                                                                             defaultValue = "true") boolean nodeOnlyReport,
                                                                     @Parameter(description = "The report Type") @RequestParam(name = "reportType") StudyService.ReportType reportType,
                                                                     @Parameter(description = "Severity levels") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels) {
-        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        nodeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesReport(nodeUuid, rootNetworkUuid, nodeOnlyReport, reportType, severityLevels));
     }
 
@@ -831,7 +831,7 @@ public class StudyController {
                                                                     @Parameter(description = "If we wanted the paged version of the results or not") @RequestParam(name = "paged", required = false,
                                                                             defaultValue = "false") boolean paged,
                                                                     Pageable pageable) {
-        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        nodeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getReportLogs(nodeUuid, rootNetworkUuid, reportId, messageFilter, severityLevels, paged, pageable));
     }
@@ -852,7 +852,7 @@ public class StudyController {
             @Parameter(description = "The search term") @RequestParam(name = "searchTerm") String searchTerm,
             @Parameter(description = "Rows per page") @RequestParam(name = "pageSize") int pageSize
     ) {
-        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        nodeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
                 studyService.getSearchTermMatchesInFilteredLogs(nodeUuid, rootNetworkUuid, reportId, severityLevels, messageFilter, searchTerm, pageSize));
@@ -866,7 +866,7 @@ public class StudyController {
                                                                        @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                        @Parameter(description = "node id") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                        @Parameter(description = "reportId") @RequestParam(name = "reportId", required = false) UUID reportId) {
-        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        nodeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAggregatedReportSeverities(nodeUuid, rootNetworkUuid, reportId));
     }
@@ -1214,7 +1214,7 @@ public class StudyController {
     public ResponseEntity<String> getVoltageInitModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                               @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                               @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
-        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        nodeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageInitModifications(nodeUuid, rootNetworkUuid));
     }
 
@@ -1225,7 +1225,7 @@ public class StudyController {
                                                                @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                @PathVariable("nodeUuid") UUID nodeUuid,
                                                                @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        nodeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         nodeService.assertIsNodeNotReadOnly(nodeUuid);
         nodeActivityRunnerService.runWith(EDIT_MODIFICATIONS, studyUuid, List.of(nodeUuid),
             () -> studyService.insertVoltageInitModifications(studyUuid, nodeUuid, rootNetworkUuid, userId));

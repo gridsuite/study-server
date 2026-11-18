@@ -104,6 +104,8 @@ class RootNetworkApplicabilityTest {
     private ObjectMapper objectMapper;
     @Autowired
     private OutputDestination output;
+    @Autowired
+    private NodeService nodeService;
 
     @MockitoBean
     private NetworkModificationRestService networkModificationRestService;
@@ -309,7 +311,7 @@ class RootNetworkApplicabilityTest {
 
         UUID studyUuid = studyEntity.getId();
         RootNetworkInfos renamingTagInfos = RootNetworkInfos.builder().id(rootNetworkUuid).tag(ROOT_NETWORK_TAG_2).build();
-        assertThrows(HttpClientErrorException.class, () -> studyService.updateRootNetworkRequest(studyUuid, renamingTagInfos, USER_ID));
+        assertThrows(HttpClientErrorException.class, () -> nodeService.updateRootNetworkRequest(studyUuid, renamingTagInfos, USER_ID));
 
         // neither the tag nor the applicabilities are touched
         assertEquals(ROOT_NETWORK_TAG_1, rootNetworkService.getRootNetworkTag(rootNetworkUuid));

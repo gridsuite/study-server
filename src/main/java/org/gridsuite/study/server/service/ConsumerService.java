@@ -84,6 +84,7 @@ public class ConsumerService {
     private final NodeActivityRunnerService nodeActivityRunnerService;
     private final WorkspaceService workspaceService;
     private final NetworkModificationService networkModificationService;
+    private final NodeService nodeService;
 
     @Value("${study.enable-operation-quotas}")
     private boolean shouldCheckOperationQuotas;
@@ -103,7 +104,8 @@ public class ConsumerService {
                            LoadFlowService loadFlowService,
                            NodeActivityRunnerService nodeActivityRunnerService,
                            WorkspaceService workspaceService,
-                           NetworkModificationService networkModificationService) {
+                           NetworkModificationService networkModificationService,
+                           NodeService nodeService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -120,6 +122,7 @@ public class ConsumerService {
         this.nodeActivityRunnerService = nodeActivityRunnerService;
         this.workspaceService = workspaceService;
         this.networkModificationService = networkModificationService;
+        this.nodeService = nodeService;
     }
 
     @Bean
@@ -276,7 +279,7 @@ public class ConsumerService {
                     .importParameters(importParameters)
                     .build());
                 case NETWORK_RECREATION -> studyService.updateNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
-                case ROOT_NETWORK_MODIFICATION -> studyService.modifyRootNetwork(studyUuid, RootNetworkInfos.builder()
+                case ROOT_NETWORK_MODIFICATION -> nodeService.modifyRootNetwork(studyUuid, RootNetworkInfos.builder()
                     .id(rootNetworkUuid)
                     .networkInfos(networkInfos)
                     .caseInfos(caseInfos)

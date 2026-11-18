@@ -179,7 +179,7 @@ class StudyControllerRebuildNodeTest {
 
         Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(networkModificationService, times(1)).unshareModificationReferences(studyUuid, Map.of(nodeUuid, List.of(modificationUuid)), userId);
-        verify(studyService, times(1)).assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        verify(nodeService, times(1)).assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         verify(nodeService, times(1)).assertIsNodeNotReadOnly(nodeUuid);
     }
 

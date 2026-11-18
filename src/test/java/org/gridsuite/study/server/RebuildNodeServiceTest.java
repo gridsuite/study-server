@@ -12,6 +12,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.nodeactivity.NetworkModificationActivityRunnerService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NodeService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
@@ -45,6 +46,9 @@ class RebuildNodeServiceTest {
 
     @MockitoBean
     private StudyService studyService;
+
+    @MockitoBean
+    private NodeService nodeService;
 
     @MockitoBean
     private NetworkModificationRestService networkModificationRestService;
