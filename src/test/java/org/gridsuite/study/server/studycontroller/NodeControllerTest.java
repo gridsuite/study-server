@@ -1142,25 +1142,26 @@ class NodeControllerTest extends StudyTestBase {
     }
 
     @Test
-    void testGetRootNetworkTagsStudyCount() throws Exception {
+    void testGetRootNetworkTags() throws Exception {
         String userId = "userId";
         UUID study1Uuid = createStudyWithStubs(userId, CASE_UUID);
         UUID study2Uuid = createStudyWithStubs(userId, CASE_UUID);
-        // study 1 is multi-root, study 2 stays mono-root: both are counted
+        // study 1 is multi-root, study 2 stays mono-root: both are returned
         StudyEntity study1 = studyRepository.findById(study1Uuid).orElseThrow();
         study1.setMonoRoot(false);
         studyRepository.save(study1);
 
-        MvcResult result = mockMvc.perform(post("/v1/studies/root-network-tags/study-count")
+        MvcResult result = mockMvc.perform(post("/v1/studies/root-network-tags")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(List.of(study1Uuid, study2Uuid, UUID.randomUUID()))))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        Map<String, Long> studyCountByTag = mapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() { });
-        Map<String, Long> expected = Stream.of(study1Uuid, study2Uuid)
-                .flatMap(studyUuid -> rootNetworkRepository.findAllByStudyId(studyUuid).stream())
-                .collect(Collectors.groupingBy(RootNetworkEntity::getTag, Collectors.counting()));
-        assertEquals(expected, studyCountByTag);
+        Map<UUID, List<String>> tagsByStudy = mapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() { });
+        Map<UUID, Set<String>> expected = Stream.of(study1Uuid, study2Uuid)
+                .collect(Collectors.toMap(Function.identity(), studyUuid -> rootNetworkRepository.findAllByStudyId(studyUuid).stream()
+                        .map(RootNetworkEntity::getTag).collect(Collectors.toSet())));
+        assertEquals(expected, tagsByStudy.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> Set.copyOf(entry.getValue()))));
     }
 }

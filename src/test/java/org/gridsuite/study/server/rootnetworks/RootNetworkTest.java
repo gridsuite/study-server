@@ -1006,7 +1006,7 @@ class RootNetworkTest {
     }
 
     @Test
-    void testCountStudiesByRootNetworkTag() {
+    void testGetRootNetworkTags() {
         UUID studyWithTwoTags = createStudy("R2");
         UUID studyWithOneTag = createStudy(null);
         createStudy("R4"); // not requested
@@ -1015,11 +1015,16 @@ class RootNetworkTest {
         monoRootStudy.setMonoRoot(true);
         studyRepository.save(monoRootStudy);
 
-        // a study is counted once per tag even when given twice, mono-root ones included, and an unknown study is ignored
-        assertEquals(Map.of("dum", 3L, "R2", 1L), rootNetworkService.countStudiesByRootNetworkTag(
-            List.of(studyWithTwoTags, studyWithTwoTags, studyWithOneTag, monoRootStudyUuid, UUID.randomUUID())));
-        assertEquals(Map.of(), rootNetworkService.countStudiesByRootNetworkTag(List.of(UUID.randomUUID())));
-        assertEquals(Map.of(), rootNetworkService.countStudiesByRootNetworkTag(List.of()));
+        // a study has each tag once even when given twice, mono-root ones included, and an unknown study is ignored
+        Map<UUID, List<String>> tagsByStudy = rootNetworkService.getRootNetworkTags(
+            List.of(studyWithTwoTags, studyWithTwoTags, studyWithOneTag, monoRootStudyUuid, UUID.randomUUID()));
+        assertEquals(Set.of(studyWithTwoTags, studyWithOneTag, monoRootStudyUuid), tagsByStudy.keySet());
+        assertEquals(Set.of("dum", "R2"), Set.copyOf(tagsByStudy.get(studyWithTwoTags)));
+        assertEquals(2, tagsByStudy.get(studyWithTwoTags).size());
+        assertEquals(List.of("dum"), tagsByStudy.get(studyWithOneTag));
+        assertEquals(List.of("dum"), tagsByStudy.get(monoRootStudyUuid));
+        assertEquals(Map.of(), rootNetworkService.getRootNetworkTags(List.of(UUID.randomUUID())));
+        assertEquals(Map.of(), rootNetworkService.getRootNetworkTags(List.of()));
     }
 
     private UUID createStudy(String extraTag) {

@@ -46,14 +46,13 @@ public interface RootNetworkRepository extends JpaRepository<RootNetworkEntity, 
     Optional<RootNetworkEntity> findByTagAndStudyId(String tag, UUID studyUuid);
 
     /**
-     * @return for each root network tag, how many of the given studies have it
+     * @return the root network tags of the given studies, once per study and tag
      */
     @Query("""
-            select r.tag as tag, count(distinct r.study.id) as studyCount from RootNetworkEntity r
+            select distinct r.study.id as studyUuid, r.tag as tag from RootNetworkEntity r
             where r.study.id in :studyUuids
-            group by r.tag
             """)
-    List<TagStudyCount> countStudiesByTag(@Param("studyUuids") Collection<UUID> studyUuids);
+    List<StudyRootNetworkTag> findTagsByStudyIds(@Param("studyUuids") Collection<UUID> studyUuids);
 
     boolean existsByIdAndName(UUID rootNetworkUuid, String rootNetworkName);
 

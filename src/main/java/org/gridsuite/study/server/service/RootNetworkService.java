@@ -21,7 +21,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
-import org.gridsuite.study.server.repository.rootnetwork.TagStudyCount;
+import org.gridsuite.study.server.repository.rootnetwork.StudyRootNetworkTag;
 import org.gridsuite.study.server.utils.JsonUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -202,12 +202,13 @@ public class RootNetworkService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Long> countStudiesByRootNetworkTag(List<UUID> studyUuids) {
+    public Map<UUID, List<String>> getRootNetworkTags(List<UUID> studyUuids) {
         if (studyUuids.isEmpty()) {
             return Map.of();
         }
-        return rootNetworkRepository.countStudiesByTag(studyUuids).stream()
-                .collect(Collectors.toMap(TagStudyCount::getTag, TagStudyCount::getStudyCount));
+        return rootNetworkRepository.findTagsByStudyIds(studyUuids).stream()
+                .collect(Collectors.groupingBy(StudyRootNetworkTag::getStudyUuid,
+                        Collectors.mapping(StudyRootNetworkTag::getTag, Collectors.toList())));
     }
 
     @Transactional

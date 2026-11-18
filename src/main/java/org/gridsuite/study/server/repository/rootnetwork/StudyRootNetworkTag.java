@@ -6,11 +6,13 @@
  */
 package org.gridsuite.study.server.repository.rootnetwork;
 
-/**
- * A root network tag with the number of studies having it
- */
-public interface TagStudyCount {
-    String getTag();
+import java.util.UUID;
 
-    long getStudyCount();
+/**
+ * A root network tag of a study
+ */
+public interface StudyRootNetworkTag {
+    UUID getStudyUuid();
+
+    String getTag();
 }
