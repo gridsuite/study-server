@@ -22,6 +22,7 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.nodeactivity.NetworkModificationActivityRunnerService;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NodeService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
 import org.springframework.http.MediaType;
@@ -47,17 +48,19 @@ import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNBUILD_A
 public class NodeController {
 
     private final NetworkModificationTreeService networkModificationTreeService;
+    private final NodeService nodeService;
     private final StudyService studyService;
     private final NetworkModificationActivityRunnerService networkModificationActivityRunnerService;
     private final NetworkModificationService networkModificationService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
 
-    public NodeController(NetworkModificationTreeService networkModificationTreeService,
+    public NodeController(NetworkModificationTreeService networkModificationTreeService, NodeService nodeService,
                           StudyService studyService,
                           NetworkModificationActivityRunnerService networkModificationActivityRunnerService,
                           NetworkModificationService networkModificationService,
                           NodeActivityRunnerService nodeActivityRunnerService) {
         this.networkModificationTreeService = networkModificationTreeService;
+        this.nodeService = nodeService;
         this.studyService = studyService;
         this.networkModificationActivityRunnerService = networkModificationActivityRunnerService;
         this.networkModificationService = networkModificationService;
@@ -73,7 +76,7 @@ public class NodeController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        nodeService.assertIsNodeNotReadOnly(nodeUuid);
         networkModificationActivityRunnerService.runWith(studyUuid, nodeUuid, userId,
                 () -> networkModificationService.unshareModificationReferences(studyUuid, Map.of(nodeUuid, List.of(modificationUuid)), userId));
         return ResponseEntity.ok().build();
@@ -91,7 +94,7 @@ public class NodeController {
         UUID sourceNodeUuid = Objects.requireNonNullElse(originNodeUuid, targetNodeUuid);
         studyService.assertIsStudyAndNodeExist(studyUuid, targetNodeUuid);
         studyService.assertIsNodeExist(studyUuid, sourceNodeUuid, new StudyException(MOVE_NETWORK_MODIFICATION_FORBIDDEN));
-        studyService.assertIsNodeNotReadOnly(targetNodeUuid);
+        nodeService.assertIsNodeNotReadOnly(targetNodeUuid);
         networkModificationActivityRunnerService.runWith(studyUuid, targetNodeUuid, sourceNodeUuid, userId,
                 () -> {
                     boolean isTargetInDifferentNodeTree = networkModificationService.invalidateNodeTreeWhenMoveModifications(studyUuid, targetNodeUuid, sourceNodeUuid);
@@ -108,7 +111,7 @@ public class NodeController {
                                                   @RequestBody List<ModificationCopyInfos> modificationInfos,
                                                   @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        nodeService.assertIsNodeNotReadOnly(nodeUuid);
         List<UUID> modificationsToCopyUuidList = modificationInfos.stream().map(ModificationCopyInfos::modificationUuid).toList();
         handleDuplicateNetworkModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId);
         return ResponseEntity.ok().build();
@@ -123,7 +126,7 @@ public class NodeController {
             @RequestBody List<UUID> modificationsUuids,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        nodeService.assertIsNodeNotReadOnly(nodeUuid);
         UUID newCompositeUuid = networkModificationActivityRunnerService.runWith(studyUuid, nodeUuid, userId,
                 () -> {
                     networkModificationService.invalidateNodeTreeWhenMoveModification(studyUuid, nodeUuid);
@@ -143,7 +146,7 @@ public class NodeController {
                                                            @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
                                                            @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        nodeService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.shareCompositeNetworkModification(studyUuid, nodeUuid, modificationUuid, name, description, parentDirectoryUuid, userId);
         return ResponseEntity.ok().build();
     }
@@ -157,7 +160,7 @@ public class NodeController {
                                                              @RequestBody List<CompositeInfos> compositeInfos,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        nodeService.assertIsNodeNotReadOnly(nodeUuid);
         handleInsertCompositeNetworkModifications(studyUuid, nodeUuid, compositeInfos, userId, action);
         return ResponseEntity.ok().build();
     }
@@ -192,7 +195,7 @@ public class NodeController {
                                                           @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                           @RequestBody String modificationAttributes,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        nodeService.assertIsNodeNotReadOnly(nodeUuid);
         networkModificationActivityRunnerService.runWith(studyUuid, nodeUuid, userId,
                 () -> {
                     networkModificationTreeService.invalidateNodeTreeWithLF(studyUuid, nodeUuid, InvalidateNodeTreeParameters.ComputationsInvalidationMode.ALL);
@@ -209,7 +212,7 @@ public class NodeController {
                                                           @Parameter(description = "Network modification UUID") @PathVariable("uuid") UUID networkModificationUuid,
                                                           @RequestBody String modificationAttributes,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        nodeService.assertIsNodeNotReadOnly(nodeUuid);
         networkModificationActivityRunnerService.runWith(studyUuid, nodeUuid, userId,
                 () -> networkModificationService.updateNetworkModification(studyUuid, modificationAttributes, nodeUuid, networkModificationUuid, userId));
         return ResponseEntity.ok().build();
@@ -222,7 +225,7 @@ public class NodeController {
                                                            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                            @Parameter(description = "Network modification UUIDs") @RequestParam(name = "uuids") List<UUID> networkModificationUuids,
                                                            @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        nodeService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.deleteNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
 
         return ResponseEntity.ok().build();
@@ -237,7 +240,7 @@ public class NodeController {
                                                           @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
                                                           @Parameter(description = "Stashed Modification") @RequestParam(name = "stashed") Boolean stashed,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        nodeService.assertIsNodeNotReadOnly(nodeUuid);
         networkModificationActivityRunnerService.runWith(studyUuid, nodeUuid, userId,
                 () -> {
                     if (stashed.booleanValue()) {
@@ -258,7 +261,7 @@ public class NodeController {
                                                                    @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
                                                                    @RequestBody NetworkModificationMetadata metadata,
                                                                    @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        nodeService.assertIsNodeNotReadOnly(nodeUuid);
         networkModificationActivityRunnerService.runWith(studyUuid, nodeUuid, userId,
                 () -> networkModificationService.updateNetworkModificationsMetadata(studyUuid, nodeUuid, networkModificationUuids, userId, metadata));
         return ResponseEntity.ok().build();

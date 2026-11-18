@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.nodeactivity.NodeActivityType;
+import org.gridsuite.study.server.service.NodeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.voltageinit.VoltageInitService;
@@ -42,13 +43,16 @@ public class VoltageInitController {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final VoltageInitService voltageInitService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
+    private final NodeService nodeService;
 
     public VoltageInitController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService,
-                                 VoltageInitService voltageInitService, NodeActivityRunnerService nodeActivityRunnerService) {
+                                 VoltageInitService voltageInitService, NodeActivityRunnerService nodeActivityRunnerService,
+                                 NodeService nodeService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.voltageInitService = voltageInitService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
+        this.nodeService = nodeService;
     }
 
     @PutMapping(value = "/run")
@@ -61,7 +65,7 @@ public class VoltageInitController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        nodeService.assertIsNodeNotReadOnly(nodeUuid);
         QuotaRunner.runComputationWithQuota(studyService, VOLTAGE_INITIALIZATION, userId, quotaId -> {
             // applying the modifications inserts them into the node, which invalidates its children
             NodeActivityType activityType = studyService.shouldApplyModifications(studyUuid)

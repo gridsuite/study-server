@@ -16,6 +16,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.nodeactivity.NetworkModificationActivityRunnerService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NodeService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
@@ -57,6 +58,9 @@ class StudyControllerRebuildNodeTest {
     // we mock studyService since we don't cover all the assertions
     @MockitoBean
     private StudyService studyService;
+
+    @MockitoBean
+    private NodeService nodeService;
 
     @MockitoBean
     NetworkModificationTreeService networkModificationTreeService;
@@ -176,7 +180,7 @@ class StudyControllerRebuildNodeTest {
         Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(networkModificationService, times(1)).unshareModificationReferences(studyUuid, Map.of(nodeUuid, List.of(modificationUuid)), userId);
         verify(studyService, times(1)).assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        verify(studyService, times(1)).assertIsNodeNotReadOnly(nodeUuid);
+        verify(nodeService, times(1)).assertIsNodeNotReadOnly(nodeUuid);
     }
 
     @Test

@@ -1063,14 +1063,6 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public void assertIsNodeNotReadOnly(UUID nodeUuid) {
-        Boolean isReadOnly = networkModificationTreeService.isReadOnly(nodeUuid);
-        if (Boolean.TRUE.equals(isReadOnly)) {
-            throw new StudyException(NOT_ALLOWED);
-        }
-    }
-
-    @Transactional(readOnly = true)
     public void assertCanRunOnConstructionNode(UUID studyUuid, UUID nodeUuid, List<String> forbiddenProvidersOnConstructionNode, Function<UUID, String> providerGetter) {
         if (networkModificationTreeService.isConstructionNode(nodeUuid)) {
             String provider = providerGetter.apply(studyUuid);

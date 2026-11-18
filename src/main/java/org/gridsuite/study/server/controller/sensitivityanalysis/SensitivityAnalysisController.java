@@ -14,10 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
-import org.gridsuite.study.server.service.RootNetworkService;
-import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisService;
 import org.gridsuite.study.server.utils.QuotaRunner;
@@ -47,6 +44,7 @@ public class SensitivityAnalysisController {
     private final SensitivityAnalysisRestService sensitivityAnalysisRestService;
     private final RootNetworkService rootNetworkService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
+    private final NodeService nodeService;
 
     public SensitivityAnalysisController(RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                          StudyService studyService,
@@ -54,7 +52,8 @@ public class SensitivityAnalysisController {
                                          NetworkModificationTreeService networkModificationTreeService,
                                          SensitivityAnalysisRestService sensitivityAnalysisRestService,
                                          RootNetworkService rootNetworkService,
-                                         NodeActivityRunnerService nodeActivityRunnerService) {
+                                         NodeActivityRunnerService nodeActivityRunnerService,
+                                         NodeService nodeService) {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.studyService = studyService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
@@ -62,6 +61,7 @@ public class SensitivityAnalysisController {
         this.sensitivityAnalysisRestService = sensitivityAnalysisRestService;
         this.rootNetworkService = rootNetworkService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
+        this.nodeService = nodeService;
     }
 
     @PostMapping(value = "/run")
@@ -72,7 +72,7 @@ public class SensitivityAnalysisController {
                                                        @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                        @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        nodeService.assertIsNodeNotReadOnly(nodeUuid);
         QuotaRunner.runComputationWithQuota(studyService, SENSITIVITY_ANALYSIS, userId, quotaId ->
             nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
                 () -> sensitivityAnalysisService.runSensitivityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId, quotaId)));
