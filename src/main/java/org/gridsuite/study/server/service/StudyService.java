@@ -24,7 +24,6 @@ import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
-import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.dto.studyexport.NodeTreeExportInfos;
 import org.gridsuite.study.server.dto.studyexport.RootNetworkExportInfos;
 import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
@@ -38,12 +37,10 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.*;
-import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
@@ -68,12 +65,10 @@ import org.springframework.web.util.UriUtils;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyConstants.BUS_ID_TO_ICC_VALUES;
@@ -125,7 +120,6 @@ public class StudyService {
     private final LoadFlowService loadFlowService;
     private final SecurityAnalysisRestService securityAnalysisRestService;
     private final DynamicMappingService dynamicMappingService;
-    private final DynamicSimulationEventService dynamicSimulationEventService;
     private final ShortCircuitRestService shortCircuitRestService;
     private final VoltageInitRestService voltageInitRestService;
     private final WorkspaceService workspaceService;
@@ -186,7 +180,6 @@ public class StudyService {
         CaseService caseService,
         DynamicMappingService dynamicMappingService,
         VoltageInitRestService voltageInitService,
-        DynamicSimulationEventService dynamicSimulationEventService,
         StudyConfigService studyConfigService,
         NadConfigService nadConfigService,
         FilterService filterService,
@@ -195,7 +188,7 @@ public class StudyService {
         RootNetworkNodeInfoService rootNetworkNodeInfoService,
         DirectoryService directoryService,
         ComputationParametersService computationParametersService,
-        WorkspaceService workspaceService, NodeRepository nodeRepository) {
+        WorkspaceService workspaceService) {
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
@@ -220,7 +213,6 @@ public class StudyService {
         this.caseService = caseService;
         this.dynamicMappingService = dynamicMappingService;
         this.voltageInitRestService = voltageInitService;
-        this.dynamicSimulationEventService = dynamicSimulationEventService;
         this.studyConfigService = studyConfigService;
         this.nadConfigService = nadConfigService;
         this.filterService = filterService;
@@ -1277,98 +1269,6 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    private void removeNodesFromAliases(UUID studyUuid, List<UUID> nodeIds, boolean removeChildren) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        if (!CollectionUtils.isEmpty(studyEntity.getNodeAliases())) {
-            Set<UUID> allNodeIds = new HashSet<>(nodeIds);
-            if (removeChildren) {
-                nodeIds.forEach(n -> allNodeIds.addAll(networkModificationTreeService.getAllChildrenUuids(n)));
-            }
-            studyEntity.getNodeAliases().forEach(nodeAliasEmbeddable -> {
-                if (nodeAliasEmbeddable.getNodeId() != null && allNodeIds.contains(nodeAliasEmbeddable.getNodeId())) {
-                    nodeAliasEmbeddable.setNodeId(null);
-                }
-            });
-        }
-    }
-
-    @Transactional
-    public void deleteNodes(UUID studyUuid, List<UUID> nodeIds, boolean deleteChildren, String userId, boolean emitNotification) {
-        removeNodesFromAliases(studyUuid, nodeIds, deleteChildren);
-
-        DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
-        for (UUID nodeId : nodeIds) {
-            AtomicReference<Long> startTime = new AtomicReference<>(null);
-            startTime.set(System.nanoTime());
-
-            boolean invalidateChildrenBuild = !deleteChildren && networkModificationTreeService.hasModifications(nodeId, false);
-            List<NodeEntity> childrenNodes = networkModificationTreeService.getChildren(nodeId);
-            networkModificationTreeService.doDeleteNode(nodeId, deleteChildren, deleteNodeInfos);
-
-            if (invalidateChildrenBuild) {
-                childrenNodes.forEach(nodeEntity -> networkModificationTreeService.invalidateNodeTree(studyUuid, nodeEntity.getIdNode()));
-            }
-
-            if (startTime.get() != null && LOGGER.isTraceEnabled()) {
-                LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId.toString().replaceAll("[\n\r]", "_"), studyUuid,
-                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-            }
-        }
-
-        deleteNodesInfos(deleteNodeInfos, userId);
-        if (emitNotification) {
-            notificationService.emitElementUpdated(studyUuid, userId);
-        }
-    }
-
-    private void deleteNodesInfos(DeleteNodeInfos deleteNodeInfos, String userId) {
-        List<CompletableFuture<?>> futures = new ArrayList<>();
-        futures.add(studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVariantIds().forEach(networkStoreService::deleteVariants)));
-        List<UUID> modificationGroupUuids = deleteNodeInfos.getModificationGroupUuids();
-        List<UUID> removedNodeUuids = deleteNodeInfos.getRemovedNodeUuids();
-        List<Pair<UUID, UUID>> modificationGroupUuidsNodeUuids = IntStream.range(0, modificationGroupUuids.size())
-                .mapToObj(index -> Pair.of(modificationGroupUuids.get(index), removedNodeUuids.get(index)))
-                .toList();
-        futures.add(studyServerExecutionService.runAsync(() -> modificationGroupUuidsNodeUuids.forEach(
-                groupUuidNodeUuid -> networkModificationRestService.deleteModificationsByGroup(groupUuidNodeUuid.getFirst(), userId))
-        ));
-        futures.add(studyServerExecutionService.runAsync(() -> deleteNodeInfos.getRemovedNodeUuids().forEach(dynamicSimulationEventService::deleteEventsByNodeId)));
-        futures.addAll(rootNetworkNodeInfoService.getRemoteDeletions(deleteNodeInfos));
-        // Do not wait completion and do not throw exception
-        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
-    }
-
-    @Transactional
-    public void stashNode(UUID studyUuid, UUID nodeId, boolean stashChildren, String userId) {
-        removeNodesFromAliases(studyUuid, List.of(nodeId), stashChildren);
-
-        AtomicReference<Long> startTime = new AtomicReference<>(null);
-        startTime.set(System.nanoTime());
-
-        boolean unbuildChildren = stashChildren || networkModificationTreeService.hasModifications(nodeId, false);
-        List<UUID> rootNetworkUuids = rootNetworkService.getStudyRootNetworks(studyUuid).stream()
-                .map(RootNetworkEntity::getId)
-                .toList();
-
-        if (unbuildChildren) {
-            rootNetworkUuids.forEach(rootNetworkId ->
-                networkModificationTreeService.invalidateNodeTree(studyUuid, nodeId, rootNetworkId));
-        } else {
-            rootNetworkUuids.forEach(rootNetworkId ->
-                networkModificationTreeService.invalidateNode(studyUuid, nodeId, rootNetworkId)
-            );
-        }
-
-        networkModificationTreeService.doStashNode(nodeId, stashChildren, userId);
-
-        if (startTime.get() != null) {
-            LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId, studyUuid,
-                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-        }
-
-        notificationService.emitElementUpdated(studyUuid, userId);
-    }
-
     public List<Pair<AbstractNode, Integer>> getStashedNodes(UUID studyId) {
         return networkModificationTreeService.getStashedNodes(studyId);
     }
@@ -1852,42 +1752,12 @@ public class StudyService {
         return filterService.exportFilters(rootNetworkService.getNetworkUuid(rootNetworkUuid), filtersUuid, variantId);
     }
 
-    @Transactional
-    public NetworkModificationNode createNode(UUID studyUuid, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode, String userId) {
-        StudyEntity study = getStudy(studyUuid);
-        networkModificationTreeService.assertCreateNode(nodeId, nodeInfo.getNodeType(), insertMode);
-        NetworkModificationNode newNode = networkModificationTreeService.createNode(study, nodeId, nodeInfo, insertMode, userId);
-
-        UUID parentUuid = networkModificationTreeService.getParentNodeUuid(newNode.getId()).orElse(null);
-        notificationService.emitNodeInserted(study.getId(), parentUuid, newNode.getId(), insertMode, nodeId);
-        // userId is null when creating initial nodes, we don't need to send element update notifications in this case
-        if (userId != null) {
-            notificationService.emitElementUpdated(study.getId(), userId);
-        }
-        return newNode;
-    }
-
     @Transactional(readOnly = true)
     public List<UUID> getRootNetworksToBuildNewNode(UUID studyUuid, UUID parentNodeUuid, NetworkModificationNode newNode) {
         if (!newNode.isSecurityNode() || !networkModificationTreeService.isRootOrConstructionNode(parentNodeUuid)) {
             return List.of();
         }
         return rootNetworkService.getStudyRootNetworks(studyUuid).stream().map(RootNetworkEntity::getId).toList();
-    }
-
-    @Transactional
-    public NetworkModificationNode createSequence(UUID studyUuid, UUID parentNodeUuid, NodeSequenceType nodeSequenceType, String userId) {
-        StudyEntity study = getStudy(studyUuid);
-        networkModificationTreeService.assertIsRootOrConstructionNode(parentNodeUuid);
-
-        NetworkModificationNode newParentNode = networkModificationTreeService.createTreeNodeFromNodeSequence(study, parentNodeUuid, nodeSequenceType);
-
-        notificationService.emitSubtreeInserted(study.getId(), newParentNode.getId(), parentNodeUuid);
-        // userId is null when creating initial nodes, we don't need to send element update notifications in this case
-        if (userId != null) {
-            notificationService.emitElementUpdated(study.getId(), userId);
-        }
-        return newParentNode;
     }
 
     private List<RootNetworkInfos> getStudyRootNetworksInfos(UUID studyUuid) {

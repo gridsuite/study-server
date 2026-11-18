@@ -114,7 +114,6 @@ public class SupervisionService {
 
     public static final String SUPERVISION_USER = "Supervision";
 
-
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService, LoadFlowService loadFlowService,
                               RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
@@ -495,7 +494,7 @@ public class SupervisionService {
         networkModificationService.deleteStashedModificationsFromGroups(notStashedModificationGroupUuids, SUPERVISION_USER);
 
         // remove stashed nodes and their modifications
-        studyService.deleteNodes(studyId, stashedNodes.stream().map(NodeEntity::getIdNode).toList(), true, SUPERVISION_USER, false);
+        networkModificationTreeService.deleteNodes(studyId, stashedNodes.stream().map(NodeEntity::getIdNode).toList(), true, SUPERVISION_USER, false);
     }
 
     @Transactional(readOnly = true)

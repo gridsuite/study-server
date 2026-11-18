@@ -23,10 +23,12 @@ import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,9 +46,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
+import static org.gridsuite.study.server.service.StudyService.STUDY_NOT_FOUND;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
@@ -75,6 +79,9 @@ public class NetworkModificationTreeService {
     private final UserAdminService userAdminService;
 
     private final StudyServerExecutionService studyServerExecutionService;
+    private final StudyRepository studyRepository;
+    private final NetworkModificationRestService networkModificationRestService;
+    private final DynamicSimulationEventService dynamicSimulationEventService;
 
     public NetworkModificationTreeService(NodeRepository nodesRepository,
                                           RootNodeInfoRepository rootNodeInfoRepository,
@@ -87,7 +94,9 @@ public class NetworkModificationTreeService {
                                           NetworkService networkStoreService,
                                           ReportService reportService,
                                           UserAdminService userAdminService,
-                                          StudyServerExecutionService studyServerExecutionService) {
+                                          StudyServerExecutionService studyServerExecutionService,
+                                          StudyRepository studyRepository,
+                                          NetworkModificationRestService networkModificationRestService, DynamicSimulationEventService dynamicSimulationEventService) {
         this.nodesRepository = nodesRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.networkModificationService = networkModificationService;
@@ -100,6 +109,9 @@ public class NetworkModificationTreeService {
         this.reportService = reportService;
         this.userAdminService = userAdminService;
         this.studyServerExecutionService = studyServerExecutionService;
+        this.studyRepository = studyRepository;
+        this.networkModificationRestService = networkModificationRestService;
+        this.dynamicSimulationEventService = dynamicSimulationEventService;
     }
 
     private NetworkModificationNodeInfoEntity createNetworkModificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {
@@ -204,6 +216,14 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public NetworkModificationNode createNode(@NonNull StudyEntity study, @NonNull UUID nodeId, @NonNull NetworkModificationNode nodeInfo, @NonNull InsertMode insertMode, String userId) {
+        return createNodeNonTransactional(study, nodeId, nodeInfo, insertMode, userId);
+    }
+
+    private NetworkModificationNode createNodeNonTransactional(@NonNull StudyEntity study,
+                                                               @NonNull UUID nodeId,
+                                                               @NonNull NetworkModificationNode nodeInfo,
+                                                               @NonNull InsertMode insertMode,
+                                                               String userId) {
         // create new node
         NetworkModificationNode newNode = createAndInsertNode(study, nodeId, nodeInfo, insertMode);
 
@@ -326,8 +346,12 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    // TODO test if studyUuid exist and have a node <nodeId>
     public void doDeleteNode(UUID nodeId, boolean deleteChildren, DeleteNodeInfos deleteNodeInfos) {
+        doDeleteNodeNonTransactional(nodeId, deleteChildren, deleteNodeInfos);
+    }
+
+    // TODO test if studyUuid exist and have a node <nodeId>
+    private void doDeleteNodeNonTransactional(UUID nodeId, boolean deleteChildren, DeleteNodeInfos deleteNodeInfos) {
         UUID studyId = self.getStudyUuidForNodeId(nodeId);
         deleteNode(nodeId, deleteChildren, false, deleteNodeInfos);
         notificationService.emitNodesDeleted(studyId, deleteNodeInfos.getRemovedNodeUuids(), deleteChildren);
@@ -1284,6 +1308,10 @@ public class NetworkModificationTreeService {
 
     @Transactional(readOnly = true)
     public Optional<UUID> getParentNodeUuid(UUID nodeUuid) {
+        return getParentNodeUuidNonTransactional(nodeUuid);
+    }
+
+    private Optional<UUID> getParentNodeUuidNonTransactional(UUID nodeUuid) {
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
         return (nodeEntity.getType() == NodeType.ROOT) ? Optional.empty() : Optional.of(nodeEntity.getParentNode().getIdNode());
     }
@@ -1503,6 +1531,10 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
+        invalidateNodeTreeNonTransactional(studyUuid, nodeUuid, rootNetworkUuid);
+    }
+
+    private void invalidateNodeTreeNonTransactional(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
         handleInvalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ALL, false);
     }
 
@@ -1614,5 +1646,131 @@ public class NetworkModificationTreeService {
                 .impactedElementTypes(impactedElementTypes)
                 .build()
         );
+    }
+
+    StudyEntity getStudy(UUID studyUuid) {
+        return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(NOT_FOUND, STUDY_NOT_FOUND));
+    }
+
+    @Transactional
+    public NetworkModificationNode createNode(UUID studyUuid, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode, String userId) {
+        StudyEntity study = getStudy(studyUuid);
+        assertCreateNode(nodeId, nodeInfo.getNodeType(), insertMode);
+        NetworkModificationNode newNode = createNodeNonTransactional(study, nodeId, nodeInfo, insertMode, userId);
+
+        UUID parentUuid = getParentNodeUuidNonTransactional(newNode.getId()).orElse(null);
+        notificationService.emitNodeInserted(study.getId(), parentUuid, newNode.getId(), insertMode, nodeId);
+        // userId is null when creating initial nodes, we don't need to send element update notifications in this case
+        if (userId != null) {
+            notificationService.emitElementUpdated(study.getId(), userId);
+        }
+        return newNode;
+    }
+
+    @Transactional
+    public NetworkModificationNode createSequence(UUID studyUuid, UUID parentNodeUuid, NodeSequenceType nodeSequenceType, String userId) {
+        StudyEntity study = getStudy(studyUuid);
+        assertIsRootOrConstructionNode(parentNodeUuid);
+
+        NetworkModificationNode newParentNode = createTreeNodeFromNodeSequence(study, parentNodeUuid, nodeSequenceType);
+
+        notificationService.emitSubtreeInserted(study.getId(), newParentNode.getId(), parentNodeUuid);
+        // userId is null when creating initial nodes, we don't need to send element update notifications in this case
+        if (userId != null) {
+            notificationService.emitElementUpdated(study.getId(), userId);
+        }
+        return newParentNode;
+    }
+
+    private void deleteNodesInfos(DeleteNodeInfos deleteNodeInfos, String userId) {
+        List<CompletableFuture<?>> futures = new ArrayList<>();
+        futures.add(studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVariantIds().forEach(networkStoreService::deleteVariants)));
+        List<UUID> modificationGroupUuids = deleteNodeInfos.getModificationGroupUuids();
+        List<UUID> removedNodeUuids = deleteNodeInfos.getRemovedNodeUuids();
+        List<Pair<UUID, UUID>> modificationGroupUuidsNodeUuids = IntStream.range(0, modificationGroupUuids.size())
+                .mapToObj(index -> Pair.of(modificationGroupUuids.get(index), removedNodeUuids.get(index)))
+                .toList();
+        futures.add(studyServerExecutionService.runAsync(() -> modificationGroupUuidsNodeUuids.forEach(
+                groupUuidNodeUuid -> networkModificationRestService.deleteModificationsByGroup(groupUuidNodeUuid.getFirst(), userId))
+        ));
+        futures.add(studyServerExecutionService.runAsync(() -> deleteNodeInfos.getRemovedNodeUuids().forEach(dynamicSimulationEventService::deleteEventsByNodeId)));
+        futures.addAll(rootNetworkNodeInfoService.getRemoteDeletions(deleteNodeInfos));
+        // Do not wait completion and do not throw exception
+        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
+    }
+
+    @Transactional
+    public void deleteNodes(UUID studyUuid, List<UUID> nodeIds, boolean deleteChildren, String userId, boolean emitNotification) {
+        removeNodesFromAliases(studyUuid, nodeIds, deleteChildren);
+
+        DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
+        for (UUID nodeId : nodeIds) {
+            AtomicReference<Long> startTime = new AtomicReference<>(null);
+            startTime.set(System.nanoTime());
+
+            boolean invalidateChildrenBuild = !deleteChildren && hasModifications(nodeId, false);
+            List<NodeEntity> childrenNodes = getChildren(nodeId);
+            doDeleteNode(nodeId, deleteChildren, deleteNodeInfos);
+
+            if (invalidateChildrenBuild) {
+                childrenNodes.forEach(nodeEntity -> invalidateNodeTree(studyUuid, nodeEntity.getIdNode()));
+            }
+
+            if (startTime.get() != null && LOGGER.isTraceEnabled()) {
+                LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId.toString().replaceAll("[\n\r]", "_"), studyUuid,
+                        TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+            }
+        }
+
+        deleteNodesInfos(deleteNodeInfos, userId);
+        if (emitNotification) {
+            notificationService.emitElementUpdated(studyUuid, userId);
+        }
+    }
+
+    @Transactional
+    public void stashNode(UUID studyUuid, UUID nodeId, boolean stashChildren, String userId) {
+        removeNodesFromAliases(studyUuid, List.of(nodeId), stashChildren);
+
+        AtomicReference<Long> startTime = new AtomicReference<>(null);
+        startTime.set(System.nanoTime());
+
+        boolean unbuildChildren = stashChildren || hasModifications(nodeId, false);
+        List<UUID> rootNetworkUuids = rootNetworkService.getStudyRootNetworks(studyUuid).stream()
+                .map(RootNetworkEntity::getId)
+                .toList();
+
+        if (unbuildChildren) {
+            rootNetworkUuids.forEach(rootNetworkId ->
+                    invalidateNodeTree(studyUuid, nodeId, rootNetworkId));
+        } else {
+            rootNetworkUuids.forEach(rootNetworkId ->
+                    invalidateNode(studyUuid, nodeId, rootNetworkId)
+            );
+        }
+
+        doStashNode(nodeId, stashChildren, userId);
+
+        if (startTime.get() != null) {
+            LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId, studyUuid,
+                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        }
+
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    private void removeNodesFromAliases(UUID studyUuid, List<UUID> nodeIds, boolean removeChildren) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        if (!org.apache.commons.collections4.CollectionUtils.isEmpty(studyEntity.getNodeAliases())) {
+            Set<UUID> allNodeIds = new HashSet<>(nodeIds);
+            if (removeChildren) {
+                nodeIds.forEach(n -> allNodeIds.addAll(getAllChildrenUuids(n)));
+            }
+            studyEntity.getNodeAliases().forEach(nodeAliasEmbeddable -> {
+                if (nodeAliasEmbeddable.getNodeId() != null && allNodeIds.contains(nodeAliasEmbeddable.getNodeId())) {
+                    nodeAliasEmbeddable.setNodeId(null);
+                }
+            });
+        }
     }
 }

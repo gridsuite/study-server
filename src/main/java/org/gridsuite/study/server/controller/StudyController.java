@@ -22,7 +22,6 @@ import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
-import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.exception.PartialResultException;
@@ -33,7 +32,6 @@ import org.gridsuite.study.server.service.networkmodification.NetworkModificatio
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.util.Pair;
 import org.springframework.http.*;
 import org.springframework.lang.NonNull;
 import org.springframework.util.CollectionUtils;
@@ -42,7 +40,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.beans.PropertyEditorSupport;
 import java.util.*;
-import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.*;
@@ -65,7 +62,6 @@ public class StudyController {
     private final RootNetworkService rootNetworkService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
     private final NetworkModificationActivityRunnerService networkModificationActivityRunnerService;
-    private final NodeActivityService nodeActivityService;
     private final StudyExportService studyExportService;
     private final StudyImportService studyImportService;
     private final NetworkModificationService networkModificationService;
@@ -81,12 +77,10 @@ public class StudyController {
                            RootNetworkService rootNetworkService,
                            NodeActivityRunnerService nodeActivityRunnerService,
                            NetworkModificationActivityRunnerService networkModificationActivityRunnerService,
-                           NodeActivityService nodeActivityService,
                            StudyExportService studyExportService,
                            StudyImportService studyImportService,
                            NetworkModificationService networkModificationService,
                            NodeService nodeService) {
-        this.nodeActivityService = nodeActivityService;
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
@@ -274,26 +268,6 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/tree/nodes", params = {"nodeToCutUuid", "referenceNodeUuid", "insertMode"})
-    @Operation(summary = "cut and paste a node")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The node was successfully created"),
-        @ApiResponse(responseCode = "403", description = "The node can't be copied above the root node nor around itself"),
-        @ApiResponse(responseCode = "404", description = "The source study or node doesn't exist")})
-    public ResponseEntity<Void> cutAndPasteNode(@PathVariable("studyUuid") UUID studyUuid,
-                                              @Parameter(description = "The node we want to cut") @RequestParam("nodeToCutUuid") UUID nodeToCutUuid,
-                                              @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
-                                              @Parameter(description = "The position where the node will be pasted relative to the reference node")
-                                                    @RequestParam(name = "insertMode") InsertMode insertMode,
-                                              @RequestHeader(HEADER_USER_ID) String userId) {
-        nodeService.assertIsNodeNotReadOnly(nodeToCutUuid);
-        // the node leaves its former parent, so its own children are reparented there whatever the insert mode
-        List<UUID> heldNodes = Stream.concat(Stream.of(nodeToCutUuid), insertMode.isChild() ? Stream.empty() : Stream.of(referenceNodeUuid)).distinct().toList();
-        nodeActivityRunnerService.runWith(EDIT_TREE, studyUuid, heldNodes,
-            () -> studyService.moveStudyNode(studyUuid, nodeToCutUuid, referenceNodeUuid, insertMode, userId));
-        return ResponseEntity.ok().build();
-    }
-
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network")
     @Operation(summary = "check study root network existence")
     @ApiResponses(value = {
@@ -355,40 +329,6 @@ public class StudyController {
         String result = studyService.getRootNetworkIndexationStatus(studyUuid, rootNetworkUuid).name();
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/tree/subtrees", params = {"subtreeToCutParentNodeUuid", "referenceNodeUuid"})
-    @Operation(summary = "cut and paste a subtree")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The subtree was successfully created"),
-        @ApiResponse(responseCode = "403", description = "The subtree can't be copied above the root node nor around itself"),
-        @ApiResponse(responseCode = "404", description = "The source study or subtree doesn't exist")})
-    public ResponseEntity<Void> cutAndPasteNodeSubtree(@PathVariable("studyUuid") UUID studyUuid,
-                                                @Parameter(description = "The parent node of the subtree we want to cut") @RequestParam("subtreeToCutParentNodeUuid") UUID subtreeToCutParentNodeUuid,
-                                                @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
-                                                @RequestHeader(HEADER_USER_ID) String userId) {
-        nodeService.assertIsNodeNotReadOnly(subtreeToCutParentNodeUuid);
-        // a subtree always attaches as a child at the destination, reparenting nothing there
-        nodeActivityRunnerService.runWith(EDIT_TREE, studyUuid, List.of(subtreeToCutParentNodeUuid),
-            () -> studyService.moveStudySubtree(studyUuid, subtreeToCutParentNodeUuid, referenceNodeUuid, userId));
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/tree/subtrees", params = {"subtreeToCopyParentNodeUuid", "referenceNodeUuid"})
-    @Operation(summary = "duplicate a subtree")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The subtree was successfully created"),
-        @ApiResponse(responseCode = "403", description = "The subtree can't be copied above the root node nor around itself"),
-        @ApiResponse(responseCode = "404", description = "The source study or subtree doesn't exist")})
-    public ResponseEntity<Void> duplicateSubtree(@Parameter(description = "The study where we want to copy the node") @PathVariable("studyUuid") UUID targetStudyUuid,
-                                                 @Parameter(description = "The copied node original study") @RequestParam(value = "sourceStudyUuid") UUID sourceStudyUuid,
-                                                 @Parameter(description = "The parent node of the subtree we want to cut")
-                                                     @RequestParam("subtreeToCopyParentNodeUuid") UUID subtreeToCopyParentNodeUuid,
-                                                 @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
-                                                 @RequestHeader(HEADER_USER_ID) String userId) {
-        // added as a child of the reference, and the origin subtree is only read: nothing to hold
-        nodeService.duplicateStudySubtree(sourceStudyUuid, targetStudyUuid, subtreeToCopyParentNodeUuid, referenceNodeUuid, userId);
-        return ResponseEntity.ok().build();
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg")
@@ -947,12 +887,6 @@ public class StudyController {
                 .body(studyService.searchModifications(rootNetworkUuid, userInput));
     }
 
-    private void buildNewNode(UUID studyUuid, UUID referenceId, NetworkModificationNode createdNode, String userId) {
-        studyService.getRootNetworksToBuildNewNode(studyUuid, referenceId, createdNode).forEach(rootNetworkUuid ->
-            nodeActivityRunnerService.runWith(BUILD, studyUuid, rootNetworkUuid, List.of(createdNode.getId()),
-                () -> networkModificationService.buildNode(studyUuid, createdNode.getId(), rootNetworkUuid, userId)));
-    }
-
     @GetMapping(value = "/nodes/infos", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get the name and the study of each given node")
     @ApiResponses(value = {
@@ -962,114 +896,6 @@ public class StudyController {
             @Parameter(description = "Node UUIDs") @RequestParam("ids") List<UUID> nodeUuids) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
                 .body(networkModificationTreeService.getNodesInfos(nodeUuids));
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
-    @Operation(summary = "Create a node as before / after the given node ID")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The node has been added"),
-        @ApiResponse(responseCode = "404", description = "The study or the node not found")})
-    public ResponseEntity<NetworkModificationNode> createNode(@RequestBody NetworkModificationNode node,
-                                                         @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                         @Parameter(description = "parent id of the node created") @PathVariable(name = "id") UUID referenceId,
-                                                         @Parameter(description = "node is inserted before the given node ID") @RequestParam(name = "mode", required = false,
-                                                                 defaultValue = "CHILD") InsertMode insertMode,
-                                                         @RequestHeader(HEADER_USER_ID) String userId) {
-
-        NetworkModificationNode newNode = nodeActivityRunnerService.runWith(EDIT_TREE, studyUuid, insertMode.isChild() ? List.of() : List.of(referenceId),
-            () -> studyService.createNode(studyUuid, referenceId, node, insertMode, userId));
-        buildNewNode(studyUuid, referenceId, newNode, userId);
-
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(newNode);
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}", params = {"sequenceType"})
-    @Operation(summary = "Create a node sequence after the given node ID")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The node sequence has been added"),
-        @ApiResponse(responseCode = "404", description = "The study or the node not found")})
-    public ResponseEntity<NetworkModificationNode> createSequence(
-                                                              @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                              @Parameter(description = "parent id of the node created") @PathVariable(name = "id") UUID referenceId,
-                                                              @Parameter(description = "sequence to create") @RequestParam("sequenceType") NodeSequenceType nodeSequenceType,
-                                                              @RequestHeader(HEADER_USER_ID) String userId) {
-        // a sequence is added as a child at every level, so it reparents nothing and holds nothing
-        NetworkModificationNode sequenceParentNode = studyService.createSequence(studyUuid, referenceId, nodeSequenceType, userId);
-        buildNewNode(studyUuid, referenceId, sequenceParentNode, userId);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(sequenceParentNode);
-    }
-
-    @DeleteMapping(value = "/studies/{studyUuid}/tree/nodes")
-    @Operation(summary = "Delete node with given ids")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Nodes have been successfully deleted"),
-        @ApiResponse(responseCode = "404", description = "The study or the nodes not found")})
-    public ResponseEntity<Void> deleteNodes(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                           @Parameter(description = "ids of children to remove") @RequestParam("ids") List<UUID> nodeIds,
-                                           @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren,
-                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        nodeActivityRunnerService.runWith(DELETE_NODES, studyUuid, nodeIds,
-            () -> studyService.deleteNodes(studyUuid, nodeIds, deleteChildren, userId, true));
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}/stash")
-    @Operation(summary = "Move to trash the node with given id")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The node has been successfully moved to trash"),
-        @ApiResponse(responseCode = "403", description = "The node can't be moved to trash"),
-        @ApiResponse(responseCode = "404", description = "The study or the node not found")})
-    public ResponseEntity<Void> stashNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                 @Parameter(description = "id of child to delete (move to trash)") @PathVariable("id") UUID nodeId,
-                                                 @Parameter(description = "to stash a node with its children") @RequestParam(value = "stashChildren", defaultValue = "false") boolean stashChildren,
-                                                 @RequestHeader(HEADER_USER_ID) String userId) {
-        nodeService.assertIsNodeNotReadOnly(nodeId);
-        nodeActivityRunnerService.runWith(DELETE_NODES, studyUuid, List.of(nodeId),
-            () -> studyService.stashNode(studyUuid, nodeId, stashChildren, userId));
-        return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/tree/nodes/stash")
-    @Operation(summary = "Get the list of nodes in the trash for a given study")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The list of nodes in the trash")})
-    public ResponseEntity<List<Pair<AbstractNode, Integer>>> getStashedNodes(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getStashedNodes(studyUuid));
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/tree/nodes/restore")
-    @Operation(summary = "restore nodes below the given anchor node")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The list of nodes in the trash")})
-    public ResponseEntity<Void> restoreNodes(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                            @Parameter(description = "ids of nodes to restore") @RequestParam("ids") List<UUID> nodeIds,
-                                            @Parameter(description = "id of node below which the node will be restored") @RequestParam("anchorNodeId") UUID anchorNodeId,
-                                            @RequestHeader(HEADER_USER_ID) String userId) {
-        // the restored nodes land under the anchor, so it is held exactly as an insertion under it would be
-        nodeActivityRunnerService.runWith(EDIT_TREE, studyUuid, List.of(anchorNodeId),
-            () -> studyService.restoreNodes(studyUuid, nodeIds, anchorNodeId, userId));
-        return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/tree")
-    @Operation(summary = "Get network modification tree for the given study")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "network modification tree"),
-        @ApiResponse(responseCode = "404", description = "The study or the node not found")})
-    public ResponseEntity<RootNode> getNetworkModificationTree(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                               @Parameter(description = "root network uuid") @RequestParam(value = "rootNetworkUuid", required = false) UUID rootNetworkUuid) {
-        RootNode rootNode = networkModificationTreeService.getStudyTreeWithReferencesInfos(studyUuid, rootNetworkUuid);
-        return rootNode != null ?
-            ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNode)
-            : ResponseEntity.notFound().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/tree/node-activities")
-    @Operation(summary = "Get the activities running in a study")
-    @ApiResponses(@ApiResponse(responseCode = "200", description = "The running activities, empty when the study is idle"))
-    public ResponseEntity<List<NodeActivityInfos>> getNodeActivities(
-            @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(nodeActivityService.getActivities(studyUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/subtree")
@@ -1083,45 +909,6 @@ public class StudyController {
         NetworkModificationNode parentNode = (NetworkModificationNode) networkModificationTreeService.getStudySubtreeWithReferencesInfos(studyUuid, parentNodeUuid, rootNetworkUuid);
         return parentNode != null ?
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(parentNode)
-                : ResponseEntity.notFound().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/tree/nodes")
-    @Operation(summary = "update node")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The node has been updated"),
-        @ApiResponse(responseCode = "404", description = "The study or the node not found")})
-    public ResponseEntity<Void> updateNode(@RequestBody NetworkModificationNode node,
-                                                 @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                 @RequestHeader(HEADER_USER_ID) String userId) {
-        networkModificationTreeService.updateNode(studyUuid, node, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/tree/nodes/{parentUuid}/children-column-positions")
-    @Operation(summary = "update children column positions")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The node column positions have been updated"),
-        @ApiResponse(responseCode = "404", description = "The study or a node was not found")})
-    public ResponseEntity<Void> updateNodesColumnPositions(@RequestBody List<NetworkModificationNode> children,
-                                                 @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                 @Parameter(description = "parent node uuid") @PathVariable("parentUuid") UUID parentUuid,
-                                                 @RequestHeader(HEADER_USER_ID) String userId) {
-        networkModificationTreeService.updateNodesColumnPositions(studyUuid, parentUuid, children, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
-    @Operation(summary = "get simplified node")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "simplified nodes (without children"),
-        @ApiResponse(responseCode = "404", description = "The study or the node not found")})
-    public ResponseEntity<AbstractNode> getNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                @Parameter(description = "node uuid") @PathVariable("id") UUID nodeId,
-                                                @Parameter(description = "root network uuid") @RequestParam(value = "rootNetworkUuid", required = false) UUID rootNetworkUuid) {
-        AbstractNode node = networkModificationTreeService.getNodeWithReferencesInfos(nodeId, rootNetworkUuid);
-        return node != null ?
-                ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(node)
                 : ResponseEntity.notFound().build();
     }
 
