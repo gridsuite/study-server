@@ -8,6 +8,7 @@ package org.gridsuite.study.server.studycontroller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import org.gridsuite.study.server.controller.StudyController;
 import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
@@ -25,6 +26,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -45,6 +47,7 @@ import static org.mockito.Mockito.*;
  */
 @SpringBootTest
 @DisableElasticsearch
+@Import(AllowAllAuthTestConfiguration.class)
 @WithMockUser(username = "userId")
 class StudyControllerRebuildNodeTest {
 

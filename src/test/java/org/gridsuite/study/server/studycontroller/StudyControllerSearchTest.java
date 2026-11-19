@@ -18,6 +18,7 @@ import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.serde.XMLImporter;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
@@ -36,6 +37,7 @@ import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
@@ -63,6 +65,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
+@Import(AllowAllAuthTestConfiguration.class)
 class StudyControllerSearchTest {
     private static final String USER_ID_HEADER = "userId";
     private static final String TEST_FILE = "testCase.xiidm";
