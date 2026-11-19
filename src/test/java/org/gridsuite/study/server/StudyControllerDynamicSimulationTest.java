@@ -8,6 +8,8 @@ package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.IrregularTimeSeriesIndex;
 import com.powsybl.timeseries.TimeSeries;
@@ -39,7 +41,9 @@ import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.utils.PropertyType;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.gridsuite.study.server.utils.wiremock.ComputationServerStubs;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -182,6 +186,17 @@ class StudyControllerDynamicSimulationTest {
     private static final String DS_STOPPED_DESTINATION = "ds.stopped";
     private static final String DS_FAILED_DESTINATION = "ds.run.dlx";
 
+    private WireMockServer wireMockServer;
+
+    private ComputationServerStubs computationServerStubs;
+
+    @BeforeEach
+    void setUp() {
+        wireMockServer = new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
+        wireMockServer.start();
+        computationServerStubs = new ComputationServerStubs(wireMockServer);
+    }
+
     @AfterEach
     void tearDown() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
@@ -189,6 +204,7 @@ class StudyControllerDynamicSimulationTest {
 
         List<String> destinations = List.of(STUDY_UPDATE_DESTINATION, DS_FAILED_DESTINATION, DS_RESULT_DESTINATION, DS_STOPPED_DESTINATION);
         TestUtils.assertQueuesEmptyThenClear(destinations, output);
+        wireMockServer.stop();
     }
 
     private RootNode getRootNode(UUID study) throws Exception {
@@ -427,13 +443,15 @@ class StudyControllerDynamicSimulationTest {
         assertThat(result.getResponse().getContentAsString()).isEqualTo("1");
 
         //Delete Dynamic result init results
-        Mockito.doNothing().when(spyDynamicSimulationRestService).deleteAllResults();
+        doReturn(wireMockServer.baseUrl()).when(spyDynamicSimulationRestService).getBaseUri();
+        computationServerStubs.stubDeleteAllResults();
         result = studyClient.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", ComputationType.DYNAMIC_SIMULATION.toString())
                         .queryParam("dryRun", "false"))
                 .andExpect(status().isOk())
                 .andReturn();
         assertThat(result.getResponse().getContentAsString()).isEqualTo("1");
+        computationServerStubs.verifyDeleteAllResults();
     }
 
     @Test

@@ -127,7 +127,7 @@ public class LoadFlowService extends AbstractComputationService {
 
     @Transactional
     public void deleteLoadflowResult(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid) {
-        loadflowRestService.deleteLoadFlowResults(List.of(loadflowResultUuid));
+        loadflowRestService.deleteResults(List.of(loadflowResultUuid));
         rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, null, null);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
     }

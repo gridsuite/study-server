@@ -88,7 +88,7 @@ public class PccMinService extends AbstractComputationService {
 
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN);
         if (prevResultUuid != null) {
-            pccMinRestService.deletePccMinResults(List.of(prevResultUuid));
+            pccMinRestService.deleteResults(List.of(prevResultUuid));
         }
         var runPccMinParametersInfos = new RunPccMinParametersInfos(studyEntity.getShortCircuitParametersUuid(), studyEntity.getPccMinParametersUuid(), null);
 
