@@ -46,8 +46,11 @@ public class SecurityAnalysisController {
     private final NodeActivityRunnerService nodeActivityRunnerService;
     private final NodeService nodeService;
 
-    public SecurityAnalysisController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService,
-                                      SecurityAnalysisService securityAnalysisService, NodeActivityRunnerService nodeActivityRunnerService, NodeService nodeService) {
+    public SecurityAnalysisController(StudyService studyService,
+                                      RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                                      SecurityAnalysisService securityAnalysisService,
+                                      NodeActivityRunnerService nodeActivityRunnerService,
+                                      NodeService nodeService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.securityAnalysisService = securityAnalysisService;
