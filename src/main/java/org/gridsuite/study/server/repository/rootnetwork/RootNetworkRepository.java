@@ -49,7 +49,8 @@ public interface RootNetworkRepository extends JpaRepository<RootNetworkEntity, 
      * @return the root network tags of the given studies, once per study and tag
      */
     @Query("""
-            select distinct r.study.id as studyUuid, r.tag as tag from RootNetworkEntity r
+            select distinct new org.gridsuite.study.server.repository.rootnetwork.StudyRootNetworkTag(r.study.id, r.tag)
+            from RootNetworkEntity r
             where r.study.id in :studyUuids
             """)
     List<StudyRootNetworkTag> findTagsByStudyIds(@Param("studyUuids") Collection<UUID> studyUuids);

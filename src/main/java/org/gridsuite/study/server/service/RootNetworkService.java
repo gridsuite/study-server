@@ -207,8 +207,8 @@ public class RootNetworkService {
             return Map.of();
         }
         return rootNetworkRepository.findTagsByStudyIds(studyUuids).stream()
-                .collect(Collectors.groupingBy(StudyRootNetworkTag::getStudyUuid,
-                        Collectors.mapping(StudyRootNetworkTag::getTag, Collectors.toList())));
+                .collect(Collectors.groupingBy(StudyRootNetworkTag::studyUuid,
+                        Collectors.mapping(StudyRootNetworkTag::tag, Collectors.toList())));
     }
 
     @Transactional

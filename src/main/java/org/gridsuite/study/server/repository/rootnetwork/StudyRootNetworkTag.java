@@ -11,8 +11,5 @@ import java.util.UUID;
 /**
  * A root network tag of a study
  */
-public interface StudyRootNetworkTag {
-    UUID getStudyUuid();
-
-    String getTag();
+public record StudyRootNetworkTag(UUID studyUuid, String tag) {
 }
