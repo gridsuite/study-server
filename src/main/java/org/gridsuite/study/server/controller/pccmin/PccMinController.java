@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
+import org.gridsuite.study.server.service.NodeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.pccmin.PccMinService;
@@ -42,13 +43,16 @@ public class PccMinController {
     private final StudyService studyService;
     private final PccMinService pccMinService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
+    private final NodeService nodeService;
 
     public PccMinController(RootNetworkNodeInfoService rootNetworkNodeInfoService, StudyService studyService,
-                            PccMinService pccMinService, NodeActivityRunnerService nodeActivityRunnerService) {
+                            PccMinService pccMinService, NodeActivityRunnerService nodeActivityRunnerService,
+                            NodeService nodeService) {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.studyService = studyService;
         this.pccMinService = pccMinService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
+        this.nodeService = nodeService;
     }
 
     @PostMapping(value = "/result/csv", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -74,7 +78,7 @@ public class PccMinController {
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                           @RequestHeader(HEADER_USER_ID) String userId) {
 
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        nodeService.assertIsNodeNotReadOnly(nodeUuid);
         QuotaRunner.runComputationWithQuota(studyService, PCC_MIN, userId, quotaId ->
             nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
                 () -> pccMinService.runPccMin(studyUuid, nodeUuid, rootNetworkUuid, userId, quotaId)));

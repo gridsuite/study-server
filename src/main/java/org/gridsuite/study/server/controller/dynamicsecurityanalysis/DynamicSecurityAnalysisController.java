@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
+import org.gridsuite.study.server.service.NodeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
@@ -41,15 +42,18 @@ public class DynamicSecurityAnalysisController {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
+    private final NodeService nodeService;
 
     public DynamicSecurityAnalysisController(StudyService studyService,
                                              RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                              DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-                                             NodeActivityRunnerService nodeActivityRunnerService) {
+                                             NodeActivityRunnerService nodeActivityRunnerService,
+                                             NodeService nodeService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
+        this.nodeService = nodeService;
     }
 
     @PostMapping(value = "/run")
@@ -60,7 +64,7 @@ public class DynamicSecurityAnalysisController {
                                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                            @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                            @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        nodeService.assertIsNodeNotReadOnly(nodeUuid);
         QuotaRunner.runComputationWithQuota(studyService, DYNAMIC_SECURITY_ANALYSIS, userId, quotaId -> {
             studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), dynamicSecurityAnalysisService::getDynamicSecurityAnalysisProvider);
             nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),

@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
+import org.gridsuite.study.server.service.NodeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
@@ -43,13 +44,18 @@ public class SecurityAnalysisController {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final SecurityAnalysisService securityAnalysisService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
+    private final NodeService nodeService;
 
-    public SecurityAnalysisController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService,
-                                      SecurityAnalysisService securityAnalysisService, NodeActivityRunnerService nodeActivityRunnerService) {
+    public SecurityAnalysisController(StudyService studyService,
+                                      RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                                      SecurityAnalysisService securityAnalysisService,
+                                      NodeActivityRunnerService nodeActivityRunnerService,
+                                      NodeService nodeService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.securityAnalysisService = securityAnalysisService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
+        this.nodeService = nodeService;
     }
 
     @PostMapping(value = "/run")
@@ -59,7 +65,7 @@ public class SecurityAnalysisController {
                                                     @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                     @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        nodeService.assertIsNodeNotReadOnly(nodeUuid);
         QuotaRunner.runComputationWithQuota(studyService, SECURITY_ANALYSIS, userId, quotaId ->
             nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
                 () -> securityAnalysisService.runSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId, quotaId)));

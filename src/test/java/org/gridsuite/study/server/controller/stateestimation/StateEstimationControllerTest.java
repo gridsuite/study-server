@@ -8,6 +8,7 @@ package org.gridsuite.study.server.controller.stateestimation;
 
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
+import org.gridsuite.study.server.service.NodeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.stateestimation.StateEstimationService;
@@ -61,13 +62,15 @@ class StateEstimationControllerTest {
     private StateEstimationService stateEstimationService;
     @Mock
     private NodeActivityRunnerService nodeActivityRunnerService;
+    @Mock
+    private NodeService nodeService;
 
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(
-            new StateEstimationController(studyService, rootNetworkNodeInfoService, stateEstimationService, nodeActivityRunnerService)).build();
+            new StateEstimationController(studyService, rootNetworkNodeInfoService, stateEstimationService, nodeActivityRunnerService, nodeService)).build();
     }
 
     @Test
