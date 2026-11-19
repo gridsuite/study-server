@@ -91,6 +91,7 @@ class NetworkModificationReferencingInfosUpdateTest {
 
     @AfterEach
     void tearDown() {
+        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
     }
 
