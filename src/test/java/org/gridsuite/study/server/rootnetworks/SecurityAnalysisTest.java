@@ -581,7 +581,6 @@ class SecurityAnalysisTest {
 
         //Test delete all results
         computationServerStubs.stubResultsCount(1);
-        computationServerStubs.stubDeleteResults("/v1/supervision/results");
         mockMvc.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", SECURITY_ANALYSIS.toString())
                 .queryParam("dryRun", "true"))
@@ -590,14 +589,14 @@ class SecurityAnalysisTest {
 
         //Delete Security analysis results
         assertEquals(1, rootNetworkNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull().size());
-        computationServerStubs.stubDeleteResults("/v1/results");
+        computationServerStubs.stubDeleteAllResults();
         reportServerStubs.stubDeleteReport();
 
         mockMvc.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", SECURITY_ANALYSIS.toString())
                 .queryParam("dryRun", "false"))
             .andExpect(status().isOk());
-        WireMockUtilsCriteria.verifyDeleteRequest(wireMockServer, "/v1/results", Map.of("resultsUuids", matching(".*")));
+        computationServerStubs.verifyDeleteAllResults();
         reportServerStubs.verifyDeleteReport();
         assertEquals(0, rootNetworkNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull().size());
     }

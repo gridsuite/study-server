@@ -62,7 +62,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static com.github.tomakehurst.wiremock.client.WireMock.delete;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.put;
@@ -485,9 +484,7 @@ class AsymmetricalLoadTest {
             .withQueryParam("resultsUuids", matching(".*"))
             .willReturn(WireMock.ok().withBody(ASYMMETRICAL_LOAD_RESULT_UUID)));
 
-        wireMockServer.stubFor(delete(urlPathEqualTo("/v1/asymmetrical-load/results"))
-            .withQueryParam("resultsUuids", matching(".*"))
-            .willReturn(ok()));
+        computationServerStubs.stubDeleteAllResults(ASYMMETRICAL_LOAD_PREFIX);
 
         Integer dryRunCount = supervisionService.deleteComputationResults(ComputationType.ASYMMETRICAL_LOAD, true);
         assertEquals(1, dryRunCount);
@@ -496,8 +493,7 @@ class AsymmetricalLoadTest {
         Integer deletedCount = supervisionService.deleteComputationResults(ComputationType.ASYMMETRICAL_LOAD, false);
         assertEquals(1, deletedCount);
 
-        wireMockServer.verify(1, deleteRequestedFor(urlPathEqualTo("/v1/asymmetrical-load/results"))
-            .withQueryParam("resultsUuids", matching(".*")));
+        computationServerStubs.verifyDeleteAllResults(ASYMMETRICAL_LOAD_PREFIX);
 
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByAsymmetricalLoadResultUuidNotNull().size());
     }
