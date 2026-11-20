@@ -22,6 +22,8 @@ import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationSer
 import org.gridsuite.study.server.utils.QuotaRunner;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,7 +31,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.DYNAWO_PROVIDER;
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_SIMULATION;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
 
@@ -58,12 +59,13 @@ public class DynamicSimulationController {
     @PostMapping(value = "/run")
     @Operation(summary = "run dynamic simulation on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation has started")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> runDynamicSimulation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                      @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                     @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
-                                                     @RequestHeader(HEADER_USER_ID) String userId) {
+                                                     @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         QuotaRunner.runComputationWithQuota(studyService, DYNAMIC_SIMULATION, userId, quotaId -> {
             studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), dynamicSimulationService::getDynamicSimulationProvider);
             nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
@@ -77,6 +79,7 @@ public class DynamicSimulationController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Time series metadata of dynamic simulation result"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation metadata"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<List<TimeSeriesMetadataInfos>> getDynamicSimulationTimeSeriesMetadata(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                                                 @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
@@ -90,6 +93,7 @@ public class DynamicSimulationController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All time series of dynamic simulation result"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation timeseries"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<List<DoubleTimeSeries>> getDynamicSimulationTimeSeriesResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                                        @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
@@ -105,6 +109,7 @@ public class DynamicSimulationController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Timeline events of dynamic simulation result"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation timeline events"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<List<TimelineEventInfos>> getDynamicSimulationTimelineResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                                        @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
@@ -118,6 +123,7 @@ public class DynamicSimulationController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The status of dynamic simulation result"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation status"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getDynamicSimulationStatus(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                              @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                              @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {

@@ -18,6 +18,7 @@ import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.serde.XMLImporter;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
@@ -36,6 +37,7 @@ import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
@@ -63,8 +65,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
+@Import(AllowAllAuthTestConfiguration.class)
 class StudyControllerSearchTest {
-    private static final String USER_ID_HEADER = "userId";
     private static final String TEST_FILE = "testCase.xiidm";
     private static final String VARIANT_1 = "variant_1";
 
@@ -98,7 +100,7 @@ class StudyControllerSearchTest {
             .then((Answer<List<CreatedStudyBasicInfos>>) invocation -> studiesInfos);
 
         mvcResult = mockMvc
-            .perform(get("/v1/search?q={request}", "userId:%s".formatted("userId")).header(USER_ID_HEADER, "userId"))
+            .perform(get("/v1/search?q={request}", "userId:%s".formatted("userId")))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
@@ -126,7 +128,7 @@ class StudyControllerSearchTest {
 
         mvcResult = mockMvc
             .perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=NAME",
-                studyUuid, firstRootNetworkUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
+                studyUuid, firstRootNetworkUuid, rootNodeId, "B"))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         List<EquipmentInfos> equipmentInfos = mapper.readValue(resultAsString, new TypeReference<>() { });
@@ -134,7 +136,7 @@ class StudyControllerSearchTest {
 
         mvcResult = mockMvc
             .perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=NAME",
-                studyUuid, firstRootNetworkUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
+                studyUuid, firstRootNetworkUuid, rootNodeId, "B"))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         equipmentInfos = mapper.readValue(resultAsString, new TypeReference<>() { });
@@ -142,14 +144,14 @@ class StudyControllerSearchTest {
 
         mvcResult = mockMvc
             .perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=ID",
-                studyUuid, firstRootNetworkUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
+                studyUuid, firstRootNetworkUuid, rootNodeId, "B"))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         equipmentInfos = mapper.readValue(resultAsString, new TypeReference<>() { });
         assertThat(equipmentInfos, new MatcherJson<>(mapper, linesInfos));
 
         var result = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=bogus",
-                studyUuid, firstRootNetworkUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
+                studyUuid, firstRootNetworkUuid, rootNodeId, "B"))
             .andExpect(status().isInternalServerError())
             .andReturn();
         var problemDetail = mapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);

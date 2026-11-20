@@ -55,6 +55,8 @@
         <sonar.organization>gridsuite</sonar.organization>
         <sonar.projectKey>org.gridsuite:study-server</sonar.projectKey>
         <sonar.coverage.exclusions>**/migration/**/*</sonar.coverage.exclusions>
+
+        <powsybl-ws-commons.version>1.42.0</powsybl-ws-commons.version>
     </properties>
 
     <build>
@@ -96,6 +98,11 @@
                 <version>${mockwebserver3.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+               <groupId>com.powsybl</groupId>
+               <artifactId>powsybl-ws-commons</artifactId>
+               <version>${powsybl-ws-commons.version}</version>
             </dependency>
 
             <!-- imports -->
@@ -174,6 +181,10 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.cloud</groupId>
@@ -262,6 +273,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.skyscreamer</groupId>
             <artifactId>jsonassert</artifactId>
             <scope>test</scope>
@@ -299,6 +315,13 @@
         <dependency>
             <groupId>com.rabbitmq</groupId>
             <artifactId>amqp-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-ws-commons</artifactId>
+            <version>${powsybl-ws-commons.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

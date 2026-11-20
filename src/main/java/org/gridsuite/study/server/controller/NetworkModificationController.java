@@ -10,12 +10,12 @@ import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
-
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION)
@@ -27,16 +27,19 @@ public class NetworkModificationController {
     }
 
     @GetMapping(value = "/network-modifications/catalog/line_types")
+    @PreAuthorize("true")
     public ResponseEntity<String> getLineTypesCatalog() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationRestService.getLineTypesCatalog());
     }
 
     @GetMapping(value = "/network-modifications/catalog/line_types/{uuid}")
+    @PreAuthorize("true")
     public ResponseEntity<String> getLineType(@PathVariable UUID uuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationRestService.getLineType(uuid));
     }
 
     @GetMapping(value = "/network-modifications/catalog/line_types/{uuid}/with-limits")
+    @PreAuthorize("true")
     public ResponseEntity<String> getLineTypeWithLimits(@PathVariable UUID uuid, @RequestParam String area,
                                                         @RequestParam(required = false) String temperature,
                                                         @RequestParam(required = false) String shapeFactor) {
@@ -44,11 +47,14 @@ public class NetworkModificationController {
     }
 
     @GetMapping(value = "/network-modifications/{uuid}")
-    public ResponseEntity<String> getNetworkModification(@PathVariable UUID uuid, @RequestHeader(HEADER_USER_ID) String userId) {
+    @PreAuthorize("@authorizationService.canRead(#uuid)")
+    public ResponseEntity<String> getNetworkModification(@PathVariable UUID uuid) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationRestService.getNetworkModification(uuid, userId));
     }
 
     @GetMapping(value = "/network-modifications/busbar-sections-for-new-coupler")
+    @PreAuthorize("true")
     public ResponseEntity<String> getBusBarSectionsForNewCoupler(@RequestParam String voltageLevelId, @RequestParam Integer busBarCount,
                                                                  @RequestParam Integer sectionCount,
                                                                  @RequestParam(name = "switchKindList", required = false) List<String> switchKindList) {
@@ -57,15 +63,17 @@ public class NetworkModificationController {
     }
 
     @PutMapping(value = "/network-modifications/{uuid}")
-    public ResponseEntity<Void> updateNetworkModification(@PathVariable UUID uuid, @RequestBody String modificationInfos,
-                                                          @RequestHeader(HEADER_USER_ID) String userId) {
+    @PreAuthorize("@authorizationService.canWrite(#uuid)")
+    public ResponseEntity<Void> updateNetworkModification(@PathVariable UUID uuid, @RequestBody String modificationInfos) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         networkModificationRestService.updateNetworkModification(uuid, modificationInfos, userId);
         return ResponseEntity.ok().build();
     }
 
     @PutMapping(value = "/network-modifications")
-    public ResponseEntity<Void> updateNetworkModificationsActivation(@RequestParam("uuids") List<UUID> networkModificationUuids, @RequestParam("active") boolean active,
-                                                                     @RequestHeader(HEADER_USER_ID) String userId) {
+    @PreAuthorize("@authorizationService.canWrite(#networkModificationUuids)")
+    public ResponseEntity<Void> updateNetworkModificationsMetadata(@RequestParam("uuids") List<UUID> networkModificationUuids, @RequestParam("active") boolean active) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         networkModificationRestService.updateNetworkModificationsActivation(networkModificationUuids, active, userId);
         return ResponseEntity.ok().build();
     }

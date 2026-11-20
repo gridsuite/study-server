@@ -10,6 +10,7 @@ import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.stateestimation.StateEstimationService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,6 +28,7 @@ public class StateEstimationParametersController {
     }
 
     @GetMapping(value = "/results/{resultUuid}/download-debug-file")
+    @PreAuthorize("@authorizationService.canRead(#resultUuid)")
     public ResponseEntity<Resource> downloadDebugFile(@PathVariable UUID resultUuid) {
         return stateEstimationService.downloadDebugFile(resultUuid);
     }

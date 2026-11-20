@@ -10,6 +10,7 @@ import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.NetworkConversionService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,6 +28,7 @@ public class NetworkConversionController {
     }
 
     @GetMapping(value = "/cases/{caseUuid}/import-parameters")
+    @PreAuthorize("@authorizationService.canRead(#caseUuid)")
     public ResponseEntity<String> getCaseImportParameters(@PathVariable UUID caseUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkConversionService.getCaseImportParameters(caseUuid));
     }

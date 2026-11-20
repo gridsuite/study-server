@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.commons.report.ReportNode;
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.ElementAttributes;
@@ -43,10 +44,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -71,6 +74,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
+@Import(AllowAllAuthTestConfiguration.class)
+@WithMockUser(username = "userId")
 class StudyControllerCreationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyControllerCreationTest.class);
 
@@ -151,7 +156,7 @@ class StudyControllerCreationTest {
         UUID caseExistsStub = wireMockStubs.caseServer.stubCaseExists(caseUuid.toString(), true);
         UUID importCaseStub = wireMockStubs.networkConversionServer.stubImportNetwork(duplicateCaseUuid.toString(), null, FIRST_VARIANT_ID, caseFormat);
 
-        sendStudyCreationRequest(userId, caseUuid, caseFormat, null, true);
+        sendStudyCreationRequest(caseUuid, caseFormat, null, true);
 
         // assert that all http requests have been sent to remote services
         wireMockStubs.caseServer.verifyCaseExists(caseExistsStub, caseUuid.toString());
@@ -173,7 +178,7 @@ class StudyControllerCreationTest {
         String importParametersAsJson = mapper.writeValueAsString(importParameters);
         UUID importCaseStub = wireMockStubs.networkConversionServer.stubImportNetwork(caseUuid.toString(), importParametersAsJson, FIRST_VARIANT_ID, caseFormat);
 
-        sendStudyCreationRequest(userId, caseUuid, caseFormat, importParameters, false);
+        sendStudyCreationRequest(caseUuid, caseFormat, importParameters, false);
 
         // assert that all http requests have been sent to remote services
         wireMockStubs.caseServer.verifyCaseExists(caseExistsStub, caseUuid.toString());
@@ -261,9 +266,9 @@ class StudyControllerCreationTest {
         verify(studyConfigService, times(1)).createDefaultSpreadsheetConfigCollection(anyString(), any());
     }
 
-    private void sendStudyCreationRequest(String userId, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, boolean duplicateCase) throws Exception {
+    private void sendStudyCreationRequest(UUID caseUuid, String caseFormat, Map<String, Object> importParameters, boolean duplicateCase) throws Exception {
         mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
-                .header(HEADER_USER_ID, userId).contentType(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
                 .param(CASE_FORMAT, caseFormat)
                 .param("duplicateCase", String.valueOf(duplicateCase))
                 .content(mapper.writeValueAsString(importParameters)))

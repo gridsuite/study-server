@@ -23,13 +23,14 @@ import org.gridsuite.study.server.utils.QuotaRunner;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.DYNA_FLOW_PROVIDER;
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE_AND_UNBUILD_CHILDREN;
@@ -62,13 +63,14 @@ public class LoadFlowController {
     @PutMapping(value = "/run")
     @Operation(summary = "run loadflow on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow has started")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> runLoadFlow(
             @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @RequestParam(value = "withRatioTapChangers", required = false, defaultValue = "false") boolean withRatioTapChangers,
-            @RequestHeader(HEADER_USER_ID) String userId) {
+            @RequestParam(value = "withRatioTapChangers", required = false, defaultValue = "false") boolean withRatioTapChangers) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         QuotaRunner.runComputationWithQuota(studyService, LOAD_FLOW, userId, quotaId -> {
             studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNA_FLOW_PROVIDER), loadFlowService::getLoadFlowProvider);
             UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
@@ -109,6 +111,7 @@ public class LoadFlowController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow result"),
         @ApiResponse(responseCode = "204", description = "No loadflow has been done yet"),
         @ApiResponse(responseCode = "404", description = "The loadflow result has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getLoadflowResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                     @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
@@ -124,6 +127,7 @@ public class LoadFlowController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow status"),
         @ApiResponse(responseCode = "204", description = "No loadflow has been done yet"),
         @ApiResponse(responseCode = "404", description = "The loadflow status has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getLoadFlowStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                 @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
@@ -135,6 +139,7 @@ public class LoadFlowController {
     @Operation(summary = "Get the loadflow computation infos on study node and root network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow computation infos"),
         @ApiResponse(responseCode = "404", description = "The loadflow computation has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<LoadFlowComputationInfos> getLoadFlowComputationInfos(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                                 @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
@@ -145,6 +150,7 @@ public class LoadFlowController {
     @Operation(summary = "Get the loadflow modifications on study node and root network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow computation infos"),
         @ApiResponse(responseCode = "404", description = "The loadflow computation has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getLoadFlowModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                                 @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
@@ -154,10 +160,11 @@ public class LoadFlowController {
     @PutMapping(value = "/stop")
     @Operation(summary = "stop loadflow on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow has been stopped")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> stopLoadFlow(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                              @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                             @RequestHeader(HEADER_USER_ID) String userId) {
+                                             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         rootNetworkNodeInfoService.stopLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }

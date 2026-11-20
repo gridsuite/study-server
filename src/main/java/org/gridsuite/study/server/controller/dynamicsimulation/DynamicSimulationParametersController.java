@@ -5,6 +5,7 @@ import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationSer
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -19,22 +20,26 @@ public class DynamicSimulationParametersController {
     }
 
     @GetMapping(value = "/providers")
+    @PreAuthorize("true")
     public ResponseEntity<String> getProviders() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(dynamicSimulationService.getProviders());
     }
 
     @GetMapping(value = "/parameters/{parameterUuid}")
+    @PreAuthorize("@authorizationService.canRead(#parameterUuid)")
     public ResponseEntity<String> getParameters(@PathVariable UUID parameterUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(dynamicSimulationService.getParameters(parameterUuid));
     }
 
     @PutMapping(value = "/parameters/{parameterUuid}")
+    @PreAuthorize("@authorizationService.canWrite(#parameterUuid)")
     public ResponseEntity<Void> updateParameters(@PathVariable UUID parameterUuid, @RequestBody String parameters) {
         dynamicSimulationService.updateParameters(parameterUuid, parameters);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/results/{resultUuid}/download-debug-file")
+    @PreAuthorize("@authorizationService.canRead(#resultUuid)")
     public ResponseEntity<Resource> downloadDebugFile(@PathVariable UUID resultUuid) {
         return dynamicSimulationService.downloadDebugFile(resultUuid);
     }

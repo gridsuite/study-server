@@ -15,11 +15,12 @@ import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNBUILD_ALL;
 
 /**
@@ -41,10 +42,11 @@ public class LoadFlowStudyParametersController {
     @PostMapping(value = "/parameters")
     @Operation(summary = "set loadflow parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters are set")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> setLoadflowParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody String lfParameter,
-            @RequestHeader(HEADER_USER_ID) String userId) {
+            @RequestBody String lfParameter) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         // only what this actually unbuilds: the security nodes holding a loadflow result, and their children
         nodeActivityRunnerService.runWith(
             UNBUILD_ALL, studyUuid, loadFlowService.getNodesInvalidatedByLoadFlowParameters(studyUuid),
@@ -58,9 +60,10 @@ public class LoadFlowStudyParametersController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The loadflow parameters were reset"),
         @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> resetLoadflowParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestHeader(HEADER_USER_ID) String userId) {
+            @PathVariable("studyUuid") UUID studyUuid) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         boolean userProfileIssue = nodeActivityRunnerService.runWith(
                 UNBUILD_ALL, studyUuid, loadFlowService.getNodesInvalidatedByLoadFlowParameters(studyUuid),
                 () -> loadFlowService.resetLoadFlowParameters(studyUuid, userId)
@@ -71,8 +74,9 @@ public class LoadFlowStudyParametersController {
     @GetMapping(value = "/parameters")
     @Operation(summary = "Get loadflow parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters")})
-    public ResponseEntity<String> getLoadFlowParameters(@PathVariable("studyUuid") UUID studyUuid,
-                                                        @RequestHeader(HEADER_USER_ID) String userId) {
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
+    public ResponseEntity<String> getLoadFlowParameters(@PathVariable("studyUuid") UUID studyUuid) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(loadFlowService.getLoadFlowParametersValues(studyUuid, userId));
@@ -84,6 +88,7 @@ public class LoadFlowStudyParametersController {
         @ApiResponse(responseCode = "200", description = "The loadflow parameters ID"),
         @ApiResponse(responseCode = "404", description = "The study is not found")
     })
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<UUID> getLoadflowParametersId(@PathVariable("studyUuid") UUID studyUuid) {
         UUID parametersId = loadFlowService.getLoadFlowParametersId(studyUuid);
         return ResponseEntity.ok().body(parametersId);
@@ -92,6 +97,7 @@ public class LoadFlowStudyParametersController {
     @GetMapping(value = "/provider")
     @Operation(summary = "Get loadflow provider for a specified study")
     @ApiResponse(responseCode = "200", description = "The loadflow provider is returned")
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getLoadFlowProvider(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(loadFlowService.getLoadFlowProvider(studyUuid));
     }

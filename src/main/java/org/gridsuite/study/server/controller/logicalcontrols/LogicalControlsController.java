@@ -20,6 +20,8 @@ import org.gridsuite.study.server.service.logicalcontrols.LogicalControlsService
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -52,11 +54,12 @@ public class LogicalControlsController {
     @PostMapping(value = "/run")
     @Operation(summary = "run logical controls on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The logical controls has started")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> runLogicalControls(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                    @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                   @RequestHeader(HEADER_USER_ID) String userId) {
+                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         // no quota on this computation
         nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> logicalControlsService.runLogicalControls(studyUuid, nodeUuid, rootNetworkUuid, userId));
@@ -66,6 +69,7 @@ public class LogicalControlsController {
     @PutMapping(value = "/stop")
     @Operation(summary = "stop logical controls on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The logical controls has been stopped")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> stopLogicalControls(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                     @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
@@ -79,6 +83,7 @@ public class LogicalControlsController {
         @ApiResponse(responseCode = "204", description = "No logical controls has been done yet"),
         @ApiResponse(responseCode = "400", description = "Invalid global filters, or column filters/sort supplied"),
         @ApiResponse(responseCode = "404", description = "The logical controls has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getLogicalControlsResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                            @Parameter(description = "rootNetwork Uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                            @Parameter(description = "node Uuid") @PathVariable("nodeUuid") UUID nodeUuid,
@@ -99,6 +104,7 @@ public class LogicalControlsController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The logical controls status"),
         @ApiResponse(responseCode = "204", description = "No logical controls has been done yet"),
         @ApiResponse(responseCode = "404", description = "The logical controls status has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getLogicalControlsStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {

@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import lombok.AllArgsConstructor;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
@@ -43,11 +44,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.HttpClientErrorException;
@@ -91,6 +94,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
+@Import(AllowAllAuthTestConfiguration.class)
+@WithMockUser(username = "userId")
 class LogicalControlsTest {
 
     private static final String LOGICAL_CONTROLS_URL_BASE = "/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/logical-controls/";
@@ -224,8 +229,7 @@ class LogicalControlsTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid)
                 .content(mnBodyJson)
-                .contentType(MediaType.APPLICATION_JSON)
-                .header("userId", "userId"))
+                .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());
 
         Message<?> msg = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
@@ -259,8 +263,7 @@ class LogicalControlsTest {
     private void runLogicalControls(StudyNodeIds ids) throws Exception {
         computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, LOGICAL_CONTROLS_RESULT_UUID, LOGICAL_CONTROLS_PREFIX);
 
-        mockMvc.perform(post(LOGICAL_CONTROLS_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
-                .header("userId", "userId"))
+        mockMvc.perform(post(LOGICAL_CONTROLS_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
             .andExpect(status().isOk());
 
         consumeLogicalControlsResult(ids, LOGICAL_CONTROLS_RESULT_UUID);
@@ -352,7 +355,6 @@ class LogicalControlsTest {
             .willReturn(ok()));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/state-estimation/parameters", ids.studyId)
-                .header("userId", "userId")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(TestUtils.resourceToString("/estim-parameters.json")))
             .andExpect(status().isOk());
@@ -401,8 +403,7 @@ class LogicalControlsTest {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID_2, "node 2");
         computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, VARIANT_ID_2, LOGICAL_CONTROLS_ERROR_RESULT_UUID, LOGICAL_CONTROLS_PREFIX);
 
-        mockMvc.perform(post(LOGICAL_CONTROLS_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
-                .header("userId", "userId"))
+        mockMvc.perform(post(LOGICAL_CONTROLS_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
             .andExpect(status().isOk());
         checkLogicalControlsMessagesReceived(ids.studyId, UPDATE_TYPE_LOGICAL_CONTROLS_STATUS);
 

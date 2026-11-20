@@ -18,12 +18,13 @@ import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_EVENTS;
 
 /**
@@ -49,6 +50,7 @@ public class DynamicSimulationEventsController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The dynamic simulation events was returned"),
         @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<List<EventInfos>> getDynamicSimulationEvents(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                        @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
         List<EventInfos> dynamicSimulationEvents = dynamicSimulationService.getDynamicSimulationEvents(nodeUuid);
@@ -60,6 +62,7 @@ public class DynamicSimulationEventsController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The dynamic simulation event was returned"),
         @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<EventInfos> getDynamicSimulationEvent(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                 @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                 @Parameter(description = "Equipment id") @RequestParam(value = "equipmentId") String equipmentId) {
@@ -73,11 +76,12 @@ public class DynamicSimulationEventsController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The network event was created"),
         @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> createDynamicSimulationEvent(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                             @RequestBody EventInfos event,
-                                                             @RequestHeader(HEADER_USER_ID) String userId) {
+                                                             @RequestBody EventInfos event) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         nodeActivityRunnerService.runWith(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
             () -> dynamicSimulationService.createDynamicSimulationEvent(studyUuid, nodeUuid, userId, event));
         return ResponseEntity.ok().build();
@@ -88,11 +92,12 @@ public class DynamicSimulationEventsController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The dynamic simulation event was updated"),
         @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> updateDynamicSimulationEvent(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                             @RequestBody EventInfos event,
-                                                             @RequestHeader(HEADER_USER_ID) String userId) {
+                                                             @RequestBody EventInfos event) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         nodeActivityRunnerService.runWith(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
             () -> dynamicSimulationService.updateDynamicSimulationEvent(studyUuid, nodeUuid, userId, event));
         return ResponseEntity.ok().build();
@@ -103,11 +108,12 @@ public class DynamicSimulationEventsController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The dynamic simulation events was deleted"),
         @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> deleteDynamicSimulationEvents(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                               @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                              @Parameter(description = "Dynamic simulation event UUIDs") @RequestParam("eventUuids") List<UUID> eventUuids,
-                                                              @RequestHeader(HEADER_USER_ID) String userId) {
+                                                              @Parameter(description = "Dynamic simulation event UUIDs") @RequestParam("eventUuids") List<UUID> eventUuids) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         nodeActivityRunnerService.runWith(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
             () -> dynamicSimulationService.deleteDynamicSimulationEvents(studyUuid, nodeUuid, userId, eventUuids));
         return ResponseEntity.ok().build();

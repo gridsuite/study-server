@@ -21,12 +21,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.PCC_MIN;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
 
@@ -56,6 +57,7 @@ public class PccMinController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Csv of pcc min results"),
         @ApiResponse(responseCode = "204", description = "No pcc min has been done yet"),
         @ApiResponse(responseCode = "404", description = "The pcc min has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<byte[]> exportPccMinResultsAsCsv(
             @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
@@ -69,12 +71,12 @@ public class PccMinController {
     @PostMapping(value = "/run")
     @Operation(summary = "run pcc min on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min has started")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> runPccMin(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                           @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                          @RequestHeader(HEADER_USER_ID) String userId) {
-
+                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         QuotaRunner.runComputationWithQuota(studyService, PCC_MIN, userId, quotaId ->
             nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
                 () -> pccMinService.runPccMin(studyUuid, nodeUuid, rootNetworkUuid, userId, quotaId)));
@@ -84,10 +86,11 @@ public class PccMinController {
     @PutMapping(value = "/stop")
     @Operation(summary = "stop pcc min on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min has been stopped")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> stopPccMin(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                           @RequestHeader(HEADER_USER_ID) String userId) {
+                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         rootNetworkNodeInfoService.stopPccMin(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
@@ -97,6 +100,7 @@ public class PccMinController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min result"),
         @ApiResponse(responseCode = "204", description = "No pcc min  has been done yet"),
         @ApiResponse(responseCode = "404", description = "The pcc min  has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getPccMinResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                   @Parameter(description = "rootNetwork Uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                   @Parameter(description = "node Uuid") @PathVariable("nodeUuid") UUID nodeUuid,
@@ -113,6 +117,7 @@ public class PccMinController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min status"),
         @ApiResponse(responseCode = "204", description = "No pcc min has been done yet"),
         @ApiResponse(responseCode = "404", description = "The pcc min status has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getPccMinStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                   @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
