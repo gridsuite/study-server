@@ -14,6 +14,7 @@ import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.nodeactivity.NetworkModificationActivityRunnerService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
@@ -51,7 +52,7 @@ import static org.mockito.Mockito.*;
 class StudyControllerRebuildNodeTest {
 
     @Autowired
-    protected ObjectMapper mapper;
+    private ObjectMapper mapper;
 
     @MockitoBean
     private NetworkModificationService networkModificationService;
@@ -62,7 +63,7 @@ class StudyControllerRebuildNodeTest {
     private StudyService studyService;
 
     @MockitoBean
-    NetworkModificationTreeService networkModificationTreeService;
+    private NetworkModificationTreeService networkModificationTreeService;
 
     // RebuildNodeService now looks up each modification's real parent composite before delegating
     // to studyService; mock it here too so this delegation-only test doesn't hit the real HTTP client
@@ -70,7 +71,10 @@ class StudyControllerRebuildNodeTest {
     private NetworkModificationRestService networkModificationRestService;
 
     @MockitoSpyBean
-    private NetworkModificationActivityRunnerService nodeActivityService;
+    private NodeActivityRunnerService nodeActivityService;
+
+    @MockitoSpyBean
+    private NetworkModificationActivityRunnerService modificationActivityRunnerService;
 
     @Autowired
     private StudyController studyController;
@@ -90,6 +94,7 @@ class StudyControllerRebuildNodeTest {
         doAnswer(_ -> Map.of()).when(networkModificationRestService).findParentComposites(any());
 
         TestUtils.bypassNodeActivities(nodeActivityService);
+        TestUtils.bypassNodeActivities(modificationActivityRunnerService);
     }
 
     @Test
@@ -176,6 +181,16 @@ class StudyControllerRebuildNodeTest {
         verify(networkModificationService, times(1)).unshareModificationReferences(studyUuid, Map.of(nodeUuid, List.of(modificationUuid)), userId);
         verify(studyService, times(1)).assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         verify(studyService, times(1)).assertIsNodeNotReadOnly(nodeUuid);
+    }
+
+    @Test
+    void testUnshareAllReferencesInNode() {
+        ResponseEntity<Void> response = studyController.unshareAllModificationReferencesInNode(studyUuid, nodeUuid, userId);
+
+        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(studyService, times(1)).assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        verify(studyService, times(1)).assertIsNodeNotReadOnly(nodeUuid);
+        verify(networkModificationService, times(1)).unshareAllReferencesInNode(studyUuid, nodeUuid, userId);
     }
 
     @Test

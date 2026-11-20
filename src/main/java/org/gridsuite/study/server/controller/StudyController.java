@@ -334,8 +334,21 @@ public class StudyController {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         String userId = SecurityContextHolder.getContext().getAuthentication().getName();
-        networkModificationActivityRunnerService.runWith(studyUuid, nodeUuid, userId,
+        nodeActivityRunnerService.runWith(UNSHARE_MODIFICATIONS, studyUuid, List.of(nodeUuid),
                 () -> networkModificationService.unshareModificationReferences(studyUuid, Map.of(nodeUuid, List.of(modificationUuid)), userId));
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/unshare")
+    @Operation(summary = "Unshare all the reference modifications of a node and copy the referenced composites in their place")
+    @ApiResponse(responseCode = "200", description = "All the reference modifications from the node have been replaced by copies of their referenced composites")
+    public ResponseEntity<Void> unshareAllModificationReferencesInNode(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        networkModificationService.unshareAllReferencesInNode(studyUuid, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1646,7 +1659,7 @@ public class StudyController {
             try {
                 E value = Enum.valueOf(enumClass, text.toUpperCase());
                 setValue(value);
-            } catch (IllegalArgumentException ex) {
+            } catch (IllegalArgumentException _) {
                 String avail = StringUtils.join(enumClass.getEnumConstants(), ", ");
                 throw new IllegalArgumentException(String.format("Enum unknown entry '%s' should be among %s", text, avail));
             }

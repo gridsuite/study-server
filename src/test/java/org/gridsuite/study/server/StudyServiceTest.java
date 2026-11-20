@@ -330,6 +330,53 @@ class StudyServiceTest {
     }
 
     @Test
+    void testUnshareAllReferencesInNodeWithoutReference() {
+        UUID studyUuid = UUID.randomUUID();
+        UUID nodeUuid = UUID.randomUUID();
+        UUID groupUuid = UUID.randomUUID();
+        String userId = "userId";
+
+        doReturn(groupUuid).when(networkModificationTreeService).getModificationGroupUuid(nodeUuid);
+        doReturn(List.of()).when(networkModificationRestService).getModificationReferences(groupUuid);
+
+        networkModificationService.unshareAllReferencesInNode(studyUuid, nodeUuid, userId);
+
+        verify(networkModificationRestService, times(1)).getModificationReferences(groupUuid);
+        verify(nodeActivityRunnerService, never()).runWith(any(), any(), any(), (Runnable) any());
+        verify(networkModificationRestService, never()).unshareModificationReferences(any(), any());
+        verify(notificationService, never()).emitModificationsUpdated(any(), any(), any());
+    }
+
+    @Test
+    void testUnshareAllReferencesInNodeWithReferences() {
+        UUID studyUuid = UUID.randomUUID();
+        UUID nodeUuid = UUID.randomUUID();
+        UUID groupUuid = UUID.randomUUID();
+        UUID modificationUuid1 = UUID.randomUUID();
+        UUID modificationUuid2 = UUID.randomUUID();
+        String userId = "userId";
+
+        doReturn(groupUuid).when(networkModificationTreeService).getModificationGroupUuid(nodeUuid);
+        doReturn(List.of(
+                new ModificationReference(modificationUuid1, UUID.randomUUID(), null),
+                new ModificationReference(modificationUuid2, UUID.randomUUID(), UUID.randomUUID())
+        )).when(networkModificationRestService).getModificationReferences(groupUuid);
+
+        doAnswer(invocation -> {
+            Runnable runnable = invocation.getArgument(3);
+            runnable.run();
+            return null;
+        }).when(nodeActivityRunnerService).runWith(any(), any(), any(), (Runnable) any());
+
+        networkModificationService.unshareAllReferencesInNode(studyUuid, nodeUuid, userId);
+
+        // a single remote call for all the references of the node, nested ones included
+        verify(nodeActivityRunnerService, times(1)).runWith(eq(UNSHARE_MODIFICATIONS), eq(studyUuid), eq(List.of(nodeUuid)), (Runnable) any());
+        verify(networkModificationRestService, times(1)).unshareModificationReferences(List.of(modificationUuid1, modificationUuid2), userId);
+        verify(notificationService, times(1)).emitModificationsUpdated(studyUuid, nodeUuid, List.of(modificationUuid1, modificationUuid2));
+    }
+
+    @Test
     void testUnshareModificationReferenceDoesNotNotifyWhenRemoteCallFails() {
         UUID studyUuid = UUID.randomUUID();
         UUID nodeUuid = UUID.randomUUID();
