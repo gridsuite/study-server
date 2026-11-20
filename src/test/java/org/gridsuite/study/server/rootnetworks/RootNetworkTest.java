@@ -1005,6 +1005,44 @@ class RootNetworkTest {
         studyEntity.addRootNetwork(rootNetworkEntity);
     }
 
+    @Test
+    void testGetRootNetworkTags() {
+        UUID studyWithTwoTags = createStudy("R2");
+        UUID studyWithOneTag = createStudy(null);
+        createStudy("R4"); // not requested
+        UUID monoRootStudyUuid = createStudy(null);
+        StudyEntity monoRootStudy = studyRepository.findById(monoRootStudyUuid).orElseThrow();
+        monoRootStudy.setMonoRoot(true);
+        studyRepository.save(monoRootStudy);
+
+        // a study has each tag once even when given twice, mono-root ones included, and an unknown study is ignored
+        Map<UUID, List<String>> tagsByStudy = rootNetworkService.getRootNetworkTags(
+            List.of(studyWithTwoTags, studyWithTwoTags, studyWithOneTag, monoRootStudyUuid, UUID.randomUUID()));
+        assertEquals(Set.of(studyWithTwoTags, studyWithOneTag, monoRootStudyUuid), tagsByStudy.keySet());
+        assertEquals(Set.of("dum", "R2"), Set.copyOf(tagsByStudy.get(studyWithTwoTags)));
+        assertEquals(2, tagsByStudy.get(studyWithTwoTags).size());
+        assertEquals(List.of("dum"), tagsByStudy.get(studyWithOneTag));
+        assertEquals(List.of("dum"), tagsByStudy.get(monoRootStudyUuid));
+        assertEquals(Map.of(), rootNetworkService.getRootNetworkTags(List.of(UUID.randomUUID())));
+        assertEquals(Map.of(), rootNetworkService.getRootNetworkTags(List.of()));
+    }
+
+    private UUID createStudy(String extraTag) {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        if (extraTag != null) {
+            createDummyRootNetwork(studyEntity, RootNetworkInfos.builder()
+                .id(UUID.randomUUID())
+                .name(CASE_NAME2)
+                .importParameters(Map.of())
+                .caseInfos(new CaseInfos(CASE_UUID2, CASE_UUID, CASE_NAME2, CASE_FORMAT2))
+                .networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
+                .reportUuid(REPORT_UUID2)
+                .tag(extraTag)
+                .build());
+        }
+        return studyRepository.save(studyEntity).getId();
+    }
+
     @AfterEach
     void tearDown() {
         TestUtils.assertWiremockServerRequestsEmptyThenShutdown(wireMockServer);

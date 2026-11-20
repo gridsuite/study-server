@@ -10,7 +10,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.controller.StudyController;
 import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
-import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.nodeactivity.NetworkModificationActivityRunnerService;
@@ -137,12 +136,11 @@ class StudyControllerRebuildNodeTest {
 
     // when a modification is enabled/disabled, this method is called
     @Test
-    void updateNetworkModificationMetadata() {
+    void updateNetworkModificationActivation() {
         List<UUID> modificationUuids = List.of(UUID.randomUUID());
-        NetworkModificationMetadata networkModificationMetadata = new NetworkModificationMetadata(true, "description", "type", null);
-        studyController.updateNetworkModificationsMetadata(studyUuid, nodeUuid, modificationUuids, networkModificationMetadata, userId);
+        studyController.updateNetworkModificationsActivation(studyUuid, nodeUuid, modificationUuids, true, userId);
 
-        verify(networkModificationService, times(1)).updateNetworkModificationsMetadata(studyUuid, nodeUuid, modificationUuids, userId, networkModificationMetadata);
+        verify(networkModificationService, times(1)).updateNetworkModificationsActivation(studyUuid, nodeUuid, modificationUuids, userId, true);
         verify(networkModificationService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
     }
 

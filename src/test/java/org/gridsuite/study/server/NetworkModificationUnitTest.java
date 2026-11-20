@@ -13,7 +13,6 @@ import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
 import org.gridsuite.study.server.dto.NodeInfos;
 import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
-import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -41,7 +40,6 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
-import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -95,8 +93,6 @@ class NetworkModificationUnitTest {
     private static final UUID CASE_LOADFLOW_UUID = UUID.fromString(CASE_LOADFLOW_UUID_STRING);
     private static final UUID NETWORK_UUID = UUID.fromString("38400000-8cf0-11bd-b23e-10b96e4ef00d");
     private static final String USER_ID_HEADER = "userId";
-
-    private static final String SHOULD_NOT_RETURN_NULL_MESSAGE = "Should not return null here";
 
     private static final long TIMEOUT = 1000;
     private static final String VARIANT_1 = "variant_1";
@@ -216,24 +212,6 @@ class NetworkModificationUnitTest {
     }
 
     @Test
-    void updateDescription() {
-        setupWithOneRootNetwork();
-        UUID modificationUuid = UUID.randomUUID();
-        List<UUID> childrenNodes = List.of(node2Uuid, node4Uuid, node3Uuid);
-
-        NetworkModificationMetadata metadata = new NetworkModificationMetadata(null, "new description", null, null);
-        studyController.updateNetworkModificationsMetadata(studyUuid, node1Uuid, List.of(modificationUuid), metadata, USER_ID_HEADER);
-
-        checkModificationUpdatedMessageReceived(studyUuid, node1Uuid, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
-
-        NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
-        verify(restClient.put(), times(1)).uri(
-                matches(".*network-modifications\\?uuids=" + modificationUuid +
-                        "&groupUuid=" + node1Infos.getModificationGroupUuid().toString()));
-        verify(restClient.put().contentType(MediaType.APPLICATION_JSON), times(1)).body(metadata);
-    }
-
-    @Test
     void activateNetworkModificationTest() {
         setupWithOneRootNetwork();
         List<UUID> modificationToDeactivateUuids = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
@@ -305,18 +283,15 @@ class NetworkModificationUnitTest {
     }
 
     private void updateNetworkModificationActivationStatus(List<UUID> networkModificationUuids, UUID nodeWithModification, List<UUID> childrenNodes, List<UUID> nodesToUnbuild, boolean activated) {
-        NetworkModificationMetadata metadata = new NetworkModificationMetadata(activated, null, null, null);
-        studyController.updateNetworkModificationsMetadata(studyUuid, node1Uuid, networkModificationUuids, metadata, USER_ID_HEADER);
+        studyController.updateNetworkModificationsActivation(studyUuid, node1Uuid, networkModificationUuids, activated, USER_ID_HEADER);
 
         checkUpdateBuildStateMessageReceived(studyUuid, nodesToUnbuild);
         checkUpdateStatusMessagesReceived(studyUuid, nodeWithModification, output);
         checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
 
-        NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
         verify(restClient.put(), times(1)).uri(
                 matches(".*network-modifications\\?" + networkModificationUuids.stream().map(uuid -> "uuids=" + uuid.toString() + "&").collect(Collectors.joining()) +
-                        "groupUuid=" + node1Infos.getModificationGroupUuid().toString()));
-        verify(restClient.put().contentType(MediaType.APPLICATION_JSON), times(1)).body(metadata);
+                        "active=" + activated));
     }
 
     private void checkModificationUpdatedMessageReceived(UUID studyUuid, UUID nodeUuid, List<UUID> childrenNodeUuids, String notificationType) {
