@@ -33,7 +33,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import java.util.List;
 import java.util.UUID;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -125,15 +125,15 @@ class NetworkModificationReferencingInfosUpdateTest {
         ModificationMoveInfos modificationMoveInfos = new ModificationMoveInfos(modificationReferenceToMoveUuid, sourceCompositeUuid, targetCompositeUuid, null);
         networkModificationService.moveNetworkModifications(studyUuid, originNodeUuid, targetNodeUuid, List.of(modificationMoveInfos), isTargetInDifferentNodeTree, userId);
 
-        ArgumentCaptor<ReferenceAttributes> referenceAttributesCaptor = ArgumentCaptor.forClass(ReferenceAttributes.class);
+        ArgumentCaptor<List<ReferenceAttributes>> referencesAttributesCaptor = ArgumentCaptor.forClass(List.class);
         ArgumentCaptor<UUID> sharedModificationUuidCaptor = ArgumentCaptor.forClass(UUID.class);
-        verify(directoryService, times(1)).updateSharingLink(sharedModificationUuidCaptor.capture(), referenceAttributesCaptor.capture(), anyString());
+        verify(directoryService, times(1)).updateSharingLinks(sharedModificationUuidCaptor.capture(), referencesAttributesCaptor.capture(), anyString());
 
         assertEquals(sharedModificationUuid, sharedModificationUuidCaptor.getValue());
 
-        assertNotNull(referenceAttributesCaptor.getValue());
-        assertThat(referenceAttributesCaptor.getValue())
+        assertNotNull(referencesAttributesCaptor.getValue());
+        assertThat(referencesAttributesCaptor.getValue())
             .usingRecursiveComparison()
-            .isEqualTo(referenceAttributesExpected);
+            .isEqualTo(List.of(referenceAttributesExpected));
     }
 }
