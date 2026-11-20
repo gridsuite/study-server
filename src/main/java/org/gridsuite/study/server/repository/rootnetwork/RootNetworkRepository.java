@@ -13,6 +13,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -43,6 +44,16 @@ public interface RootNetworkRepository extends JpaRepository<RootNetworkEntity, 
     List<RootNetworkEntity> findAllByStudyId(UUID studyUuid);
 
     Optional<RootNetworkEntity> findByTagAndStudyId(String tag, UUID studyUuid);
+
+    /**
+     * @return the root network tags of the given studies, once per study and tag
+     */
+    @Query("""
+            select distinct new org.gridsuite.study.server.repository.rootnetwork.StudyRootNetworkTag(r.study.id, r.tag)
+            from RootNetworkEntity r
+            where r.study.id in :studyUuids
+            """)
+    List<StudyRootNetworkTag> findTagsByStudyIds(@Param("studyUuids") Collection<UUID> studyUuids);
 
     boolean existsByIdAndName(UUID rootNetworkUuid, String rootNetworkName);
 

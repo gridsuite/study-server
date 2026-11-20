@@ -11,23 +11,23 @@ import lombok.Getter;
 import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
 @Getter
-public abstract class AbstractRestClient implements RestClient {
+public abstract class AbstractRestClientService implements RestClientService {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    protected final RestTemplate restTemplate;
+    protected final RestClient restClient;
 
     @Setter
     protected String baseUri;
 
-    protected AbstractRestClient(String baseUri, RestTemplate restTemplate) {
+    protected AbstractRestClientService(String baseUri, RestClient restClient) {
         this.baseUri = baseUri;
-        this.restTemplate = restTemplate;
+        this.restClient = restClient;
     }
 }

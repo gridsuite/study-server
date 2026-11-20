@@ -33,14 +33,26 @@ public class DynamicSimulationStudyParametersController {
     }
 
     @PostMapping(value = "/parameters")
-    @Operation(summary = "Set dynamic simulation parameters on study, reset to default ones if empty body")
+    @Operation(summary = "Set dynamic simulation parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation parameters are set")})
     public ResponseEntity<Void> setDynamicSimulationParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String dsParameter,
+            @RequestBody String dsParameter,
             @RequestHeader(HEADER_USER_ID) String userId) {
         dynamicSimulationService.setDynamicSimulationParameters(studyUuid, dsParameter, userId);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/parameters/reset")
+    @Operation(summary = "Reset dynamic simulation parameters on study to the user profile or default ones")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation parameters are reset"),
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    public ResponseEntity<Void> resetDynamicSimulationParameters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        return dynamicSimulationService.resetDynamicSimulationParameters(studyUuid, userId) ?
+                ResponseEntity.noContent().build() :
+                ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/parameters")

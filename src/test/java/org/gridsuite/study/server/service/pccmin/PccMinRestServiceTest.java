@@ -8,17 +8,20 @@ package org.gridsuite.study.server.service.pccmin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.service.RemoteServicesInspector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.PCC_MIN_API_VERSION;
+import static org.mockito.Answers.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,23 +31,34 @@ class PccMinRestServiceTest {
 
     @Mock
     private RemoteServicesProperties remoteServicesProperties;
+    @Mock(answer = RETURNS_DEEP_STUBS)
+    private RestClient restClient;
     @Mock
-    private RestTemplate restTemplate;
+    private RemoteServicesInspector remoteServicesInspector;
 
     private PccMinRestService pccMinRestService;
 
     @BeforeEach
     void setUp() {
         when(remoteServicesProperties.getServiceUri("pcc-min-server")).thenReturn(BASE_URI);
-        pccMinRestService = new PccMinRestService(remoteServicesProperties, new ObjectMapper(), restTemplate);
+        pccMinRestService = new PccMinRestService(remoteServicesProperties, remoteServicesInspector, new ObjectMapper(), restClient);
     }
 
     @Test
     void testGetParameters() {
         UUID parameterUuid = UUID.randomUUID();
         String parameters = "{\"provider\":\"pcc-min\"}";
-        when(restTemplate.getForObject(BASE_URI + "/" + PCC_MIN_API_VERSION + "/parameters/" + parameterUuid, String.class)).thenReturn(parameters);
+        when(restClient.get().uri(BASE_URI + "/" + PCC_MIN_API_VERSION + "/parameters/" + parameterUuid).retrieve().body(String.class)).thenReturn(parameters);
 
         assertThat(pccMinRestService.getParameters(parameterUuid)).isEqualTo(parameters);
+    }
+
+    @Test
+    void testResetPccMinParameters() {
+        UUID parameterUuid = UUID.randomUUID();
+
+        pccMinRestService.resetPccMinParameters(parameterUuid);
+
+        verify(restClient.put().uri(BASE_URI + "/" + PCC_MIN_API_VERSION + "/parameters/" + parameterUuid + "/reset").retrieve()).toBodilessEntity();
     }
 }

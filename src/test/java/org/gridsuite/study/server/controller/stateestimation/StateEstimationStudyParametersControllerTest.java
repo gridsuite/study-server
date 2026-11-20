@@ -68,4 +68,16 @@ class StateEstimationStudyParametersControllerTest {
 
         verify(stateEstimationService).setStateEstimationParametersValues(studyUuid, PARAMETERS, USER_ID);
     }
+
+    @Test
+    void testResetStateEstimationParametersValues() throws Exception {
+        UUID studyUuid = UUID.randomUUID();
+
+        mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid)
+                .header(HEADER_USER_ID, USER_ID))
+            .andExpect(status().isOk())
+            .andExpect(content().string(""));
+
+        verify(stateEstimationService).resetStateEstimationParametersValues(studyUuid, USER_ID);
+    }
 }

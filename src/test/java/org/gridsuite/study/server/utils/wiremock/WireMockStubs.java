@@ -46,6 +46,7 @@ public class WireMockStubs {
     private static final String URI_NETWORK_MODIFICATION_GROUPS = "/v1/groups";
 
     private static final String URI_NETWORK_MODIFICATION_CONTAINERS = "/v1/containers";
+    public static final String ROOT_NETWORK_TAGS_AUTHORIZED_URL = URI_NETWORK_MODIFICATION_CONTAINERS + "/root-network-tags/authorized";
 
     public static final String FIRST_VARIANT_ID = "first_variant_id";
 
@@ -172,6 +173,12 @@ public class WireMockStubs {
                 requestBody);
     }
 
+    public UUID stubRootNetworkTagsAllowed() {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(ROOT_NETWORK_TAGS_AUTHORIZED_URL))
+            .willReturn(WireMock.ok())
+        ).getId();
+    }
+
     public UUID stubNetworkModificationCountGet(String groupUuid, Integer expectedCount) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_CONTAINERS + DELIMITER + groupUuid + "/network-modifications-count"))
             .withQueryParam(QUERY_PARAM_STASHED, WireMock.equalTo("false"))
@@ -241,21 +248,16 @@ public class WireMockStubs {
         ).getId();
     }
 
-    public UUID stubNetworkModificationDeleteGroup() {
-        return wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + ".*"))
+    public UUID stubCreateSharingLinks() {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + "/sharing-links"))
             .willReturn(WireMock.ok())
         ).getId();
     }
 
-    public UUID stubGetAllReferencesDataFromGroup() {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_CONTAINERS + DELIMITER + ".*/references"))
-                .willReturn(WireMock.ok()
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .withBody("[]"))).getId();
-    }
-
-    public void verifyGetReferencesDataFromGroup(UUID getReferencesUuid) {
-        verifyGetRequest(wireMock, getReferencesUuid, URI_NETWORK_MODIFICATION_CONTAINERS + DELIMITER + ".*/references", true, Map.of(), 1);
+    public UUID stubNetworkModificationDeleteGroup() {
+        return wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + ".*"))
+            .willReturn(WireMock.ok())
+        ).getId();
     }
 
     public UUID stubNetworkModificationDeleteIndex() {
@@ -290,6 +292,10 @@ public class WireMockStubs {
 
     public void verifyDuplicateModificationGroup(UUID stubId, int nbRequests) {
         verifyPostRequest(wireMock, stubId, URI_NETWORK_MODIFICATION_GROUPS + "/.*/duplicate", true, Map.of("groupUuid", WireMock.matching(".*")), nbRequests);
+    }
+
+    public void verifyCreateSharingLinks(UUID stubId, int nbRequests) {
+        verifyPostRequest(wireMock, stubId, URI_NETWORK_MODIFICATION_GROUPS + "/sharing-links", true, Map.of(), nbRequests);
     }
 
     public void verifyNetworkModificationDeleteGroup(UUID stubId) {

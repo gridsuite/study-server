@@ -28,6 +28,7 @@ public enum NodeActivityType {
     REIMPORT_CASE(UPDATING, true, false, false),
     EDIT_TREE(UPDATING, true, true, true),
     EDIT_MODIFICATIONS(UPDATING, true, true, true),
+    UNSHARE_MODIFICATIONS(UPDATING, false, true, true),
     DELETE_NODES(DELETING, true, true, true),
     EDIT_EVENTS(UPDATING, false, true, true);
 

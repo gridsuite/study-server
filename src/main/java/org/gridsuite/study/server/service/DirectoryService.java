@@ -18,12 +18,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 
@@ -38,22 +37,23 @@ public class DirectoryService {
     public static final String PARAM_ACCESS_TYPE = "accessType";
     public static final String PARAM_TARGET_DIRECTORY_UUID = "targetDirectoryUuid";
     public static final String PARAM_RECURSIVE_CHECK = "recursiveCheck";
-    private final RestTemplate restTemplate;
+    private final RestClient restClient;
 
     @Setter
     @Getter
     private String directoryServerServerBaseUri;
 
     @Autowired
-    public DirectoryService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
+    public DirectoryService(RemoteServicesProperties remoteServicesProperties, RestClient restClient) {
         this.directoryServerServerBaseUri = remoteServicesProperties.getServiceUri("directory-server");
-        this.restTemplate = restTemplate;
+        this.restClient = restClient;
     }
 
     public String getElementName(UUID elementUuid) {
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/elements/{elementUuid}/name");
         String path = pathBuilder.buildAndExpand(elementUuid).toUriString();
-        return restTemplate.getForObject(getDirectoryServerServerBaseUri() + path, String.class);
+        return restClient.get().uri(getDirectoryServerServerBaseUri() + path)
+            .retrieve().body(String.class);
     }
 
     public Map<UUID, String> getElementNames(Set<UUID> elementUuids) {
@@ -70,16 +70,10 @@ public class DirectoryService {
             .buildAndExpand()
             .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
         try {
-            Map<UUID, String> elementNamesMap = restTemplate.exchange(
-                getDirectoryServerServerBaseUri() + path,
-                HttpMethod.GET,
-                new HttpEntity<>(headers),
-                new ParameterizedTypeReference<Map<UUID, String>>() { }
-            ).getBody();
+            Map<UUID, String> elementNamesMap = restClient.get().uri(getDirectoryServerServerBaseUri() + path)
+                .headers(headers -> headers.setContentType(MediaType.APPLICATION_JSON))
+                .retrieve().body(new ParameterizedTypeReference<Map<UUID, String>>() { });
             return elementNamesMap != null ? elementNamesMap : Map.of();
 
         } catch (RestClientException e) {
@@ -93,92 +87,129 @@ public class DirectoryService {
             .queryParam("elementTypes", elementTypes)
             .queryParam("strictMode", strictMode)
             .build().toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        return restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
+        return restClient.get().uri(getDirectoryServerServerBaseUri() + path)
+            .headers(headers -> headers.set(HEADER_USER_ID, userId))
+            .headers(headers -> headers.setContentType(MediaType.APPLICATION_JSON))
+            .retrieve().body(String.class);
     }
 
     public boolean elementExists(UUID directoryUuid, String elementName, String type) {
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/directories/{directoryUuid}/elements/{elementName}/types/{type}");
         String path = pathBuilder.buildAndExpand(directoryUuid, elementName, type).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<Void> request = new HttpEntity<>(headers);
-        ResponseEntity<Void> response = restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.HEAD, request, Void.class);
+        ResponseEntity<Void> response = restClient.head().uri(getDirectoryServerServerBaseUri() + path)
+            .headers(headers -> headers.setContentType(MediaType.APPLICATION_JSON))
+            .retrieve().toBodilessEntity();
         return response.getStatusCode() == HttpStatus.OK;
     }
 
-    public void createElementsReferences(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, String userId) {
-        references.stream()
-                .collect(Collectors.groupingBy(ModificationReference::referencedId,
-                        Collectors.mapping(ref -> {
-                            boolean insideComposite = ref.containerId() != null;
-                            return ReferenceAttributes.createReferenceAttributes(
-                                    ref.modificationUuid(),
-                                    insideComposite ? nodeUuid : studyUuid,
-                                    insideComposite ? ref.containerId() : nodeUuid,
-                                    insideComposite ? ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION
-                                            : ReferenceAttributes.ReferenceType.STUDY_NODE);
-                        }, Collectors.toList())))
-                .forEach((referencedId, referencesAttributes) -> createElementReferences(referencedId, referencesAttributes, userId));
+    public void createSharingLinks(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, String userId) {
+        createSharingLinks(references, studyUuid, nodeUuid, false, userId);
     }
 
-    public void createElementReferences(@NonNull UUID elementUuid, @NonNull List<ReferenceAttributes> referencesAttributes, String userId) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        headers.setContentType(MediaType.APPLICATION_JSON);
+    public void createSharingLinks(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, boolean recreate, String userId) {
+        // one call per referenced shared element, carrying all its references
+        for (Map.Entry<UUID, List<ReferenceAttributes>> entry : groupReferenceAttributesByReferencedId(references, studyUuid, nodeUuid).entrySet()) {
+            createSharingLinks(entry.getKey(), entry.getValue(), recreate, userId);
+        }
+    }
 
-        HttpEntity<List<ReferenceAttributes>> requestEntity = new HttpEntity<>(referencesAttributes, headers);
+    public void updateSharingLinks(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, String userId) {
+        // one call per referenced shared element, carrying all its references
+        for (Map.Entry<UUID, List<ReferenceAttributes>> entry : groupReferenceAttributesByReferencedId(references, studyUuid, nodeUuid).entrySet()) {
+            updateSharingLinks(entry.getKey(), entry.getValue(), userId);
+        }
+    }
+
+    public void removeSharingLinks(List<ModificationReference> references, String userId) {
+        // one call per referenced shared element, carrying all its references
+        Map<UUID, List<UUID>> referenceUuidsByReferencedId = new LinkedHashMap<>();
+        for (ModificationReference ref : references) {
+            referenceUuidsByReferencedId.computeIfAbsent(ref.referencedId(), k -> new ArrayList<>()).add(ref.modificationUuid());
+        }
+        for (Map.Entry<UUID, List<UUID>> entry : referenceUuidsByReferencedId.entrySet()) {
+            removeSharingLinks(entry.getKey(), entry.getValue(), userId);
+        }
+    }
+
+    private static Map<UUID, List<ReferenceAttributes>> groupReferenceAttributesByReferencedId(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid) {
+        Map<UUID, List<ReferenceAttributes>> referenceAttributesByReferencedId = new LinkedHashMap<>();
+        for (ModificationReference ref : references) {
+            referenceAttributesByReferencedId.computeIfAbsent(ref.referencedId(), k -> new ArrayList<>()).add(toReferenceAttributes(ref, studyUuid, nodeUuid));
+        }
+        return referenceAttributesByReferencedId;
+    }
+
+    /**
+     * a modification-reference at the root of the node group is registered as used by the node of the study,
+     * one nested in a composite as used by this composite of the node
+     */
+    private static ReferenceAttributes toReferenceAttributes(ModificationReference ref, UUID studyUuid, UUID nodeUuid) {
+        boolean insideComposite = ref.containerId() != null;
+        return ReferenceAttributes.createReferenceAttributes(
+                ref.modificationUuid(),
+                insideComposite ? nodeUuid : studyUuid,
+                insideComposite ? ref.containerId() : nodeUuid,
+                insideComposite ? ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION
+                        : ReferenceAttributes.ReferenceType.STUDY_NODE);
+    }
+
+    public void createSharingLinks(@NonNull UUID elementUuid, @NonNull List<ReferenceAttributes> referencesAttributes, boolean recreate, String userId) {
 
         var path = UriComponentsBuilder.fromPath(
                 DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")
+            .queryParam("recreate", recreate)
             .buildAndExpand(elementUuid)
             .toUriString();
 
-        restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.POST, requestEntity, ElementAttributes.class);
+        restClient.post().uri(getDirectoryServerServerBaseUri() + path)
+            .headers(headers -> headers.set(HEADER_USER_ID, userId))
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(referencesAttributes)
+            .retrieve().toEntity(ElementAttributes.class);
     }
 
     /**
      * remove references from the shared modification in directory server in a single call
-     * @param referenceUuids uuids of the composites or group where the 'Modification reference' is located
+     * @param referenceUuids uuids of the 'Modification references' to remove
      * @param userId id of the user who caused the unreferencing
      * @param sharedElementUuid uuid of the referenced shared element in the directory-server
      */
-    public void removeElementReferences(UUID sharedElementUuid, List<UUID> referenceUuids, String userId) {
+    public void removeSharingLinks(UUID sharedElementUuid, List<UUID> referenceUuids, String userId) {
         Objects.requireNonNull(referenceUuids);
         Objects.requireNonNull(sharedElementUuid);
 
         var path = UriComponentsBuilder.fromPath(
                         DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")
+                .queryParam(PARAM_IDS, referenceUuids)
                 .buildAndExpand(sharedElementUuid)
                 .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<List<UUID>> requestEntity = new HttpEntity<>(referenceUuids, headers);
-        restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.DELETE, requestEntity, ElementAttributes.class);
+        restClient.delete()
+            .uri(getDirectoryServerServerBaseUri() + path)
+            .headers(headers -> {
+                headers.set(HEADER_USER_ID, userId);
+                headers.setContentType(MediaType.APPLICATION_JSON);
+            })
+            .retrieve().toEntity(ElementAttributes.class);
     }
 
-    public void createElement(UUID directoryUuid, String description, UUID elementUuid, String elementName, String type, String userId) {
+    public void createElement(UUID directoryUuid, String description, UUID elementUuid, String elementName, String type, String userId, boolean allowNewName) {
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/directories/{directoryUuid}/elements");
+        if (allowNewName) {
+            pathBuilder.queryParam("allowNewName", true);
+        }
         ElementAttributes elementAttributes = new ElementAttributes(elementUuid, elementName, type, userId, 0, description);
         String path = pathBuilder.buildAndExpand(directoryUuid).toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<ElementAttributes> requestEntity = new HttpEntity<>(elementAttributes, headers);
-        restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.POST, requestEntity, ElementAttributes.class);
+        restClient.post().uri(getDirectoryServerServerBaseUri() + path)
+            .headers(headers -> headers.set(HEADER_USER_ID, userId))
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(elementAttributes)
+            .retrieve().toEntity(ElementAttributes.class);
     }
 
     public void checkPermission(List<UUID> elementUuids, UUID targetDirectoryUuid, String userId, PermissionType permissionType, boolean recursiveCheck) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HEADER_USER_ID, userId);
 
         String path = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/elements/authorized")
             .queryParam(PARAM_ACCESS_TYPE, permissionType)
@@ -188,11 +219,13 @@ public class DirectoryService {
             .buildAndExpand()
             .toUriString();
 
-        restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.GET, new HttpEntity<>(headers), Void.class);
+        restClient.get().uri(getDirectoryServerServerBaseUri() + path)
+            .headers(headers -> headers.add(HEADER_USER_ID, userId))
+            .retrieve().toBodilessEntity();
     }
 
     /**
-     * update modification-references in directory server in a single call, so they point to a new container after a move.
+     * update element sharing links in directory server in a single call, so they point to a new container after a move.
      * the rows to update are identified by {@code elementUuid} (the referenced shared element) and, for each entry,
      * the {@code referenceId} carried by its {@code ReferenceAttributes} (the modification-reference itself); each
      * {@code ReferenceAttributes} also carries the new location.
@@ -200,18 +233,17 @@ public class DirectoryService {
      * @param referencesAttributes new attributes of the modification-references
      * @param userId id of the user who moves the references
      */
-    public void updateElementReferences(@NonNull UUID elementUuid, @NonNull List<ReferenceAttributes> referencesAttributes, String userId) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<List<ReferenceAttributes>> requestEntity = new HttpEntity<>(referencesAttributes, headers);
+    public void updateSharingLinks(@NonNull UUID elementUuid, @NonNull List<ReferenceAttributes> referencesAttributes, String userId) {
 
         var path = UriComponentsBuilder.fromPath(
                 DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")
             .buildAndExpand(elementUuid)
             .toUriString();
 
-        restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.PUT, requestEntity, Void.class);
+        restClient.put().uri(getDirectoryServerServerBaseUri() + path)
+            .headers(headers -> headers.set(HEADER_USER_ID, userId))
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(referencesAttributes)
+            .retrieve().toBodilessEntity();
     }
 }

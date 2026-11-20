@@ -42,13 +42,24 @@ public class DynamicMarginCalculationStudyParametersController {
     }
 
     @PostMapping(value = "/parameters")
-    @Operation(summary = "Set dynamic margin calculation parameters on study, reset to default one if empty body")
+    @Operation(summary = "Set dynamic margin calculation parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic margin calculation parameters are set")})
     public ResponseEntity<Void> setDynamicMarginCalculationParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String dmcParameter,
+            @RequestBody String dmcParameter,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        return dynamicMarginCalculationService.setDynamicMarginCalculationParameters(studyUuid, dmcParameter, userId) ?
+        dynamicMarginCalculationService.setDynamicMarginCalculationParameters(studyUuid, dmcParameter, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/parameters/reset")
+    @Operation(summary = "Reset dynamic margin calculation parameters on study to the user profile or default ones")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic margin calculation parameters are reset"),
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    public ResponseEntity<Void> resetDynamicMarginCalculationParameters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        return dynamicMarginCalculationService.resetDynamicMarginCalculationParameters(studyUuid, userId) ?
                 ResponseEntity.noContent().build() :
                 ResponseEntity.ok().build();
     }

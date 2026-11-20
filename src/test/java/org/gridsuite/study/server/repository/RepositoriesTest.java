@@ -52,17 +52,21 @@ class RepositoriesTest {
 
     @BeforeEach
     void setup() {
-        rootNodeInfoRepository.deleteAll();
-        networkModificationNodeInfoRepository.deleteAll();
-        nodeRepository.deleteAll();
-        rootNetworkRepository.deleteAll();
-        studyRepository.deleteAll();
+        cleanDB();
     }
 
     @AfterEach
     void tearDown() {
-        studyRepository.deleteAll();
+        cleanDB();
+    }
+
+    private void cleanDB() {
+        rootNodeInfoRepository.deleteAll();
+        networkModificationNodeInfoRepository.deleteAll();
+        nodeRepository.deleteAll();
+        rootNetworkRepository.deleteAll();
         studyCreationRequestRepository.deleteAll();
+        studyRepository.deleteAll();
     }
 
     @Test
