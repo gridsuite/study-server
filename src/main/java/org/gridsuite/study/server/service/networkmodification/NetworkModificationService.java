@@ -151,17 +151,14 @@ public class NetworkModificationService {
     }
 
     @Transactional
-    public void updateNetworkModificationsMetadata(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId, NetworkModificationMetadata metadata) {
+    public void updateNetworkModificationsActivation(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId, boolean active) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         try {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
             }
-            UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationRestService.updateModificationsMetadata(groupId, modificationsUuids, metadata, userId);
-            if (metadata.getActivated() != null || metadata.getName() != null) {
-                networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid);
-            }
+            networkModificationRestService.updateModificationsActivation(modificationsUuids, active, userId);
+            networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid);
         } finally {
             notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
         }

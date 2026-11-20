@@ -8,6 +8,8 @@ package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeReceiver;
@@ -29,7 +31,9 @@ import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMargin
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.gridsuite.study.server.utils.wiremock.ComputationServerStubs;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -147,6 +151,17 @@ class StudyControllerDynamicMarginCalculationTest {
     private static final String DMC_STOPPED_DESTINATION = "dmc.stopped";
     private static final String DMC_FAILED_DESTINATION = "dmc.run.dlx";
 
+    private WireMockServer wireMockServer;
+
+    private ComputationServerStubs computationServerStubs;
+
+    @BeforeEach
+    void setUp() {
+        wireMockServer = new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
+        wireMockServer.start();
+        computationServerStubs = new ComputationServerStubs(wireMockServer);
+    }
+
     @AfterEach
     void tearDown() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
@@ -154,6 +169,7 @@ class StudyControllerDynamicMarginCalculationTest {
 
         List<String> destinations = List.of(STUDY_UPDATE_DESTINATION, DMC_FAILED_DESTINATION, DMC_RESULT_DESTINATION, DMC_STOPPED_DESTINATION);
         TestUtils.assertQueuesEmptyThenClear(destinations, output);
+        wireMockServer.stop();
     }
 
     private RootNode getRootNode(UUID study) throws Exception {
@@ -392,13 +408,15 @@ class StudyControllerDynamicMarginCalculationTest {
         assertThat(result.getResponse().getContentAsString()).isEqualTo("1");
 
         //Delete Dynamic result init results
-        doNothing().when(spyDynamicMarginCalculationRestService).deleteAllResults();
+        doReturn(wireMockServer.baseUrl()).when(spyDynamicMarginCalculationRestService).getBaseUri();
+        computationServerStubs.stubDeleteAllResults();
         result = studyClient.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", ComputationType.DYNAMIC_MARGIN_CALCULATION.toString())
                         .queryParam("dryRun", "false"))
                 .andExpect(status().isOk())
                 .andReturn();
         assertThat(result.getResponse().getContentAsString()).isEqualTo("1");
+        computationServerStubs.verifyDeleteAllResults();
     }
 
     @Test

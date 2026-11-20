@@ -394,7 +394,7 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
      * @param resultUuids a given results UUID
      */
     public void deleteResults(List<UUID> resultUuids) {
-        if (CollectionUtils.isEmpty(resultUuids)) {
+        if (Objects.requireNonNull(resultUuids, "resultUuids must not be null").isEmpty()) {
             return;
         }
 
@@ -403,13 +403,6 @@ public class DynamicSimulationRestService extends AbstractComputationRestService
         // call dynamic-simulation REST API
         getRestClient().delete().uri(uriComponents.build().toUriString())
             .retrieve().toBodilessEntity();
-    }
-
-    /**
-     * Delete all results
-     */
-    public void deleteAllResults() {
-        deleteResults(null);
     }
 
     /**
