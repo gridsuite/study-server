@@ -154,13 +154,13 @@ public class NetworkModificationRestService {
             .retrieve().toBodilessEntity();
     }
 
-    public void updateNetworkModificationsMetadata(List<UUID> networkModificationUuids, String metadata, String userId) {
+    public void updateNetworkModificationsActivation(List<UUID> networkModificationUuids, boolean active, String userId) {
         String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH)
-            .queryParam(UUIDS, networkModificationUuids).build().toUriString();
+            .queryParam(UUIDS, networkModificationUuids)
+            .queryParam(QUERY_PARAM_ACTIVE, active)
+            .build().toUriString();
         restClient.put().uri(getNetworkModificationServerURI(false) + path)
-            .contentType(MediaType.APPLICATION_JSON)
             .headers(headers -> headers.set(HEADER_USER_ID, userId))
-            .body(metadata)
             .retrieve().toBodilessEntity();
     }
 
@@ -280,23 +280,18 @@ public class NetworkModificationRestService {
             .retrieve().toBodilessEntity();
     }
 
-    public void updateModificationsMetadata(UUID groupUUid, List<UUID> modificationsUuids, NetworkModificationMetadata metadata, String userId) {
-        Objects.requireNonNull(groupUUid);
+    public void updateModificationsActivation(List<UUID> modificationsUuids, boolean active, String userId) {
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
             .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
             .queryParam(UUIDS, modificationsUuids)
-            .queryParam(GROUP_UUID, groupUUid)
+            .queryParam(QUERY_PARAM_ACTIVE, active)
             .buildAndExpand()
             .toUriString();
 
         var requestSpec = restClient.put().uri(path);
         if (userId != null) {
             requestSpec.header(HEADER_USER_ID, userId);
-            if (metadata != null) {
-                requestSpec.contentType(MediaType.APPLICATION_JSON)
-                    .body(metadata);
-            }
         }
         requestSpec.retrieve().toBodilessEntity();
     }
