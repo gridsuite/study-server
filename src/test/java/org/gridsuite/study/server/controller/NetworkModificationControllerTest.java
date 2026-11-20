@@ -132,18 +132,16 @@ class NetworkModificationControllerTest {
     }
 
     @Test
-    void testUpdateNetworkModificationsMetadata() throws Exception {
+    void testUpdateNetworkModificationsActivation() throws Exception {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
-        String metadata = "{\"message\":\"metadata\"}";
 
         mockMvc.perform(put(BASE_URL + "/network-modifications")
                 .param("uuids", firstUuid.toString(), secondUuid.toString())
-                .content(metadata)
-                .contentType(MediaType.APPLICATION_JSON))
+                .param("active", "true"))
             .andExpect(status().isOk())
             .andExpect(content().string(""));
 
-        verify(networkModificationService).updateNetworkModificationsMetadata(List.of(firstUuid, secondUuid), metadata, "userId");
+        verify(networkModificationService).updateNetworkModificationsActivation(List.of(firstUuid, secondUuid), true, "userId");
     }
 }

@@ -72,9 +72,9 @@ public class NetworkModificationController {
 
     @PutMapping(value = "/network-modifications")
     @PreAuthorize("@authorizationService.canWrite(#networkModificationUuids)")
-    public ResponseEntity<Void> updateNetworkModificationsMetadata(@RequestParam("uuids") List<UUID> networkModificationUuids, @RequestBody String metadata) {
+    public ResponseEntity<Void> updateNetworkModificationsMetadata(@RequestParam("uuids") List<UUID> networkModificationUuids, @RequestParam("active") boolean active) {
         String userId = SecurityContextHolder.getContext().getAuthentication().getName();
-        networkModificationRestService.updateNetworkModificationsMetadata(networkModificationUuids, metadata, userId);
+        networkModificationRestService.updateNetworkModificationsActivation(networkModificationUuids, active, userId);
         return ResponseEntity.ok().build();
     }
 }

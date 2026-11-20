@@ -18,6 +18,8 @@ import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.utils.MatcherReportLog;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
@@ -34,6 +36,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.utils.JsonUtils.getModificationContextJsonString;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -1136,5 +1139,29 @@ class NodeControllerTest extends StudyTestBase {
         Map<UUID, NodeInfos> infosByNodeUuid = nodesInfos.stream().collect(Collectors.toMap(NodeInfos::nodeUuid, Function.identity()));
         assertEquals(new NodeInfos(node1.getId(), "node1", study1Uuid), infosByNodeUuid.get(node1.getId()));
         assertEquals(new NodeInfos(node2.getId(), "node2", study2Uuid), infosByNodeUuid.get(node2.getId()));
+    }
+
+    @Test
+    void testGetRootNetworkTags() throws Exception {
+        String userId = "userId";
+        UUID study1Uuid = createStudyWithStubs(userId, CASE_UUID);
+        UUID study2Uuid = createStudyWithStubs(userId, CASE_UUID);
+        // study 1 is multi-root, study 2 stays mono-root: both are returned
+        StudyEntity study1 = studyRepository.findById(study1Uuid).orElseThrow();
+        study1.setMonoRoot(false);
+        studyRepository.save(study1);
+
+        MvcResult result = mockMvc.perform(post("/v1/studies/root-network-tags")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(List.of(study1Uuid, study2Uuid, UUID.randomUUID()))))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Map<UUID, List<String>> tagsByStudy = mapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() { });
+        Map<UUID, Set<String>> expected = Stream.of(study1Uuid, study2Uuid)
+                .collect(Collectors.toMap(Function.identity(), studyUuid -> rootNetworkRepository.findAllByStudyId(studyUuid).stream()
+                        .map(RootNetworkEntity::getTag).collect(Collectors.toSet())));
+        assertEquals(expected, tagsByStudy.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> Set.copyOf(entry.getValue()))));
     }
 }
