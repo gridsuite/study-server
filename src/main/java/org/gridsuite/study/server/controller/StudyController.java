@@ -342,12 +342,13 @@ public class StudyController {
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/unshare")
     @Operation(summary = "Unshare all the reference modifications of a node and copy the referenced composites in their place")
     @ApiResponse(responseCode = "200", description = "All the reference modifications from the node have been replaced by copies of their referenced composites")
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> unshareAllModificationReferencesInNode(
             @PathVariable("studyUuid") UUID studyUuid,
-            @PathVariable("nodeUuid") UUID nodeUuid,
-            @RequestHeader(HEADER_USER_ID) String userId) {
+            @PathVariable("nodeUuid") UUID nodeUuid) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         networkModificationService.unshareAllReferencesInNode(studyUuid, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
