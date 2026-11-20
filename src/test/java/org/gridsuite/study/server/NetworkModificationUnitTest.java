@@ -94,8 +94,6 @@ class NetworkModificationUnitTest {
     private static final UUID NETWORK_UUID = UUID.fromString("38400000-8cf0-11bd-b23e-10b96e4ef00d");
     private static final String USER_ID_HEADER = "userId";
 
-    private static final String SHOULD_NOT_RETURN_NULL_MESSAGE = "Should not return null here";
-
     private static final long TIMEOUT = 1000;
     private static final String VARIANT_1 = "variant_1";
     private static final String VARIANT_2 = "variant_2";
