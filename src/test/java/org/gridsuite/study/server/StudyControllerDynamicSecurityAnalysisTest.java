@@ -94,7 +94,6 @@ class StudyControllerDynamicSecurityAnalysisTest {
     private static final String STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETERS = "{studyUuid}/dynamic-security-analysis/parameters";
     private static final String STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_STATUS = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-security-analysis/status";
 
-    private static final String HEADER_USER_ID_NAME = "userId";
     private static final String HEADER_USER_ID_VALUE = "userId";
 
     private static final String VARIANT_ID = "variant_1";

@@ -701,7 +701,7 @@ class ShortCircuitTest implements WithAssertions {
         computationServerStubs.stubParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
         userAdminServerStubs.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
         computationServerStubs.stubInvalidateStatus();
-        resetParametersAndDoChecks(studyNameUserIdUuid, NO_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyNameUserIdUuid, HttpStatus.OK);
         computationServerStubs.verifyParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
         userAdminServerStubs.verifyGetUserProfile(NO_PROFILE_USER_ID);
         computationServerStubs.verifyInvalidateStatus(Map.of("resultUuid", new RegexPattern(".*")));
@@ -743,13 +743,13 @@ class ShortCircuitTest implements WithAssertions {
         computationServerStubs.stubParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
         userAdminServerStubs.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
         computationServerStubs.stubInvalidateStatus();
-        resetParametersAndDoChecks(studyNameUserIdUuid, NO_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyNameUserIdUuid, HttpStatus.OK);
         computationServerStubs.verifyParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
         userAdminServerStubs.verifyGetUserProfile(NO_PROFILE_USER_ID);
         computationServerStubs.verifyInvalidateStatus(Map.of("resultUuid", new RegexPattern(".*")));
     }
 
-    private void resetParametersAndDoChecks(UUID studyNameUserIdUuid, String userId, HttpStatusCode status) throws Exception {
+    private void resetParametersAndDoChecks(UUID studyNameUserIdUuid, HttpStatusCode status) throws Exception {
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/short-circuit-analysis/parameters/reset", studyNameUserIdUuid))
             .andExpect(status().is(status.value()));
@@ -779,7 +779,7 @@ class ShortCircuitTest implements WithAssertions {
 
         userAdminServerStubs.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
         computationServerStubs.stubParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
-        resetParametersAndDoChecks(studyNameUserIdUuid, NO_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyNameUserIdUuid, HttpStatus.OK);
         userAdminServerStubs.verifyGetUserProfile(NO_PROFILE_USER_ID);
         computationServerStubs.verifyParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
     }
@@ -792,7 +792,7 @@ class ShortCircuitTest implements WithAssertions {
 
         userAdminServerStubs.stubGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
         computationServerStubs.stubParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
-        resetParametersAndDoChecks(studyNameUserIdUuid, NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyNameUserIdUuid, HttpStatus.OK);
         userAdminServerStubs.verifyGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID);
         computationServerStubs.verifyParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
     }
@@ -806,7 +806,7 @@ class ShortCircuitTest implements WithAssertions {
         userAdminServerStubs.stubGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON);
         computationServerStubs.stubParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
         computationServerStubs.stubParametersDuplicateFromNotFound(PROFILE_SHORT_CIRCUIT_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
-        resetParametersAndDoChecks(studyNameUserIdUuid, INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
+        resetParametersAndDoChecks(studyNameUserIdUuid, HttpStatus.NO_CONTENT);
         userAdminServerStubs.verifyGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID);
         computationServerStubs.verifyParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
         computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SHORT_CIRCUIT_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
@@ -822,7 +822,7 @@ class ShortCircuitTest implements WithAssertions {
         computationServerStubs.stubParametersDuplicateFrom(PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING,
                 objectMapper.writeValueAsString(PROFILE_SHORT_CIRCUIT_ANALYSIS_DUPLICATED_PARAMETERS_UUID_STRING));
         computationServerStubs.stubDeleteParameters(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
-        resetParametersAndDoChecks(studyNameUserIdUuid, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyNameUserIdUuid, HttpStatus.OK);
         userAdminServerStubs.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
         computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
         computationServerStubs.verifyDeleteParameters(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
@@ -837,7 +837,7 @@ class ShortCircuitTest implements WithAssertions {
         userAdminServerStubs.stubGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
         computationServerStubs.stubParametersDuplicateFrom(PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING,
                 objectMapper.writeValueAsString(PROFILE_SHORT_CIRCUIT_ANALYSIS_DUPLICATED_PARAMETERS_UUID_STRING));
-        resetParametersAndDoChecks(studyNameUserIdUuid, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyNameUserIdUuid, HttpStatus.OK);
         userAdminServerStubs.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
         computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
     }

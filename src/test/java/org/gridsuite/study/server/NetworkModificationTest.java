@@ -1823,7 +1823,6 @@ class NetworkModificationTest {
 
     @Test
     void testDeleteVoltageLevelOnline() throws Exception {
-        String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
@@ -1872,7 +1871,6 @@ class NetworkModificationTest {
 
     @Test
     void testDeleteAttachingline() throws Exception {
-        String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);

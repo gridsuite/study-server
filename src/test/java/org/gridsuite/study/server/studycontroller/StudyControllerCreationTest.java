@@ -156,7 +156,7 @@ class StudyControllerCreationTest {
         UUID caseExistsStub = wireMockStubs.caseServer.stubCaseExists(caseUuid.toString(), true);
         UUID importCaseStub = wireMockStubs.networkConversionServer.stubImportNetwork(duplicateCaseUuid.toString(), null, FIRST_VARIANT_ID, caseFormat);
 
-        sendStudyCreationRequest(userId, caseUuid, caseFormat, null, true);
+        sendStudyCreationRequest(caseUuid, caseFormat, null, true);
 
         // assert that all http requests have been sent to remote services
         wireMockStubs.caseServer.verifyCaseExists(caseExistsStub, caseUuid.toString());
@@ -178,7 +178,7 @@ class StudyControllerCreationTest {
         String importParametersAsJson = mapper.writeValueAsString(importParameters);
         UUID importCaseStub = wireMockStubs.networkConversionServer.stubImportNetwork(caseUuid.toString(), importParametersAsJson, FIRST_VARIANT_ID, caseFormat);
 
-        sendStudyCreationRequest(userId, caseUuid, caseFormat, importParameters, false);
+        sendStudyCreationRequest(caseUuid, caseFormat, importParameters, false);
 
         // assert that all http requests have been sent to remote services
         wireMockStubs.caseServer.verifyCaseExists(caseExistsStub, caseUuid.toString());
@@ -266,7 +266,7 @@ class StudyControllerCreationTest {
         verify(studyConfigService, times(1)).createDefaultSpreadsheetConfigCollection(anyString(), any());
     }
 
-    private void sendStudyCreationRequest(String userId, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, boolean duplicateCase) throws Exception {
+    private void sendStudyCreationRequest(UUID caseUuid, String caseFormat, Map<String, Object> importParameters, boolean duplicateCase) throws Exception {
         mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
                 .contentType(MediaType.APPLICATION_JSON)
                 .param(CASE_FORMAT, caseFormat)

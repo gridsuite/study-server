@@ -77,7 +77,6 @@ class NetworkAreaDiagramTest {
     private NetworkStoreService networkStoreService;
 
     private static final String SINGLE_LINE_DIAGRAM_SERVER_BASE_URL = "/v1/network-area-diagram/";
-    private static final String USER1 = "user1";
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final UUID ROOTNETWORK_UUID = UUID.randomUUID();
     private static final UUID NODE_UUID = UUID.randomUUID();

@@ -58,9 +58,6 @@ class StudyControllerDynamicMappingTest {
     private static final String STUDY_NETWORK_VALUES_END_POINT = "{studyUuid}/dynamic-mapping/network/values";
     private static final String STUDY_NETWORK_MATCHES_END_POINT = "{studyUuid}/dynamic-mapping/network/matches/rule";
 
-    private static final String HEADER_USER_ID_NAME = "userId";
-    private static final String HEADER_USER_ID_VALUE = "userId";
-
     private static final UUID CASE_UUID = UUID.randomUUID();
     private static final UUID NETWORK_UUID = UUID.randomUUID();
 

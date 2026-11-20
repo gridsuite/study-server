@@ -549,7 +549,7 @@ class AsymmetricalLoadTest {
         wireMockServer.verify(0, WireMock.getRequestedFor(WireMock.urlMatching("/v1/asymmetrical-load/results/.*")));
     }
 
-    private void createOrUpdateParametersAndDoChecks(UUID studyUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
+    private void createOrUpdateParametersAndDoChecks(UUID studyUuid, String parameters, HttpStatusCode status) throws Exception {
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/asymmetrical-load/parameters", studyUuid)
                     .contentType(MediaType.ALL)
@@ -640,7 +640,7 @@ class AsymmetricalLoadTest {
             .willReturn(ok()));
         UUID studyUuid = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), ASYMMETRICAL_LOAD_PARAMETERS_UUID).getId();
 
-        createOrUpdateParametersAndDoChecks(studyUuid, parameterToUpdate, "userId", HttpStatus.OK);
+        createOrUpdateParametersAndDoChecks(studyUuid, parameterToUpdate, HttpStatus.OK);
         wireMockServer.verify(putRequestedFor(urlPathEqualTo("/v1/asymmetrical-load/parameters/" + ASYMMETRICAL_LOAD_PARAMETERS_UUID)));
 
         // Fail case

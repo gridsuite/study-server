@@ -67,7 +67,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisableElasticsearch
 @Import(AllowAllAuthTestConfiguration.class)
 class StudyControllerSearchTest {
-    private static final String USER_ID_HEADER = "userId";
     private static final String TEST_FILE = "testCase.xiidm";
     private static final String VARIANT_1 = "variant_1";
 

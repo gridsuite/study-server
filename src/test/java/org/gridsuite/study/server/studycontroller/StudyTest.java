@@ -1019,7 +1019,7 @@ class StudyTest extends StudyTestBase {
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
         // duplicate the study
-        StudyEntity duplicatedStudy = duplicateStudy(study1Uuid, userId);
+        StudyEntity duplicatedStudy = duplicateStudy(study1Uuid);
         assertNotEquals(study1Uuid, duplicatedStudy.getId());
         StudyEntity originalStudy = studyRepository.findById(study1Uuid).orElseThrow();
         assertEquals(originalStudy.isMonoRoot(), duplicatedStudy.isMonoRoot());
@@ -1122,7 +1122,7 @@ class StudyTest extends StudyTestBase {
         wireMockStubs.verifyWorkspacesConfigDuplicateFromAny(stubWorkspacesConfigDuplicateFromId, 1);
     }
 
-    private StudyEntity duplicateStudy(UUID studyUuid, String userId) throws Exception {
+    private StudyEntity duplicateStudy(UUID studyUuid) throws Exception {
         // Network reindex stubs - using scenarios for stateful behavior
         UUID stubReindexAllId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/networks/.*/reindex-all"))
             .inScenario("reindex")

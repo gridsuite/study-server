@@ -460,7 +460,7 @@ class VoltageInitTest {
         doAnswer(invocation -> List.of()).when(networkModificationTreeService).getHighestNodeUuids(any(), any());
     }
 
-    private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, StudyVoltageInitParameters parameters, String userId, HttpStatusCode status) throws Exception {
+    private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, StudyVoltageInitParameters parameters, HttpStatusCode status) throws Exception {
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -470,7 +470,7 @@ class VoltageInitTest {
         checkParametersChangedMessagesReceived(studyNameUserIdUuid);
     }
 
-    private void resetParametersAndDoChecks(UUID studyNameUserIdUuid, String userId, HttpStatusCode status) throws Exception {
+    private void resetParametersAndDoChecks(UUID studyNameUserIdUuid, HttpStatusCode status) throws Exception {
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/voltage-init/parameters/reset", studyNameUserIdUuid))
             .andExpect(status().is(status.value()));
@@ -504,7 +504,7 @@ class VoltageInitTest {
 
         StudyVoltageInitParameters parameters = createStudyVoltageInitParameters(false, VOLTAGE_INIT_PARAMETERS_INFOS);
 
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, parameters, "userId", HttpStatus.OK);
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, parameters, HttpStatus.OK);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters")));
 
         //checking update is registered
@@ -516,7 +516,7 @@ class VoltageInitTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + VOLTAGE_INIT_PARAMETERS_UUID_STRING)));
 
         //update voltage init parameters
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, parameters, "userId", HttpStatus.OK);
+        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, parameters, HttpStatus.OK);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + VOLTAGE_INIT_PARAMETERS_UUID_STRING)));
 
         // insert a study with a wrong voltage init parameters uuid
@@ -1158,7 +1158,7 @@ class VoltageInitTest {
     void testResetVoltageInitParametersUserHasNoProfile(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID, VOLTAGE_INIT_PARAMETERS_UUID, false);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        resetParametersAndDoChecks(studyNameUserIdUuid, NO_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyNameUserIdUuid, HttpStatus.OK);
 
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + NO_PROFILE_USER_ID + "/profile")));
@@ -1170,7 +1170,7 @@ class VoltageInitTest {
     void testResetVoltageInitParametersUserHasNoParamsInProfile(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID, VOLTAGE_INIT_PARAMETERS_UUID, false);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        resetParametersAndDoChecks(studyNameUserIdUuid, NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyNameUserIdUuid, HttpStatus.OK);
 
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + NO_PARAMS_IN_PROFILE_USER_ID + "/profile")));
@@ -1182,7 +1182,7 @@ class VoltageInitTest {
     void testResetVoltageInitParametersUserHasInvalidParamsInProfile(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID, VOLTAGE_INIT_PARAMETERS_UUID, false);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        resetParametersAndDoChecks(studyNameUserIdUuid, INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
+        resetParametersAndDoChecks(studyNameUserIdUuid, HttpStatus.NO_CONTENT);
 
         var requests = TestUtils.getRequestsDone(3, server);
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
@@ -1205,7 +1205,7 @@ class VoltageInitTest {
                 .andExpect(status().isOk());
         consumeVoltageInitResult(studyEntity.getId(), firstRootNetworkUuid, modificationNode1.getId(), VOLTAGE_INIT_RESULT_UUID, false);
 
-        resetParametersAndDoChecks(studyUuid, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyUuid, HttpStatus.OK);
 
         var requests = TestUtils.getRequestsDone(5, server);
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING
@@ -1221,7 +1221,7 @@ class VoltageInitTest {
     void testResetVoltageInitParametersUserHasValidParamsInProfileButNoExistingVoltageInitParams(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID, null, false);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        resetParametersAndDoChecks(studyNameUserIdUuid, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyNameUserIdUuid, HttpStatus.OK);
 
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));

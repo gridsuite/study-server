@@ -660,7 +660,7 @@ class LoadFlowTest {
         if (shouldDuplicate) {
             wireMockStubs.loadflowServer.stubDuplicateLoadflowParameters(duplicateFromUuid, objectMapper.writeValueAsString(duplicatedLoadflowParametersUuid), duplicateIsNotFound);
         }
-        setOrResetParameters(studyNameUserIdUuid, parameters, userId, status);
+        setOrResetParameters(studyNameUserIdUuid, parameters, status);
         if (parameters == null || parameters.isEmpty()) {
             wireMockStubs.loadflowServer.verifyResetLoadflowParameters(loadflowParametersUuid);
             wireMockStubs.userAdminServer.verifyGetUserProfile(userId);
@@ -680,7 +680,7 @@ class LoadFlowTest {
         wireMockStubs.loadflowServer.stubDuplicateLoadflowParameters(duplicateFromUuid, objectMapper.writeValueAsString(duplicatedLoadflowParametersUuid), false);
         wireMockStubs.loadflowServer.stubDeleteLoadFlowParameters(loadflowParametersUuid);
 
-        setOrResetParameters(studyNameUserIdUuid, "", userId, HttpStatus.OK);
+        setOrResetParameters(studyNameUserIdUuid, "", HttpStatus.OK);
         wireMockStubs.userAdminServer.verifyGetUserProfile(userId);
         wireMockStubs.loadflowServer.verifyDuplicateLoadflowParameters(duplicateFromUuid);
         wireMockStubs.loadflowServer.verifyDeleteLoadFlowParameters(loadflowParametersUuid);
@@ -698,7 +698,7 @@ class LoadFlowTest {
         if (shouldDuplicate) {
             wireMockStubs.loadflowServer.stubDuplicateLoadflowParameters(duplicateFromUuid, objectMapper.writeValueAsString(UUID.randomUUID()), false);
         }
-        setOrResetParameters(studyNameUserIdUuid, parameters, userId, HttpStatus.OK);
+        setOrResetParameters(studyNameUserIdUuid, parameters, HttpStatus.OK);
         if (parameters == null || parameters.isEmpty()) {
             wireMockStubs.userAdminServer.verifyGetUserProfile(userId);
         }
@@ -711,7 +711,7 @@ class LoadFlowTest {
     }
 
     /** empty parameters means a reset to the user profile/default parameters */
-    private void setOrResetParameters(UUID studyUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
+    private void setOrResetParameters(UUID studyUuid, String parameters, HttpStatusCode status) throws Exception {
         if (parameters == null || parameters.isEmpty()) {
             mockMvc.perform(post("/v1/studies/{studyUuid}/loadflow/parameters/reset", studyUuid))
                     .andExpect(status().is(status.value()));

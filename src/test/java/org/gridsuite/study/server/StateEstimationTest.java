@@ -415,7 +415,7 @@ class StateEstimationTest {
         String estimParametersJson = TestUtils.resourceToString(ESTIM_PARAMETERS_FILE);
 
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
-        createOrUpdateParametersAndDoChecks(ids.studyId, estimParametersJson, "userId", HttpStatus.OK);
+        createOrUpdateParametersAndDoChecks(ids.studyId, estimParametersJson, HttpStatus.OK);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters")));
 
         //insert a study
@@ -429,7 +429,7 @@ class StateEstimationTest {
 
         assertEquals(estimParametersJson, mvcResult.getResponse().getContentAsString());
 
-        createOrUpdateParametersAndDoChecks(ids2.studyId, estimParametersJson, "userId", HttpStatus.OK);
+        createOrUpdateParametersAndDoChecks(ids2.studyId, estimParametersJson, HttpStatus.OK);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING)));
 
         //checking update is registered
@@ -441,11 +441,11 @@ class StateEstimationTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING)));
 
         //update state estimation parameters
-        createOrUpdateParametersAndDoChecks(ids2.studyId, estimParametersJson, "userId", HttpStatus.OK);
+        createOrUpdateParametersAndDoChecks(ids2.studyId, estimParametersJson, HttpStatus.OK);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING)));
 
         //reset state estimation parameters to default ones
-        resetParametersAndDoChecks(ids2.studyId, "userId");
+        resetParametersAndDoChecks(ids2.studyId);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING + "/reset")));
 
         // insert a study with a wrong state estimation parameters uuid
@@ -462,13 +462,13 @@ class StateEstimationTest {
     void testResetStateEstimationParametersWithNoExistingParameters(final MockWebServer server) throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
 
-        resetParametersAndDoChecks(ids.studyId, "userId");
+        resetParametersAndDoChecks(ids.studyId);
 
         assertEquals(STATE_ESTIMATION_PARAMETERS_UUID, studyRepository.findById(ids.studyId).orElseThrow().getStateEstimationParametersUuid());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/default")));
     }
 
-    private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
+    private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, HttpStatusCode status) throws Exception {
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/state-estimation/parameters", studyNameUserIdUuid)
                     .contentType(MediaType.APPLICATION_JSON)
@@ -478,7 +478,7 @@ class StateEstimationTest {
         checkParametersChangedMessagesReceived(studyNameUserIdUuid);
     }
 
-    private void resetParametersAndDoChecks(UUID studyNameUserIdUuid, String userId) throws Exception {
+    private void resetParametersAndDoChecks(UUID studyNameUserIdUuid) throws Exception {
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/state-estimation/parameters/reset", studyNameUserIdUuid))
             .andExpect(status().isOk());

@@ -862,7 +862,7 @@ class SecurityAnalysisTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
         userAdminServerStubs.stubGetUserProfile(NO_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
         computationServerStubs.stubParametersReset(SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);
-        resetParametersAndDoChecks(studyNameUserIdUuid, NO_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyNameUserIdUuid, HttpStatus.OK);
         userAdminServerStubs.verifyGetUserProfile(NO_PROFILE_USER_ID);
         computationServerStubs.verifyParametersReset(SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);
     }
@@ -940,7 +940,7 @@ class SecurityAnalysisTest {
 
         userAdminServerStubs.stubGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
         computationServerStubs.stubParametersReset(SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);
-        resetParametersAndDoChecks(studyUuid, NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyUuid, HttpStatus.OK);
 
         userAdminServerStubs.verifyGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID);
         computationServerStubs.verifyParametersReset(SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);
@@ -955,7 +955,7 @@ class SecurityAnalysisTest {
         userAdminServerStubs.stubGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON);
         computationServerStubs.stubParametersReset(SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);
         computationServerStubs.stubParametersDuplicateFromNotFound(PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
-        resetParametersAndDoChecks(studyUuid, INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
+        resetParametersAndDoChecks(studyUuid, HttpStatus.NO_CONTENT);
 
         // --- Verify WireMock requests ---
         userAdminServerStubs.verifyGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID);
@@ -987,7 +987,7 @@ class SecurityAnalysisTest {
         Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
 
-        resetParametersAndDoChecks(studyUuid, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyUuid, HttpStatus.OK);
 
         computationServerStubs.verifyComputationRun(NETWORK_UUID_STRING, Map.of("receiver", matching(".*")));
 
@@ -1012,14 +1012,14 @@ class SecurityAnalysisTest {
         userAdminServerStubs.stubGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
         computationServerStubs.stubParametersDuplicateFrom(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING, DUPLICATED_PARAMS_JSON);
 
-        resetParametersAndDoChecks(studyUuid, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyUuid, HttpStatus.OK);
 
         // --- Verify requests ---
         userAdminServerStubs.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
         computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
     }
 
-    private void resetParametersAndDoChecks(UUID studyUuid, String userId, HttpStatusCode status) throws Exception {
+    private void resetParametersAndDoChecks(UUID studyUuid, HttpStatusCode status) throws Exception {
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/security-analysis/parameters/reset", studyUuid))
             .andExpect(status().is(status.value()));

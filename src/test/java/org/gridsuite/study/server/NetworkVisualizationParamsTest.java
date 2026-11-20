@@ -71,7 +71,6 @@ class NetworkVisualizationParamsTest {
     private static final String CASE_LOADFLOW_UUID_STRING = "11a91c11-2c2d-83bb-b45f-20b83e4ef00c";
     private static final UUID CASE_LOADFLOW_UUID = UUID.fromString(CASE_LOADFLOW_UUID_STRING);
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
-    private static final String NO_PROFILE_USER_ID = "noProfileUser";
 
     private static final String NETWORK_VISU_PARAMETERS_UUID_STRING = "5218bc26-1196-4ac5-a860-d7342359bca7";
     private static final UUID NETWORK_VISU_PARAMETERS_UUID = UUID.fromString(NETWORK_VISU_PARAMETERS_UUID_STRING);
