@@ -314,7 +314,7 @@ public class StudyController {
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        networkModificationActivityRunnerService.runWith(studyUuid, nodeUuid, userId,
+        nodeActivityRunnerService.runWith(UNSHARE_MODIFICATIONS, studyUuid, List.of(nodeUuid),
                 () -> networkModificationService.unshareModificationReferences(studyUuid, Map.of(nodeUuid, List.of(modificationUuid)), userId));
         return ResponseEntity.ok().build();
     }
@@ -1545,7 +1545,7 @@ public class StudyController {
             try {
                 E value = Enum.valueOf(enumClass, text.toUpperCase());
                 setValue(value);
-            } catch (IllegalArgumentException ex) {
+            } catch (IllegalArgumentException _) {
                 String avail = StringUtils.join(enumClass.getEnumConstants(), ", ");
                 throw new IllegalArgumentException(String.format("Enum unknown entry '%s' should be among %s", text, avail));
             }
