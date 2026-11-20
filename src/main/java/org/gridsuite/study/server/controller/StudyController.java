@@ -1289,6 +1289,7 @@ public class StudyController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Root network tags by study, unknown studies are ignored"),
     })
+    @PreAuthorize("@authorizationService.canRead(#studyUuids)")
     public ResponseEntity<Map<UUID, List<String>>> getRootNetworkTags(
             @Parameter(description = "Study UUIDs") @RequestBody List<UUID> studyUuids) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
