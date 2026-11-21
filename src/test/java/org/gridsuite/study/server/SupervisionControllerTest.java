@@ -28,7 +28,6 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,15 +36,23 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.messaging.Message;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.test.web.client.ExpectedCount;
+import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -57,9 +64,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -72,7 +80,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @AutoConfigureMockMvc
 @SpringBootTest(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})
+@Import(SupervisionControllerTest.MockRestServiceServerConfiguration.class)
 class SupervisionControllerTest {
+
+    @TestConfiguration
+    static class MockRestServiceServerConfiguration {
+        static MockRestServiceServer server;
+
+        @Bean
+        org.springframework.web.client.RestClient.Builder testRestClientBuilder() {
+            org.springframework.web.client.RestClient.Builder builder = Mockito.spy(org.springframework.web.client.RestClient.builder());
+            server = MockRestServiceServer.bindTo(builder).build();
+            Mockito.doReturn(builder).when(builder).requestFactory(any(ClientHttpRequestFactory.class));
+            return builder;
+        }
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -125,13 +147,13 @@ class SupervisionControllerTest {
     private StudyInfosService studyInfosService;
 
     @Autowired
+    private RemoteServicesProperties remoteServicesProperties;
+
+    @Autowired
     private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
 
     @Autowired
     private OutputDestination output;
-
-    @MockitoBean
-    private NetworkModificationRestService networkModificationService;
 
     private static EquipmentInfos toEquipmentInfos(Identifiable<?> i) {
         return EquipmentInfos.builder()
@@ -154,6 +176,7 @@ class SupervisionControllerTest {
 
     @BeforeEach
     void setup() {
+        MockRestServiceServerConfiguration.server.reset();
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase", new ResourceSet("", TEST_FILE));
         Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
         network.getIdentifiables().forEach(idable -> equipmentInfosService.addEquipmentInfos(toEquipmentInfos(idable)));
@@ -224,6 +247,48 @@ class SupervisionControllerTest {
             .andExpectAll(status().isOk(),
                         content().string(status));
     }
+
+    private void expectDeleteStashedModifications(UUID studyUuid) throws Exception {
+        List<UUID> groupUuids = networkModificationTreeService.getAllNetworkModificationNodeInfos(studyUuid, false)
+                .stream()
+                .map(nodeInfo -> nodeInfo.getModificationGroupUuid())
+                .toList();
+        if (groupUuids.isEmpty()) {
+            return;
+        }
+
+        URI expectedUri = URI.create(remoteServicesProperties.getServiceUri("network-modification-server"))
+                .resolve("/v1/groups/stashed-modifications");
+        MockRestServiceServerConfiguration.server.expect(request -> assertEquals(expectedUri, request.getURI()))
+                .andExpect(method(HttpMethod.DELETE))
+                .andExpect(request -> assertEquals("Supervision", request.getHeaders().getFirst("userId")))
+                .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.content().json(mapper.writeValueAsString(groupUuids)))
+                .andRespond(withSuccess());
+    }
+
+    private void expectDeleteReports() {
+        URI expectedUri = URI.create(remoteServicesProperties.getServiceUri("report-server"))
+                .resolve("/v1/reports");
+        MockRestServiceServerConfiguration.server.expect(ExpectedCount.manyTimes(), request -> assertEquals(expectedUri, request.getURI()))
+                .andExpect(method(HttpMethod.DELETE))
+                .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.content().contentType(MediaType.APPLICATION_JSON))
+                .andRespond(withSuccess());
+    }
+
+        private void expectCreateSharingLinks(UUID studyUuid, String userId) throws Exception {
+        List<UUID> groupUuids = networkModificationTreeService.getAllNetworkModificationNodeInfos(studyUuid, false)
+            .stream()
+            .map(nodeInfo -> nodeInfo.getModificationGroupUuid())
+            .toList();
+        URI expectedUri = URI.create(remoteServicesProperties.getServiceUri("network-modification-server"))
+            .resolve("/v1/groups/sharing-links?recreate=true");
+        MockRestServiceServerConfiguration.server.expect(request -> assertEquals(expectedUri, request.getURI()))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(request -> assertEquals(userId, request.getHeaders().getFirst("userId")))
+            .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.content().json(mapper.writeValueAsString(groupUuids)))
+            .andRespond(withSuccess());
+        }
 
     @Test
     void testESConfig() throws Exception {
@@ -371,8 +436,11 @@ class SupervisionControllerTest {
         Mockito.doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
         Mockito.doNothing().when(networkStoreService).deleteNetwork(SECOND_NETWORK_UUID);
 
+        expectDeleteStashedModifications(STUDY_UUID);
+        expectDeleteReports();
         mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/unload", STUDY_UUID))
                 .andExpect(status().isOk());
+        MockRestServiceServerConfiguration.server.verify();
 
         // Check that both root network underlying networks have been erased
         Mockito.verify(rootNetworkService, Mockito.times(2))
@@ -396,19 +464,19 @@ class SupervisionControllerTest {
     @Test
     void testrecreateNetworkModificationSharingLinks() throws Exception {
         initStudy();
+        MockRestServiceServer server = MockRestServiceServerConfiguration.server;
+        expectCreateSharingLinks(STUDY_UUID, "userId");
+
         mockMvc.perform(post("/v1/supervision/studies/{studyUuid}/network-modifications/sharing-links/recreate", STUDY_UUID)
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
-
-        verify(networkModificationService, times(1)).createSharingLinks(any(), eq(true), eq("userId"));
-
-        Mockito.clearInvocations(networkModificationService);
+        server.verify();
+        server.reset();
 
         mockMvc.perform(post("/v1/supervision/studies/{studyUuid}/network-modifications/sharing-links/recreate", NOT_FOUND_STUDY_UUID)
                         .header("userId", "userId"))
                 .andExpect(status().isNotFound());
-        verify(networkModificationService, Mockito.never()).createSharingLinks(any(), eq(true), any());
-
+        server.verify();
     }
 
     @Test
@@ -422,8 +490,11 @@ class SupervisionControllerTest {
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         List<UUID> loadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
         assertEquals(List.of(STUDY_UUID), loadedStudyUuids);
+        expectDeleteStashedModifications(STUDY_UUID);
+        expectDeleteReports();
         mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/unload", STUDY_UUID))
                 .andExpect(status().isOk());
+        MockRestServiceServerConfiguration.server.verify();
         mvcResult = mockMvc.perform(get("/v1/supervision/studies/loaded")
                         .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
