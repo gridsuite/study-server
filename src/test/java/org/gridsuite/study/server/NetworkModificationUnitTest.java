@@ -8,8 +8,8 @@ package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.gridsuite.study.server.controller.NodeController;
 import org.gridsuite.study.server.controller.StudyController;
-import org.gridsuite.study.server.controller.StudyNodeController;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
 import org.gridsuite.study.server.dto.NodeInfos;
@@ -81,7 +81,7 @@ class NetworkModificationUnitTest {
     @Autowired
     private StudyController studyController;
     @Autowired
-    private StudyNodeController studyNodeController;
+    private NodeController studyNodeController;
 
     @MockitoBean
     private NetworkService networkService;

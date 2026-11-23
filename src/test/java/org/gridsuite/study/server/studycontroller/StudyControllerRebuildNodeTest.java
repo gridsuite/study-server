@@ -8,15 +8,14 @@ package org.gridsuite.study.server.studycontroller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.gridsuite.study.server.controller.NodeController;
 import org.gridsuite.study.server.controller.StudyController;
-import org.gridsuite.study.server.controller.StudyNodeController;
 import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.nodeactivity.NetworkModificationActivityRunnerService;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.NodeService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
@@ -60,9 +59,6 @@ class StudyControllerRebuildNodeTest {
     private StudyService studyService;
 
     @MockitoBean
-    private NodeService nodeService;
-
-    @MockitoBean
     private NetworkModificationTreeService networkModificationTreeService;
 
     // RebuildNodeService now looks up each modification's real parent composite before delegating
@@ -80,7 +76,7 @@ class StudyControllerRebuildNodeTest {
     private StudyController studyController;
 
     @Autowired
-    private StudyNodeController studyNodeController;
+    private NodeController studyNodeController;
 
     private final UUID studyUuid = UUID.randomUUID();
     private final UUID rootNetworkUuid = UUID.randomUUID();
@@ -182,8 +178,8 @@ class StudyControllerRebuildNodeTest {
 
         Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(networkModificationService, times(1)).unshareModificationReferences(studyUuid, Map.of(nodeUuid, List.of(modificationUuid)), userId);
-        verify(nodeService, times(1)).assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        verify(nodeService, times(1)).assertIsNodeNotReadOnly(nodeUuid);
+        verify(networkModificationTreeService, times(1)).assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        verify(networkModificationTreeService, times(1)).assertIsNodeNotReadOnly(nodeUuid);
     }
 
     @Test
@@ -191,8 +187,8 @@ class StudyControllerRebuildNodeTest {
         ResponseEntity<Void> response = studyNodeController.unshareAllModificationReferencesInNode(studyUuid, nodeUuid, userId);
 
         Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(nodeService, times(1)).assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        verify(nodeService, times(1)).assertIsNodeNotReadOnly(nodeUuid);
+        verify(networkModificationTreeService, times(1)).assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        verify(networkModificationTreeService, times(1)).assertIsNodeNotReadOnly(nodeUuid);
         verify(networkModificationService, times(1)).unshareAllReferencesInNode(studyUuid, nodeUuid, userId);
     }
 

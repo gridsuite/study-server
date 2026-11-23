@@ -13,7 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
-import org.gridsuite.study.server.service.NodeService;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
@@ -46,16 +46,16 @@ public class ShortCircuitController {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final ShortCircuitService shortCircuitService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
-    private final NodeService nodeService;
+    private final NetworkModificationTreeService networkModificationTreeService;
 
     public ShortCircuitController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                   ShortCircuitService shortCircuitService, NodeActivityRunnerService nodeActivityRunnerService,
-                                  NodeService nodeService) {
+                                  NetworkModificationTreeService networkModificationTreeService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.shortCircuitService = shortCircuitService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
-        this.nodeService = nodeService;
+        this.networkModificationTreeService = networkModificationTreeService;
     }
 
     @PutMapping(value = "/run")
@@ -68,7 +68,7 @@ public class ShortCircuitController {
             @RequestParam(value = "busId", required = false) Optional<String> busId,
             @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        nodeService.assertIsNodeNotReadOnly(nodeUuid);
+        networkModificationTreeService.assertIsNodeNotReadOnly(nodeUuid);
         QuotaRunner.runComputationWithQuota(studyService, SHORT_CIRCUIT, userId, quotaId ->
             nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
                 () -> shortCircuitService.runShortCircuit(studyUuid, nodeUuid, rootNetworkUuid, busId, debug, userId, quotaId)));

@@ -117,7 +117,7 @@ public class SupervisionService {
     private final RestClient restClient;
 
     public static final String SUPERVISION_USER = "Supervision";
-    private final StudyNodeService studyNodeService;
+    private final NodeService studyNodeService;
 
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService, LoadFlowService loadFlowService,
@@ -143,7 +143,7 @@ public class SupervisionService {
                               NodeRepository nodeRepository,
                               NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
                               NetworkModificationRestService networkModificationService,
-                              RestClient restClient, StudyNodeService studyNodeService) {
+                              RestClient restClient, NodeService studyNodeService) {
 
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;

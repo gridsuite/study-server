@@ -23,6 +23,7 @@ import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
@@ -75,6 +76,7 @@ public class NetworkModificationTreeService {
     private final UserAdminService userAdminService;
 
     private final StudyServerExecutionService studyServerExecutionService;
+    private final StudyRepository studyRepository;
 
     public NetworkModificationTreeService(NodeRepository nodesRepository,
                                           RootNodeInfoRepository rootNodeInfoRepository,
@@ -87,7 +89,8 @@ public class NetworkModificationTreeService {
                                           NetworkService networkStoreService,
                                           ReportService reportService,
                                           UserAdminService userAdminService,
-                                          StudyServerExecutionService studyServerExecutionService) {
+                                          StudyServerExecutionService studyServerExecutionService,
+                                          StudyRepository studyRepository) {
         this.nodesRepository = nodesRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.networkModificationService = networkModificationService;
@@ -100,6 +103,7 @@ public class NetworkModificationTreeService {
         this.reportService = reportService;
         this.userAdminService = userAdminService;
         this.studyServerExecutionService = studyServerExecutionService;
+        this.studyRepository = studyRepository;
     }
 
     private NetworkModificationNodeInfoEntity createNetworkModificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {
@@ -121,6 +125,65 @@ public class NetworkModificationTreeService {
         );
         newNodeInfo.setNode(newNode);
         return newNodeInfo;
+    }
+
+    public void assertIsStudyExist(UUID studyUuid) {
+        if (!studyRepository.existsById(studyUuid)) {
+            throw new StudyException(NOT_FOUND, "Study not found");
+        }
+    }
+
+    public void assertIsStudyAndNodeExist(UUID studyUuid, UUID nodeUuid) {
+        assertIsStudyExist(studyUuid);
+        assertIsNodeExist(studyUuid, nodeUuid);
+    }
+
+    public void assertIsNodeExist(UUID studyUuid, UUID nodeUuid) {
+        assertIsNodeExist(studyUuid, nodeUuid, new StudyException(NOT_FOUND, "Node not found"));
+    }
+
+    public void assertIsNodeExist(UUID studyUuid, UUID nodeUuid, StudyException exception) {
+        if (!nodesRepository.existsByStudyIdAndNodeId(studyUuid, nodeUuid)) {
+            throw exception;
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public void assertIsNodeNotReadOnly(UUID nodeUuid) {
+        Boolean isReadOnly = isReadOnly(nodeUuid);
+        if (Boolean.TRUE.equals(isReadOnly)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+    }
+
+    public Boolean isReadOnly(UUID nodeUuid) {
+        return getNodeInfoEntity(nodeUuid).getReadOnly();
+    }
+
+    @Transactional(readOnly = true)
+    public void assertCanRunOnConstructionNode(UUID studyUuid, UUID nodeUuid, List<String> forbiddenProvidersOnConstructionNode, Function<UUID, String> providerGetter) {
+        if (isConstructionNode(nodeUuid)) {
+            String provider = providerGetter.apply(studyUuid);
+            if (forbiddenProvidersOnConstructionNode.contains(provider)) {
+                throw new StudyException(NOT_ALLOWED, provider + " must run only from a security type node !");
+            }
+        }
+    }
+
+    void doUnbuildNodeTree(UUID studyUuid, UUID rootNodeUuid, boolean skipDeleteVariants, @NonNull String userId) {
+        InvalidateNodeTreeParameters invalidateNodeTreeParameters = InvalidateNodeTreeParameters.ALL;
+        List<UUID> rootNetworkIds = rootNetworkService.getStudyRootNetworkIds(studyUuid);
+        List<CompletableFuture<Void>> futures = rootNetworkIds.stream()
+                .map(rnId -> studyServerExecutionService.runAsync(() ->
+                        invalidateNodeTree(studyUuid, rootNodeUuid, rnId, invalidateNodeTreeParameters, skipDeleteVariants)))
+                .toList();
+        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+        boolean noneMatchUnloading = rootNetworkIds.stream()
+                .map(rnId -> rootNetworkService.getRootNetwork(rnId).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")))
+                .noneMatch(rootNetwork -> rootNetwork.getLoadStatus() == RootNetworkLoadStatus.UNLOADING);
+        if (noneMatchUnloading) {
+            notificationService.emitElementUpdated(studyUuid, userId);
+        }
     }
 
     @Transactional

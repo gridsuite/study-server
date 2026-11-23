@@ -69,7 +69,6 @@ public class StudyController {
     private final StudyExportService studyExportService;
     private final StudyImportService studyImportService;
     private final NetworkModificationService networkModificationService;
-    private final NodeService nodeService;
 
     public StudyController(StudyService studyService,
                            NetworkService networkStoreService,
@@ -84,8 +83,7 @@ public class StudyController {
                            NodeActivityService nodeActivityService,
                            StudyExportService studyExportService,
                            StudyImportService studyImportService,
-                           NetworkModificationService networkModificationService,
-                           NodeService nodeService) {
+                           NetworkModificationService networkModificationService) {
         this.nodeActivityService = nodeActivityService;
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -100,7 +98,6 @@ public class StudyController {
         this.studyExportService = studyExportService;
         this.studyImportService = studyImportService;
         this.networkModificationService = networkModificationService;
-        this.nodeService = nodeService;
     }
 
     @InitBinder
@@ -286,7 +283,7 @@ public class StudyController {
                                               @Parameter(description = "The position where the node will be pasted relative to the reference node")
                                                     @RequestParam(name = "insertMode") InsertMode insertMode,
                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        nodeService.assertIsNodeNotReadOnly(nodeToCutUuid);
+        networkModificationTreeService.assertIsNodeNotReadOnly(nodeToCutUuid);
         // the node leaves its former parent, so its own children are reparented there whatever the insert mode
         List<UUID> heldNodes = Stream.concat(Stream.of(nodeToCutUuid), insertMode.isChild() ? Stream.empty() : Stream.of(referenceNodeUuid)).distinct().toList();
         nodeActivityRunnerService.runWith(EDIT_TREE, studyUuid, heldNodes,
@@ -367,7 +364,7 @@ public class StudyController {
                                                 @Parameter(description = "The parent node of the subtree we want to cut") @RequestParam("subtreeToCutParentNodeUuid") UUID subtreeToCutParentNodeUuid,
                                                 @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
                                                 @RequestHeader(HEADER_USER_ID) String userId) {
-        nodeService.assertIsNodeNotReadOnly(subtreeToCutParentNodeUuid);
+        networkModificationTreeService.assertIsNodeNotReadOnly(subtreeToCutParentNodeUuid);
         // a subtree always attaches as a child at the destination, reparenting nothing there
         nodeActivityRunnerService.runWith(EDIT_TREE, studyUuid, List.of(subtreeToCutParentNodeUuid),
             () -> studyService.moveStudySubtree(studyUuid, subtreeToCutParentNodeUuid, referenceNodeUuid, userId));
@@ -813,7 +810,7 @@ public class StudyController {
                                                                             defaultValue = "true") boolean nodeOnlyReport,
                                                                     @Parameter(description = "The report Type") @RequestParam(name = "reportType") StudyService.ReportType reportType,
                                                                     @Parameter(description = "Severity levels") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels) {
-        nodeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        networkModificationTreeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesReport(nodeUuid, rootNetworkUuid, nodeOnlyReport, reportType, severityLevels));
     }
 
@@ -831,7 +828,7 @@ public class StudyController {
                                                                     @Parameter(description = "If we wanted the paged version of the results or not") @RequestParam(name = "paged", required = false,
                                                                             defaultValue = "false") boolean paged,
                                                                     Pageable pageable) {
-        nodeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        networkModificationTreeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getReportLogs(nodeUuid, rootNetworkUuid, reportId, messageFilter, severityLevels, paged, pageable));
     }
@@ -852,7 +849,7 @@ public class StudyController {
             @Parameter(description = "The search term") @RequestParam(name = "searchTerm") String searchTerm,
             @Parameter(description = "Rows per page") @RequestParam(name = "pageSize") int pageSize
     ) {
-        nodeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        networkModificationTreeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
                 studyService.getSearchTermMatchesInFilteredLogs(nodeUuid, rootNetworkUuid, reportId, severityLevels, messageFilter, searchTerm, pageSize));
@@ -866,7 +863,7 @@ public class StudyController {
                                                                        @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                        @Parameter(description = "node id") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                        @Parameter(description = "reportId") @RequestParam(name = "reportId", required = false) UUID reportId) {
-        nodeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        networkModificationTreeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAggregatedReportSeverities(nodeUuid, rootNetworkUuid, reportId));
     }
@@ -897,7 +894,7 @@ public class StudyController {
                                                                      @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") Set<UUID> networkModificationUuids,
                                                                      @Parameter(description = "New applicability value") @RequestParam(name = "applicable") Boolean applicable,
                                                                      @RequestHeader(HEADER_USER_ID) String userId) {
-        nodeService.assertIsNodeNotReadOnly(nodeUuid);
+        networkModificationTreeService.assertIsNodeNotReadOnly(nodeUuid);
         networkModificationActivityRunnerService.runWith(studyUuid, nodeUuid, userId,
             () -> {
                 networkModificationService.updateNetworkModificationsApplicabilityInRootNetwork(studyUuid, nodeUuid, rootNetworkUuid, networkModificationUuids, userId, applicable);
@@ -1034,7 +1031,7 @@ public class StudyController {
                                                  @Parameter(description = "id of child to delete (move to trash)") @PathVariable("id") UUID nodeId,
                                                  @Parameter(description = "to stash a node with its children") @RequestParam(value = "stashChildren", defaultValue = "false") boolean stashChildren,
                                                  @RequestHeader(HEADER_USER_ID) String userId) {
-        nodeService.assertIsNodeNotReadOnly(nodeId);
+        networkModificationTreeService.assertIsNodeNotReadOnly(nodeId);
         nodeActivityRunnerService.runWith(DELETE_NODES, studyUuid, List.of(nodeId),
             () -> studyService.stashNode(studyUuid, nodeId, stashChildren, userId));
         return ResponseEntity.ok().build();
@@ -1225,7 +1222,7 @@ public class StudyController {
     public ResponseEntity<String> getVoltageInitModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                               @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                               @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
-        nodeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        networkModificationTreeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageInitModifications(nodeUuid, rootNetworkUuid));
     }
 
@@ -1236,8 +1233,8 @@ public class StudyController {
                                                                @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                @PathVariable("nodeUuid") UUID nodeUuid,
                                                                @RequestHeader(HEADER_USER_ID) String userId) {
-        nodeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        nodeService.assertIsNodeNotReadOnly(nodeUuid);
+        networkModificationTreeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        networkModificationTreeService.assertIsNodeNotReadOnly(nodeUuid);
         nodeActivityRunnerService.runWith(EDIT_MODIFICATIONS, studyUuid, List.of(nodeUuid),
             () -> studyService.insertVoltageInitModifications(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();

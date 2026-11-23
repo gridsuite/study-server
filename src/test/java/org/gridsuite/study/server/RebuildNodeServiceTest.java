@@ -6,13 +6,12 @@
  */
 package org.gridsuite.study.server;
 
-import org.gridsuite.study.server.controller.StudyNodeController;
+import org.gridsuite.study.server.controller.NodeController;
 import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.nodeactivity.NetworkModificationActivityRunnerService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.NodeService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
@@ -36,7 +35,7 @@ import static org.mockito.Mockito.*;
 @DisableElasticsearch
 class RebuildNodeServiceTest {
     @Autowired
-    private StudyNodeController studyNodeController;
+    private NodeController studyNodeController;
 
     @MockitoBean
     private NetworkModificationService networkModificationService;
@@ -52,9 +51,6 @@ class RebuildNodeServiceTest {
 
     @MockitoSpyBean
     private NetworkModificationActivityRunnerService nodeActivityService;
-
-    @MockitoBean
-    private NodeService nodeService;
 
     UUID studyUuid = UUID.randomUUID();
     UUID node1Uuid = UUID.randomUUID();

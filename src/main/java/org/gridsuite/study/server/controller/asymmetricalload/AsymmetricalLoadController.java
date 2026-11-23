@@ -13,7 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
-import org.gridsuite.study.server.service.NodeService;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.asymmetricalload.AsymmetricalLoadService;
@@ -42,15 +42,15 @@ public class AsymmetricalLoadController {
     private final StudyService studyService;
     private final AsymmetricalLoadService asymmetricalLoadService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
-    private final NodeService nodeService;
+    private final NetworkModificationTreeService networkModificationTreeService;
 
     public AsymmetricalLoadController(RootNetworkNodeInfoService rootNetworkNodeInfoService, StudyService studyService, AsymmetricalLoadService asymmetricalLoadService,
-                                      NodeActivityRunnerService nodeActivityRunnerService, NodeService nodeService) {
+                                      NodeActivityRunnerService nodeActivityRunnerService, NetworkModificationTreeService networkModificationTreeService) {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.studyService = studyService;
         this.asymmetricalLoadService = asymmetricalLoadService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
-        this.nodeService = nodeService;
+        this.networkModificationTreeService = networkModificationTreeService;
     }
 
     @PostMapping(value = "/result/csv", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -76,7 +76,7 @@ public class AsymmetricalLoadController {
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                           @RequestHeader(HEADER_USER_ID) String userId) {
 
-        nodeService.assertIsNodeNotReadOnly(nodeUuid);
+        networkModificationTreeService.assertIsNodeNotReadOnly(nodeUuid);
         QuotaRunner.runComputationWithQuota(studyService, ASYMMETRICAL_LOAD, userId, quotaId ->
             nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
                 () -> asymmetricalLoadService.runAsymmetricalLoad(studyUuid, nodeUuid, rootNetworkUuid, userId, quotaId)));

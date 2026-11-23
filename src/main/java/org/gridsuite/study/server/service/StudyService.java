@@ -129,7 +129,6 @@ public class StudyService {
     private final WorkspaceService workspaceService;
 
     private final ObjectMapper objectMapper;
-    private final NodeService nodeService;
 
     public enum ReportType {
         NETWORK_MODIFICATION("NetworkModification"),
@@ -194,8 +193,7 @@ public class StudyService {
             RootNetworkNodeInfoService rootNetworkNodeInfoService,
             DirectoryService directoryService,
             ComputationParametersService computationParametersService,
-            WorkspaceService workspaceService,
-            NodeService nodeService) {
+            WorkspaceService workspaceService) {
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
@@ -230,7 +228,6 @@ public class StudyService {
         this.directoryService = directoryService;
         this.computationParametersService = computationParametersService;
         this.workspaceService = workspaceService;
-        this.nodeService = nodeService;
     }
 
     private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid) {
@@ -2264,7 +2261,7 @@ public class StudyService {
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
         // First we unbuild all nodes
-        nodeService.doUnbuildNodeTree(studyUuid, rootNodeUuid, true, userId);
+        networkModificationTreeService.doUnbuildNodeTree(studyUuid, rootNodeUuid, true, userId);
         // Then we erase data linked to root node on all root networks
         rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetworkService.getRootNetworkInfos(rootNetworkUuid)), true, false);
         if (!updateCase) {

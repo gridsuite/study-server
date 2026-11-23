@@ -14,7 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
-import org.gridsuite.study.server.service.NodeService;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -35,13 +35,14 @@ import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_EVEN
 public class DynamicSimulationEventsController {
     private final DynamicSimulationService dynamicSimulationService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
-    private final NodeService nodeService;
+    private final NetworkModificationTreeService networkModificationTreeService;
 
     public DynamicSimulationEventsController(DynamicSimulationService dynamicSimulationService,
-                                             NodeActivityRunnerService nodeActivityRunnerService, NodeService nodeService) {
+                                             NodeActivityRunnerService nodeActivityRunnerService,
+                                             NetworkModificationTreeService networkModificationTreeService) {
         this.dynamicSimulationService = dynamicSimulationService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
-        this.nodeService = nodeService;
+        this.networkModificationTreeService = networkModificationTreeService;
     }
 
     @GetMapping(value = "/events")
@@ -77,7 +78,7 @@ public class DynamicSimulationEventsController {
                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @RequestBody EventInfos event,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
-        nodeService.assertIsNodeNotReadOnly(nodeUuid);
+        networkModificationTreeService.assertIsNodeNotReadOnly(nodeUuid);
         nodeActivityRunnerService.runWith(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
             () -> dynamicSimulationService.createDynamicSimulationEvent(studyUuid, nodeUuid, userId, event));
         return ResponseEntity.ok().build();
@@ -92,7 +93,7 @@ public class DynamicSimulationEventsController {
                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @RequestBody EventInfos event,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
-        nodeService.assertIsNodeNotReadOnly(nodeUuid);
+        networkModificationTreeService.assertIsNodeNotReadOnly(nodeUuid);
         nodeActivityRunnerService.runWith(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
             () -> dynamicSimulationService.updateDynamicSimulationEvent(studyUuid, nodeUuid, userId, event));
         return ResponseEntity.ok().build();
@@ -107,7 +108,7 @@ public class DynamicSimulationEventsController {
                                                               @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                               @Parameter(description = "Dynamic simulation event UUIDs") @RequestParam("eventUuids") List<UUID> eventUuids,
                                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        nodeService.assertIsNodeNotReadOnly(nodeUuid);
+        networkModificationTreeService.assertIsNodeNotReadOnly(nodeUuid);
         nodeActivityRunnerService.runWith(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
             () -> dynamicSimulationService.deleteDynamicSimulationEvents(studyUuid, nodeUuid, userId, eventUuids));
         return ResponseEntity.ok().build();

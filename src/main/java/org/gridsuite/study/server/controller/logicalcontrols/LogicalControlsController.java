@@ -14,7 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
-import org.gridsuite.study.server.service.NodeService;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.logicalcontrols.LogicalControlsService;
@@ -41,15 +41,15 @@ public class LogicalControlsController {
     private final StudyService studyService;
     private final LogicalControlsService logicalControlsService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
-    private final NodeService nodeService;
+    private final NetworkModificationTreeService networkModificationTreeService;
 
     public LogicalControlsController(RootNetworkNodeInfoService rootNetworkNodeInfoService, StudyService studyService, LogicalControlsService logicalControlsService,
-                                     NodeActivityRunnerService nodeActivityRunnerService, NodeService nodeService) {
+                                     NodeActivityRunnerService nodeActivityRunnerService, NetworkModificationTreeService networkModificationTreeService) {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.studyService = studyService;
         this.logicalControlsService = logicalControlsService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
-        this.nodeService = nodeService;
+        this.networkModificationTreeService = networkModificationTreeService;
     }
 
     @PostMapping(value = "/run")
@@ -59,7 +59,7 @@ public class LogicalControlsController {
                                                    @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                    @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                    @RequestHeader(HEADER_USER_ID) String userId) {
-        nodeService.assertIsNodeNotReadOnly(nodeUuid);
+        networkModificationTreeService.assertIsNodeNotReadOnly(nodeUuid);
         // no quota on this computation
         nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> logicalControlsService.runLogicalControls(studyUuid, nodeUuid, rootNetworkUuid, userId));

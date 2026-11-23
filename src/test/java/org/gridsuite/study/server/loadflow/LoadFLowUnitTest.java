@@ -65,8 +65,6 @@ class LoadFLowUnitTest {
     @MockitoSpyBean
     private NetworkModificationTreeService networkModificationTreeService;
     @MockitoSpyBean
-    private NodeService nodeService;
-    @MockitoSpyBean
     private StudyServerExecutionService studyServerExecutionService;
     @MockitoSpyBean
     private LoadFlowService loadFlowService;
@@ -112,35 +110,35 @@ class LoadFLowUnitTest {
 
     @Test
     void testRunLoadFlow() {
-        doReturn(Boolean.FALSE).when(nodeService).isReadOnly(nodeUuid);
+        doReturn(Boolean.FALSE).when(networkModificationTreeService).isReadOnly(nodeUuid);
         when(rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW)).thenReturn(null);
         doNothing().when(loadFlowService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString(), any());
-        doNothing().when(nodeService).assertCanRunOnConstructionNode(any(), any(), any(), any());
+        doNothing().when(networkModificationTreeService).assertCanRunOnConstructionNode(any(), any(), any(), any());
 
         controller.runLoadFlow(studyUuid, rootNetworkUuid, nodeUuid, false, userId);
 
         verify(loadFlowService, times(1)).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString(), any());
-        verify(nodeService, times(1)).assertCanRunOnConstructionNode(any(), any(), any(), any());
+        verify(networkModificationTreeService, times(1)).assertCanRunOnConstructionNode(any(), any(), any(), any());
     }
 
     @Test
     void testRunLoadFlowWithExistingResult() {
         UUID previousResultUuid = UUID.randomUUID();
         when(rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW)).thenReturn(previousResultUuid);
-        doNothing().when(nodeService).assertCanRunOnConstructionNode(eq(studyUuid), eq(nodeUuid), any(), any());
+        doNothing().when(networkModificationTreeService).assertCanRunOnConstructionNode(eq(studyUuid), eq(nodeUuid), any(), any());
 
         doNothing().when(loadFlowService).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, previousResultUuid);
         doReturn(loadflowResultUuid).when(loadFlowService).createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, false);
         doNothing().when(loadFlowService).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId, null);
 
-        doReturn(Boolean.FALSE).when(nodeService).isReadOnly(nodeUuid);
+        doReturn(Boolean.FALSE).when(networkModificationTreeService).isReadOnly(nodeUuid);
 
         controller.runLoadFlow(studyUuid, rootNetworkUuid, nodeUuid, false, userId);
 
         verify(loadFlowService, times(1)).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, previousResultUuid);
         verify(loadFlowService, times(1)).createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, false);
         verify(loadFlowService, times(1)).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId, null);
-        verify(nodeService, times(1)).assertCanRunOnConstructionNode(eq(studyUuid), eq(nodeUuid), any(), any());
+        verify(networkModificationTreeService, times(1)).assertCanRunOnConstructionNode(eq(studyUuid), eq(nodeUuid), any(), any());
     }
 
     @Test

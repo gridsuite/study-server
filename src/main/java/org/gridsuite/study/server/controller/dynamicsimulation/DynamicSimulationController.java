@@ -16,7 +16,7 @@ import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
-import org.gridsuite.study.server.service.NodeService;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -47,15 +47,15 @@ public class DynamicSimulationController {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
     private final DynamicSimulationService dynamicSimulationService;
-    private final NodeService nodeService;
+    private final NetworkModificationTreeService networkModificationTreeService;
 
     public DynamicSimulationController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService, DynamicSimulationService dynamicSimulationService,
-                                       NodeActivityRunnerService nodeActivityRunnerService, NodeService nodeService) {
+                                       NodeActivityRunnerService nodeActivityRunnerService, NetworkModificationTreeService networkModificationTreeService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
         this.dynamicSimulationService = dynamicSimulationService;
-        this.nodeService = nodeService;
+        this.networkModificationTreeService = networkModificationTreeService;
     }
 
     @PostMapping(value = "/run")
@@ -66,9 +66,9 @@ public class DynamicSimulationController {
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                      @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
-        nodeService.assertIsNodeNotReadOnly(nodeUuid);
+        networkModificationTreeService.assertIsNodeNotReadOnly(nodeUuid);
         QuotaRunner.runComputationWithQuota(studyService, DYNAMIC_SIMULATION, userId, quotaId -> {
-            nodeService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), dynamicSimulationService::getDynamicSimulationProvider);
+            networkModificationTreeService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), dynamicSimulationService::getDynamicSimulationProvider);
             nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
                 () -> dynamicSimulationService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug, quotaId));
         });
