@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.nodeactivity.NodeActivityType;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NodeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
@@ -47,16 +48,18 @@ public class LoadFlowController {
     private final LoadFlowService loadFlowService;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
+    private final NodeService nodeService;
 
     public LoadFlowController(StudyService studyService,
                               RootNetworkNodeInfoService rootNetworkNodeInfoService, LoadFlowService loadFlowService,
                               NetworkModificationTreeService networkModificationTreeService,
-                              NodeActivityRunnerService nodeActivityRunnerService) {
+                              NodeActivityRunnerService nodeActivityRunnerService, NodeService nodeService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.loadFlowService = loadFlowService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
+        this.nodeService = nodeService;
     }
 
     @PutMapping(value = "/run")
@@ -68,9 +71,9 @@ public class LoadFlowController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @RequestParam(value = "withRatioTapChangers", required = false, defaultValue = "false") boolean withRatioTapChangers,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        nodeService.assertIsNodeNotReadOnly(nodeUuid);
         QuotaRunner.runComputationWithQuota(studyService, LOAD_FLOW, userId, quotaId -> {
-            studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNA_FLOW_PROVIDER), loadFlowService::getLoadFlowProvider);
+            nodeService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNA_FLOW_PROVIDER), loadFlowService::getLoadFlowProvider);
             UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
             // a loadflow on a security node writes solved values onto its own variant and invalidates its children
             NodeActivityType activityType = networkModificationTreeService.isSecurityNode(nodeUuid)

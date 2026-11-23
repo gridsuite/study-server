@@ -17,7 +17,6 @@ import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.computation.ComputationParameterUUIDs;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
@@ -39,7 +38,6 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.*;
-import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
@@ -72,8 +70,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -94,7 +90,6 @@ public class StudyService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
     public static final String STUDY_NOT_FOUND = "Study not found";
-    private final NodeRepository nodeRepository;
 
     NotificationService notificationService;
 
@@ -134,6 +129,7 @@ public class StudyService {
     private final WorkspaceService workspaceService;
 
     private final ObjectMapper objectMapper;
+    private final NodeService nodeService;
 
     public enum ReportType {
         NETWORK_MODIFICATION("NetworkModification"),
@@ -165,40 +161,41 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-        StudyRepository studyRepository,
-        StudyCreationRequestRepository studyCreationRequestRepository,
-        NetworkService networkStoreService,
-        NetworkModificationRestService networkModificationRestService,
-        ReportService reportService,
-        UserAdminService userAdminService,
-        StudyInfosService studyInfosService,
-        EquipmentInfosService equipmentInfosService,
-        NetworkModificationTreeService networkModificationTreeService,
-        ObjectMapper objectMapper,
-        StudyServerExecutionService studyServerExecutionService,
-        NotificationService notificationService,
-        LoadFlowRestService loadflowRestService,
-        LoadFlowService loadFlowService,
-        ShortCircuitRestService shortCircuitService,
-        SingleLineDiagramService singleLineDiagramService,
-        NetworkConversionService networkConversionService,
-        GeoDataService geoDataService,
-        NetworkMapService networkMapService,
-        SecurityAnalysisRestService securityAnalysisRestService,
-        ActionsService actionsService,
-        CaseService caseService,
-        DynamicMappingService dynamicMappingService,
-        VoltageInitRestService voltageInitService,
-        DynamicSimulationEventService dynamicSimulationEventService,
-        StudyConfigService studyConfigService,
-        NadConfigService nadConfigService,
-        FilterService filterService,
-        @Lazy StudyService studyService,
-        RootNetworkService rootNetworkService,
-        RootNetworkNodeInfoService rootNetworkNodeInfoService,
-        DirectoryService directoryService,
-        ComputationParametersService computationParametersService,
-        WorkspaceService workspaceService, NodeRepository nodeRepository) {
+            StudyRepository studyRepository,
+            StudyCreationRequestRepository studyCreationRequestRepository,
+            NetworkService networkStoreService,
+            NetworkModificationRestService networkModificationRestService,
+            ReportService reportService,
+            UserAdminService userAdminService,
+            StudyInfosService studyInfosService,
+            EquipmentInfosService equipmentInfosService,
+            NetworkModificationTreeService networkModificationTreeService,
+            ObjectMapper objectMapper,
+            StudyServerExecutionService studyServerExecutionService,
+            NotificationService notificationService,
+            LoadFlowRestService loadflowRestService,
+            LoadFlowService loadFlowService,
+            ShortCircuitRestService shortCircuitService,
+            SingleLineDiagramService singleLineDiagramService,
+            NetworkConversionService networkConversionService,
+            GeoDataService geoDataService,
+            NetworkMapService networkMapService,
+            SecurityAnalysisRestService securityAnalysisRestService,
+            ActionsService actionsService,
+            CaseService caseService,
+            DynamicMappingService dynamicMappingService,
+            VoltageInitRestService voltageInitService,
+            DynamicSimulationEventService dynamicSimulationEventService,
+            StudyConfigService studyConfigService,
+            NadConfigService nadConfigService,
+            FilterService filterService,
+            @Lazy StudyService studyService,
+            RootNetworkService rootNetworkService,
+            RootNetworkNodeInfoService rootNetworkNodeInfoService,
+            DirectoryService directoryService,
+            ComputationParametersService computationParametersService,
+            WorkspaceService workspaceService,
+            NodeService nodeService) {
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
@@ -233,7 +230,7 @@ public class StudyService {
         this.directoryService = directoryService;
         this.computationParametersService = computationParametersService;
         this.workspaceService = workspaceService;
-        this.nodeRepository = nodeRepository;
+        this.nodeService = nodeService;
     }
 
     private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid) {
@@ -420,24 +417,6 @@ public class StudyService {
         networkModificationRestService.assertRootNetworkTagsAllowed(getStudyModificationGroupUuids(studyUuid), List.of(), List.of(), List.of(newTag), userId);
     }
 
-    /**
-     * Modifications written into a study must be associated with all its root network tags, including the shared
-     * modifications they point to: the ones the user cannot write on, which they cannot associate with a new tag, must
-     * already be.
-     *
-     * @param containerUuids groups or composites whose content is written into the study: only the shared modifications
-     *                       their content refers to are checked, not the containers themselves
-     * @param modificationUuids modifications written into the study: the shared modifications they and their content
-     *                          refer to are checked
-     * @param sharedUuids shared modifications the study is given a reference to: they are checked themselves, along
-     *                    with the shared modifications their content refers to
-     */
-    private void assertCanWriteModificationsInStudy(UUID studyUuid, List<UUID> containerUuids, List<UUID> modificationUuids,
-                                                    List<UUID> sharedUuids, String userId) {
-        networkModificationRestService.assertRootNetworkTagsAllowed(containerUuids, modificationUuids, sharedUuids,
-                rootNetworkService.getStudyRootNetworkTags(studyUuid), userId);
-    }
-
     public SharedModificationsWriteAccess getSharedModificationsWriteAccess(UUID studyUuid, String userId) {
         List<UUID> groupUuids = getStudyModificationGroupUuids(studyUuid);
         return groupUuids.isEmpty()
@@ -603,16 +582,6 @@ public class StudyService {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         Map<UUID, Object> modificationsByGroup = networkModificationRestService.searchModifications(networkUuid, userInput);
         return networkModificationTreeService.getNetworkModificationsByNodeInfos(modificationsByGroup);
-    }
-
-    @Transactional
-    public String getExportedNetworkModifications(UUID studyUuid, UUID nodeUuid) {
-        if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
-            throw new StudyException(NOT_ALLOWED);
-        }
-        UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-
-        return networkModificationRestService.getModificationsToExport(groupId);
     }
 
     private Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID studyUuid) {
@@ -1062,43 +1031,10 @@ public class StudyService {
         return exportUuid;
     }
 
-    @Transactional(readOnly = true)
-    public void assertIsNodeNotReadOnly(UUID nodeUuid) {
-        Boolean isReadOnly = networkModificationTreeService.isReadOnly(nodeUuid);
-        if (Boolean.TRUE.equals(isReadOnly)) {
-            throw new StudyException(NOT_ALLOWED);
-        }
-    }
-
-    @Transactional(readOnly = true)
-    public void assertCanRunOnConstructionNode(UUID studyUuid, UUID nodeUuid, List<String> forbiddenProvidersOnConstructionNode, Function<UUID, String> providerGetter) {
-        if (networkModificationTreeService.isConstructionNode(nodeUuid)) {
-            String provider = providerGetter.apply(studyUuid);
-            if (forbiddenProvidersOnConstructionNode.contains(provider)) {
-                throw new StudyException(NOT_ALLOWED, provider + " must run only from a security type node !");
-            }
-        }
-    }
-
-    public void assertIsNodeExist(UUID studyUuid, UUID nodeUuid) {
-        assertIsNodeExist(studyUuid, nodeUuid, new StudyException(NOT_FOUND, "Node not found"));
-    }
-
-    public void assertIsNodeExist(UUID studyUuid, UUID nodeUuid, StudyException exception) {
-        if (!nodeRepository.existsByStudyIdAndNodeId(studyUuid, nodeUuid)) {
-            throw exception;
-        }
-    }
-
     public void assertIsStudyExist(UUID studyUuid) {
         if (!studyRepository.existsById(studyUuid)) {
-            throw new StudyException(NOT_FOUND, "Study not found");
+            throw new StudyException(NOT_FOUND, STUDY_NOT_FOUND);
         }
-    }
-
-    public void assertIsStudyAndNodeExist(UUID studyUuid, UUID nodeUuid) {
-        assertIsStudyExist(studyUuid);
-        assertIsNodeExist(studyUuid, nodeUuid);
     }
 
     public void assertRootNodeOrBuiltNode(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
@@ -1360,27 +1296,6 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    @Transactional
-    public void unbuildNodeTree(@NonNull UUID studyUuid, UUID rootNodeUuid, @NonNull String userId) {
-        doUnbuildNodeTree(studyUuid, rootNodeUuid, false, userId);
-    }
-
-    private void doUnbuildNodeTree(UUID studyUuid, UUID rootNodeUuid, boolean skipDeleteVariants, @NonNull String userId) {
-        InvalidateNodeTreeParameters invalidateNodeTreeParameters = InvalidateNodeTreeParameters.ALL;
-        List<UUID> rootNetworkIds = rootNetworkService.getStudyRootNetworkIds(studyUuid);
-        List<CompletableFuture<Void>> futures = rootNetworkIds.stream()
-                .map(rnId -> studyServerExecutionService.runAsync(() ->
-                    networkModificationTreeService.invalidateNodeTree(studyUuid, rootNodeUuid, rnId, invalidateNodeTreeParameters, skipDeleteVariants)))
-                .toList();
-        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
-        boolean noneMatchUnloading = rootNetworkIds.stream()
-                .map(rnId -> rootNetworkService.getRootNetwork(rnId).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")))
-                .noneMatch(rootNetwork -> rootNetwork.getLoadStatus() == RootNetworkLoadStatus.UNLOADING);
-        if (noneMatchUnloading) {
-            notificationService.emitElementUpdated(studyUuid, userId);
-        }
-    }
-
     public void stopBuild(@NonNull UUID nodeUuid, UUID rootNetworkUuid) {
         networkModificationRestService.stopBuild(nodeUuid, rootNetworkUuid);
     }
@@ -1401,7 +1316,7 @@ public class StudyService {
     public void duplicateStudyNode(UUID sourceStudyUuid, UUID targetStudyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
         assertDuplicateStudyNode(sourceStudyUuid, targetStudyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode);
         if (!sourceStudyUuid.equals(targetStudyUuid)) {
-            assertCanWriteModificationsInStudy(targetStudyUuid, List.of(networkModificationTreeService.getModificationGroupUuid(nodeToCopyUuid)),
+            rootNetworkService.assertCanWriteModificationsInStudy(targetStudyUuid, List.of(networkModificationTreeService.getModificationGroupUuid(nodeToCopyUuid)),
                     List.of(), List.of(), userId);
         }
 
@@ -1447,7 +1362,7 @@ public class StudyService {
     public void duplicateStudySubtree(UUID sourceStudyUuid, UUID targetStudyUuid, UUID parentNodeToCopyUuid, UUID referenceNodeUuid, String userId) {
         assertDuplicateStudySubtree(sourceStudyUuid, targetStudyUuid, parentNodeToCopyUuid, referenceNodeUuid);
         if (!sourceStudyUuid.equals(targetStudyUuid)) {
-            assertCanWriteModificationsInStudy(targetStudyUuid, networkModificationTreeService.getSubtreeModificationGroupUuids(parentNodeToCopyUuid),
+            rootNetworkService.assertCanWriteModificationsInStudy(targetStudyUuid, networkModificationTreeService.getSubtreeModificationGroupUuids(parentNodeToCopyUuid),
                     List.of(), List.of(), userId);
         }
         AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(sourceStudyUuid, parentNodeToCopyUuid, null);
@@ -1485,22 +1400,6 @@ public class StudyService {
         });
 
         notificationService.emitSubtreeMoved(studyUuid, parentNodeToMoveUuid, referenceNodeUuid);
-        notificationService.emitElementUpdated(studyUuid, userId);
-    }
-
-    @Transactional
-    public void deleteNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
-        assertIsStudyExist(studyUuid);
-        List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
-        try {
-            if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
-                throw new StudyException(NOT_ALLOWED);
-            }
-            // the references of the deleted modifications are removed from directory-server through the DELETE notification network-modification-server emits
-            networkModificationRestService.deleteModificationsByUuids(modificationsUuids, userId);
-        } finally {
-            notificationService.emitModificationsDeleted(studyUuid, nodeUuid, childrenUuids);
-        }
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
@@ -1646,135 +1545,6 @@ public class StudyService {
             updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.NOT_INDEXED);
         }
         return rootNetwork.getIndexationStatus();
-    }
-
-    @Transactional
-    public void duplicateNetworkModifications(
-        UUID targetStudyUuid,
-        UUID targetNodeUuid,
-        List<UUID> modificationsUuids,
-        String userId) {
-        assertCanWriteModificationsInStudy(targetStudyUuid, List.of(), modificationsUuids, List.of(), userId);
-        duplicateModificationsOrInsertComposites(targetStudyUuid, targetNodeUuid,
-            (groupUuid, modificationApplicationContexts) -> {
-                NetworkModificationsResult result = networkModificationRestService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts), userId);
-                directoryService.createSharingLinks(networkModificationRestService.getChildrenModificationsReferences(result.modificationUuids()), targetStudyUuid, targetNodeUuid, userId);
-                return result;
-            },
-            userId);
-    }
-
-    /**
-     * Moves a composite modification of a node out of the study : it is stored as an element in the directory server,
-     * and replaced in the node by a reference to this now shared composite modification.
-     */
-    @Transactional(readOnly = true)
-    public void shareCompositeNetworkModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, String name,
-                                                  String description, UUID parentDirectoryUuid, String userId) {
-        UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-        List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
-        try {
-            // the applied modifications are left unchanged : the node does not need to be rebuilt
-            ModificationReference newReference = networkModificationRestService.extractCompositeModificationToShare(groupUuid, modificationUuid, name, description);
-            // the composite modification keeps its uuid when extracted, so it is shared under that same uuid
-            // description is null as it is provided by the referenced modification
-            directoryService.createElement(parentDirectoryUuid, null, modificationUuid, name, DirectoryService.MODIFICATION, userId, true);
-            // extraction replaced the local composite by a new reference modification, in the node group or in a parent
-            // composite: register it on the shared element
-            directoryService.createSharingLinks(List.of(newReference), studyUuid, nodeUuid, userId);
-        } finally {
-            notificationService.emitModificationsUpdated(studyUuid, nodeUuid, childrenUuids);
-        }
-        notificationService.emitElementUpdated(studyUuid, userId);
-    }
-
-    @Transactional
-    public void insertCompositeNetworkModifications(
-        UUID targetStudyUuid,
-        UUID targetNodeUuid,
-        List<CompositeInfos> compositesInfos,
-        String userId,
-        StudyConstants.CompositeModificationsActionType action) {
-        boolean isInsert = action == StudyConstants.CompositeModificationsActionType.INSERT;
-        assertCanWriteCompositesInStudy(targetStudyUuid, compositesInfos, isInsert, userId);
-        duplicateModificationsOrInsertComposites(
-                targetStudyUuid,
-                targetNodeUuid,
-                (groupUuid, modificationApplicationContexts) -> {
-                    NetworkModificationsResult result = networkModificationRestService.insertCompositeModifications(groupUuid, action, Pair.of(compositesInfos, modificationApplicationContexts));
-                    if (isInsert) {
-                        createCompositesReferences(compositesInfos, result.modificationUuids(), targetStudyUuid, targetNodeUuid, userId);
-                    }
-                    return result;
-                },
-                userId
-        );
-    }
-
-    /**
-     * Only an INSERT of a composite marked as shared gives the study a reference to it: the shared composite is checked
-     * itself. Any other composite is copied: only its content is checked, the composite being passed as its container.
-     */
-    private void assertCanWriteCompositesInStudy(UUID studyUuid, List<CompositeInfos> compositesInfos, boolean isInsert, String userId) {
-        Map<Boolean, List<UUID>> uuidsByShared = compositesInfos.stream()
-                .collect(Collectors.partitioningBy(composite -> isInsert && composite.isShared(),
-                        Collectors.mapping(CompositeInfos::id, Collectors.toList())));
-        List<UUID> sharedCompositeUuids = uuidsByShared.get(true);
-        List<UUID> copiedCompositeUuids = uuidsByShared.get(false);
-        assertCanWriteModificationsInStudy(studyUuid, copiedCompositeUuids, List.of(), sharedCompositeUuids, userId);
-    }
-
-    private void createCompositesReferences(List<CompositeInfos> compositesInfos, List<UUID> insertedModificationUuids,
-                                            UUID studyUuid, UUID nodeUuid, String userId) {
-        for (int i = 0; i < compositesInfos.size(); i++) {
-            CompositeInfos composite = compositesInfos.get(i);
-            if (!composite.isShared()) {
-                continue;
-            }
-            directoryService.createSharingLink(composite.id(), ReferenceAttributes.createReferenceAttributes(
-                    insertedModificationUuids.get(i), studyUuid, nodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE), false, userId);
-        }
-    }
-
-    private void duplicateModificationsOrInsertComposites(
-        UUID targetStudyUuid,
-        UUID targetNodeUuid,
-        BiFunction<UUID, List<ModificationApplicationContext>, NetworkModificationsResult> handleModifications,
-        String userId) {
-        networkModificationTreeService.invalidateNodeTreeWithLF(targetStudyUuid, targetNodeUuid, ComputationsInvalidationMode.ALL);
-        List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
-        try {
-            networkModificationTreeService.assertStudyContainsNode(targetStudyUuid, targetNodeUuid);
-
-            List<RootNetworkEntity> studyRootNetworkEntities = rootNetworkService.getStudyRootNetworks(targetStudyUuid);
-            UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(targetNodeUuid);
-
-            List<ModificationApplicationContext> modificationApplicationContexts = studyRootNetworkEntities.stream()
-                .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), targetNodeUuid, rootNetworkEntity.getNetworkUuid()))
-                .toList();
-
-            NetworkModificationsResult networkModificationResults = handleModifications.apply(groupUuid, modificationApplicationContexts);
-
-            handleNetworkModificationApplyResult(targetStudyUuid, targetNodeUuid, networkModificationResults, studyRootNetworkEntities);
-        } finally {
-            notificationService.emitModificationsUpdated(targetStudyUuid, targetNodeUuid, childrenUuids);
-        }
-        notificationService.emitElementUpdated(targetStudyUuid, userId);
-    }
-
-    private void handleNetworkModificationApplyResult(UUID targetStudyUuid, UUID targetNodeUuid,
-                                                      NetworkModificationsResult networkModificationResults,
-                                                      List<RootNetworkEntity> studyRootNetworkEntities) {
-        if (networkModificationResults != null) {
-            int index = 0;
-            // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
-            for (Optional<NetworkModificationResult> modificationResultOpt : networkModificationResults.modificationResults()) {
-                if (modificationResultOpt.isPresent() && studyRootNetworkEntities.get(index) != null) {
-                    networkModificationTreeService.handleNetworkModificationApplyResult(targetStudyUuid, targetNodeUuid, studyRootNetworkEntities.get(index).getId(), modificationResultOpt.get());
-                }
-                index++;
-            }
-        }
     }
 
     private ReportPage getParentNodesReportLogs(UUID nodeUuid, UUID rootNetworkUuid, String messageFilter, Set<String> severityLevels, boolean paged, Pageable pageable) {
@@ -2476,7 +2246,7 @@ public class StudyService {
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
         // First we unbuild all nodes
-        doUnbuildNodeTree(studyUuid, rootNodeUuid, true, userId);
+        nodeService.doUnbuildNodeTree(studyUuid, rootNodeUuid, true, userId);
         // Then we erase data linked to root node on all root networks
         rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetworkService.getRootNetworkInfos(rootNetworkUuid)), true, false);
         if (!updateCase) {

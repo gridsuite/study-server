@@ -117,6 +117,7 @@ public class SupervisionService {
     private final RestClient restClient;
 
     public static final String SUPERVISION_USER = "Supervision";
+    private final StudyNodeService studyNodeService;
 
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService, LoadFlowService loadFlowService,
@@ -142,7 +143,7 @@ public class SupervisionService {
                               NodeRepository nodeRepository,
                               NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
                               NetworkModificationRestService networkModificationService,
-                              RestClient restClient) {
+                              RestClient restClient, StudyNodeService studyNodeService) {
 
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -170,6 +171,7 @@ public class SupervisionService {
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.networkModificationService = networkModificationService;
         this.restClient = restClient;
+        this.studyNodeService = studyNodeService;
     }
 
     @Transactional
@@ -498,7 +500,7 @@ public class SupervisionService {
     public void unbuildAllNodes(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
-        studyService.unbuildNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), SUPERVISION_USER);
+        studyNodeService.unbuildNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), SUPERVISION_USER);
 
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }

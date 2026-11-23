@@ -6,12 +6,13 @@
  */
 package org.gridsuite.study.server;
 
-import org.gridsuite.study.server.controller.NodeController;
+import org.gridsuite.study.server.controller.StudyNodeController;
 import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.nodeactivity.NetworkModificationActivityRunnerService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NodeService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
@@ -35,7 +36,7 @@ import static org.mockito.Mockito.*;
 @DisableElasticsearch
 class RebuildNodeServiceTest {
     @Autowired
-    private NodeController nodeController;
+    private StudyNodeController studyNodeController;
 
     @MockitoBean
     private NetworkModificationService networkModificationService;
@@ -51,6 +52,9 @@ class RebuildNodeServiceTest {
 
     @MockitoSpyBean
     private NetworkModificationActivityRunnerService nodeActivityService;
+
+    @MockitoBean
+    private NodeService nodeService;
 
     UUID studyUuid = UUID.randomUUID();
     UUID node1Uuid = UUID.randomUUID();
@@ -77,7 +81,7 @@ class RebuildNodeServiceTest {
 
         UUID modificationUuid = UUID.randomUUID();
         ModificationMoveInfos modificationMoveInfos = new ModificationMoveInfos(modificationUuid, null, null, null);
-        nodeController.moveModifications(studyUuid, node1Uuid, node1Uuid, List.of(modificationMoveInfos), userId);
+        studyNodeController.moveModifications(studyUuid, node1Uuid, node1Uuid, List.of(modificationMoveInfos), userId);
 
         verify(networkModificationService, times(1)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
     }
@@ -91,7 +95,7 @@ class RebuildNodeServiceTest {
             Map.of(node1Uuid, Set.of(rootNetworkUuid), node2Uuid, Set.of(rootNetworkUuid))
         ).when(networkModificationService).getSecurityNodesToRebuild(studyUuid, node1Uuid, node2Uuid);
 
-        nodeController.moveModifications(studyUuid, node1Uuid, node2Uuid, List.of(), userId);
+        studyNodeController.moveModifications(studyUuid, node1Uuid, node2Uuid, List.of(), userId);
 
         verify(networkModificationService, times(1)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
         verify(networkModificationService, times(1)).buildNode(studyUuid, node2Uuid, rootNetworkUuid, userId);
@@ -106,7 +110,7 @@ class RebuildNodeServiceTest {
             Map.of(node1Uuid, Set.of(rootNetworkUuid, rootNetwork2Uuid))
         ).when(networkModificationService).getSecurityNodesToRebuild(studyUuid, node1Uuid, node2Uuid);
 
-        nodeController.moveModifications(studyUuid, node1Uuid, node2Uuid, List.of(), userId);
+        studyNodeController.moveModifications(studyUuid, node1Uuid, node2Uuid, List.of(), userId);
 
         verify(networkModificationService, times(1)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
         verify(networkModificationService, times(1)).buildNode(studyUuid, node1Uuid, rootNetwork2Uuid, userId);
@@ -121,7 +125,7 @@ class RebuildNodeServiceTest {
             Map.of(node1Uuid, Set.of(rootNetworkUuid), node2Uuid, Set.of(rootNetwork2Uuid))
         ).when(networkModificationService).getSecurityNodesToRebuild(studyUuid, node1Uuid, node2Uuid);
 
-        nodeController.moveModifications(studyUuid, node1Uuid, node2Uuid, List.of(), userId);
+        studyNodeController.moveModifications(studyUuid, node1Uuid, node2Uuid, List.of(), userId);
 
         verify(networkModificationService, times(1)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
         verify(networkModificationService, times(1)).buildNode(studyUuid, node2Uuid, rootNetwork2Uuid, userId);
@@ -133,7 +137,7 @@ class RebuildNodeServiceTest {
 
         UUID modificationUuid = UUID.randomUUID();
         ModificationMoveInfos modificationMoveInfos = new ModificationMoveInfos(modificationUuid, null, null, null);
-        nodeController.moveModifications(studyUuid, node1Uuid, node1Uuid, List.of(modificationMoveInfos), userId);
+        studyNodeController.moveModifications(studyUuid, node1Uuid, node1Uuid, List.of(modificationMoveInfos), userId);
 
         verify(networkModificationService, times(0)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
     }

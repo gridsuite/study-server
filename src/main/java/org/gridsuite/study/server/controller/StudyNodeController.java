@@ -15,7 +15,7 @@ import org.gridsuite.study.server.nodeactivity.NetworkModificationActivityRunner
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NodeService;
-import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.StudyNodeService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -35,19 +35,22 @@ import static org.gridsuite.study.server.nodeactivity.NodeActivityType.*;
  */
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/nodes")
-public class NodeController {
+public class StudyNodeController {
 
+    private final StudyNodeService studyNodeService;
     private final NodeService nodeService;
     private final NetworkModificationActivityRunnerService networkModificationActivityRunnerService;
     private final NetworkModificationService networkModificationService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
     private final NetworkModificationTreeService networkModificationTreeService;
 
-    public NodeController(NodeService nodeService,
-                          NetworkModificationActivityRunnerService networkModificationActivityRunnerService,
-                          NetworkModificationService networkModificationService,
-                          NodeActivityRunnerService nodeActivityRunnerService,
-                          NetworkModificationTreeService networkModificationTreeService) {
+    public StudyNodeController(StudyNodeService studyNodeService,
+                               NodeService nodeService,
+                               NetworkModificationActivityRunnerService networkModificationActivityRunnerService,
+                               NetworkModificationService networkModificationService,
+                               NodeActivityRunnerService nodeActivityRunnerService,
+                               NetworkModificationTreeService networkModificationTreeService) {
+        this.studyNodeService = studyNodeService;
         this.nodeService = nodeService;
         this.networkModificationActivityRunnerService = networkModificationActivityRunnerService;
         this.networkModificationService = networkModificationService;
@@ -85,7 +88,7 @@ public class NodeController {
                                                            @RequestHeader(HEADER_USER_ID) String userId) {
         nodeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         nodeService.assertIsNodeNotReadOnly(nodeUuid);
-        nodeService.shareCompositeNetworkModification(studyUuid, nodeUuid, modificationUuid, name, description, parentDirectoryUuid, userId);
+        studyNodeService.shareCompositeNetworkModification(studyUuid, nodeUuid, modificationUuid, name, description, parentDirectoryUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -110,7 +113,7 @@ public class NodeController {
             String userId,
             StudyConstants.CompositeModificationsActionType action) {
         nodeActivityRunnerService.runWith(EDIT_MODIFICATIONS, targetStudyUuid, List.of(targetNodeUuid),
-                () -> nodeService.insertCompositeNetworkModifications(targetStudyUuid, targetNodeUuid, compositeInfos, userId, action));
+                () -> studyNodeService.insertCompositeNetworkModifications(targetStudyUuid, targetNodeUuid, compositeInfos, userId, action));
     }
 
     @GetMapping(value = "/{nodeUuid}/network-modifications", produces = MediaType.TEXT_PLAIN_VALUE)
@@ -133,7 +136,7 @@ public class NodeController {
     public ResponseEntity<String> getExportedNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                   @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
         nodeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(nodeService.getExportedNetworkModifications(studyUuid, nodeUuid));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyNodeService.getExportedNetworkModifications(studyUuid, nodeUuid));
     }
 
     @PostMapping(value = "/{nodeUuid}/network-modifications")
@@ -174,7 +177,7 @@ public class NodeController {
                                                            @Parameter(description = "Network modification UUIDs") @RequestParam(name = "uuids") List<UUID> networkModificationUuids,
                                                            @RequestHeader(HEADER_USER_ID) String userId) {
         nodeService.assertIsNodeNotReadOnly(nodeUuid);
-        nodeService.deleteNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
+        studyNodeService.deleteNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
 
         return ResponseEntity.ok().build();
     }
@@ -261,7 +264,7 @@ public class NodeController {
                                                 @RequestHeader(HEADER_USER_ID) String userId) {
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
         nodeActivityRunnerService.runWith(UNBUILD_ALL, studyUuid, List.of(rootNodeUuid),
-                () -> nodeService.unbuildNodeTree(studyUuid, rootNodeUuid, userId));
+                () -> studyNodeService.unbuildNodeTree(studyUuid, rootNodeUuid, userId));
         return ResponseEntity.ok().build();
     }
 
@@ -281,7 +284,7 @@ public class NodeController {
 
     private void handleDuplicateNetworkModifications(UUID targetStudyUuid, UUID targetNodeUuid, List<UUID> modificationsToCopyUuidList, String userId) {
         nodeActivityRunnerService.runWith(EDIT_MODIFICATIONS, targetStudyUuid, List.of(targetNodeUuid),
-                () -> nodeService.duplicateNetworkModifications(targetStudyUuid, targetNodeUuid, modificationsToCopyUuidList, userId));
+                () -> studyNodeService.duplicateNetworkModifications(targetStudyUuid, targetNodeUuid, modificationsToCopyUuidList, userId));
     }
 
     @PutMapping(value = "/{nodeUuid}/network-modifications/move")

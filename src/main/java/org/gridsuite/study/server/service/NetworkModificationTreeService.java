@@ -1311,10 +1311,6 @@ public class NetworkModificationTreeService {
         return parentUuid != nodeUuid && new HashSet<>(getAllChildrenUuids(parentUuid)).contains(nodeUuid);
     }
 
-    public Boolean isReadOnly(UUID nodeUuid) {
-        return getNodeInfoEntity(nodeUuid).getReadOnly();
-    }
-
     public boolean isRootNode(UUID nodeUuid) {
         return rootNodeInfoRepository.findById(nodeUuid).isPresent();
     }
