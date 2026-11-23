@@ -48,7 +48,7 @@ public class SpreadsheetConfigCollectionController {
         @ApiResponse(responseCode = "200", description = "The updated spreadsheet config collection"),
         @ApiResponse(responseCode = "404", description = "The study or the collection doesn't exist")
     })
-    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid) and @authorizationService.canRead(#collectionUuid)")
     public ResponseEntity<String> updateSpreadsheetConfigCollection(
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestParam("collectionUuid") UUID collectionUuid,
@@ -76,7 +76,7 @@ public class SpreadsheetConfigCollectionController {
             description = "Adds a new spreadsheet configuration to a collection")
     @ApiResponse(responseCode = "201", description = "Configuration added")
     @ApiResponse(responseCode = "404", description = "Configuration collection not found")
-    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid) and @authorizationService.canRead(#id)")
     public ResponseEntity<UUID> addSpreadsheetConfigToCollection(
             @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "ID of the configuration collection") @PathVariable UUID id,

@@ -40,7 +40,7 @@ public class SpreadsheetConfigController {
     @PostMapping("/{id}/columns")
     @Operation(summary = "Create a column", description = "Creates a new column")
     @ApiResponse(responseCode = "201", description = "Column created")
-    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid) and @authorizationService.canRead(#id)")
     public ResponseEntity<UUID> createColumn(
             @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "ID of the spreadsheet config") @PathVariable UUID id,
