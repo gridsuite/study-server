@@ -27,8 +27,10 @@ import org.gridsuite.study.server.service.StudyServerExecutionService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.utils.MatcherReport;
 import org.gridsuite.study.server.utils.TestUtils;
+import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
@@ -389,6 +391,32 @@ class StudyTest extends StudyTestBase {
                 .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkStudyMetadataUpdatedMessagesReceived();
+    }
+
+    @Test
+    void testUnloadStudy() throws Exception {
+        UUID studyUuid = createStudyWithStubs("userId", CASE_UUID);
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+        UUID stubDeleteReportsId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/reports"))
+            .willReturn(WireMock.ok())).getId();
+        UUID stubDeleteIndexId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/network-modifications/index"))
+            .willReturn(WireMock.ok())).getId();
+        UUID stubDeleteStashedId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/groups/stashed-modifications"))
+            .willReturn(WireMock.ok())).getId();
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/unload", studyUuid))
+            .andExpect(status().isOk());
+
+        // load status, build status and indexation notifications
+        while (output.receive(TIMEOUT, studyUpdateDestination) != null) {
+            // drain
+        }
+        WireMockUtils.verifyDeleteRequest(wireMockServer, stubDeleteReportsId, "/v1/reports", false, Map.of(), 2);
+        WireMockUtils.verifyDeleteRequest(wireMockServer, stubDeleteIndexId, "/v1/network-modifications/index", false, Map.of(), 1);
+        WireMockUtils.verifyDeleteRequest(wireMockServer, stubDeleteStashedId, "/v1/groups/stashed-modifications", false, Map.of(), 1);
+
+        Mockito.verify(networkStoreService, Mockito.times(1)).deleteNetwork(NETWORK_UUID);
+        assertEquals(RootNetworkLoadStatus.UNLOADED, rootNetworkRepository.findById(rootNetworkUuid).orElseThrow().getLoadStatus());
     }
 
     @Test

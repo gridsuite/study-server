@@ -85,9 +85,6 @@ class SupervisionControllerTest {
     private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
     private static final long TIMEOUT = 1000;
 
-    private static final UUID SECOND_NETWORK_UUID = UUID.randomUUID();
-    private static final UUID SECOND_CASE_UUID = UUID.randomUUID();
-
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
 
@@ -167,7 +164,6 @@ class SupervisionControllerTest {
     @AfterEach
     void tearDown() {
         equipmentInfosService.deleteAllByNetworkUuid(NETWORK_UUID);
-        equipmentInfosService.deleteAllByNetworkUuid(SECOND_NETWORK_UUID);
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         rootNetworkNodeInfoRepository.deleteAll();
         studyRepository.deleteAll();
@@ -182,24 +178,6 @@ class SupervisionControllerTest {
         when(rootNetworkService.getNetworkUuid(rootNetworkUuid)).thenReturn(NETWORK_UUID);
         assertIndexationStatus(STUDY_UUID, RootNetworkIndexationStatus.INDEXED.name());
         return study;
-    }
-
-    private void addSecondRootNetwork(UUID rootNetworkUuid, UUID networkUuid) {
-        rootNetworkService.insertCreationRequest(STUDY_UUID,
-                RootNetworkInfos.builder()
-                        .id(rootNetworkUuid)
-                        .name("second")
-                        .tag("SND")
-                        .caseInfos(new CaseInfos(SECOND_CASE_UUID, null, "secondCase", "XIIDM"))
-                        .networkInfos(new NetworkInfos(networkUuid, "secondNetworkId"))
-                        .build(),
-                "userId");
-        studyService.createRootNetwork(STUDY_UUID,
-                RootNetworkInfos.builder()
-                        .id(rootNetworkUuid)
-                        .networkInfos(new NetworkInfos(networkUuid, "secondNetworkId"))
-                        .caseInfos(new CaseInfos(SECOND_CASE_UUID, null, "secondCase", "XIIDM"))
-                        .build());
     }
 
     private void assertIndexationCount(long expectedEquipmentsIndexationCount, long expectedTombstonedEquipmentsIndexationCount) throws Exception {
@@ -361,39 +339,6 @@ class SupervisionControllerTest {
     }
 
     @Test
-    void testUnloadStudy() throws Exception {
-        initStudy();
-        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(STUDY_UUID);
-        UUID secondRootNetworkUuid = UUID.randomUUID();
-        addSecondRootNetwork(secondRootNetworkUuid, SECOND_NETWORK_UUID);
-        when(rootNetworkService.getNetworkUuid(secondRootNetworkUuid)).thenReturn(SECOND_NETWORK_UUID);
-
-        Mockito.doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
-        Mockito.doNothing().when(networkStoreService).deleteNetwork(SECOND_NETWORK_UUID);
-
-        mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/unload", STUDY_UUID))
-                .andExpect(status().isOk());
-
-        // Check that both root network underlying networks have been erased
-        Mockito.verify(rootNetworkService, Mockito.times(2))
-                .invalidateRootNetworkRemoteInfos(any(), eq(true), eq(false));
-        Mockito.verify(networkStoreService, Mockito.times(1)).deleteNetwork(NETWORK_UUID);
-        Mockito.verify(networkStoreService, Mockito.times(1)).deleteNetwork(SECOND_NETWORK_UUID);
-
-        // Check that the study index data has been erased
-        assertIndexationStatus(STUDY_UUID, RootNetworkIndexationStatus.NOT_INDEXED.name());
-        assertIndexationCount(0, 0);
-
-        List<UUID> allRootNetworkUuids = rootNetworkService.getStudyRootNetworkIds(STUDY_UUID);
-        assertThat(allRootNetworkUuids).hasSize(2);
-        assertEquals(RootNetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(firstRootNetworkUuid).orElseThrow().getLoadStatus());
-        assertEquals(RootNetworkLoadStatus.UNLOADED, rootNetworkService.getRootNetwork(secondRootNetworkUuid).orElseThrow().getLoadStatus());
-        // While invalidating the root network set to UNLOADING so doUnbuildNodeTree
-        // noneMatch(UNLOADING) check never holds and no element.update notification is emitted
-        TestUtils.assertQueuesEmptyThenClear(List.of(ELEMENT_UPDATE_DESTINATION), output);
-    }
-
-    @Test
     void testrecreateNetworkModificationSharingLinks() throws Exception {
         initStudy();
         mockMvc.perform(post("/v1/supervision/studies/{studyUuid}/network-modifications/sharing-links/recreate", STUDY_UUID)
@@ -422,7 +367,7 @@ class SupervisionControllerTest {
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         List<UUID> loadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
         assertEquals(List.of(STUDY_UUID), loadedStudyUuids);
-        mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/unload", STUDY_UUID))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/unload", STUDY_UUID))
                 .andExpect(status().isOk());
         mvcResult = mockMvc.perform(get("/v1/supervision/studies/loaded")
                         .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))
