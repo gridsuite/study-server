@@ -22,7 +22,6 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
 import org.gridsuite.study.server.repository.rootnetwork.StudyRootNetworkTag;
-import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.utils.JsonUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -56,7 +55,6 @@ public class RootNetworkService {
     private final EquipmentInfosService equipmentInfosService;
     private final NetworkStoreService networkStoreService;
     private final NotificationService notificationService;
-    private final NetworkModificationRestService networkModificationRestService;
 
     private final ObjectMapper objectMapper;
 
@@ -73,7 +71,6 @@ public class RootNetworkService {
                               EquipmentInfosService equipmentInfosService,
                               NetworkStoreService networkStoreService,
                               NotificationService notificationService,
-                              NetworkModificationRestService networkModificationRestService,
                               ObjectMapper objectMapper) {
         this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
@@ -86,7 +83,6 @@ public class RootNetworkService {
         this.equipmentInfosService = equipmentInfosService;
         this.networkStoreService = networkStoreService;
         this.notificationService = notificationService;
-        this.networkModificationRestService = networkModificationRestService;
         this.objectMapper = objectMapper;
     }
 
@@ -445,23 +441,5 @@ public class RootNetworkService {
     @Transactional(readOnly = true)
     public List<UUID> getLoadedStudyIds(List<UUID> studyUuids) {
         return rootNetworkRepository.findDistinctStudyIdsByStudyIdInAndLoadStatus(studyUuids, RootNetworkLoadStatus.LOADED);
-    }
-
-    /**
-     * Modifications written into a study must be associated with all its root network tags, including the shared
-     * modifications they point to: the ones the user cannot write on, which they cannot associate with a new tag, must
-     * already be.
-     *
-     * @param containerUuids groups or composites whose content is written into the study: only the shared modifications
-     *                       their content refers to are checked, not the containers themselves
-     * @param modificationUuids modifications written into the study: the shared modifications they and their content
-     *                          refer to are checked
-     * @param sharedUuids shared modifications the study is given a reference to: they are checked themselves, along
-     *                    with the shared modifications their content refers to
-     */
-    void assertCanWriteModificationsInStudy(UUID studyUuid, List<UUID> containerUuids, List<UUID> modificationUuids,
-                                                    List<UUID> sharedUuids, String userId) {
-        networkModificationRestService.assertRootNetworkTagsAllowed(containerUuids, modificationUuids, sharedUuids,
-                getStudyRootNetworkTags(studyUuid), userId);
     }
 }

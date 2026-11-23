@@ -120,7 +120,7 @@ public class StudyNodeService {
                         Collectors.mapping(CompositeInfos::id, Collectors.toList())));
         List<UUID> sharedCompositeUuids = uuidsByShared.get(true);
         List<UUID> copiedCompositeUuids = uuidsByShared.get(false);
-        rootNetworkService.assertCanWriteModificationsInStudy(studyUuid, copiedCompositeUuids, List.of(), sharedCompositeUuids, userId);
+        assertCanWriteModificationsInStudy(studyUuid, copiedCompositeUuids, List.of(), sharedCompositeUuids, userId);
     }
 
     private void createCompositesReferences(List<CompositeInfos> compositesInfos, List<UUID> insertedModificationUuids,
@@ -141,7 +141,7 @@ public class StudyNodeService {
             UUID targetNodeUuid,
             List<UUID> modificationsUuids,
             String userId) {
-        rootNetworkService.assertCanWriteModificationsInStudy(targetStudyUuid, List.of(), modificationsUuids, List.of(), userId);
+        assertCanWriteModificationsInStudy(targetStudyUuid, List.of(), modificationsUuids, List.of(), userId);
         duplicateModificationsOrInsertComposites(targetStudyUuid, targetNodeUuid,
                 (groupUuid, modificationApplicationContexts) -> {
                     NetworkModificationsResult result = networkModificationRestService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts), userId);
@@ -221,6 +221,25 @@ public class StudyNodeService {
     @Transactional
     public void unbuildNodeTree(@NonNull UUID studyUuid, UUID rootNodeUuid, @NonNull String userId) {
         nodeService.doUnbuildNodeTree(studyUuid, rootNodeUuid, false, userId);
+    }
+
+    /**
+     * Modifications written into a study must be associated with all its root network tags, including the shared
+     * modifications they point to: the ones the user cannot write on, which they cannot associate with a new tag, must
+     * already be.
+     *
+     * @param containerUuids groups or composites whose content is written into the study: only the shared modifications
+     *                       their content refers to are checked, not the containers themselves
+     * @param modificationUuids modifications written into the study: the shared modifications they and their content
+     *                          refer to are checked
+     * @param sharedUuids shared modifications the study is given a reference to: they are checked themselves, along
+     *                    with the shared modifications their content refers to
+     */
+    //TODO : has duplicate in study server see if it is possible to move to a common place
+    private void assertCanWriteModificationsInStudy(UUID studyUuid, List<UUID> containerUuids, List<UUID> modificationUuids,
+                                            List<UUID> sharedUuids, String userId) {
+        networkModificationRestService.assertRootNetworkTagsAllowed(containerUuids, modificationUuids, sharedUuids,
+                rootNetworkService.getStudyRootNetworkTags(studyUuid), userId);
     }
 
 }

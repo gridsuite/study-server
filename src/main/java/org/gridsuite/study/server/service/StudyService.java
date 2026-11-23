@@ -860,6 +860,24 @@ public class StudyService {
             getOptionalParameters(elementType, studyEntity, loadFlowParameters));
     }
 
+    /**
+     * Modifications written into a study must be associated with all its root network tags, including the shared
+     * modifications they point to: the ones the user cannot write on, which they cannot associate with a new tag, must
+     * already be.
+     *
+     * @param containerUuids groups or composites whose content is written into the study: only the shared modifications
+     *                       their content refers to are checked, not the containers themselves
+     * @param modificationUuids modifications written into the study: the shared modifications they and their content
+     *                          refer to are checked
+     * @param sharedUuids shared modifications the study is given a reference to: they are checked themselves, along
+     *                    with the shared modifications their content refers to
+     */
+    private void assertCanWriteModificationsInStudy(UUID studyUuid, List<UUID> containerUuids, List<UUID> modificationUuids,
+                                                    List<UUID> sharedUuids, String userId) {
+        networkModificationRestService.assertRootNetworkTagsAllowed(containerUuids, modificationUuids, sharedUuids,
+                rootNetworkService.getStudyRootNetworkTags(studyUuid), userId);
+    }
+
     @Transactional
     public String getNetworkElementInfos(UUID studyUuid,
                                          UUID nodeUuid,
@@ -1316,7 +1334,7 @@ public class StudyService {
     public void duplicateStudyNode(UUID sourceStudyUuid, UUID targetStudyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
         assertDuplicateStudyNode(sourceStudyUuid, targetStudyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode);
         if (!sourceStudyUuid.equals(targetStudyUuid)) {
-            rootNetworkService.assertCanWriteModificationsInStudy(targetStudyUuid, List.of(networkModificationTreeService.getModificationGroupUuid(nodeToCopyUuid)),
+            assertCanWriteModificationsInStudy(targetStudyUuid, List.of(networkModificationTreeService.getModificationGroupUuid(nodeToCopyUuid)),
                     List.of(), List.of(), userId);
         }
 
@@ -1362,7 +1380,7 @@ public class StudyService {
     public void duplicateStudySubtree(UUID sourceStudyUuid, UUID targetStudyUuid, UUID parentNodeToCopyUuid, UUID referenceNodeUuid, String userId) {
         assertDuplicateStudySubtree(sourceStudyUuid, targetStudyUuid, parentNodeToCopyUuid, referenceNodeUuid);
         if (!sourceStudyUuid.equals(targetStudyUuid)) {
-            rootNetworkService.assertCanWriteModificationsInStudy(targetStudyUuid, networkModificationTreeService.getSubtreeModificationGroupUuids(parentNodeToCopyUuid),
+            assertCanWriteModificationsInStudy(targetStudyUuid, networkModificationTreeService.getSubtreeModificationGroupUuids(parentNodeToCopyUuid),
                     List.of(), List.of(), userId);
         }
         AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(sourceStudyUuid, parentNodeToCopyUuid, null);
