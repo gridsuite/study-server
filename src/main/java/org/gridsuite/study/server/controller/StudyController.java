@@ -244,6 +244,15 @@ public class StudyController {
         return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).build();
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/allowed-tags", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get the tags the user may give to a new or renamed root network, restricted when the study" +
+        " contains shared modifications the user cannot write on")
+    @ApiResponse(responseCode = "200", description = "The allowed root network tags were returned")
+    public ResponseEntity<AllowedRootNetworkTags> getAllowedRootNetworkTags(@PathVariable("studyUuid") UUID studyUuid,
+                                                                           @RequestHeader(HEADER_USER_ID) String userId) {
+        return ResponseEntity.ok().body(studyService.getAllowedRootNetworkTags(studyUuid, userId));
+    }
+
     @DeleteMapping(value = "/studies/{studyUuid}/root-networks")
     @Operation(summary = "Delete root networks for study")
     @ApiResponse(responseCode = "200", description = "Root network deleted")

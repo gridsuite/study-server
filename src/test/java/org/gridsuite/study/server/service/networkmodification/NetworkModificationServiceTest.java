@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.RootNetworkTagsCheckInfos;
+import org.gridsuite.study.server.dto.AllowedRootNetworkTags;
 import org.gridsuite.study.server.dto.SharedModificationsWriteAccess;
 import org.gridsuite.study.server.service.RootNetworkService;
 import org.junit.jupiter.api.BeforeEach;
@@ -294,8 +295,11 @@ class NetworkModificationServiceTest {
         verify(requestSpec).body(new RootNetworkTagsCheckInfos(List.of(), List.of(modificationUuid), List.of(), List.of("PH1")));
         networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of(), List.of(sharedUuid), List.of("PH1"), USER_ID);
         verify(requestSpec).body(new RootNetworkTagsCheckInfos(List.of(), List.of(), List.of(sharedUuid), List.of("PH1")));
-        verify(requestSpec, times(3)).contentType(MediaType.APPLICATION_JSON);
-        verify(requestSpec, times(3)).headers(argThat(headersConsumer -> {
+        // the tags already used are sent to be left out of the allowed tags reported on refusal
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of(), List.of(), List.of("PH3"), List.of("PH1"), USER_ID);
+        verify(requestSpec).body(new RootNetworkTagsCheckInfos(List.of(groupUuid), List.of(), List.of(), List.of("PH3"), List.of("PH1")));
+        verify(requestSpec, times(4)).contentType(MediaType.APPLICATION_JSON);
+        verify(requestSpec, times(4)).headers(argThat(headersConsumer -> {
             HttpHeaders headers = new HttpHeaders();
             headersConsumer.accept(headers);
             return USER_ID.equals(headers.getFirst(HEADER_USER_ID));
@@ -328,6 +332,25 @@ class NetworkModificationServiceTest {
 
         assertThat(networkModificationService.getReferencedModificationsWriteAccess(List.of(groupUuid), USER_ID))
             .isEqualTo(SharedModificationsWriteAccess.NONE_WRITABLE);
+    }
+
+    @Test
+    void testGetAllowedRootNetworkTags() {
+        UUID groupUuid = UUID.randomUUID();
+        String url = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/root-network-tags/allowed?usedTags=PH1&usedTags=PH2";
+        var requestSpec = restClient.post().uri(url);
+        makeFluent(requestSpec);
+        doReturn(requestSpec).when(requestSpec).body(any(Object.class));
+        AllowedRootNetworkTags allowedTags = new AllowedRootNetworkTags(true, List.of("A"));
+        when(requestSpec.retrieve().body(AllowedRootNetworkTags.class)).thenReturn(allowedTags);
+
+        assertThat(networkModificationService.getAllowedRootNetworkTags(List.of(groupUuid), List.of("PH1", "PH2"), USER_ID)).isEqualTo(allowedTags);
+        verify(requestSpec).body(List.of(groupUuid));
+        verify(requestSpec).headers(argThat(headersConsumer -> {
+            HttpHeaders headers = new HttpHeaders();
+            headersConsumer.accept(headers);
+            return USER_ID.equals(headers.getFirst(HEADER_USER_ID));
+        }));
     }
 
     @Test
