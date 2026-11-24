@@ -50,7 +50,7 @@ public class DynamicSimulationEventsController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The dynamic simulation events was returned"),
         @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
+    @PreAuthorize("true")
     public ResponseEntity<List<EventInfos>> getDynamicSimulationEvents(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                        @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
         List<EventInfos> dynamicSimulationEvents = dynamicSimulationService.getDynamicSimulationEvents(nodeUuid);
@@ -62,7 +62,7 @@ public class DynamicSimulationEventsController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The dynamic simulation event was returned"),
         @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
+    @PreAuthorize("true")
     public ResponseEntity<EventInfos> getDynamicSimulationEvent(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                 @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                 @Parameter(description = "Equipment id") @RequestParam(value = "equipmentId") String equipmentId) {

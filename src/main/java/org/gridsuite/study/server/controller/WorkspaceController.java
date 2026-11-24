@@ -109,7 +109,7 @@ public class WorkspaceController {
     @Operation(summary = "Save NAD config")
     @ApiResponse(responseCode = "201", description = "NAD config saved")
     @ApiResponse(responseCode = "404", description = "Study not found")
-    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<UUID> saveNadConfig(
             @PathVariable UUID studyUuid,
             @PathVariable UUID workspaceId,
