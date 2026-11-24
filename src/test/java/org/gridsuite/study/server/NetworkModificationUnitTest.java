@@ -9,7 +9,7 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.controller.NodeController;
-import org.gridsuite.study.server.controller.StudyController;
+import org.gridsuite.study.server.controller.RootNetworkStudyController;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
 import org.gridsuite.study.server.dto.NodeInfos;
@@ -79,7 +79,7 @@ class NetworkModificationUnitTest {
     @Autowired
     private StudyRepository studyRepository;
     @Autowired
-    private StudyController studyController;
+    private RootNetworkStudyController rootNetworkStudyController;
     @Autowired
     private NodeController studyNodeController;
 
@@ -169,7 +169,7 @@ class NetworkModificationUnitTest {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
 
         // Unbuild security node without LF -> no children invalidation
-        studyController.unbuildNode(studyUuid, firstRootNetworkUuid, node1Uuid, USER_ID_HEADER);
+        rootNetworkStudyController.unbuildNode(studyUuid, firstRootNetworkUuid, node1Uuid, USER_ID_HEADER);
         /*       rootNode
          *          |
          *        node1
@@ -189,7 +189,7 @@ class NetworkModificationUnitTest {
 
         // Unbuild security node with LF -> children invalidation
         when(rootNetworkNodeInfoService.isLoadflowDone(node2Uuid, firstRootNetworkUuid)).thenReturn(true);
-        studyController.unbuildNode(studyUuid, firstRootNetworkUuid, node2Uuid, USER_ID_HEADER);
+        rootNetworkStudyController.unbuildNode(studyUuid, firstRootNetworkUuid, node2Uuid, USER_ID_HEADER);
         /*       rootNode
          *          |
          *        node1

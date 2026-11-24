@@ -9,6 +9,7 @@ package org.gridsuite.study.server.studycontroller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.controller.NodeController;
+import org.gridsuite.study.server.controller.RootNetworkStudyController;
 import org.gridsuite.study.server.controller.StudyController;
 import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -74,6 +75,9 @@ class StudyControllerRebuildNodeTest {
 
     @Autowired
     private StudyController studyController;
+
+    @Autowired
+    private RootNetworkStudyController rootNetworkStudyController;
 
     @Autowired
     private NodeController studyNodeController;
@@ -166,7 +170,7 @@ class StudyControllerRebuildNodeTest {
     @Test
     void testUpdateNetworkModificationApplicabilityByRootNetwork() {
         Set<UUID> modificationUuids = Set.of(UUID.randomUUID());
-        studyController.updateNetworkModificationsApplicability(studyUuid, rootNetworkUuid, nodeUuid, modificationUuids, true, userId);
+        rootNetworkStudyController.updateNetworkModificationsApplicability(studyUuid, rootNetworkUuid, nodeUuid, modificationUuids, true, userId);
 
         verify(networkModificationService, times(1)).updateNetworkModificationsApplicabilityInRootNetwork(studyUuid, nodeUuid, rootNetworkUuid, modificationUuids, userId, true);
         verify(networkModificationService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
