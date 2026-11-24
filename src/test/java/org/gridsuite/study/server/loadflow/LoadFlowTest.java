@@ -185,6 +185,8 @@ class LoadFlowTest {
     @MockitoSpyBean
     private StudyService studyService;
     @MockitoSpyBean
+    private TreeService treeService;
+    @MockitoSpyBean
     private NetworkModificationService networkModificationService;
     @MockitoBean
     private NetworkModificationRestService networkModificationRestService;
@@ -1102,8 +1104,8 @@ class LoadFlowTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
-        reset(studyService);
-        doReturn(List.of()).when(studyService).getRootNetworksToBuildNewNode(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
+        reset(treeService);
+        doReturn(List.of()).when(treeService).getRootNetworksToBuildNewNode(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
                 .andExpect(status().isOk());
@@ -1115,7 +1117,7 @@ class LoadFlowTest {
         rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder().variantId(variantId).build());
 
-        verify(studyService, times(1)).getRootNetworksToBuildNewNode(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
+        verify(treeService, times(1)).getRootNetworksToBuildNewNode(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
 
         return modificationNode;
     }

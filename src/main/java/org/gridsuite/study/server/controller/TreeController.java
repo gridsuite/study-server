@@ -21,7 +21,7 @@ import org.gridsuite.study.server.nodeactivity.NodeActivityInfos;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.nodeactivity.NodeActivityService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.TreeService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
 import org.springframework.data.util.Pair;
 import org.springframework.http.MediaType;
@@ -46,20 +46,19 @@ public class TreeController {
 
     private final NetworkModificationTreeService networkModificationTreeService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
-    private final StudyService studyService;
     private final NodeActivityService nodeActivityService;
     private final NetworkModificationService networkModificationService;
+    private final TreeService treeService;
 
     public TreeController(NetworkModificationTreeService networkModificationTreeService,
                           NodeActivityRunnerService nodeActivityRunnerService,
-                          StudyService studyService,
                           NodeActivityService nodeActivityService,
-                          NetworkModificationService networkModificationService) {
+                          NetworkModificationService networkModificationService, TreeService treeService) {
         this.networkModificationTreeService = networkModificationTreeService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
-        this.studyService = studyService;
         this.nodeActivityService = nodeActivityService;
         this.networkModificationService = networkModificationService;
+        this.treeService = treeService;
     }
 
     @PostMapping(value = "/nodes", params = {"nodeToCutUuid", "referenceNodeUuid", "insertMode"})
@@ -78,7 +77,7 @@ public class TreeController {
         // the node leaves its former parent, so its own children are reparented there whatever the insert mode
         List<UUID> heldNodes = Stream.concat(Stream.of(nodeToCutUuid), insertMode.isChild() ? Stream.empty() : Stream.of(referenceNodeUuid)).distinct().toList();
         nodeActivityRunnerService.runWith(EDIT_TREE, studyUuid, heldNodes,
-                () -> studyService.moveStudyNode(studyUuid, nodeToCutUuid, referenceNodeUuid, insertMode, userId));
+                () -> treeService.moveStudyNode(studyUuid, nodeToCutUuid, referenceNodeUuid, insertMode, userId));
         return ResponseEntity.ok().build();
     }
 
@@ -116,7 +115,7 @@ public class TreeController {
         networkModificationTreeService.assertIsNodeNotReadOnly(subtreeToCutParentNodeUuid);
         // a subtree always attaches as a child at the destination, reparenting nothing there
         nodeActivityRunnerService.runWith(EDIT_TREE, studyUuid, List.of(subtreeToCutParentNodeUuid),
-                () -> studyService.moveStudySubtree(studyUuid, subtreeToCutParentNodeUuid, referenceNodeUuid, userId));
+                () -> treeService.moveStudySubtree(studyUuid, subtreeToCutParentNodeUuid, referenceNodeUuid, userId));
         return ResponseEntity.ok().build();
     }
 
@@ -133,7 +132,7 @@ public class TreeController {
                                                  @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
                                                  @RequestHeader(HEADER_USER_ID) String userId) {
         // added as a child of the reference, and the origin subtree is only read: nothing to hold
-        studyService.duplicateStudySubtree(sourceStudyUuid, targetStudyUuid, subtreeToCopyParentNodeUuid, referenceNodeUuid, userId);
+        treeService.duplicateStudySubtree(sourceStudyUuid, targetStudyUuid, subtreeToCopyParentNodeUuid, referenceNodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -150,7 +149,7 @@ public class TreeController {
                                                               @RequestHeader(HEADER_USER_ID) String userId) {
 
         NetworkModificationNode newNode = nodeActivityRunnerService.runWith(EDIT_TREE, studyUuid, insertMode.isChild() ? List.of() : List.of(referenceId),
-                () -> studyService.createNode(studyUuid, referenceId, node, insertMode, userId));
+                () -> treeService.createNode(studyUuid, referenceId, node, insertMode, userId));
         buildNewNode(studyUuid, referenceId, newNode, userId);
 
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(newNode);
@@ -167,7 +166,7 @@ public class TreeController {
             @Parameter(description = "sequence to create") @RequestParam("sequenceType") NodeSequenceType nodeSequenceType,
             @RequestHeader(HEADER_USER_ID) String userId) {
         // a sequence is added as a child at every level, so it reparents nothing and holds nothing
-        NetworkModificationNode sequenceParentNode = studyService.createSequence(studyUuid, referenceId, nodeSequenceType, userId);
+        NetworkModificationNode sequenceParentNode = treeService.createSequence(studyUuid, referenceId, nodeSequenceType, userId);
         buildNewNode(studyUuid, referenceId, sequenceParentNode, userId);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(sequenceParentNode);
     }
@@ -182,7 +181,7 @@ public class TreeController {
                                             @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren,
                                             @RequestHeader(HEADER_USER_ID) String userId) {
         nodeActivityRunnerService.runWith(DELETE_NODES, studyUuid, nodeIds,
-                () -> studyService.deleteNodes(studyUuid, nodeIds, deleteChildren, userId, true));
+                () -> treeService.deleteNodes(studyUuid, nodeIds, deleteChildren, userId, true));
         return ResponseEntity.ok().build();
     }
 
@@ -198,7 +197,7 @@ public class TreeController {
                                           @RequestHeader(HEADER_USER_ID) String userId) {
         networkModificationTreeService.assertIsNodeNotReadOnly(nodeId);
         nodeActivityRunnerService.runWith(DELETE_NODES, studyUuid, List.of(nodeId),
-                () -> studyService.stashNode(studyUuid, nodeId, stashChildren, userId));
+                () -> treeService.stashNode(studyUuid, nodeId, stashChildren, userId));
         return ResponseEntity.ok().build();
     }
 
@@ -207,7 +206,7 @@ public class TreeController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The list of nodes in the trash")})
     public ResponseEntity<List<Pair<AbstractNode, Integer>>> getStashedNodes(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getStashedNodes(studyUuid));
+        return ResponseEntity.ok().body(treeService.getStashedNodes(studyUuid));
     }
 
     @PostMapping(value = "/nodes/restore")
@@ -220,7 +219,7 @@ public class TreeController {
                                              @RequestHeader(HEADER_USER_ID) String userId) {
         // the restored nodes land under the anchor, so it is held exactly as an insertion under it would be
         nodeActivityRunnerService.runWith(EDIT_TREE, studyUuid, List.of(anchorNodeId),
-                () -> studyService.restoreNodes(studyUuid, nodeIds, anchorNodeId, userId));
+                () -> treeService.restoreNodes(studyUuid, nodeIds, anchorNodeId, userId));
         return ResponseEntity.ok().build();
     }
 
@@ -264,7 +263,7 @@ public class TreeController {
     }
 
     private void buildNewNode(UUID studyUuid, UUID referenceId, NetworkModificationNode createdNode, String userId) {
-        studyService.getRootNetworksToBuildNewNode(studyUuid, referenceId, createdNode).forEach(rootNetworkUuid ->
+        treeService.getRootNetworksToBuildNewNode(studyUuid, referenceId, createdNode).forEach(rootNetworkUuid ->
                 nodeActivityRunnerService.runWith(BUILD, studyUuid, rootNetworkUuid, List.of(createdNode.getId()),
                         () -> networkModificationService.buildNode(studyUuid, createdNode.getId(), rootNetworkUuid, userId)));
     }
