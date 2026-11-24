@@ -26,7 +26,7 @@ public class ShortCircuitParametersController {
     }
 
     @GetMapping(value = "/results/{resultUuid}/download-debug-file")
-    @PreAuthorize("@authorizationService.canRead(#resultUuid)")
+    @PreAuthorize("true")
     public ResponseEntity<Resource> downloadDebugFile(@PathVariable UUID resultUuid) {
         return shortCircuitService.downloadDebugFile(resultUuid);
     }

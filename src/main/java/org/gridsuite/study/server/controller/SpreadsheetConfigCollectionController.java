@@ -76,7 +76,7 @@ public class SpreadsheetConfigCollectionController {
             description = "Adds a new spreadsheet configuration to a collection")
     @ApiResponse(responseCode = "201", description = "Configuration added")
     @ApiResponse(responseCode = "404", description = "Configuration collection not found")
-    @PreAuthorize("@authorizationService.canWrite(#studyUuid) and @authorizationService.canRead(#id)")
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid) and @authorizationService.canWrite(#id)")
     public ResponseEntity<UUID> addSpreadsheetConfigToCollection(
             @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "ID of the configuration collection") @PathVariable UUID id,
@@ -89,7 +89,7 @@ public class SpreadsheetConfigCollectionController {
             description = "Removes an existing spreadsheet configuration from a collection")
     @ApiResponse(responseCode = "204", description = "Configuration removed")
     @ApiResponse(responseCode = "404", description = "Configuration collection or configuration not found")
-    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid) and @authorizationService.canWrite(#id)")
     public ResponseEntity<Void> removeSpreadsheetConfigFromCollection(
             @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "ID of the configuration collection") @PathVariable UUID id,
