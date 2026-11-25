@@ -183,7 +183,7 @@ public class NetworkModificationTreeService {
         List<UUID> rootNetworkIds = rootNetworkService.getStudyRootNetworkIds(studyUuid);
         List<CompletableFuture<Void>> futures = rootNetworkIds.stream()
                 .map(rnId -> studyServerExecutionService.runAsync(() ->
-                        invalidateNodeTree(studyUuid, rootNodeUuid, rnId, invalidateNodeTreeParameters, skipDeleteVariants)))
+                        self.invalidateNodeTree(studyUuid, rootNodeUuid, rnId, invalidateNodeTreeParameters, skipDeleteVariants)))
                 .toList();
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
         boolean noneMatchUnloading = rootNetworkIds.stream()
