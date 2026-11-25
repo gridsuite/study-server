@@ -119,6 +119,7 @@ public class SupervisionService {
     public static final String SUPERVISION_USER = "Supervision";
     private final NodeService studyNodeService;
     private final TreeService treeService;
+    private final RootNetworkStudyService rootNetworkStudyService;
 
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService, LoadFlowService loadFlowService,
@@ -144,7 +145,7 @@ public class SupervisionService {
                               NodeRepository nodeRepository,
                               NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
                               NetworkModificationRestService networkModificationService,
-                              RestClient restClient, NodeService studyNodeService, TreeService treeService) {
+                              RestClient restClient, NodeService studyNodeService, TreeService treeService, RootNetworkStudyService rootNetworkStudyService) {
 
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -174,6 +175,7 @@ public class SupervisionService {
         this.restClient = restClient;
         this.studyNodeService = studyNodeService;
         this.treeService = treeService;
+        this.rootNetworkStudyService = rootNetworkStudyService;
     }
 
     @Transactional
@@ -519,7 +521,7 @@ public class SupervisionService {
         rootNetworkService.getStudyRootNetworkIds(studyUuid).forEach(rnId -> {
             try {
                 rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADING);
-                studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER, false);
+                rootNetworkStudyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER, false);
                 rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADED);
             } catch (Exception e) {
                 rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.LOADED);
@@ -576,7 +578,7 @@ public class SupervisionService {
         studyService.getStudies().forEach(study -> {
             List<RootNetworkInfos> rootNetworkInfos = rootNetworkService.getRootNetworkInfosWithLinksInfos(study.getId());
             for (RootNetworkInfos rootNetworkInfo : rootNetworkInfos) {
-                studyService.updateRootNetworkIndexationStatus(study.getId(), rootNetworkInfo.getId(), RootNetworkIndexationStatus.NOT_INDEXED);
+                rootNetworkStudyService.updateRootNetworkIndexationStatus(study.getId(), rootNetworkInfo.getId(), RootNetworkIndexationStatus.NOT_INDEXED);
             }
         });
     }

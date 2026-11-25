@@ -127,6 +127,14 @@ public class NetworkModificationTreeService {
         return newNodeInfo;
     }
 
+    @Transactional(readOnly = true)
+    public void assertIsRootNetworkAndNodeInStudy(@NonNull final UUID studyUuid, @NonNull final UUID rootNetworkId, @NonNull final UUID nodeUuid) {
+        this.rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkId);
+        if (!studyUuid.equals(getStudyUuidForNodeId(nodeUuid))) {
+            throw new StudyException(NOT_FOUND, "Node not found");
+        }
+    }
+
     public void assertIsStudyExist(UUID studyUuid) {
         if (!studyRepository.existsById(studyUuid)) {
             throw new StudyException(NOT_FOUND, "Study not found");
@@ -175,7 +183,7 @@ public class NetworkModificationTreeService {
         List<UUID> rootNetworkIds = rootNetworkService.getStudyRootNetworkIds(studyUuid);
         List<CompletableFuture<Void>> futures = rootNetworkIds.stream()
                 .map(rnId -> studyServerExecutionService.runAsync(() ->
-                        invalidateNodeTree(studyUuid, rootNodeUuid, rnId, invalidateNodeTreeParameters, skipDeleteVariants)))
+                        self.invalidateNodeTree(studyUuid, rootNodeUuid, rnId, invalidateNodeTreeParameters, skipDeleteVariants)))
                 .toList();
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
         boolean noneMatchUnloading = rootNetworkIds.stream()

@@ -24,10 +24,7 @@ import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.NetworkService;
-import org.gridsuite.study.server.service.RootNetworkService;
-import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -83,7 +80,7 @@ class EquipmentInfosServiceTests implements WithAssertions {
     private RootNetworkService rootNetworkService;
 
     @Autowired
-    private StudyService studyService;
+    private RootNetworkStudyService rootNetworkStudyService;
 
     @BeforeEach
     void setup() {
@@ -397,7 +394,7 @@ class EquipmentInfosServiceTests implements WithAssertions {
     }
 
     private void testNameFullAscii(String pat) {
-        assertEquals(1, studyService.searchEquipments(NODE_UUID, ROOTNETWORK_UUID, pat, EquipmentInfosService.FieldSelector.NAME, null, false).size());
+        assertEquals(1, rootNetworkStudyService.searchEquipments(NODE_UUID, ROOTNETWORK_UUID, pat, EquipmentInfosService.FieldSelector.NAME, null, false).size());
     }
 
     private void testNameFullAsciis() {

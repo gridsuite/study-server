@@ -155,6 +155,8 @@ class RootNetworkTest {
     @MockitoSpyBean
     private StudyService studyService;
     @MockitoSpyBean
+    private RootNetworkStudyService rootNetworkStudyService;
+    @MockitoSpyBean
     private StudyServerExecutionService studyServerExecutionService;
 
     @MockitoBean
@@ -555,7 +557,7 @@ class RootNetworkTest {
             .build());
 
         // before deletion, check we have 2 root networks for study
-        assertEquals(2, studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).size());
+        assertEquals(2, rootNetworkStudyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).size());
 
         mockMvc.perform(delete("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
                 .contentType(APPLICATION_JSON)
@@ -564,7 +566,7 @@ class RootNetworkTest {
             .andExpect(status().isOk());
 
         // after deletion, check we have only 1 root network for study
-        List<BasicRootNetworkInfos> rootNetworkListAfterDeletion = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
+        List<BasicRootNetworkInfos> rootNetworkListAfterDeletion = rootNetworkStudyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
         assertEquals(1, rootNetworkListAfterDeletion.size());
         assertEquals(firstRootNetworkUuid, rootNetworkListAfterDeletion.getFirst().rootNetworkUuid());
 
@@ -605,7 +607,7 @@ class RootNetworkTest {
         studyRepository.save(studyEntity);
 
         networkModificationTreeService.createRoot(studyEntity);
-        UUID firstRootNetworkUuid = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).getFirst().rootNetworkUuid();
+        UUID firstRootNetworkUuid = rootNetworkStudyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).getFirst().rootNetworkUuid();
 
         // try to delete all root networks
         mockMvc.perform(delete("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
@@ -614,7 +616,7 @@ class RootNetworkTest {
                 .header("userId", USER_ID))
             .andExpect(status().isForbidden());
 
-        assertEquals(2, studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).size());
+        assertEquals(2, rootNetworkStudyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).size());
 
         // try to delete unknown root network
         mockMvc.perform(delete("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
@@ -623,7 +625,7 @@ class RootNetworkTest {
                 .header("userId", USER_ID))
             .andExpect(status().isNotFound());
 
-        assertEquals(2, studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).size());
+        assertEquals(2, rootNetworkStudyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).size());
     }
 
     @Test
@@ -877,7 +879,7 @@ class RootNetworkTest {
         studyRepository.save(studyEntity);
 
         // after creating 3 root networks, check rootNetworkOrder to assert they are correctly incremented
-        List<BasicRootNetworkInfos> result = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
+        List<BasicRootNetworkInfos> result = rootNetworkStudyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
         assertEquals(3, result.size());
         // check rootNetworkOrdered is ordered by creation ordered
         assertEquals("rootNetworkName", result.get(0).name());
@@ -885,10 +887,10 @@ class RootNetworkTest {
         assertEquals("dummyRootNetwork2", result.get(2).name());
 
         // delete the 2nd root network
-        studyService.deleteRootNetworks(studyEntity.getId(), List.of(result.get(1).rootNetworkUuid()), USER_ID);
+        rootNetworkStudyService.deleteRootNetworks(studyEntity.getId(), List.of(result.get(1).rootNetworkUuid()), USER_ID);
 
         // check "dummyRootNetwork2" root network order have been updated correctly
-        List<BasicRootNetworkInfos> resultAfterDeletion = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
+        List<BasicRootNetworkInfos> resultAfterDeletion = rootNetworkStudyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
         assertEquals(2, resultAfterDeletion.size());
         assertEquals("rootNetworkName", resultAfterDeletion.get(0).name());
         assertEquals("dummyRootNetwork2", resultAfterDeletion.get(1).name());
@@ -907,7 +909,7 @@ class RootNetworkTest {
             .build());
 
         // check "dummyRootNetwork3" root network order have been created correctly
-        List<BasicRootNetworkInfos> resultAfterCreation = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
+        List<BasicRootNetworkInfos> resultAfterCreation = rootNetworkStudyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
         assertEquals(3, resultAfterCreation.size());
         assertEquals("rootNetworkName", resultAfterCreation.get(0).name());
         assertEquals("dummyRootNetwork2", resultAfterCreation.get(1).name());
@@ -942,11 +944,11 @@ class RootNetworkTest {
         UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks")).willReturn(WireMock.ok())).getId();
 
         // 1st recreation request : moves the root network to LOADING and sends the network import request
-        studyService.recreateNetwork(USER_ID, studyEntity.getId(), rootNetworkUuid, CASE_FORMAT2);
+        rootNetworkStudyService.recreateNetwork(USER_ID, studyEntity.getId(), rootNetworkUuid, CASE_FORMAT2);
         assertEquals(RootNetworkLoadStatus.LOADING, rootNetworkRepository.findById(rootNetworkUuid).orElseThrow().getLoadStatus());
 
         // 2nd recreation request for the same root network arrives while the 1st one is still loading
-        studyService.recreateNetwork(USER_ID, studyEntity.getId(), rootNetworkUuid, CASE_FORMAT2);
+        rootNetworkStudyService.recreateNetwork(USER_ID, studyEntity.getId(), rootNetworkUuid, CASE_FORMAT2);
         verify(rootNetworkService, times(1)).updateNetworkLoadStatus(rootNetworkUuid, RootNetworkLoadStatus.LOADING);
         assertEquals(RootNetworkLoadStatus.LOADING, rootNetworkRepository.findById(rootNetworkUuid).orElseThrow().getLoadStatus());
 
@@ -964,7 +966,7 @@ class RootNetworkTest {
         assertEquals(RootNetworkLoadStatus.LOADED, rootNetworkRepository.findById(rootNetworkUuid).orElseThrow().getLoadStatus());
 
         // a 3rd recreation request is now accepted since the root network is no longer loading
-        studyService.recreateNetwork(USER_ID, studyEntity.getId(), rootNetworkUuid, CASE_FORMAT2);
+        rootNetworkStudyService.recreateNetwork(USER_ID, studyEntity.getId(), rootNetworkUuid, CASE_FORMAT2);
         assertEquals(RootNetworkLoadStatus.LOADING, rootNetworkRepository.findById(rootNetworkUuid).orElseThrow().getLoadStatus());
         verifyPostRequest(wireMockServer, stubId, "/v1/networks", true,
             Map.of("caseUuid", WireMock.equalTo(CASE_UUID.toString()), "caseFormat", WireMock.equalTo(CASE_FORMAT2)), 1);
