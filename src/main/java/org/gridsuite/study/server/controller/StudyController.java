@@ -12,16 +12,16 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.dto.modification.*;
+import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
-import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.exception.PartialResultException;
-import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.nodeactivity.*;
+import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeAlias;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
 import org.springframework.core.io.Resource;
@@ -32,8 +32,9 @@ import org.springframework.web.bind.annotation.*;
 import java.beans.PropertyEditorSupport;
 import java.util.*;
 
-import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.*;
+import static org.gridsuite.study.server.StudyConstants.CASE_FORMAT;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_TREE;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -81,9 +82,19 @@ public class StudyController {
 
     @InitBinder
     public void initBinder(WebDataBinder webdataBinder) {
-        webdataBinder.registerCustomEditor(EquipmentInfosService.FieldSelector.class,
-            new MyEnumConverter<>(EquipmentInfosService.FieldSelector.class));
         webdataBinder.registerCustomEditor(ModificationType.class, new MyModificationTypeConverter());
+    }
+
+    static class MyModificationTypeConverter extends PropertyEditorSupport {
+
+        MyModificationTypeConverter() {
+            super();
+        }
+
+        @Override
+        public void setAsText(final String text) throws IllegalArgumentException {
+            setValue(ModificationType.getTypeFromUri(text));
+        }
     }
 
     @GetMapping(value = "/study_creation_requests")
@@ -312,37 +323,6 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of optional services")})
     public ResponseEntity<List<ServiceStatusInfos>> getOptionalServices() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(remoteServicesInspector.getOptionalServices());
-    }
-
-    static class MyEnumConverter<E extends Enum<E>> extends PropertyEditorSupport {
-        private final Class<E> enumClass;
-
-        MyEnumConverter(Class<E> enumClass) {
-            this.enumClass = enumClass;
-        }
-
-        @Override
-        public void setAsText(final String text) throws IllegalArgumentException {
-            try {
-                E value = Enum.valueOf(enumClass, text.toUpperCase());
-                setValue(value);
-            } catch (IllegalArgumentException _) {
-                String avail = StringUtils.join(enumClass.getEnumConstants(), ", ");
-                throw new IllegalArgumentException(String.format("Enum unknown entry '%s' should be among %s", text, avail));
-            }
-        }
-    }
-
-    static class MyModificationTypeConverter extends PropertyEditorSupport {
-
-        MyModificationTypeConverter() {
-            super();
-        }
-
-        @Override
-        public void setAsText(final String text) throws IllegalArgumentException {
-            setValue(ModificationType.getTypeFromUri(text));
-        }
     }
 
     @GetMapping(value = "/servers/infos")

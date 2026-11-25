@@ -33,8 +33,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
 import org.springframework.util.CollectionUtils;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 
+import java.beans.PropertyEditorSupport;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -42,7 +44,6 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.*;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNBUILD;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -77,6 +78,31 @@ public class RootNetworkStudyController {
         this.nodeActivityRunnerService = nodeActivityRunnerService;
         this.rootNetworkService = rootNetworkService;
         this.networkModificationService = networkModificationService;
+    }
+
+    @InitBinder
+    public void initBinder(WebDataBinder webdataBinder) {
+        webdataBinder.registerCustomEditor(EquipmentInfosService.FieldSelector.class,
+            new MyEnumConverter<>(EquipmentInfosService.FieldSelector.class));
+    }
+
+    static class MyEnumConverter<E extends Enum<E>> extends PropertyEditorSupport {
+        private final Class<E> enumClass;
+
+        MyEnumConverter(Class<E> enumClass) {
+            this.enumClass = enumClass;
+        }
+
+        @Override
+        public void setAsText(final String text) throws IllegalArgumentException {
+            try {
+                E value = Enum.valueOf(enumClass, text.toUpperCase());
+                setValue(value);
+            } catch (IllegalArgumentException _) {
+                String avail = StringUtils.join(enumClass.getEnumConstants(), ", ");
+                throw new IllegalArgumentException(String.format("Enum unknown entry '%s' should be among %s", text, avail));
+            }
+        }
     }
 
     @GetMapping(value = "")

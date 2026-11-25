@@ -148,7 +148,8 @@ class StudyControllerSearchTest {
         equipmentInfos = mapper.readValue(resultAsString, new TypeReference<>() { });
         assertThat(equipmentInfos, new MatcherJson<>(mapper, linesInfos));
 
-        var result = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=bogus",
+        var result = mockMvc
+            .perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=bogus",
                 studyUuid, firstRootNetworkUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
             .andExpect(status().isInternalServerError())
             .andReturn();
