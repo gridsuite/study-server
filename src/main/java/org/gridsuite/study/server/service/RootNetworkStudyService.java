@@ -545,11 +545,16 @@ public class RootNetworkStudyService {
 
     @Transactional
     public void modifyRootNetwork(UUID studyUuid, RootNetworkInfos rootNetworkInfos, String userId) {
-        invalidateStudyRootNetwork(studyUuid, rootNetworkInfos.getId(), userId, true);
+        handleInvalidateStudyRootNetwork(studyUuid, rootNetworkInfos.getId(), userId, true);
         updateRootNetworkBasicInfos(studyUuid, rootNetworkInfos, true, userId);
     }
 
+    @Transactional
     public void invalidateStudyRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId, boolean updateCase) {
+        handleInvalidateStudyRootNetwork(studyUuid, rootNetworkUuid, userId, updateCase);
+    }
+
+    private void handleInvalidateStudyRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId, boolean updateCase) {
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
         // First we unbuild all nodes
