@@ -14,6 +14,9 @@ import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
 import org.gridsuite.study.server.service.DirectoryService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
@@ -59,6 +62,12 @@ class NetworkModificationReferencingInfosUpdateTest {
     NotificationService notificationService;
     @MockitoSpyBean
     private NetworkModificationService networkModificationService;
+    @Autowired
+    private NodeRepository nodeRepository;
+    @Autowired
+    private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+    @Autowired
+    private RootNodeInfoRepository rootNodeInfoRepository;
 
     private final UUID node1Uuid = UUID.randomUUID();
     private final UUID node2Uuid = UUID.randomUUID();
@@ -91,7 +100,9 @@ class NetworkModificationReferencingInfosUpdateTest {
 
     @AfterEach
     void tearDown() {
-        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
+        networkModificationNodeInfoRepository.deleteAll();
+        rootNodeInfoRepository.deleteAll();
+        nodeRepository.deleteAll();
         studyRepository.deleteAll();
     }
 
