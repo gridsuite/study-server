@@ -261,8 +261,7 @@ public class NetworkModificationTreeService {
         // Then we create the modification group, and recreate its references once the node is committed
         networkModificationService.duplicateModificationsGroup(modificationGroupUuid, newGroupUuid,
             rootNetworkService.getStudyRootNetworkTags(studyUuid), userId);
-        // TODO do this in network modification server
-        networkModificationService.createSharingLinks(List.of(newGroupUuid), userId);
+        networkModificationService.createSharingLinks(List.of(newGroupUuid), false, userId);
 
         return node.getId();
     }
@@ -622,7 +621,7 @@ public class NetworkModificationTreeService {
 
             networkModificationService.duplicateModificationsGroup(modificationGroupToDuplicateId, newModificationGroupId,
                 rootNetworkService.getStudyRootNetworkTags(newStudyEntity.getId()), userId);
-            networkModificationService.createSharingLinks(List.of(newModificationGroupId), userId);
+            networkModificationService.createSharingLinks(List.of(newModificationGroupId), false, userId);
         } else {
             // when cloning studyTree, we don't clone root node
             // if cloning the whole study, the root node is previously created

@@ -20,6 +20,7 @@ import org.gridsuite.study.server.dto.SharedModificationsWriteAccess;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
 import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.utils.annotations.PostCompletion;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.util.Pair;
@@ -617,14 +618,12 @@ public class NetworkModificationRestService {
             .retrieve().toEntity(new ParameterizedTypeReference<Map<UUID, UUID>>() { });
     }
 
-    public void createSharingLinks(List<UUID> groupUuids, String userId) {
-        createSharingLinks(groupUuids, false, userId);
-    }
-
     /**
      * Asks network-modification-server to notify back the recreation of the references of the group, so that they are created in directory-server.
-     * Called after the commit only, so that the node holding the group is resolvable when the notification is consumed.
+     * Deferred after the completion of the current transaction (if any), so that the node holding the group is resolvable
+     * when the notification is consumed.
      */
+    @PostCompletion
     public void createSharingLinks(List<UUID> groupUuids, boolean recreate, String userId) {
         Objects.requireNonNull(groupUuids);
         var path = UriComponentsBuilder.fromPath(GROUPS + "/sharing-links")
