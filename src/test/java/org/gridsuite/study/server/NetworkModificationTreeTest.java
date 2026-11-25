@@ -229,6 +229,8 @@ class NetworkModificationTreeTest {
     private NodeActivityRunnerService nodeActivityRunnerService;
     @MockitoSpyBean
     private StudyService studyService;
+    @MockitoSpyBean
+    private TreeService treeService;
 
     @BeforeEach
     void setUp(final MockWebServer server) {
@@ -1358,8 +1360,8 @@ class NetworkModificationTreeTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         newNodeBodyJson = jsonObject.toString();
 
-        reset(studyService);
-        doReturn(List.of()).when(studyService).getRootNetworksToBuildNewNode(eq(studyUuid), eq(parentNode.getId()), any(NetworkModificationNode.class));
+        reset(treeService);
+        doReturn(List.of()).when(treeService).getRootNetworksToBuildNewNode(eq(studyUuid), eq(parentNode.getId()), any(NetworkModificationNode.class));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNode.getId())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -1372,7 +1374,7 @@ class NetworkModificationTreeTest {
         newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
 
-        verify(studyService, times(1)).getRootNetworksToBuildNewNode(eq(studyUuid), eq(parentNode.getId()), any(NetworkModificationNode.class));
+        verify(treeService, times(1)).getRootNetworksToBuildNewNode(eq(studyUuid), eq(parentNode.getId()), any(NetworkModificationNode.class));
 
         rootNetworkNodeInfoService.updateRootNetworkNode(newNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder()

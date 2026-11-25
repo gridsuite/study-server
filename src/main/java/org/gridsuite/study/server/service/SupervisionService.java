@@ -118,6 +118,7 @@ public class SupervisionService {
 
     public static final String SUPERVISION_USER = "Supervision";
     private final NodeService studyNodeService;
+    private final TreeService treeService;
 
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService, LoadFlowService loadFlowService,
@@ -143,7 +144,7 @@ public class SupervisionService {
                               NodeRepository nodeRepository,
                               NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
                               NetworkModificationRestService networkModificationService,
-                              RestClient restClient, NodeService studyNodeService) {
+                              RestClient restClient, NodeService studyNodeService, TreeService treeService) {
 
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -172,6 +173,7 @@ public class SupervisionService {
         this.networkModificationService = networkModificationService;
         this.restClient = restClient;
         this.studyNodeService = studyNodeService;
+        this.treeService = treeService;
     }
 
     @Transactional
@@ -557,7 +559,7 @@ public class SupervisionService {
         networkModificationService.deleteStashedModificationsFromGroups(notStashedModificationGroupUuids, SUPERVISION_USER);
 
         // remove stashed nodes and their modifications
-        studyService.deleteNodes(studyId, stashedNodes.stream().map(NodeEntity::getIdNode).toList(), true, SUPERVISION_USER, false);
+        treeService.deleteNodes(studyId, stashedNodes.stream().map(NodeEntity::getIdNode).toList(), true, SUPERVISION_USER, false);
     }
 
     @Transactional(readOnly = true)

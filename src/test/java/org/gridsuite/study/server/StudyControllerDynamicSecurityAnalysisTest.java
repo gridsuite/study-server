@@ -23,10 +23,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
-import org.gridsuite.study.server.service.StudyService;
-import org.gridsuite.study.server.service.UserAdminService;
+import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
@@ -117,6 +114,9 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
     @MockitoSpyBean
     StudyService spyStudyService;
+
+    @MockitoSpyBean
+    TreeService spyTreeService;
 
     @MockitoBean
     private LoadFlowRestService mockLoadFlowRestService;
@@ -218,8 +218,8 @@ class StudyControllerDynamicSecurityAnalysisTest {
                 .nodeBuildStatus(NodeBuildStatus.from(buildStatus))
                 .children(Collections.emptyList()).build();
 
-        reset(spyStudyService);
-        doReturn(List.of()).when(spyStudyService).getRootNetworksToBuildNewNode(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
+        reset(spyTreeService);
+        doReturn(List.of()).when(spyTreeService).getRootNetworksToBuildNewNode(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
 
         studyClient.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid)
                         .content(objectMapper.writeValueAsString(modificationNode))
@@ -235,7 +235,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
         rootNetworkNodeInfoService.updateRootNetworkNode(newNodeId, studyTestUtils.getOneRootNetworkUuid(studyUuid), RootNetworkNodeInfo.builder().variantId(variantId).build());
 
-        verify(spyStudyService, times(1)).getRootNetworksToBuildNewNode(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
+        verify(spyTreeService, times(1)).getRootNetworksToBuildNewNode(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
 
         return modificationNode;
     }

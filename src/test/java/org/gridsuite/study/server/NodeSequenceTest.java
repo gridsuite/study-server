@@ -24,7 +24,7 @@ import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModi
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.TreeService;
 import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -71,7 +71,7 @@ class NodeSequenceTest {
     @Autowired
     private NodeRepository nodeRepository;
     @Autowired
-    private StudyService studyService;
+    private TreeService treeService;
     @MockitoBean
     private NotificationService notificationService;
     @MockitoBean
@@ -93,7 +93,7 @@ class NodeSequenceTest {
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
         NetworkModificationNode constructionNode = createNode(rootNode.getIdNode(), "N1", NetworkModificationNodeType.CONSTRUCTION);
 
-        studyService.createSequence(studyUuid, constructionNode.getId(), NodeSequenceType.SECURITY_SEQUENCE, userId);
+        treeService.createSequence(studyUuid, constructionNode.getId(), NodeSequenceType.SECURITY_SEQUENCE, userId);
 
         AbstractNode parentOfSubtree = networkModificationTreeService.getStudySubtree(studyUuid, constructionNode.getId(), null);
         AbstractNode nNode = parentOfSubtree.getChildren().getFirst();
@@ -109,7 +109,7 @@ class NodeSequenceTest {
     void testCreateSecuritySequenceOnRootNode() {
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
 
-        studyService.createSequence(studyUuid, rootNode.getIdNode(), NodeSequenceType.SECURITY_SEQUENCE, userId);
+        treeService.createSequence(studyUuid, rootNode.getIdNode(), NodeSequenceType.SECURITY_SEQUENCE, userId);
 
         AbstractNode parentOfSubtree = networkModificationTreeService.getStudySubtree(studyUuid, rootNode.getIdNode(), null);
         AbstractNode nNode = parentOfSubtree.getChildren().getFirst();
@@ -126,8 +126,8 @@ class NodeSequenceTest {
         NetworkModificationNode constructionNode = createNode(rootNode.getIdNode(), "N1", NetworkModificationNodeType.CONSTRUCTION);
         NetworkModificationNode constructionNode2 = createNode(rootNode.getIdNode(), "N2", NetworkModificationNodeType.CONSTRUCTION);
 
-        studyService.createSequence(studyUuid, constructionNode.getId(), NodeSequenceType.SECURITY_SEQUENCE, userId);
-        studyService.createSequence(studyUuid, constructionNode2.getId(), NodeSequenceType.SECURITY_SEQUENCE, userId);
+        treeService.createSequence(studyUuid, constructionNode.getId(), NodeSequenceType.SECURITY_SEQUENCE, userId);
+        treeService.createSequence(studyUuid, constructionNode2.getId(), NodeSequenceType.SECURITY_SEQUENCE, userId);
 
         AbstractNode parentOfSubtree = networkModificationTreeService.getStudySubtree(studyUuid, constructionNode.getId(), null);
         AbstractNode nNode = parentOfSubtree.getChildren().getFirst();
@@ -149,7 +149,7 @@ class NodeSequenceTest {
         NetworkModificationNode constructionNode = createNode(rootNode.getIdNode(), "N1", NetworkModificationNodeType.SECURITY);
         UUID constructionNodeId = constructionNode.getId();
 
-        assertThrows(StudyException.class, () -> studyService.createSequence(studyUuid, constructionNodeId, NodeSequenceType.SECURITY_SEQUENCE, userId));
+        assertThrows(StudyException.class, () -> treeService.createSequence(studyUuid, constructionNodeId, NodeSequenceType.SECURITY_SEQUENCE, userId));
     }
 
     NetworkModificationNode createNode(UUID parentNodeUuid, String name, NetworkModificationNodeType networkModificationNodeType) {
