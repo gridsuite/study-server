@@ -13,6 +13,7 @@ import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -23,6 +24,8 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntit
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
 import org.gridsuite.study.server.repository.rootnetwork.StudyRootNetworkTag;
 import org.gridsuite.study.server.utils.JsonUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,8 +58,12 @@ public class RootNetworkService {
     private final EquipmentInfosService equipmentInfosService;
     private final NetworkStoreService networkStoreService;
     private final NotificationService notificationService;
+    private final StudyInfosService studyInfosService;
+    private final NetworkConversionService networkConversionService;
 
     private final ObjectMapper objectMapper;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(RootNetworkService.class);
 
     @Value("${study.max-root-network-by-study}")
     private int maximumRootNetworkByStudy = 4;
@@ -71,6 +78,8 @@ public class RootNetworkService {
                               EquipmentInfosService equipmentInfosService,
                               NetworkStoreService networkStoreService,
                               NotificationService notificationService,
+                              StudyInfosService studyInfosService,
+                              NetworkConversionService networkConversionService,
                               ObjectMapper objectMapper) {
         this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
@@ -83,6 +92,8 @@ public class RootNetworkService {
         this.equipmentInfosService = equipmentInfosService;
         this.networkStoreService = networkStoreService;
         this.notificationService = notificationService;
+        this.studyInfosService = studyInfosService;
+        this.networkConversionService = networkConversionService;
         this.objectMapper = objectMapper;
     }
 
@@ -118,6 +129,40 @@ public class RootNetworkService {
             //delete old case
             caseService.deleteCase(oldCaseUuid);
         }
+    }
+
+    private CreatedStudyBasicInfos toCreatedStudyBasicInfos(StudyEntity entity) {
+        return CreatedStudyBasicInfos.builder()
+                .id(entity.getId())
+                .build();
+    }
+
+    void reindexRootNetwork(StudyEntity study, UUID rootNetworkUuid) {
+        CreatedStudyBasicInfos studyInfos = toCreatedStudyBasicInfos(study);
+        // reindex root network for study in elasticsearch
+        studyInfosService.recreateStudyInfos(studyInfos);
+        RootNetworkEntity rootNetwork = getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        if (rootNetwork.getLoadStatus() != RootNetworkLoadStatus.LOADED) {
+            LOGGER.info("Root network '{}' is not loaded, skipping reindexation", rootNetworkUuid);
+            return;
+        }
+        // Reset indexation status
+        updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.INDEXING_ONGOING);
+        try {
+            networkConversionService.reindexStudyNetworkEquipments(getNetworkUuid(rootNetworkUuid));
+            updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.INDEXED);
+        } catch (Exception e) {
+            // Allow to retry indexation
+            updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.NOT_INDEXED);
+            throw e;
+        }
+        LOGGER.info("Study with id = '{}' has been reindexed", study.getId());
+    }
+
+    private StudyEntity updateRootNetworkIndexationStatus(StudyEntity studyEntity, RootNetworkEntity rootNetworkEntity, RootNetworkIndexationStatus indexationStatus) {
+        rootNetworkEntity.setIndexationStatus(indexationStatus);
+        notificationService.emitRootNetworkIndexationStatusChanged(studyEntity.getId(), rootNetworkEntity.getId(), indexationStatus);
+        return studyEntity;
     }
 
     private void updateRootNetworkInfos(RootNetworkEntity rootNetworkEntity, RootNetworkInfos rootNetworkInfos, boolean updateCase) {

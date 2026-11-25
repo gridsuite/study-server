@@ -102,7 +102,7 @@ public class StateEstimationController {
         if (request.getParameterMap().containsKey(QUERY_PARAM_FILTERS) || request.getParameterMap().containsKey(QUERY_PARAM_SORT)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only global filters are supported on state estimation measurements");
         }
-        studyService.assertIsRootNetworkAndNodeInStudy(studyUuid, rootNetworkUuid, nodeUuid);
+        networkModificationTreeService.assertIsRootNetworkAndNodeInStudy(studyUuid, rootNetworkUuid, nodeUuid);
         String measurements = stateEstimationService.getStateEstimationMeasurements(nodeUuid, rootNetworkUuid, globalFilters);
         return measurements != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(measurements) :
                 ResponseEntity.noContent().build();

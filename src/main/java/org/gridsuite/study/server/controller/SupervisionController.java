@@ -18,6 +18,7 @@ import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.service.RootNetworkStudyService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.SupervisionService;
 import org.springframework.http.MediaType;
@@ -43,14 +44,20 @@ public class SupervisionController {
     private final EquipmentInfosService equipmentInfosService;
 
     private final RestClient restClient;
+    private final RootNetworkStudyService rootNetworkStudyService;
 
-    public SupervisionController(SupervisionService supervisionService, StudyService studyService, RootNetworkService rootNetworkService, EquipmentInfosService equipmentInfosService, RestClient
-            restClient) {
+    public SupervisionController(SupervisionService supervisionService,
+                                 StudyService studyService,
+                                 RootNetworkService rootNetworkService,
+                                 EquipmentInfosService equipmentInfosService,
+                                 RestClient restClient,
+                                 RootNetworkStudyService rootNetworkStudyService) {
         this.supervisionService = supervisionService;
         this.studyService = studyService;
         this.rootNetworkService = rootNetworkService;
         this.equipmentInfosService = equipmentInfosService;
         this.restClient = restClient;
+        this.rootNetworkStudyService = rootNetworkStudyService;
     }
 
     @GetMapping(value = "/root-networks")
@@ -166,8 +173,8 @@ public class SupervisionController {
     @Operation(summary = "reindex the study")
     @ApiResponse(responseCode = "200", description = "Study reindexed")
     public ResponseEntity<Void> reindexStudy(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        studyService.getExistingBasicRootNetworkInfos(studyUuid).forEach(
-                rootNetwork -> studyService.reindexRootNetwork(studyUuid, rootNetwork.rootNetworkUuid())
+        rootNetworkStudyService.getExistingBasicRootNetworkInfos(studyUuid).forEach(
+                rootNetwork -> rootNetworkStudyService.reindexRootNetwork(studyUuid, rootNetwork.rootNetworkUuid())
         );
         return ResponseEntity.ok().build();
     }

@@ -55,7 +55,7 @@ public class RootNetworkStudyController {
     private final NetworkService networkStoreService;
     private final NetworkModificationActivityRunnerService networkModificationActivityRunnerService;
     private final NetworkModificationTreeService networkModificationTreeService;
-    private final StudyService studyService;
+    private final RootNetworkStudyService rootNetworkStudyService;
     private final CaseService caseService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
     private final RootNetworkService rootNetworkService;
@@ -64,7 +64,7 @@ public class RootNetworkStudyController {
     public RootNetworkStudyController(NetworkService networkStoreService,
                                       NetworkModificationActivityRunnerService networkModificationActivityRunnerService,
                                       NetworkModificationTreeService networkModificationTreeService,
-                                      StudyService studyService,
+                                      RootNetworkStudyService rootNetworkStudyService,
                                       CaseService caseService,
                                       NodeActivityRunnerService nodeActivityRunnerService,
                                       RootNetworkService rootNetworkService,
@@ -72,7 +72,7 @@ public class RootNetworkStudyController {
         this.networkStoreService = networkStoreService;
         this.networkModificationActivityRunnerService = networkModificationActivityRunnerService;
         this.networkModificationTreeService = networkModificationTreeService;
-        this.studyService = studyService;
+        this.rootNetworkStudyService = rootNetworkStudyService;
         this.caseService = caseService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
         this.rootNetworkService = rootNetworkService;
@@ -83,7 +83,7 @@ public class RootNetworkStudyController {
     @Operation(summary = "Get root networks for study")
     @ApiResponse(responseCode = "200", description = "List of root networks")
     public ResponseEntity<List<BasicRootNetworkInfos>> getRootNetworks(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getAllBasicRootNetworkInfos(studyUuid));
+        return ResponseEntity.ok().body(rootNetworkStudyService.getAllBasicRootNetworkInfos(studyUuid));
     }
 
     @PostMapping(value = "")
@@ -92,7 +92,7 @@ public class RootNetworkStudyController {
     public ResponseEntity<RootNetworkRequestInfos> createRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
                                                                      @RequestBody RootNetworkInfos rootNetworkInfos,
                                                                      @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, rootNetworkInfos, userId));
+        return ResponseEntity.ok().body(rootNetworkStudyService.createRootNetworkRequest(studyUuid, rootNetworkInfos, userId));
     }
 
     @PutMapping(value = "/{rootNetworkUuid}")
@@ -107,10 +107,10 @@ public class RootNetworkStudyController {
             // the reimport unbuilds the whole tree of this root network, so it is held on the root node
             UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
             nodeActivityRunnerService.runWith(REIMPORT_CASE, studyUuid, rootNetworkUuid, List.of(rootNodeUuid),
-                    () -> studyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, userId));
+                    () -> rootNetworkStudyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, userId));
         } else {
             // only the basic infos (name, tag) are updated, the tree is left untouched
-            studyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, userId);
+            rootNetworkStudyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, userId);
         }
         return ResponseEntity.ok().build();
     }
@@ -141,7 +141,7 @@ public class RootNetworkStudyController {
     public ResponseEntity<Void> deleteRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
                                                   @RequestBody List<UUID> rootNetworksUuids,
                                                   @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.deleteRootNetworks(studyUuid, rootNetworksUuids, userId);
+        rootNetworkStudyService.deleteRootNetworks(studyUuid, rootNetworksUuids, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -185,7 +185,7 @@ public class RootNetworkStudyController {
                                                                    @RequestParam(value = "caseUuid") UUID caseUuid,
                                                                    @Parameter(description = "case format") @RequestParam(name = "caseFormat", required = false) String caseFormat,
                                                                    @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.recreateNetwork(caseUuid, userId, studyUuid, rootNetworkUuid, caseFormat, importParameters);
+        rootNetworkStudyService.recreateNetwork(caseUuid, userId, studyUuid, rootNetworkUuid, caseFormat, importParameters);
         return ResponseEntity.ok().build();
     }
 
@@ -199,7 +199,7 @@ public class RootNetworkStudyController {
                                                                 @RequestHeader(HEADER_USER_ID) String userId,
                                                                 @Parameter(description = "case format") @RequestParam(name = "caseFormat", required = false) String caseFormat
     ) {
-        studyService.recreateNetwork(userId, studyUuid, rootNetworkUuid, caseFormat);
+        rootNetworkStudyService.recreateNetwork(userId, studyUuid, rootNetworkUuid, caseFormat);
         return ResponseEntity.ok().build();
     }
 
@@ -210,7 +210,7 @@ public class RootNetworkStudyController {
         @ApiResponse(responseCode = "204", description = "The root network indexation status doesn't exist"),
         @ApiResponse(responseCode = "404", description = "The root network or network doesn't exist")})
     public ResponseEntity<String> checkRootNetworkIndexationStatus(@PathVariable("studyUuid") UUID studyUuid, @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
-        String result = studyService.getRootNetworkIndexationStatus(studyUuid, rootNetworkUuid).name();
+        String result = rootNetworkStudyService.getRootNetworkIndexationStatus(studyUuid, rootNetworkUuid).name();
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -225,7 +225,7 @@ public class RootNetworkStudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
             @RequestBody Map<String, Object> sldRequestInfos) {
-        byte[] result = studyService.generateVoltageLevelSvg(
+        byte[] result = rootNetworkStudyService.generateVoltageLevelSvg(
                 voltageLevelId,
                 nodeUuid,
                 rootNetworkUuid,
@@ -244,7 +244,7 @@ public class RootNetworkStudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
             @RequestBody Map<String, Object> sldRequestInfos) {
-        String result = studyService.generateVoltageLevelSvgAndMetadata(
+        String result = rootNetworkStudyService.generateVoltageLevelSvgAndMetadata(
                 voltageLevelId,
                 nodeUuid,
                 rootNetworkUuid,
@@ -263,7 +263,7 @@ public class RootNetworkStudyController {
             @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false,
                     defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelBusesOrBusbarSections(nodeUuid, rootNetworkUuid, voltageLevelId,
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNetworkStudyService.getVoltageLevelBusesOrBusbarSections(nodeUuid, rootNetworkUuid, voltageLevelId,
                 inUpstreamBuiltParentNode));
     }
 
@@ -277,7 +277,8 @@ public class RootNetworkStudyController {
             @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false,
                     defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelTopologyInfos(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode,
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
+                rootNetworkStudyService.getVoltageLevelTopologyInfos(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode,
                 "switches"));
     }
 
@@ -291,7 +292,8 @@ public class RootNetworkStudyController {
             @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false,
                     defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelTopologyInfos(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode,
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
+                rootNetworkStudyService.getVoltageLevelTopologyInfos(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode,
                 "bus-bar-sections"));
     }
 
@@ -305,7 +307,8 @@ public class RootNetworkStudyController {
             @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false,
                     defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelTopologyInfos(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode,
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
+                rootNetworkStudyService.getVoltageLevelTopologyInfos(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode,
                 "feeder-bays"));
     }
 
@@ -319,7 +322,8 @@ public class RootNetworkStudyController {
             @Parameter(description = "voltageLevelId") @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false,
                     defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        return ResponseEntity.ok().body(studyService.getVoltageLevelSubstationId(studyUuid, nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode));
+        return ResponseEntity.ok().body(rootNetworkStudyService.getVoltageLevelSubstationId(
+                studyUuid, nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/hvdc-lines/{hvdcId}/shunt-compensators")
@@ -332,7 +336,7 @@ public class RootNetworkStudyController {
             @PathVariable("hvdcId") String hvdcId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false,
                     defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        String hvdcInfos = studyService.getHvdcLineShuntCompensators(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode, hvdcId);
+        String hvdcInfos = rootNetworkStudyService.getHvdcLineShuntCompensators(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode, hvdcId);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(hvdcInfos);
     }
 
@@ -345,7 +349,8 @@ public class RootNetworkStudyController {
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @RequestBody(required = false) List<String> linesIds) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLinesGraphics(rootNetworkService.getNetworkUuid(rootNetworkUuid), nodeUuid, rootNetworkUuid, linesIds));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
+                rootNetworkStudyService.getLinesGraphics(rootNetworkService.getNetworkUuid(rootNetworkUuid), nodeUuid, rootNetworkUuid, linesIds));
     }
 
     @PostMapping(value = "/{rootNetworkUuid}/nodes/{nodeUuid}/geo-data/substations", consumes = MediaType.APPLICATION_JSON_VALUE,
@@ -357,7 +362,8 @@ public class RootNetworkStudyController {
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @RequestBody(required = false) List<String> substationsIds) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubstationsGraphics(rootNetworkService.getNetworkUuid(rootNetworkUuid), nodeUuid, rootNetworkUuid,
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
+                rootNetworkStudyService.getSubstationsGraphics(rootNetworkService.getNetworkUuid(rootNetworkUuid), nodeUuid, rootNetworkUuid,
                 substationsIds));
     }
 
@@ -374,7 +380,8 @@ public class RootNetworkStudyController {
             @Parameter(description = "equipment type") @RequestParam(name = "equipmentType") String equipmentType,
             @Parameter(description = "Nominal Voltages") @RequestParam(name = "nominalVoltages", required = false) List<Double> nominalVoltages) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsIds(nodeUuid, rootNetworkUuid, substationsIds, inUpstreamBuiltParentNode, equipmentType,
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
+                rootNetworkStudyService.getNetworkElementsIds(nodeUuid, rootNetworkUuid, substationsIds, inUpstreamBuiltParentNode, equipmentType,
                 nominalVoltages));
     }
 
@@ -392,7 +399,8 @@ public class RootNetworkStudyController {
             @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
             @Parameter(description = "Nominal Voltages") @RequestParam(name = "nominalVoltages", required = false) List<Double> nominalVoltages) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsInfos(studyUuid, nodeUuid, rootNetworkUuid, substationsIds, infoType, elementType,
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
+                rootNetworkStudyService.getNetworkElementsInfos(studyUuid, nodeUuid, rootNetworkUuid, substationsIds, infoType, elementType,
                 inUpstreamBuiltParentNode, nominalVoltages));
     }
 
@@ -409,9 +417,9 @@ public class RootNetworkStudyController {
             @Parameter(description = "The equipment type to filter and return") @RequestParam(name = "equipmentType") @NonNull EquipmentType equipmentType,
             @Parameter(description = "Info type (e.g., LIST, TAB, MAP, FORM)") @RequestParam(name = "infoType", defaultValue = "LIST") String infoType,
             @RequestBody @NonNull List<UUID> filterUuids) {
-        studyService.assertIsRootNetworkAndNodeInStudy(studyUuid, rootNetworkUuid, nodeUuid);
+        networkModificationTreeService.assertIsRootNetworkAndNodeInStudy(studyUuid, rootNetworkUuid, nodeUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
-                .body(studyService.getNetworkElementsInfosFromFilters(studyUuid, nodeUuid, rootNetworkUuid, equipmentType, infoType, filterUuids));
+                .body(rootNetworkStudyService.getNetworkElementsInfosFromFilters(studyUuid, nodeUuid, rootNetworkUuid, equipmentType, infoType, filterUuids));
     }
 
     @GetMapping(value = "/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements/{elementId}")
@@ -426,7 +434,8 @@ public class RootNetworkStudyController {
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false,
                     defaultValue = "false") boolean inUpstreamBuiltParentNode,
             @Parameter(description = "Info type parameters") InfoTypeParameters infoTypeParameters) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementInfos(studyUuid, nodeUuid, rootNetworkUuid, elementType, infoTypeParameters, elementId,
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
+                rootNetworkStudyService.getNetworkElementInfos(studyUuid, nodeUuid, rootNetworkUuid, elementType, infoTypeParameters, elementId,
                 inUpstreamBuiltParentNode));
     }
 
@@ -440,7 +449,8 @@ public class RootNetworkStudyController {
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false,
                     defaultValue = "false") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkCountries(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
+                rootNetworkStudyService.getNetworkCountries(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/nominal-voltages")
@@ -453,7 +463,8 @@ public class RootNetworkStudyController {
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false,
                     defaultValue = "false") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkNominalVoltages(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
+                rootNetworkStudyService.getNetworkNominalVoltages(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/branch-or-3wt/{equipmentId}/voltage-level-id")
@@ -467,7 +478,7 @@ public class RootNetworkStudyController {
             @PathVariable("equipmentId") String equipmentId,
             @RequestParam(value = "side") ThreeSides side,
             @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        String voltageLevelId = studyService.getBranchOr3WTVoltageLevelId(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode, equipmentId, side);
+        String voltageLevelId = rootNetworkStudyService.getBranchOr3WTVoltageLevelId(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode, equipmentId, side);
         return StringUtils.isEmpty(voltageLevelId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(voltageLevelId);
     }
 
@@ -482,7 +493,8 @@ public class RootNetworkStudyController {
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false,
                     defaultValue = "false") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelEquipments(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode, voltageLevelId));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
+                rootNetworkStudyService.getVoltageLevelEquipments(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode, voltageLevelId));
     }
 
     @GetMapping(value = "/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/all")
@@ -494,7 +506,8 @@ public class RootNetworkStudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllMapData(studyUuid, nodeUuid, rootNetworkUuid, substationsIds));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
+                rootNetworkStudyService.getAllMapData(studyUuid, nodeUuid, rootNetworkUuid, substationsIds));
     }
 
     @PostMapping(value = "/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}")
@@ -512,9 +525,9 @@ public class RootNetworkStudyController {
             @RequestParam(value = "parentDirectoryUuid", required = false) String parentDirectoryUuidStr,
             @RequestParam(value = "description", required = false) String description,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid, rootNetworkUuid);
+        rootNetworkStudyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid, rootNetworkUuid);
         UUID parentDirectoryUuid = parentDirectoryUuidStr != null ? UUID.fromString(parentDirectoryUuidStr) : null;
-        UUID exportUuid = studyService.exportNetwork(studyUuid,
+        UUID exportUuid = rootNetworkStudyService.exportNetwork(studyUuid,
                 nodeUuid,
                 rootNetworkUuid,
                 new NodeExportInfos(exportToGridExplore, parentDirectoryUuid, fileName, description),
@@ -533,8 +546,9 @@ public class RootNetworkStudyController {
                                                                 @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                 @Parameter(description = "Contingency list UUIDs") @RequestParam(name = "contingencyListIds",
                                                                         required = false) List<UUID> contingencyListIds) {
-        return ResponseEntity.ok().body(CollectionUtils.isEmpty(contingencyListIds) ? ActionsService.EMPTY_CONTINGENCY_COUNT : studyService.getContingencyCount(studyUuid, contingencyListIds, nodeUuid,
-                rootNetworkUuid));
+        return ResponseEntity.ok().body(CollectionUtils.isEmpty(contingencyListIds)
+                ? ActionsService.EMPTY_CONTINGENCY_COUNT
+                : rootNetworkStudyService.getContingencyCount(studyUuid, contingencyListIds, nodeUuid, rootNetworkUuid));
     }
 
     @GetMapping(value = "/{rootNetworkUuid}/nodes/{nodeUuid}/limit-violations")
@@ -546,7 +560,7 @@ public class RootNetworkStudyController {
                                                 @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
                                                 @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
                                                                         Sort sort) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLimitViolations(nodeUuid, rootNetworkUuid, filters, globalFilters, sort));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNetworkStudyService.getLimitViolations(nodeUuid, rootNetworkUuid, filters, globalFilters, sort));
     }
 
     @GetMapping(value = "/{rootNetworkUuid}/nodes/{nodeUuid}/computation/result/enum-values")
@@ -557,7 +571,7 @@ public class RootNetworkStudyController {
                                                             @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                             @Parameter(description = "Computing Type") @RequestParam(name = "computingType") ComputationType computingType,
                                                             @Parameter(description = "Enum name") @RequestParam(name = "enumName") String enumName) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getResultEnumValues(nodeUuid, rootNetworkUuid, computingType, enumName));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNetworkStudyService.getResultEnumValues(nodeUuid, rootNetworkUuid, computingType, enumName));
     }
 
     @PostMapping(value = "/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg")
@@ -570,7 +584,7 @@ public class RootNetworkStudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("substationId") String substationId,
             @RequestBody Map<String, Object> sldRequestInfos) {
-        byte[] result = studyService.generateSubstationSvg(substationId, nodeUuid, rootNetworkUuid, sldRequestInfos);
+        byte[] result = rootNetworkStudyService.generateSubstationSvg(substationId, nodeUuid, rootNetworkUuid, sldRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -585,7 +599,7 @@ public class RootNetworkStudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("substationId") String substationId,
             @RequestBody Map<String, Object> sldRequestInfos) {
-        String result = studyService.generateSubstationSvgAndMetadata(substationId, nodeUuid, rootNetworkUuid, sldRequestInfos);
+        String result = rootNetworkStudyService.generateSubstationSvgAndMetadata(substationId, nodeUuid, rootNetworkUuid, sldRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -598,7 +612,7 @@ public class RootNetworkStudyController {
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @RequestBody Map<String, Object> nadRequestInfos) {
-        String result = studyService.generateNetworkAreaDiagram(nodeUuid, rootNetworkUuid, nadRequestInfos);
+        String result = rootNetworkStudyService.generateNetworkAreaDiagram(nodeUuid, rootNetworkUuid, nadRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -614,7 +628,7 @@ public class RootNetworkStudyController {
                                                              @Parameter(description = "The report Type") @RequestParam(name = "reportType") StudyService.ReportType reportType,
                                                              @Parameter(description = "Severity levels") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels) {
         networkModificationTreeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesReport(nodeUuid, rootNetworkUuid, nodeOnlyReport, reportType, severityLevels));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNetworkStudyService.getParentNodesReport(nodeUuid, rootNetworkUuid, nodeOnlyReport, reportType, severityLevels));
     }
 
     @GetMapping(value = "/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -633,7 +647,8 @@ public class RootNetworkStudyController {
                                                     Pageable pageable) {
         networkModificationTreeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getReportLogs(nodeUuid, rootNetworkUuid, reportId, messageFilter, severityLevels, paged, pageable));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
+                rootNetworkStudyService.getReportLogs(nodeUuid, rootNetworkUuid, reportId, messageFilter, severityLevels, paged, pageable));
     }
 
     @GetMapping(value = "/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs/search", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -655,7 +670,7 @@ public class RootNetworkStudyController {
         networkModificationTreeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
-                studyService.getSearchTermMatchesInFilteredLogs(nodeUuid, rootNetworkUuid, reportId, severityLevels, messageFilter, searchTerm, pageSize));
+                rootNetworkStudyService.getSearchTermMatchesInFilteredLogs(nodeUuid, rootNetworkUuid, reportId, severityLevels, messageFilter, searchTerm, pageSize));
     }
 
     @GetMapping(value = "/{rootNetworkUuid}/nodes/{nodeUuid}/report/aggregated-severities", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -668,7 +683,7 @@ public class RootNetworkStudyController {
                                                                                 @Parameter(description = "reportId") @RequestParam(name = "reportId", required = false) UUID reportId) {
         networkModificationTreeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAggregatedReportSeverities(nodeUuid, rootNetworkUuid, reportId));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNetworkStudyService.getAggregatedReportSeverities(nodeUuid, rootNetworkUuid, reportId));
     }
 
     @PutMapping(value = "/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", params = "applicable")
@@ -705,7 +720,7 @@ public class RootNetworkStudyController {
         @Parameter(description = "Should search in upstream built node") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
         @Parameter(description = "Equipment type") @RequestParam(value = "equipmentType", required = false) String equipmentType) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
-                .body(studyService.searchEquipments(nodeUuid, rootNetworkUuid, userInput, fieldSelector, equipmentType, inUpstreamBuiltParentNode));
+                .body(rootNetworkStudyService.searchEquipments(nodeUuid, rootNetworkUuid, userInput, fieldSelector, equipmentType, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/{rootNetworkUuid}/modifications/indexation-infos", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -718,10 +733,10 @@ public class RootNetworkStudyController {
             @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput) {
-        studyService.assertIsStudyExist(studyUuid);
+        networkModificationTreeService.assertIsStudyExist(studyUuid);
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
-                .body(studyService.searchModifications(rootNetworkUuid, userInput));
+                .body(rootNetworkStudyService.searchModifications(rootNetworkUuid, userInput));
     }
 
     @PostMapping(value = "/{rootNetworkUuid}/nodes/{nodeUuid}/build")
@@ -754,7 +769,7 @@ public class RootNetworkStudyController {
         NodeActivityType unbuildType = networkModificationTreeService.isSecurityNodeWithLoadFlowDone(nodeUuid, rootNetworkUuid)
                 ? UNBUILD_CHILDREN : UNBUILD;
         nodeActivityRunnerService.runWith(unbuildType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
-                () -> studyService.unbuildStudyNode(studyUuid, nodeUuid, rootNetworkUuid, userId));
+                () -> rootNetworkStudyService.unbuildStudyNode(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }
 
@@ -765,7 +780,7 @@ public class RootNetworkStudyController {
     public ResponseEntity<Void> stopBuild(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                           @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        studyService.stopBuild(nodeUuid, rootNetworkUuid);
+        rootNetworkStudyService.stopBuild(nodeUuid, rootNetworkUuid);
         return ResponseEntity.ok().build();
     }
 
@@ -774,7 +789,7 @@ public class RootNetworkStudyController {
     @ApiResponse(responseCode = "200", description = "Root network reindexed")
     public ResponseEntity<Void> reindexRootNetwork(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                    @Parameter(description = "root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
-        studyService.reindexRootNetwork(studyUuid, rootNetworkUuid);
+        rootNetworkStudyService.reindexRootNetwork(studyUuid, rootNetworkUuid);
         return ResponseEntity.ok().build();
     }
 
@@ -786,7 +801,7 @@ public class RootNetworkStudyController {
                                                               @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                               @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
         networkModificationTreeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageInitModifications(nodeUuid, rootNetworkUuid));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNetworkStudyService.getVoltageInitModifications(nodeUuid, rootNetworkUuid));
     }
 
     @PostMapping(value = "/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init")
@@ -799,7 +814,7 @@ public class RootNetworkStudyController {
         networkModificationTreeService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         networkModificationTreeService.assertIsNodeNotReadOnly(nodeUuid);
         nodeActivityRunnerService.runWith(EDIT_MODIFICATIONS, studyUuid, List.of(nodeUuid),
-                () -> studyService.insertVoltageInitModifications(studyUuid, nodeUuid, rootNetworkUuid, userId));
+                () -> rootNetworkStudyService.insertVoltageInitModifications(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }
 
@@ -813,7 +828,7 @@ public class RootNetworkStudyController {
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false,
                     defaultValue = "false") boolean inUpstreamBuiltParentNode,
             @RequestBody String filter) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.evaluateFilter(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode, filter));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNetworkStudyService.evaluateFilter(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode, filter));
     }
 
     @PostMapping(value = "/{rootNetworkUuid}/nodes/{nodeUuid}/global-filter/evaluate",
@@ -826,8 +841,8 @@ public class RootNetworkStudyController {
             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "The equipments types to filter and return") @RequestParam(name = "equipmentTypes") @NonNull final List<EquipmentType> equipmentTypes,
             @RequestBody @NonNull GlobalFilter filter) {
-        this.studyService.assertIsRootNetworkAndNodeInStudy(studyUuid, rootNetworkUuid, nodeUuid);
-        return ResponseEntity.ok(studyService.evaluateGlobalFilter(nodeUuid, rootNetworkUuid, equipmentTypes, filter));
+        this.networkModificationTreeService.assertIsRootNetworkAndNodeInStudy(studyUuid, rootNetworkUuid, nodeUuid);
+        return ResponseEntity.ok(rootNetworkStudyService.evaluateGlobalFilter(nodeUuid, rootNetworkUuid, equipmentTypes, filter));
     }
 
     @GetMapping(value = "/{rootNetworkUuid}/filters/{filterUuid}/elements")
@@ -837,7 +852,7 @@ public class RootNetworkStudyController {
             @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @Parameter(description = "Filter uuid to be applied") @PathVariable("filterUuid") UUID filterUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilter(rootNetworkUuid, filterUuid));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNetworkStudyService.exportFilter(rootNetworkUuid, filterUuid));
     }
 
     @GetMapping(value = "/{rootNetworkUuid}/nodes/{nodeUuid}/filters/elements")
@@ -850,7 +865,7 @@ public class RootNetworkStudyController {
             @Parameter(description = "Filters uuid to be resolved") @RequestParam("filtersUuid") List<UUID> filtersUuid,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false,
                     defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilters(rootNetworkUuid, filtersUuid, nodeUuid, inUpstreamBuiltParentNode));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNetworkStudyService.exportFilters(rootNetworkUuid, filtersUuid, nodeUuid, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/{rootNetworkUuid}/nodes/{nodeUuid}/computations/status")
@@ -859,6 +874,6 @@ public class RootNetworkStudyController {
     public ResponseEntity<Map<ComputationType, String>> getAllComputationsStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                                  @Parameter(description = "Root network UUID") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                                  @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllComputationsStatus(studyUuid, rootNetworkUuid, nodeUuid));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNetworkStudyService.getAllComputationsStatus(studyUuid, rootNetworkUuid, nodeUuid));
     }
 }

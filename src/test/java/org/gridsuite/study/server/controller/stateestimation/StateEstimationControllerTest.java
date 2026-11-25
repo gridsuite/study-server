@@ -83,8 +83,8 @@ class StateEstimationControllerTest {
             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
             .andExpect(content().string(measurements));
 
-        InOrder inOrder = inOrder(studyService, stateEstimationService);
-        inOrder.verify(studyService).assertIsRootNetworkAndNodeInStudy(studyUuid, rootNetworkUuid, nodeUuid);
+        InOrder inOrder = inOrder(networkModificationTreeService, stateEstimationService);
+        inOrder.verify(networkModificationTreeService).assertIsRootNetworkAndNodeInStudy(studyUuid, rootNetworkUuid, nodeUuid);
         inOrder.verify(stateEstimationService).getStateEstimationMeasurements(nodeUuid, rootNetworkUuid, GLOBAL_FILTERS);
     }
 
@@ -128,7 +128,7 @@ class StateEstimationControllerTest {
 
     @Test
     void notOwnedNodeStopsBeforeResolution() {
-        doThrow(new StudyException(NOT_FOUND, "Node not found")).when(studyService).assertIsRootNetworkAndNodeInStudy(studyUuid, rootNetworkUuid, nodeUuid);
+        doThrow(new StudyException(NOT_FOUND, "Node not found")).when(networkModificationTreeService).assertIsRootNetworkAndNodeInStudy(studyUuid, rootNetworkUuid, nodeUuid);
 
         assertThatThrownBy(() -> mockMvc.perform(get(URL, studyUuid, rootNetworkUuid, nodeUuid).queryParam("globalFilters", GLOBAL_FILTERS)))
             .hasCauseInstanceOf(StudyException.class);
@@ -142,7 +142,7 @@ class StateEstimationControllerTest {
 
         mockMvc.perform(get(URL, studyUuid, rootNetworkUuid, nodeUuid).queryParam("globalFilters", GLOBAL_FILTERS))
             .andExpect(status().isNotFound());
-        verify(studyService).assertIsRootNetworkAndNodeInStudy(studyUuid, rootNetworkUuid, nodeUuid);
+        verify(networkModificationTreeService).assertIsRootNetworkAndNodeInStudy(studyUuid, rootNetworkUuid, nodeUuid);
     }
 
     @Test
