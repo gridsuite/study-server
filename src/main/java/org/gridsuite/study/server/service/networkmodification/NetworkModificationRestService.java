@@ -15,9 +15,9 @@ import org.gridsuite.study.server.StudyConstants.CompositeModificationsActionTyp
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.RestrictionsOnTags;
 import org.gridsuite.study.server.dto.RootNetworkTagsCheckInfos;
 import org.gridsuite.study.server.dto.RootNetworkTagsNamingInfos;
-import org.gridsuite.study.server.dto.RestrictionsOnTags;
 import org.gridsuite.study.server.dto.SharedModificationsWriteAccess;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
