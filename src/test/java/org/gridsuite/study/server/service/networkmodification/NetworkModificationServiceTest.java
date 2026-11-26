@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.RootNetworkTagsCheckInfos;
-import org.gridsuite.study.server.dto.AllowedRootNetworkTags;
+import org.gridsuite.study.server.dto.RootNetworkTagsNamingRestrictions;
 import org.gridsuite.study.server.dto.SharedModificationsWriteAccess;
 import org.gridsuite.study.server.service.RootNetworkService;
 import org.junit.jupiter.api.BeforeEach;
@@ -335,16 +335,16 @@ class NetworkModificationServiceTest {
     }
 
     @Test
-    void testGetAllowedRootNetworkTags() {
+    void testGetRootNetworkTagsNamingRestrictions() {
         UUID groupUuid = UUID.randomUUID();
-        String url = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/root-network-tags/allowed?usedTags=PH1&usedTags=PH2";
+        String url = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/root-network-tags/naming-restrictions?usedTags=PH1&usedTags=PH2";
         var requestSpec = restClient.post().uri(url);
         makeFluent(requestSpec);
         doReturn(requestSpec).when(requestSpec).body(any(Object.class));
-        AllowedRootNetworkTags allowedTags = new AllowedRootNetworkTags(true, List.of("A"));
-        when(requestSpec.retrieve().body(AllowedRootNetworkTags.class)).thenReturn(allowedTags);
+        RootNetworkTagsNamingRestrictions restrictions = new RootNetworkTagsNamingRestrictions(true, List.of("A"));
+        when(requestSpec.retrieve().body(RootNetworkTagsNamingRestrictions.class)).thenReturn(restrictions);
 
-        assertThat(networkModificationService.getAllowedRootNetworkTags(List.of(groupUuid), List.of("PH1", "PH2"), USER_ID)).isEqualTo(allowedTags);
+        assertThat(networkModificationService.getRootNetworkTagsNamingRestrictions(List.of(groupUuid), List.of("PH1", "PH2"), USER_ID)).isEqualTo(restrictions);
         verify(requestSpec).body(List.of(groupUuid));
         verify(requestSpec).headers(argThat(headersConsumer -> {
             HttpHeaders headers = new HttpHeaders();

@@ -415,7 +415,7 @@ public class StudyService {
     /**
      * A root network tag of a study must be associated with all its shared modifications: the ones the user cannot
      * write on, which they cannot associate with a new tag, must already be. On refusal, the allowed tags reported leave
-     * out the ones the study already uses, as {@link #getAllowedRootNetworkTags} does.
+     * out the ones the study already uses, as {@link #getRootNetworkTagsNamingRestrictions} does.
      */
     private void assertCanAddRootNetworkTag(UUID studyUuid, String newTag, String userId) {
         networkModificationRestService.assertRootNetworkTagsAllowed(getStudyModificationGroupUuids(studyUuid), List.of(), List.of(),
@@ -452,12 +452,12 @@ public class StudyService {
      * modifications the user cannot write on, the tags they all are already associated with, but the ones already
      * used in the study
      */
-    public AllowedRootNetworkTags getAllowedRootNetworkTags(UUID studyUuid, String userId) {
+    public RootNetworkTagsNamingRestrictions getRootNetworkTagsNamingRestrictions(UUID studyUuid, String userId) {
         List<UUID> groupUuids = getStudyModificationGroupUuids(studyUuid);
         if (groupUuids.isEmpty()) {
-            return AllowedRootNetworkTags.UNRESTRICTED;
+            return RootNetworkTagsNamingRestrictions.UNRESTRICTED;
         }
-        return networkModificationRestService.getAllowedRootNetworkTags(groupUuids, rootNetworkService.getStudyRootNetworkTags(studyUuid), userId);
+        return networkModificationRestService.getRootNetworkTagsNamingRestrictions(groupUuids, rootNetworkService.getStudyRootNetworkTags(studyUuid), userId);
     }
 
     private List<UUID> getStudyModificationGroupUuids(UUID studyUuid) {

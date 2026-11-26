@@ -15,8 +15,8 @@ import org.gridsuite.study.server.StudyConstants.CompositeModificationsActionTyp
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.AllowedRootNetworkTags;
 import org.gridsuite.study.server.dto.RootNetworkTagsCheckInfos;
+import org.gridsuite.study.server.dto.RootNetworkTagsNamingRestrictions;
 import org.gridsuite.study.server.dto.SharedModificationsWriteAccess;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
@@ -746,17 +746,17 @@ public class NetworkModificationRestService {
      * @return the root network tags the user may associate with the content of the containers, restricted when it
      * refers to shared modifications the user cannot write on, the {@code usedTags} left out: the tags reported when
      */
-    public AllowedRootNetworkTags getAllowedRootNetworkTags(List<UUID> containerUuids, List<String> usedTags, String userId) {
+    public RootNetworkTagsNamingRestrictions getRootNetworkTagsNamingRestrictions(List<UUID> containerUuids, List<String> usedTags, String userId) {
         // the uuids go in the body as a large tree would exceed the url length limit
-        String path = UriComponentsBuilder.fromPath(CONTAINERS + DELIMITER + "root-network-tags/allowed")
+        String path = UriComponentsBuilder.fromPath(CONTAINERS + DELIMITER + "root-network-tags/naming-restrictions")
                 .queryParam("usedTags", usedTags)
                 .build().toUriString();
-        AllowedRootNetworkTags allowedTags = restClient.post().uri(getNetworkModificationServerURI(false) + path)
+        RootNetworkTagsNamingRestrictions restrictions = restClient.post().uri(getNetworkModificationServerURI(false) + path)
                 .headers(headers -> headers.set(HEADER_USER_ID, userId))
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(containerUuids)
-                .retrieve().body(AllowedRootNetworkTags.class);
-        return allowedTags == null ? AllowedRootNetworkTags.UNRESTRICTED : allowedTags;
+                .retrieve().body(RootNetworkTagsNamingRestrictions.class);
+        return restrictions == null ? RootNetworkTagsNamingRestrictions.UNRESTRICTED : restrictions;
     }
 
     /**
