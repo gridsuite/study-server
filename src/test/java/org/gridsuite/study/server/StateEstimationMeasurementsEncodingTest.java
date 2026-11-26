@@ -11,7 +11,7 @@ import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.RecordedRequest;
-import mockwebserver3.junit5.internal.MockWebServerExtension;
+import mockwebserver3.junit5.StartStop;
 import okhttp3.Headers;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -28,7 +28,6 @@ import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
@@ -67,7 +66,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *
  * @author Kamil MARUT {@literal <kamil.marut at rte-france.com>}
  */
-@ExtendWith(MockWebServerExtension.class)
 @AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @DisableElasticsearch
@@ -103,6 +101,8 @@ class StateEstimationMeasurementsEncodingTest {
     private RemoteServicesProperties remoteServicesProperties;
     @Mock
     private RemoteServicesInspector remoteServicesInspector;
+    @StartStop
+    final MockWebServer server = new MockWebServer();
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private UUID studyUuid;
@@ -110,7 +110,7 @@ class StateEstimationMeasurementsEncodingTest {
     private UUID nodeUuid;
 
     @BeforeEach
-    void setUp(MockWebServer server) {
+    void setUp() {
         stateEstimationRestService.setBaseUri(server.url("").toString().replaceAll("/$", ""));
     }
 
@@ -163,7 +163,7 @@ class StateEstimationMeasurementsEncodingTest {
     }
 
     @Test
-    void globalFiltersAndResponseSurviveBothHops(MockWebServer server) throws Exception {
+    void globalFiltersAndResponseSurviveBothHops() throws Exception {
         createStudyAndNode(RESULT_UUID);
         server.enqueue(json(200, MEASUREMENTS));
 
@@ -174,17 +174,17 @@ class StateEstimationMeasurementsEncodingTest {
         assertThat(response.body()).isEqualTo(MEASUREMENTS.getBytes(StandardCharsets.UTF_8));
 
         RecordedRequest request = server.takeRequest(5, TimeUnit.SECONDS);
-        assertThat(request.getRequestUrl().encodedPath()).isEqualTo("/v1/results/" + RESULT_UUID + "/measurements");
-        assertThat(request.getRequestUrl().queryParameter("globalFilters")).isEqualTo(GLOBAL_FILTERS);
-        assertThat(request.getRequestUrl().queryParameter("networkUuid")).isEqualTo(NETWORK_UUID.toString());
-        assertThat(request.getRequestUrl().queryParameter("variantId")).isEqualTo(VARIANT_ID);
-        assertThat(request.getRequestUrl().querySize()).isEqualTo(3);
-        assertThat(request.getRequestUrl().encodedQuery()).contains("%2B", "%2541", "100%25", "%26").doesNotContain("%252541", " ", "+");
+        assertThat(request.getUrl().encodedPath()).isEqualTo("/v1/results/" + RESULT_UUID + "/measurements");
+        assertThat(request.getUrl().queryParameter("globalFilters")).isEqualTo(GLOBAL_FILTERS);
+        assertThat(request.getUrl().queryParameter("networkUuid")).isEqualTo(NETWORK_UUID.toString());
+        assertThat(request.getUrl().queryParameter("variantId")).isEqualTo(VARIANT_ID);
+        assertThat(request.getUrl().querySize()).isEqualTo(3);
+        assertThat(request.getUrl().encodedQuery()).contains("%2B", "%2541", "100%25", "%26").doesNotContain("%252541", " ", "+");
         assertThat(server.getRequestCount()).isEqualTo(1);
     }
 
     @Test
-    void absentGlobalFiltersAreNotForwarded(MockWebServer server) throws Exception {
+    void absentGlobalFiltersAreNotForwarded() throws Exception {
         createStudyAndNode(RESULT_UUID);
         server.enqueue(json(200, "[]"));
 
@@ -192,11 +192,11 @@ class StateEstimationMeasurementsEncodingTest {
 
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(new String(response.body(), StandardCharsets.UTF_8)).isEqualTo("[]");
-        assertThat(server.takeRequest(5, TimeUnit.SECONDS).getRequestUrl().queryParameterNames()).containsExactlyInAnyOrder("networkUuid", "variantId");
+        assertThat(server.takeRequest(5, TimeUnit.SECONDS).getUrl().queryParameterNames()).containsExactlyInAnyOrder("networkUuid", "variantId");
     }
 
     @Test
-    void noStoredResultIsNoContentWithoutDownstreamCall(MockWebServer server) throws Exception {
+    void noStoredResultIsNoContentWithoutDownstreamCall() throws Exception {
         createStudyAndNode(null);
         HttpResponse<byte[]> response = get(measurementsUri(studyUuid, nodeUuid, browserQuery(GLOBAL_FILTERS)));
 
@@ -207,7 +207,7 @@ class StateEstimationMeasurementsEncodingTest {
 
     @ParameterizedTest
     @ValueSource(ints = {400, 404, 500})
-    void downstreamProblemDetailKeepsStatusAndDetail(int status, MockWebServer server) throws Exception {
+    void downstreamProblemDetailKeepsStatusAndDetail(int status) throws Exception {
         createStudyAndNode(RESULT_UUID);
         PowsyblWsProblemDetail downstreamError = PowsyblWsProblemDetail.builder(HttpStatus.valueOf(status))
             .server("state-estimation-server").detail("downstream detail é").path("/v1/results/measurements").build();
@@ -220,7 +220,7 @@ class StateEstimationMeasurementsEncodingTest {
     }
 
     @Test
-    void downstreamErrorWithoutProblemDetailKeepsStatus(MockWebServer server) throws Exception {
+    void downstreamErrorWithoutProblemDetailKeepsStatus() throws Exception {
         createStudyAndNode(RESULT_UUID);
         server.enqueue(new MockResponse(503, Headers.of("Content-Type", "text/plain"), "maintenance"));
 
@@ -229,7 +229,7 @@ class StateEstimationMeasurementsEncodingTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"filters", "sort"})
-    void columnFiltersAndSortAreRejectedBeforeAnyWork(String parameter, MockWebServer server) throws Exception {
+    void columnFiltersAndSortAreRejectedBeforeAnyWork(String parameter) throws Exception {
         createStudyAndNode(RESULT_UUID);
 
         assertThat(get(measurementsUri(studyUuid, nodeUuid, "?" + parameter + "=%5B%5D")).statusCode()).isEqualTo(400);
@@ -237,7 +237,7 @@ class StateEstimationMeasurementsEncodingTest {
     }
 
     @Test
-    void foreignOrUnknownNodeIsNotFoundBeforeAnyWork(MockWebServer server) throws Exception {
+    void foreignOrUnknownNodeIsNotFoundBeforeAnyWork() throws Exception {
         createStudyAndNode(RESULT_UUID);
 
         assertThat(get(measurementsUri(UUID.randomUUID(), nodeUuid, "")).statusCode()).isEqualTo(404);
@@ -256,7 +256,7 @@ class StateEstimationMeasurementsEncodingTest {
     }
 
     @Test
-    void slowStateEstimationServerIsGatewayTimeoutWithTheApplicationHttpClient(MockWebServer server) {
+    void slowStateEstimationServerIsGatewayTimeoutWithTheApplicationHttpClient() {
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory();
         requestFactory.setReadTimeout(Duration.ofMillis(300));
         StateEstimationRestService withTimeout = new StateEstimationRestService(
