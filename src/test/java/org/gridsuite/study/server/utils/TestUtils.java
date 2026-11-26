@@ -107,7 +107,7 @@ public final class TestUtils {
                 if (request == null) {
                     throw new AssertionError("Expected " + n + " requests, got only " + i);
                 }
-                return new RequestWithBody(request.getPath(), request.getBody().readUtf8());
+                return new RequestWithBody(request.getTarget(), request.getBody().utf8());
             } catch (InterruptedException e) {
                 throw new UncheckedInterruptedException(e);
             }
@@ -120,13 +120,13 @@ public final class TestUtils {
             do {
                 recordedRequest = Objects.requireNonNull(server.takeRequest(TIMEOUT, TimeUnit.MILLISECONDS));
                 // skip quota start/end requests that are auto-handled and not part of test assertions
-            } while (recordedRequest.getPath() != null && recordedRequest.getPath().matches("/v1/users/.*/quota/.*"));
+            } while (recordedRequest.getTarget() != null && recordedRequest.getTarget().matches("/v1/users/.*/quota/.*"));
         } catch (InterruptedException e) {
             throw new UncheckedInterruptedException(e);
         }
         assertEquals(method, recordedRequest.getMethod());
-        assertNotNull(recordedRequest.getPath());
-        assertTrue(recordedRequest.getPath().matches(path));
+        assertNotNull(recordedRequest.getTarget());
+        assertTrue(recordedRequest.getTarget().matches(path));
     }
 
     public static Set<String> getRequestsDone(int n, MockWebServer server) {
@@ -136,8 +136,8 @@ public final class TestUtils {
                 do {
                     req = Objects.requireNonNull(server.takeRequest(TIMEOUT, TimeUnit.MILLISECONDS));
                     // skip quota start/end requests that are auto-handled and not part of test assertions
-                } while (req.getPath() != null && req.getPath().matches("/v1/users/.*/quota/.*"));
-                return req.getPath();
+                } while (req.getTarget() != null && req.getTarget().matches("/v1/users/.*/quota/.*"));
+                return req.getTarget();
             } catch (InterruptedException e) {
                 throw new UncheckedInterruptedException(e);
             }

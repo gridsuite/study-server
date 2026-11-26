@@ -18,7 +18,7 @@ import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.RecordedRequest;
-import mockwebserver3.junit5.internal.MockWebServerExtension;
+import mockwebserver3.junit5.StartStop;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import org.gridsuite.study.server.dto.NodeReceiver;
@@ -40,7 +40,6 @@ import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -78,7 +77,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * @author David Braquart <david.braquart at rte-france.com>
  */
-@ExtendWith(MockWebServerExtension.class)
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
@@ -149,6 +147,8 @@ class StateEstimationTest {
     private TestUtils studyTestUtils;
     @Autowired
     private ConsumerService consumerService;
+    @StartStop
+    final MockWebServer server = new MockWebServer();
 
     @AllArgsConstructor
     private static final class StudyNodeIds {
@@ -158,7 +158,7 @@ class StateEstimationTest {
     }
 
     @BeforeEach
-    void setup(final MockWebServer server) throws Exception {
+    void setup() throws Exception {
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
 
         // Ask the server for its URL. You'll need this to make HTTP requests.
@@ -179,8 +179,9 @@ class StateEstimationTest {
             @Override
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
-                String path = Objects.requireNonNull(request.getPath());
+                String path = Objects.requireNonNull(request.getTarget());
                 String method = Objects.requireNonNull(request.getMethod());
+                String[] targetParts = path.split("%");
 
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reporterId=.*&reportType=StateEstimation&variantId=" + VARIANT_ID + "&receiver=.*")) {
                     // estim with success
@@ -192,8 +193,8 @@ class StateEstimationTest {
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reporterId=.*&reportType=StateEstimation&variantId=" + VARIANT_ID_2 + "&receiver=.*")) {
                     // estim with failure
                     input.send(MessageBuilder.withPayload("")
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[
-                                    11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + targetParts[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + targetParts[11].substring(4)
+                                    + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .build(), ESTIM_FAILED_DESTINATION);
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), estimErrorResultUuidStr);
                 } else if (path.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID)) {
@@ -203,22 +204,22 @@ class StateEstimationTest {
                 } else if (path.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID + "/stop.*")) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", STATE_ESTIMATION_RESULT_UUID)
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[
-                                    11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + targetParts[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + targetParts[11].substring(4)
+                                    + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .build(), ESTIM_STOPPED_DESTINATION);
-                    return new MockResponse(200);
+                    return new MockResponse.Builder().code(200).build();
                 } else if (path.matches("/v1/supervision/results-count")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "1");
                 } else if (path.matches("/v1/reports")) {
-                    return new MockResponse(200);
+                    return new MockResponse.Builder().code(200).build();
                 } else if (path.matches("/v1/results\\?resultsUuids.*")) {
-                    return new MockResponse(200);
+                    return new MockResponse.Builder().code(200).build();
                 } else if (path.matches("/v1/supervision/results")) {
-                    return new MockResponse(200);
+                    return new MockResponse.Builder().code(200).build();
                 } else if (path.matches("/v1/parameters/" + WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING)) {
-                    return new MockResponse(404);
+                    return new MockResponse.Builder().code(404).build();
                 } else if (path.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID + "/reset") && "PUT".equals(method)) {
-                    return new MockResponse(200);
+                    return new MockResponse.Builder().code(200).build();
                 } else if (path.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID)) {
                     if ("GET".equals(method)) {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), estimParametersJson);
@@ -233,9 +234,9 @@ class StateEstimationTest {
                 } else if (path.matches("/v1/users/.*/profile") && "GET".equals(method)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "{}");
                 } else if (path.matches("/v1/users/.*/quota/.*") && "POST".equals(method)) {
-                    return new MockResponse(200);
+                    return new MockResponse.Builder().code(200).build();
                 } else {
-                    return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
+                    return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getTarget()).build();
                 }
             }
         };
@@ -329,7 +330,7 @@ class StateEstimationTest {
     }
 
     @AfterEach
-    void tearDown(final MockWebServer server) {
+    void tearDown() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
         List<String> destinations = List.of(STUDY_UPDATE_DESTINATION, ESTIM_RESULT_JSON_DESTINATION, ESTIM_STOPPED_DESTINATION, ESTIM_FAILED_DESTINATION);
@@ -342,7 +343,7 @@ class StateEstimationTest {
     }
 
     @Test
-    void testComputation(final MockWebServer server) throws Exception {
+    void testComputation() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
         runEstim(server, ids);
 
@@ -360,7 +361,7 @@ class StateEstimationTest {
     }
 
     @Test
-    void testResultsDeletion(final MockWebServer server) throws Exception {
+    void testResultsDeletion() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
         runEstim(server, ids);
 
@@ -387,7 +388,7 @@ class StateEstimationTest {
     }
 
     @Test
-    void testStop(final MockWebServer server) throws Exception {
+    void testStop() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
         runEstim(server, ids);
 
@@ -398,7 +399,7 @@ class StateEstimationTest {
     }
 
     @Test
-    void testFailure(final MockWebServer server) throws Exception {
+    void testFailure() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID_2, "node 2", null);
 
         mockMvc.perform(post(STATE_ESTIMATION_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
@@ -411,7 +412,7 @@ class StateEstimationTest {
     }
 
     @Test
-    void testStateEstimationParameters(final MockWebServer server) throws Exception {
+    void testStateEstimationParameters() throws Exception {
         String estimParametersJson = TestUtils.resourceToString(ESTIM_PARAMETERS_FILE);
 
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
@@ -459,7 +460,7 @@ class StateEstimationTest {
     }
 
     @Test
-    void testResetStateEstimationParametersWithNoExistingParameters(final MockWebServer server) throws Exception {
+    void testResetStateEstimationParametersWithNoExistingParameters() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
 
         resetParametersAndDoChecks(ids.studyId);
@@ -498,7 +499,7 @@ class StateEstimationTest {
     }
 
     @Test
-    void testDebugComputation(final MockWebServer server) throws Exception {
+    void testDebugComputation() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
         mockMvc.perform(post(STATE_ESTIMATION_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
                         .param("debug", "true"))

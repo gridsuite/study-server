@@ -13,7 +13,7 @@ import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.RecordedRequest;
-import mockwebserver3.junit5.internal.MockWebServerExtension;
+import mockwebserver3.junit5.StartStop;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -28,7 +28,6 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.slf4j.Logger;
@@ -61,7 +60,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * @author Ayoub LABIDI <ayoub.labidi at rte-france.com>
  */
-@ExtendWith(MockWebServerExtension.class)
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
@@ -126,9 +124,11 @@ class SpreadsheetConfigCollectionTest {
     private StudyConfigService studyConfigService;
     @Autowired
     private UserAdminService userAdminService;
+    @StartStop
+    final MockWebServer server = new MockWebServer();
 
     @BeforeEach
-    void setup(final MockWebServer server) {
+    void setup() {
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         studyConfigService.setStudyConfigServerBaseUri(baseUrl);
@@ -138,46 +138,46 @@ class SpreadsheetConfigCollectionTest {
             @Override
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
-                String path = Objects.requireNonNull(request.getPath());
+                String path = Objects.requireNonNull(request.getTarget());
                 String method = request.getMethod();
                 if (("/v1/spreadsheet-config-collections/" + SPREADSHEET_CONFIG_COLLECTION_UUID_STRING).equals(path)) {
                     if ("GET".equals(method)) {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SPREADSHEET_CONFIG_COLLECTION_JSON);
                     } else if ("PUT".equals(method)) {
-                        return new MockResponse(200);
+                        return new MockResponse.Builder().code(200).build();
                     }
                 } else if (("/v1/spreadsheet-config-collections/" + SPREADSHEET_CONFIG_COLLECTION_UUID + "/reorder").equals(path)) {
-                    return new MockResponse(204);
+                    return new MockResponse.Builder().code(204).build();
                 } else if ("DELETE".equals(method) && ("/v1/spreadsheet-config-collections/" + SPREADSHEET_CONFIG_COLLECTION_UUID + "/spreadsheet-configs" + SPREADSHEET_CONFIG_UUID).equals(path)) {
-                    return new MockResponse(204);
+                    return new MockResponse.Builder().code(204).build();
                 } else if ("POST".equals(method) && ("/v1/spreadsheet-config-collections/" + SPREADSHEET_CONFIG_COLLECTION_UUID + "/spreadsheet-configs").equals(path)) {
                     return new MockResponse(201, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), NEW_SPREADSHEET_CONFIG_UUID_JSON);
                 } else if (("/v1/spreadsheet-config-collections/" + NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING).equals(path)) {
                     if ("GET".equals(method)) {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), NEW_SPREADSHEET_CONFIG_COLLECTION_JSON);
                     } else if ("PUT".equals(method)) {
-                        return new MockResponse(200);
+                        return new MockResponse.Builder().code(200).build();
                     } else if ("DELETE".equals(method)) {
-                        return new MockResponse(200);
+                        return new MockResponse.Builder().code(200).build();
                     }
                 } else if ("/v1/spreadsheet-config-collections/non-existing-collection".equals(path)) {
-                    return new MockResponse(404);
+                    return new MockResponse.Builder().code(404).build();
                 } else if (path.matches("/v1/spreadsheet-config-collections/.*/duplicate") && "POST".equals(method)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_JSON);
                 } else if (path.matches("/v1/spreadsheet-config-collections/" + SPREADSHEET_CONFIG_COLLECTION_UUID_STRING + "/append\\?sourceCollection=.*")) {
-                    return new MockResponse(200);
+                    return new MockResponse.Builder().code(200).build();
                 } else if (path.matches("/v1/spreadsheet-config-collections/.*") && "DELETE".equals(method)) {
                     // Return an error for the specific UUID that should trigger a delete error
                     if (path.contains(ERROR_DELETE_COLLECTION_UUID_STRING)) {
-                        return new MockResponse(HttpStatus.INTERNAL_SERVER_ERROR.value());
+                        return new MockResponse.Builder().code(HttpStatus.INTERNAL_SERVER_ERROR.value()).build();
                     }
-                    return new MockResponse(200);
+                    return new MockResponse.Builder().code(200).build();
                 } else if ("/v1/spreadsheet-config-collections/default".equals(path)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SPREADSHEET_CONFIG_COLLECTION_UUID_JSON);
                 } else if ("/v1/spreadsheet-config-collections".equals(path) && "POST".equals(method)) {
                     String body = null;
                     try {
-                        body = request.getBody().readUtf8();
+                        body = request.getBody().utf8();
                     } catch (Exception e) {
                         LOGGER.error("Error reading request body", e);
                     }
@@ -190,15 +190,15 @@ class SpreadsheetConfigCollectionTest {
                 } else if (path.matches("/v1/users/" + VALID_PROFILE_USER_ID + "/profile")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), USER_PROFILE_VALID_PARAMS_JSON);
                 }
-                LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
-                return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
+                LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getTarget());
+                return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getTarget()).build();
             }
         };
         server.setDispatcher(dispatcher);
     }
 
     @Test
-    void testUpdateSpreadsheetConfigCollection(final MockWebServer server) throws Exception {
+    void testUpdateSpreadsheetConfigCollection() throws Exception {
         // Create a study with an existing spreadsheet config collection
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, SPREADSHEET_CONFIG_COLLECTION_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -225,7 +225,7 @@ class SpreadsheetConfigCollectionTest {
     }
 
     @Test
-    void testAppendSpreadsheetConfigCollection(final MockWebServer server) throws Exception {
+    void testAppendSpreadsheetConfigCollection() throws Exception {
         // Create a study with an existing spreadsheet config collection
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, SPREADSHEET_CONFIG_COLLECTION_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -253,7 +253,7 @@ class SpreadsheetConfigCollectionTest {
     }
 
     @Test
-    void testAppendSpreadsheetConfigCollectionEmptyCase(final MockWebServer server) throws Exception {
+    void testAppendSpreadsheetConfigCollectionEmptyCase() throws Exception {
         // Create a study with no collection
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, null);
         UUID studyUuid = studyEntity.getId();
@@ -280,7 +280,7 @@ class SpreadsheetConfigCollectionTest {
     }
 
     @Test
-    void testUpdateSpreadsheetConfigCollectionWithDeleteError(final MockWebServer server) throws Exception {
+    void testUpdateSpreadsheetConfigCollectionWithDeleteError() throws Exception {
         // Create a study with an existing spreadsheet config collection
         // Use the special UUID that will trigger a delete error
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, ERROR_DELETE_COLLECTION_UUID);
@@ -309,7 +309,7 @@ class SpreadsheetConfigCollectionTest {
     }
 
     @Test
-    void testGetSpreadsheetCollection(final MockWebServer server) throws Exception {
+    void testGetSpreadsheetCollection() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, SPREADSHEET_CONFIG_COLLECTION_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
 
@@ -323,7 +323,7 @@ class SpreadsheetConfigCollectionTest {
     }
 
     @Test
-    void testGetSpreadsheetCollectionNotFound(final MockWebServer server) throws Exception {
+    void testGetSpreadsheetCollectionNotFound() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, null);
         UUID studyNameUserIdUuid = studyEntity.getId();
 
@@ -339,7 +339,7 @@ class SpreadsheetConfigCollectionTest {
 
     @Test
     @WithMockUser(username = NO_PROFILE_USER_ID)
-    void testSetSpreadsheetConfigCollection(final MockWebServer server) throws Exception {
+    void testSetSpreadsheetConfigCollection() throws Exception {
         // Create a study with an existing spreadsheet config collection
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, SPREADSHEET_CONFIG_COLLECTION_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -362,7 +362,7 @@ class SpreadsheetConfigCollectionTest {
     }
 
     @Test
-    void testSetSpreadsheetConfigCollectionWithNonExistingCollection(final MockWebServer server) throws Exception {
+    void testSetSpreadsheetConfigCollectionWithNonExistingCollection() throws Exception {
         // Create a study with an existing spreadsheet config collection
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, null);
         UUID studyUuid = studyEntity.getId();
@@ -385,7 +385,7 @@ class SpreadsheetConfigCollectionTest {
 
     @Test
     @WithMockUser(username = VALID_PROFILE_USER_ID)
-    void testResetToDefaultWithUserProfile(final MockWebServer server) throws Exception {
+    void testResetToDefaultWithUserProfile() throws Exception {
         // Create a study with an existing spreadsheet config collection
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, SPREADSHEET_CONFIG_COLLECTION_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -410,7 +410,7 @@ class SpreadsheetConfigCollectionTest {
 
     @Test
     @WithMockUser(username = NO_PROFILE_USER_ID)
-    void testResetToDefaultWithoutUserProfile(final MockWebServer server) throws Exception {
+    void testResetToDefaultWithoutUserProfile() throws Exception {
         // Create a study with an existing spreadsheet config collection
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, NEW_SPREADSHEET_CONFIG_COLLECTION_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -433,7 +433,7 @@ class SpreadsheetConfigCollectionTest {
     }
 
     @Test
-    void testReorderCollection(final MockWebServer server) throws Exception {
+    void testReorderCollection() throws Exception {
         // Create a study with an existing spreadsheet config collection
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, SPREADSHEET_CONFIG_COLLECTION_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -449,7 +449,7 @@ class SpreadsheetConfigCollectionTest {
     }
 
     @Test
-    void testRemoveConfig(final MockWebServer server) throws Exception {
+    void testRemoveConfig() throws Exception {
         // Create a study with an existing spreadsheet config collection
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, SPREADSHEET_CONFIG_COLLECTION_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -462,7 +462,7 @@ class SpreadsheetConfigCollectionTest {
     }
 
     @Test
-    void testAddConfig(final MockWebServer server) throws Exception {
+    void testAddConfig() throws Exception {
         // Create a study with an existing spreadsheet config collection
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, SPREADSHEET_CONFIG_COLLECTION_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -478,7 +478,7 @@ class SpreadsheetConfigCollectionTest {
     }
 
     @AfterEach
-    void tearDown(final MockWebServer server) {
+    void tearDown() {
         List<String> destinations = List.of(STUDY_UPDATE_DESTINATION);
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
