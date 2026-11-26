@@ -46,6 +46,8 @@ public interface RootNetworkNodeInfoRepository extends JpaRepository<RootNetwork
 
     List<RootNetworkNodeInfoEntity> findAllByAsymmetricalLoadResultUuidNotNull();
 
+    List<RootNetworkNodeInfoEntity> findAllByLogicalControlsResultUuidNotNull();
+
     List<RootNetworkNodeInfoEntity> findAllByNodeInfoId(UUID nodeInfoId);
 
     List<RootNetworkNodeInfoEntity> findAllByRootNetworkId(UUID rootNetworkUuid);

@@ -13,8 +13,6 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.matching.RegexPattern;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import mockwebserver3.MockWebServer;
-import mockwebserver3.junit5.internal.MockWebServerExtension;
 import org.assertj.core.api.WithAssertions;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
@@ -34,7 +32,6 @@ import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.*;
 import org.json.JSONObject;
 import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,7 +49,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import java.util.*;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.matching;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.HEADER_BUS_ID;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
@@ -72,7 +68,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@ExtendWith(MockWebServerExtension.class)
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
@@ -108,7 +103,7 @@ class ShortCircuitTest implements WithAssertions {
             "\"SENSITIVITY_ANALYSIS\":null,\"SHORT_CIRCUIT\":\"{\\\"status\\\":\\\"COMPLETED\\\"}\"," +
             "\"SHORT_CIRCUIT_ONE_BUS\":null,\"VOLTAGE_INITIALIZATION\":null,\"DYNAMIC_SIMULATION\":null," +
             "\"DYNAMIC_SECURITY_ANALYSIS\":null,\"DYNAMIC_MARGIN_CALCULATION\":null,\"STATE_ESTIMATION\":null," +
-            "\"PCC_MIN\":null,\"ASYMMETRICAL_LOAD\":null}";
+            "\"PCC_MIN\":null,\"ASYMMETRICAL_LOAD\":null,\"LOGICAL_CONTROLS\":null}";
 
     private static final String SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
     private static final UUID SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID = UUID.fromString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
@@ -356,13 +351,13 @@ class ShortCircuitTest implements WithAssertions {
 
         // Delete Shortcircuit results
         assertEquals(1, rootNetworkNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
-        computationServerStubs.stubDeleteResults("/v1/results");
+        computationServerStubs.stubDeleteAllResults();
         reportServerStubs.stubDeleteReport();
         mockMvc.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", ComputationType.SHORT_CIRCUIT.toString())
                         .queryParam("dryRun", "false"))
                 .andExpect(status().isOk());
-        WireMockUtilsCriteria.verifyDeleteRequest(wireMockServer, "/v1/results", Map.of("resultsUuids", matching(".*")));
+        computationServerStubs.verifyDeleteAllResults();
         reportServerStubs.verifyDeleteReport();
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
     }
@@ -582,13 +577,13 @@ class ShortCircuitTest implements WithAssertions {
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/supervision/results-count", Map.of());
 
         // Delete Shortcircuit results
-        computationServerStubs.stubDeleteResults("/v1/results");
+        computationServerStubs.stubDeleteAllResults();
         reportServerStubs.stubDeleteReport();
         mockMvc.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", ComputationType.SHORT_CIRCUIT.toString())
                         .queryParam("dryRun", "false"))
                 .andExpect(status().isOk());
-        WireMockUtilsCriteria.verifyDeleteRequest(wireMockServer, "/v1/results", Map.of("resultsUuids", matching(".*")));
+        computationServerStubs.verifyDeleteAllResults();
         reportServerStubs.verifyDeleteReport();
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull().size());
     }
@@ -678,7 +673,7 @@ class ShortCircuitTest implements WithAssertions {
     @Test
     void testSetParamInvalidateShortCircuitStatus() throws Exception {
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, null);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
@@ -707,20 +702,19 @@ class ShortCircuitTest implements WithAssertions {
         consumeShortCircuitAnalysisResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid, SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, false);
 
         // update parameters invalidate the status
-        computationServerStubs.stubGetParametersDefault(objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING));
-        computationServerStubs.stubPostParametersDefault(objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID));
+        computationServerStubs.stubParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
         userAdminServerStubs.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
         computationServerStubs.stubInvalidateStatus();
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PROFILE_USER_ID, HttpStatus.OK);
-        computationServerStubs.verifyParametersDefault(1);
+        resetParametersAndDoChecks(studyNameUserIdUuid, NO_PROFILE_USER_ID, HttpStatus.OK);
+        computationServerStubs.verifyParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
         userAdminServerStubs.verifyGetUserProfile(NO_PROFILE_USER_ID);
         computationServerStubs.verifyInvalidateStatus(Map.of("resultUuid", new RegexPattern(".*")));
     }
 
     @Test
-    void testSetParamInvalidateOneBusShortCircuitStatus(final MockWebServer server) throws Exception {
+    void testSetParamInvalidateOneBusShortCircuitStatus() throws Exception {
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, null);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
@@ -750,22 +744,19 @@ class ShortCircuitTest implements WithAssertions {
         consumeShortCircuitAnalysisOneBusResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid, SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, false);
 
         // update parameters invalidate the status
-        computationServerStubs.stubGetParametersDefault(objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING));
-        computationServerStubs.stubPostParametersDefault(objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID));
+        computationServerStubs.stubParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
         userAdminServerStubs.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
         computationServerStubs.stubInvalidateStatus();
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PROFILE_USER_ID, HttpStatus.OK);
-        computationServerStubs.verifyParametersDefault(1);
+        resetParametersAndDoChecks(studyNameUserIdUuid, NO_PROFILE_USER_ID, HttpStatus.OK);
+        computationServerStubs.verifyParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
         userAdminServerStubs.verifyGetUserProfile(NO_PROFILE_USER_ID);
         computationServerStubs.verifyInvalidateStatus(Map.of("resultUuid", new RegexPattern(".*")));
     }
 
-    private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
+    private void resetParametersAndDoChecks(UUID studyNameUserIdUuid, String userId, HttpStatusCode status) throws Exception {
         mockMvc.perform(
-                post("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)
-                    .header("userId", userId)
-                    .contentType(MediaType.ALL)
-                    .content(parameters))
+                post("/v1/studies/{studyUuid}/short-circuit-analysis/parameters/reset", studyNameUserIdUuid)
+                    .header("userId", userId))
             .andExpect(status().is(status.value()));
         Message<byte[]> message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -791,40 +782,40 @@ class ShortCircuitTest implements WithAssertions {
         UUID studyNameUserIdUuid = studyEntity.getId();
 
         userAdminServerStubs.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
-        computationServerStubs.stubParameterPut(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING, objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID));
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PROFILE_USER_ID, HttpStatus.OK);
+        computationServerStubs.stubParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
+        resetParametersAndDoChecks(studyNameUserIdUuid, NO_PROFILE_USER_ID, HttpStatus.OK);
         userAdminServerStubs.verifyGetUserProfile(NO_PROFILE_USER_ID);
-        computationServerStubs.verifyParameterPut(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
+        computationServerStubs.verifyParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
     }
 
     @Test
-    void testResetShortCircuitAnalysisParametersUserHasNoParamsInProfile(final MockWebServer server) throws Exception {
+    void testResetShortCircuitAnalysisParametersUserHasNoParamsInProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
 
         userAdminServerStubs.stubGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
-        computationServerStubs.stubParameterPut(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING, objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID));
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        computationServerStubs.stubParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
+        resetParametersAndDoChecks(studyNameUserIdUuid, NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
         userAdminServerStubs.verifyGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID);
-        computationServerStubs.verifyParameterPut(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
+        computationServerStubs.verifyParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
     }
 
     @Test
-    void testResetShortCircuitAnalysisParametersUserHasInvalidParamsInProfile(final MockWebServer server) throws Exception {
+    void testResetShortCircuitAnalysisParametersUserHasInvalidParamsInProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
 
         userAdminServerStubs.stubGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON);
-        computationServerStubs.stubParameterPut(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING, objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID));
+        computationServerStubs.stubParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
         computationServerStubs.stubParametersDuplicateFromNotFound(PROFILE_SHORT_CIRCUIT_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
+        resetParametersAndDoChecks(studyNameUserIdUuid, INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
         userAdminServerStubs.verifyGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID);
-        computationServerStubs.verifyParameterPut(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
+        computationServerStubs.verifyParametersReset(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
         computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SHORT_CIRCUIT_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
     }
 
     @Test
-    void testResetShortCircuitAnalysisParametersUserHasValidParamsInProfile(final MockWebServer server) throws Exception {
+    void testResetShortCircuitAnalysisParametersUserHasValidParamsInProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
 
@@ -832,21 +823,21 @@ class ShortCircuitTest implements WithAssertions {
         computationServerStubs.stubParametersDuplicateFrom(PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING,
                 objectMapper.writeValueAsString(PROFILE_SHORT_CIRCUIT_ANALYSIS_DUPLICATED_PARAMETERS_UUID_STRING));
         computationServerStubs.stubDeleteParameters(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyNameUserIdUuid, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
         userAdminServerStubs.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
         computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
         computationServerStubs.verifyDeleteParameters(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
     }
 
     @Test
-    void testResetShortCircuitAnalysisParametersUserHasValidParamsInProfileButNoExistingShortcircuitAnalysisParams(final MockWebServer server) throws Exception {
+    void testResetShortCircuitAnalysisParametersUserHasValidParamsInProfileButNoExistingShortcircuitAnalysisParams() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, null);
         UUID studyNameUserIdUuid = studyEntity.getId();
 
         userAdminServerStubs.stubGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
         computationServerStubs.stubParametersDuplicateFrom(PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING,
                 objectMapper.writeValueAsString(PROFILE_SHORT_CIRCUIT_ANALYSIS_DUPLICATED_PARAMETERS_UUID_STRING));
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyNameUserIdUuid, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
         userAdminServerStubs.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
         computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
     }

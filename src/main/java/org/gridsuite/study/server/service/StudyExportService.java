@@ -13,9 +13,11 @@ import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.dto.studyexport.*;
 import org.gridsuite.study.server.dto.studyexport.modifications.ExportedModificationsInfos;
 import org.gridsuite.study.server.dto.studyexport.parameters.*;
+import org.gridsuite.study.server.dto.studyexport.spreadsheets.ExportedSpreadsheetConfigCollection;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.InputStreamResource;
@@ -56,6 +58,8 @@ public class StudyExportService {
     public static final String JSON = ".json";
     public static final String MODIFICATIONS_FOLDER = "networkModifications";
     public static final String LOAD_FLOW_PARAMETERS_JSON = "loadFlowParameters.json";
+    public static final String SPREADSHEETS_FOLDER = "spreadsheets";
+    public static final String SPREADSHEET_CONFIG_COLLECTION_JSON = "spreadsheetConfigCollection.json";
 
     private final StudyService studyService;
     private final CaseService caseService;
@@ -64,13 +68,13 @@ public class StudyExportService {
     private final ComputationParametersService computationParametersService;
     private final FilterService filterService;
     private final ActionsService actionsService;
-    private final NetworkModificationService networkModificationService;
+    private final NetworkModificationRestService networkModificationRestService;
     private final LoadFlowRestService loadFlowRestService;
 
     public StudyExportService(StudyService studyService, CaseService caseService, DirectoryService directoryService,
                               ObjectMapper objectMapper, ComputationParametersService computationParametersService,
                               FilterService filterService, ActionsService actionsService,
-                              NetworkModificationService networkModificationService,
+                              NetworkModificationRestService networkModificationRestService,
                               LoadFlowRestService loadFlowRestService) {
         this.studyService = studyService;
         this.caseService = caseService;
@@ -79,7 +83,7 @@ public class StudyExportService {
         this.computationParametersService = computationParametersService;
         this.filterService = filterService;
         this.actionsService = actionsService;
-        this.networkModificationService = networkModificationService;
+        this.networkModificationRestService = networkModificationRestService;
         this.loadFlowRestService = loadFlowRestService;
     }
 
@@ -131,6 +135,7 @@ public class StudyExportService {
         }
         exportParameters(studyUuid, tempDir);
         exportModifications(treeExportInfos.nodeTree(), tempDir, userId);
+        exportSpreadsheetConfigCollection(studyUuid, tempDir);
         Path zipFile = createTempExportFile(studyUuid);
         try (OutputStream fos = Files.newOutputStream(zipFile);
              ZipOutputStream zipOut = new ZipOutputStream(fos)) {
@@ -211,7 +216,7 @@ public class StudyExportService {
     }
 
     private void collectModificationsByGroupUuid(Path modificationsDir, UUID groupUuid, Set<UUID> filterUuids, Set<UUID> loadFlowParametersUuids, String userId) throws IOException {
-        String modifications = networkModificationService.getModifications(groupUuid, false, false, userId);
+        String modifications = networkModificationRestService.getModifications(groupUuid, false, false, userId);
         Files.writeString(modificationsDir.resolve(groupUuid + JSON), modifications);
         for (ExportedModificationsInfos references : objectMapper.readValue(modifications, ExportedModificationsInfos[].class)) {
             filterUuids.addAll(references.getFilterUuids());
@@ -233,6 +238,17 @@ public class StudyExportService {
             List<ExportedElementInfos> loadFlowParameters = toExportedElements(parameters, directoryService.getElementNames(loadFlowParametersUuids), UUID_FIELD);
             objectMapper.writeValue(modificationsDir.resolve(LOAD_FLOW_PARAMETERS_JSON).toFile(), loadFlowParameters);
         }
+    }
+
+    private void exportSpreadsheetConfigCollection(UUID studyUuid, Path tempDir) throws IOException {
+        String spreadsheetConfigCollection = studyService.getSpreadsheetConfigCollectionForExport(studyUuid);
+        if (spreadsheetConfigCollection == null) {
+            return;
+        }
+        Path spreadsheetsDir = Files.createDirectories(tempDir.resolve(SPREADSHEETS_FOLDER));
+        Files.writeString(spreadsheetsDir.resolve(SPREADSHEET_CONFIG_COLLECTION_JSON), spreadsheetConfigCollection);
+        Set<UUID> filterUuids = objectMapper.readValue(spreadsheetConfigCollection, ExportedSpreadsheetConfigCollection.class).getFilterUuids();
+        collectFiltersByByGroupUuid(spreadsheetsDir, filterUuids);
     }
 
     private Path createTempWorkDir(UUID studyUuid) {

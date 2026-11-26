@@ -17,11 +17,10 @@ import org.gridsuite.study.server.repository.QuotaConsumptionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Map;
@@ -44,14 +43,14 @@ public class UserAdminService {
     private static final String USERS_CONSUME_QUOTA_URI = USERS_QUOTA_URI + "/{operation}/consume";
     private static final String USERS_RELEASE_QUOTA_URI = USERS_QUOTA_URI + "/{quotaId}/release";
 
-    private final RestTemplate restTemplate;
+    private final RestClient restClient;
     private final QuotaConsumptionRepository quotaConsumptionRepository;
     private String userAdminServerBaseUri;
 
-    public UserAdminService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate,
+    public UserAdminService(RemoteServicesProperties remoteServicesProperties, RestClient restClient,
                             QuotaConsumptionRepository quotaConsumptionRepository) {
         this.userAdminServerBaseUri = remoteServicesProperties.getServiceUri("user-admin-server");
-        this.restTemplate = restTemplate;
+        this.restClient = restClient;
         this.quotaConsumptionRepository = quotaConsumptionRepository;
     }
 
@@ -62,18 +61,16 @@ public class UserAdminService {
     public UserProfileInfos getUserProfile(String sub) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_PROFILE_URI)
                 .buildAndExpand(sub).toUriString();
-        return restTemplate.getForObject(userAdminServerBaseUri + path, UserProfileInfos.class);
+        return restClient.get().uri(userAdminServerBaseUri + path)
+            .retrieve().body(UserProfileInfos.class);
     }
 
     public Map<QuotaType, QuotaState> getUserQuotaState(String sub) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_QUOTA_STATE_URI)
                 .buildAndExpand(sub).toUriString();
-        return restTemplate.exchange(
-                userAdminServerBaseUri + path,
-                HttpMethod.GET,
-                null,
-                new ParameterizedTypeReference<Map<QuotaType, QuotaState>>() {
-                }).getBody();
+        return restClient.get().uri(userAdminServerBaseUri + path)
+            .retrieve().body(new ParameterizedTypeReference<Map<QuotaType, QuotaState>>() {
+                });
     }
 
     public UUID consumeQuota(String sub, QuotaType quotaType) {
@@ -81,7 +78,8 @@ public class UserAdminService {
                 .buildAndExpand(sub, quotaType)
                 .toUriString();
         try {
-            return restTemplate.postForObject(userAdminServerBaseUri + path, null, UUID.class);
+            return restClient.post().uri(userAdminServerBaseUri + path)
+                .retrieve().body(UUID.class);
         } catch (HttpClientErrorException.TooManyRequests e) {
             throw new StudyException(MAX_OPERATION_TYPE_EXCEEDED, "Max number of " + quotaType.name() + " already reached");
         }
@@ -95,7 +93,8 @@ public class UserAdminService {
                 .buildAndExpand(sub, quotaId)
                 .toUriString();
         try {
-            restTemplate.postForEntity(userAdminServerBaseUri + path, null, Void.class);
+            restClient.post().uri(userAdminServerBaseUri + path)
+                .retrieve().toBodilessEntity();
         } catch (Exception e) {
             LOGGER.error("Could not release quota '{}' for user '{}'", quotaId, sub, e);
         }

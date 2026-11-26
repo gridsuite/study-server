@@ -21,6 +21,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
+import org.gridsuite.study.server.repository.rootnetwork.StudyRootNetworkTag;
 import org.gridsuite.study.server.utils.JsonUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -198,6 +199,16 @@ public class RootNetworkService {
     public List<RootNetworkInfos> getRootNetworkInfosWithLinksInfos(UUID studyUuid) {
         return rootNetworkRepository.findAllWithInfosByStudyId(studyUuid).stream()
                 .map(rootNetworkEntity -> rootNetworkEntity.toDto(objectMapper)).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Map<UUID, List<String>> getRootNetworkTags(List<UUID> studyUuids) {
+        if (studyUuids.isEmpty()) {
+            return Map.of();
+        }
+        return rootNetworkRepository.findTagsByStudyIds(studyUuids).stream()
+                .collect(Collectors.groupingBy(StudyRootNetworkTag::studyUuid,
+                        Collectors.mapping(StudyRootNetworkTag::tag, Collectors.toList())));
     }
 
     @Transactional
@@ -392,6 +403,12 @@ public class RootNetworkService {
 
     public List<RootNetworkEntity> getStudyRootNetwork(StudyEntity study) {
         return study.getRootNetworks();
+    }
+
+    public List<String> getStudyRootNetworkTags(UUID studyUuid) {
+        return rootNetworkRepository.findAllByStudyId(studyUuid).stream()
+                .map(RootNetworkEntity::getTag)
+                .toList();
     }
 
     public List<UUID> getStudyRootNetworkIds(UUID studyUuid) {

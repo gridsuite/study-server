@@ -17,7 +17,7 @@ import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.RecordedRequest;
-import mockwebserver3.junit5.internal.MockWebServerExtension;
+import mockwebserver3.junit5.StartStop;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import org.apache.commons.collections4.CollectionUtils;
@@ -30,7 +30,6 @@ import org.gridsuite.study.server.service.client.timeseries.impl.TimeSeriesClien
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,7 +37,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.*;
 
@@ -51,7 +50,6 @@ import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPoi
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
-@ExtendWith(MockWebServerExtension.class)
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
@@ -75,7 +73,7 @@ class TimeSeriesClientTest {
     private TimeSeriesClient timeSeriesClient;
 
     @Autowired
-    private RestTemplate restTemplate;
+    private RestClient restClient;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -83,16 +81,19 @@ class TimeSeriesClientTest {
     @Autowired
     private RemoteServicesProperties remoteServicesProperties;
 
+    @StartStop
+    final MockWebServer server = new MockWebServer();
+
     @NotNull
     private Dispatcher getDispatcher() {
         return new Dispatcher() {
             @Override
             public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
-                String path = Objects.requireNonNull(recordedRequest.getPath());
+                String path = Objects.requireNonNull(recordedRequest.getTarget());
                 String method = recordedRequest.getMethod();
 
-                MockResponse response = new MockResponse(HttpStatus.NOT_FOUND.value());
-                List<String> pathSegments = ListUtils.emptyIfNull(recordedRequest.getRequestUrl().pathSegments());
+                MockResponse response = new MockResponse.Builder().code(HttpStatus.NOT_FOUND.value()).build();
+                List<String> pathSegments = ListUtils.emptyIfNull(recordedRequest.getUrl().pathSegments());
 
                 // timeseries-group/{groupUuid}/xxx
                 if ("GET".equals(method) && path.matches(TIME_SERIES_BASE_URL + "/.*")) {
@@ -107,12 +108,12 @@ class TimeSeriesClientTest {
                                     response = new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), timeSeriesGroupMetadataJson);
                             }
                         } catch (JsonProcessingException e) {
-                            return new MockResponse(HttpStatus.NOT_FOUND.value());
+                            return new MockResponse.Builder().code(HttpStatus.NOT_FOUND.value()).build();
                         }
                     } else {
                         // take {groupUuid} at the last
-                        String groupUuid = emptyIfNull(recordedRequest.getRequestUrl().pathSegments()).stream().reduce((first, second) -> second).orElse("");
-                        String timeSeriesNames = recordedRequest.getRequestUrl().queryParameter("timeSeriesNames");
+                        String groupUuid = emptyIfNull(recordedRequest.getUrl().pathSegments()).stream().reduce((first, second) -> second).orElse("");
+                        String timeSeriesNames = recordedRequest.getUrl().queryParameter("timeSeriesNames");
                         LOGGER.info("sent timeSeriesNames = {}", timeSeriesNames);
                         List<TimeSeries<?, ?>> timeseries;
                         if (timeSeriesNames == null) {
@@ -122,7 +123,7 @@ class TimeSeriesClientTest {
                             timeseries = database.get(groupUuid).stream().filter(series -> timeSeriesNames.contains(series.getMetadata().getName())).toList();
                         }
                         if (CollectionUtils.isEmpty(timeseries)) {
-                            return new MockResponse(HttpStatus.NO_CONTENT.value());
+                            return new MockResponse.Builder().code(HttpStatus.NO_CONTENT.value()).build();
                         }
                         response = new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), TimeSeries.toJson(timeseries));
                     }
@@ -133,7 +134,7 @@ class TimeSeriesClientTest {
     }
 
     @BeforeEach
-    public void setup(final MockWebServer server) {
+    public void setup() {
         // setup fake database
         // timeseries
         TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{32, 64, 128, 256});
@@ -164,7 +165,7 @@ class TimeSeriesClientTest {
         // get base URL
         HttpUrl baseUrl = server.url("");
         remoteServicesProperties.setServiceUri("timeseries-server", baseUrl.toString());
-        timeSeriesClient = new TimeSeriesClientImpl(remoteServicesProperties, restTemplate);
+        timeSeriesClient = new TimeSeriesClientImpl(remoteServicesProperties, restClient);
     }
 
     @Test

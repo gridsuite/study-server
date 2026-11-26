@@ -35,7 +35,11 @@ public class BasicEquipmentInfos {
     @AccessType(AccessType.Type.PROPERTY)
     @SuppressWarnings("unused")
     public String getUniqueId() {
-        return networkUuid + "_" + variantId + "_" + id;
+        return buildUniqueId(networkUuid, variantId, id);
+    }
+
+    public static String buildUniqueId(UUID networkUuid, String variantId, String equipmentId) {
+        return networkUuid + "_" + variantId + "_" + equipmentId;
     }
 
     @SuppressWarnings("unused")

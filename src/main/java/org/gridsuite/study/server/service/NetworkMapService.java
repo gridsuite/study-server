@@ -17,12 +17,9 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.gridsuite.study.server.dto.InfoTypeParameters;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
@@ -34,19 +31,20 @@ import static org.gridsuite.study.server.StudyConstants.*;
 
 @Service
 public class NetworkMapService {
-    private final RestTemplate restTemplate;
+    private final RestClient restClient;
 
     private String networkMapServerBaseUri;
 
-    public NetworkMapService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
+    public NetworkMapService(RemoteServicesProperties remoteServicesProperties, RestClient restClient) {
         this.networkMapServerBaseUri = remoteServicesProperties.getServiceUri("network-map-server");
-        this.restTemplate = restTemplate;
+        this.restClient = restClient;
     }
 
     public String getElementSchema(String elementType, String infoType) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION + "/schemas/{elementType}/{infoType}")
             .buildAndExpand(elementType, infoType).toUriString();
-        return restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
+        return restClient.get().uri(networkMapServerBaseUri + path)
+            .retrieve().body(String.class);
     }
 
     public String getElementsInfos(UUID networkUuid,
@@ -70,10 +68,12 @@ public class NetworkMapService {
                 .optionalParameters(optionalParameters)
                 .build(), builder);
         String url = builder.buildAndExpand(networkUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<List<String>> httpEntity = new HttpEntity<>(substationsIds, headers);
-        return restTemplate.postForObject(networkMapServerBaseUri + url, httpEntity, String.class);
+        var requestSpec = restClient.post().uri(networkMapServerBaseUri + url)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (substationsIds != null) {
+            requestSpec.body(substationsIds);
+        }
+        return requestSpec.retrieve().body(String.class);
     }
 
     public String getElementInfos(UUID networkUuid,
@@ -93,7 +93,8 @@ public class NetworkMapService {
             .optionalParameters(optionalParameters)
             .build(), builder);
 
-        return restTemplate.getForObject(networkMapServerBaseUri + builder.build().toUriString(), String.class, networkUuid, elementId);
+        return restClient.get().uri(networkMapServerBaseUri + builder.build().toUriString(), networkUuid, elementId)
+            .retrieve().body(String.class);
     }
 
     public String getElementsInfosByIds(UUID networkUuid,
@@ -113,7 +114,9 @@ public class NetworkMapService {
         queryParamInfoTypeParameters(InfoTypeParameters.builder()
                 .optionalParameters(optionalParameters)
                 .build(), builder);
-        return restTemplate.postForObject(networkMapServerBaseUri + builder.buildAndExpand(networkUuid).toUriString(), elementIds, String.class);
+        return restClient.post().uri(networkMapServerBaseUri + builder.buildAndExpand(networkUuid).toUriString())
+            .body(elementIds)
+            .retrieve().body(String.class);
     }
 
     public String getAllElementsInfos(UUID networkUuid,
@@ -129,10 +132,12 @@ public class NetworkMapService {
         if (substationsIds != null) {
             builder = builder.queryParam(QUERY_PARAM_SUBSTATION_ID, substationsIds);
         }
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<?> httpEntity = new HttpEntity<>(optionalParameters, headers);
-        return restTemplate.postForObject(networkMapServerBaseUri + builder.buildAndExpand(networkUuid).toUriString(), httpEntity, String.class);
+        var requestSpec = restClient.post().uri(networkMapServerBaseUri + builder.buildAndExpand(networkUuid).toUriString())
+            .contentType(MediaType.APPLICATION_JSON);
+        if (optionalParameters != null) {
+            requestSpec.body(optionalParameters);
+        }
+        return requestSpec.retrieve().body(String.class);
     }
 
     private void queryParamInfoTypeParameters(InfoTypeParameters infoTypesParameters, UriComponentsBuilder builder) {
@@ -146,7 +151,8 @@ public class NetworkMapService {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
 
-        return restTemplate.getForObject(networkMapServerBaseUri + builder.build().toUriString(), String.class, networkUuid);
+        return restClient.get().uri(networkMapServerBaseUri + builder.build().toUriString(), networkUuid)
+            .retrieve().body(String.class);
     }
 
     public String getNominalVoltages(UUID networkUuid, String variantId) {
@@ -156,7 +162,8 @@ public class NetworkMapService {
             uriBuilder = uriBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
 
-        return restTemplate.getForObject(networkMapServerBaseUri + uriBuilder.build().toUriString(), String.class, networkUuid);
+        return restClient.get().uri(networkMapServerBaseUri + uriBuilder.build().toUriString(), networkUuid)
+            .retrieve().body(String.class);
     }
 
     public String getElementsIds(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, List<Double> nominalVoltages) {
@@ -172,10 +179,12 @@ public class NetworkMapService {
             builder = builder.queryParam(QUERY_PARAM_NOMINAL_VOLTAGES, nominalVoltages);
         }
         String url = builder.buildAndExpand(networkUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<List<String>> httpEntity = new HttpEntity<>(substationsIds, headers);
-        return restTemplate.postForObject(networkMapServerBaseUri + url, httpEntity, String.class);
+        var requestSpec = restClient.post().uri(networkMapServerBaseUri + url)
+            .contentType(MediaType.APPLICATION_JSON);
+        if (substationsIds != null) {
+            requestSpec.body(substationsIds);
+        }
+        return requestSpec.retrieve().body(String.class);
     }
 
     public String getEquipmentsMapData(UUID networkUuid, String variantId, List<String> substationsIds, String equipmentPath) {
@@ -189,7 +198,8 @@ public class NetworkMapService {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         String url = builder.buildAndExpand(networkUuid).toUriString();
-        return restTemplate.getForObject(networkMapServerBaseUri + url, String.class);
+        return restClient.get().uri(networkMapServerBaseUri + url)
+            .retrieve().body(String.class);
     }
 
     public String getBranchOr3WTVoltageLevelId(UUID networkUuid, String variantId, String equipmentId, ThreeSides side) {
@@ -200,7 +210,8 @@ public class NetworkMapService {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         String path = builder.buildAndExpand(networkUuid, equipmentId).toUriString();
-        return restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
+        return restClient.get().uri(networkMapServerBaseUri + path)
+            .retrieve().body(String.class);
     }
 
     public String getHvdcLineShuntCompensators(UUID networkUuid, String variantId, String hvdcId) {
@@ -210,7 +221,8 @@ public class NetworkMapService {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         String path = builder.buildAndExpand(networkUuid, hvdcId).toUriString();
-        return restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
+        return restClient.get().uri(networkMapServerBaseUri + path)
+            .retrieve().body(String.class);
     }
 
     public String getVoltageLevelSubstationId(UUID networkUuid, String variantId,
@@ -220,9 +232,9 @@ public class NetworkMapService {
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        return restTemplate.exchange(networkMapServerBaseUri + builder.build().toUriString(), HttpMethod.GET, null,
-                new ParameterizedTypeReference<String>() {
-                }, networkUuid, voltageLevelId).getBody();
+        return restClient.get().uri(networkMapServerBaseUri + builder.build().toUriString(), networkUuid, voltageLevelId)
+            .retrieve().body(new ParameterizedTypeReference<String>() {
+                });
     }
 
     public List<IdentifiableInfos> getVoltageLevelBusesOrBusbarSections(UUID networkUuid, String variantId,
@@ -234,9 +246,9 @@ public class NetworkMapService {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
 
-        return restTemplate.exchange(networkMapServerBaseUri + builder.build().toUriString(), HttpMethod.GET, null,
-                new ParameterizedTypeReference<List<IdentifiableInfos>>() {
-                }, networkUuid, voltageLevelId).getBody();
+        return restClient.get().uri(networkMapServerBaseUri + builder.build().toUriString(), networkUuid, voltageLevelId)
+            .retrieve().body(new ParameterizedTypeReference<List<IdentifiableInfos>>() {
+                });
     }
 
     public String getVoltageLevelTopologyInfos(UUID networkUuid, String variantId,
@@ -248,9 +260,9 @@ public class NetworkMapService {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
 
-        return restTemplate.exchange(networkMapServerBaseUri + builder.build().toUriString(), HttpMethod.GET, null,
-                new ParameterizedTypeReference<String>() {
-                }, networkUuid, voltageLevelId).getBody();
+        return restClient.get().uri(networkMapServerBaseUri + builder.build().toUriString(), networkUuid, voltageLevelId)
+            .retrieve().body(new ParameterizedTypeReference<String>() {
+                });
     }
 
     public void setNetworkMapServerBaseUri(String networkMapServerBaseUri) {

@@ -57,17 +57,32 @@ public class SensitivityAnalysisService extends AbstractComputationService {
     }
 
     @Transactional
-    public boolean setSensitivityAnalysisParameters(UUID studyUuid, String parameters, String userId) {
-        return setComputationParameters(
+    public void setSensitivityAnalysisParameters(UUID studyUuid, String parameters, String userId) {
+        setComputationParameters(
                 studyUuid,
                 parameters,
                 userId,
                 StudyEntity::getSensitivityAnalysisParametersUuid,
                 StudyEntity::setSensitivityAnalysisParametersUuid,
-                UserProfileInfos::getSensitivityAnalysisParameterId,
-                sensitivityAnalysisRestService,
                 sensitivityAnalysisRestService::createSensitivityAnalysisParameters,
                 sensitivityAnalysisRestService::updateSensitivityAnalysisParameters,
+                SENSITIVITY_ANALYSIS,
+                List.of(rootNetworkNodeInfoService::invalidateSensitivityAnalysisStatusOnAllNodes),
+                NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS
+        );
+    }
+
+    @Transactional
+    public boolean resetSensitivityAnalysisParameters(UUID studyUuid, String userId) {
+        return resetComputationParameters(
+                studyUuid,
+                userId,
+                StudyEntity::getSensitivityAnalysisParametersUuid,
+                StudyEntity::setSensitivityAnalysisParametersUuid,
+                UserProfileInfos::getSensitivityAnalysisParameterId,
+                sensitivityAnalysisRestService,
+                sensitivityAnalysisRestService::resetSensitivityAnalysisParameters,
+                sensitivityAnalysisRestService::createDefaultParameters,
                 SENSITIVITY_ANALYSIS,
                 List.of(rootNetworkNodeInfoService::invalidateSensitivityAnalysisStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS
@@ -87,7 +102,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
     private UUID handleSensitivityAnalysisRequest(StudyEntity study, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
         if (prevResultUuid != null) {
-            sensitivityAnalysisRestService.deleteSensitivityAnalysisResults(List.of(prevResultUuid));
+            sensitivityAnalysisRestService.deleteResults(List.of(prevResultUuid));
         }
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);

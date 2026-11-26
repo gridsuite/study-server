@@ -37,6 +37,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.elasticsearch.client.elc.Queries;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import static org.gridsuite.study.server.elasticsearch.EquipmentInfosService.EQUIPMENT_TYPE_SCORES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -175,6 +176,21 @@ class EquipmentInfosServiceTests implements WithAssertions {
         equipmentInfosService.deleteAllByNetworkUuid(NETWORK_UUID);
         assertEquals(0, equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID).size());
         assertEquals(0, equipmentInfosService.getTombstonedEquipmentInfosCount(NETWORK_UUID));
+    }
+
+    @Test
+    void testFindTombstonedEquipmentInfosMatchesExactIds() {
+        equipmentInfosService.addTombstonedEquipmentInfos(TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).variantId("variant1").id("T1").build());
+        equipmentInfosService.addTombstonedEquipmentInfos(TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).variantId("variant1").id("T1(1)").build());
+        equipmentInfosService.addTombstonedEquipmentInfos(TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).variantId("variant1").id("POSTE T1").build());
+        equipmentInfosService.addTombstonedEquipmentInfos(TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).variantId("variant2").id("T1").build());
+
+        assertEquals(Set.of("T1"), equipmentInfosService.findTombstonedEquipmentInfosByIdIn(NETWORK_UUID, "variant1", List.of("T1"))
+            .stream().map(TombstonedEquipmentInfos::getId).collect(Collectors.toSet()));
+        assertEquals(Set.of("variant1"), equipmentInfosService.findTombstonedEquipmentInfosByIdIn(NETWORK_UUID, "variant1", List.of("T1"))
+            .stream().map(TombstonedEquipmentInfos::getVariantId).collect(Collectors.toSet()));
+        assertEquals(Set.of("T1(1)"), equipmentInfosService.findTombstonedEquipmentInfosByIdIn(NETWORK_UUID, "variant1", List.of("T1(1)"))
+            .stream().map(TombstonedEquipmentInfos::getId).collect(Collectors.toSet()));
     }
 
     @Test

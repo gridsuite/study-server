@@ -12,7 +12,7 @@ import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.RecordedRequest;
-import mockwebserver3.junit5.internal.MockWebServerExtension;
+import mockwebserver3.junit5.StartStop;
 import okhttp3.HttpUrl;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -24,7 +24,6 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,7 +42,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
-@ExtendWith(MockWebServerExtension.class)
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
@@ -75,9 +73,11 @@ class CaseTest {
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
     @Autowired
     private TestUtils studyTestUtils;
+    @StartStop
+    final MockWebServer server = new MockWebServer();
 
     @BeforeEach
-    void setup(final MockWebServer server) {
+    void setup() {
         // Ask the server for its URL. You'll need this to make HTTP requests.
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
@@ -88,11 +88,11 @@ class CaseTest {
             @Override
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
-                String path = Objects.requireNonNull(request.getPath());
+                String path = Objects.requireNonNull(request.getTarget());
                 switch (path) {
                     default:
-                        LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
-                        return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
+                        LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getTarget());
+                        return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getTarget()).build();
                 }
             }
         };
@@ -120,7 +120,7 @@ class CaseTest {
     }
 
     @AfterEach
-    void tearDown(final MockWebServer server) {
+    void tearDown() {
         List<String> destinations = List.of(STUDY_UPDATE_DESTINATION);
 
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));

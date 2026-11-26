@@ -17,7 +17,7 @@ import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.RecordedRequest;
-import mockwebserver3.junit5.internal.MockWebServerExtension;
+import mockwebserver3.junit5.StartStop;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import org.gridsuite.study.server.dto.NodeReceiver;
@@ -39,7 +39,6 @@ import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,7 +73,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * @author David Braquart <david.braquart at rte-france.com>
  */
-@ExtendWith(MockWebServerExtension.class)
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
@@ -101,8 +99,6 @@ class StateEstimationTest {
     private static final String WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING = "72c9d1ef-d8ab-4388-a6fe-855604c2dc10";
 
     private static final String ESTIM_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
-
-    private static final String LOGICAL_CONTROLS_RESULT_JSON = "{\"balances\":{}}";
 
     private static final String VARIANT_ID = "variant_1";
     private static final String VARIANT_ID_2 = "variant_2";
@@ -145,6 +141,8 @@ class StateEstimationTest {
     private TestUtils studyTestUtils;
     @Autowired
     private ConsumerService consumerService;
+    @StartStop
+    final MockWebServer server = new MockWebServer();
 
     @AllArgsConstructor
     private static final class StudyNodeIds {
@@ -154,7 +152,7 @@ class StateEstimationTest {
     }
 
     @BeforeEach
-    void setup(final MockWebServer server) throws Exception {
+    void setup() throws Exception {
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
 
         // Ask the server for its URL. You'll need this to make HTTP requests.
@@ -175,8 +173,9 @@ class StateEstimationTest {
             @Override
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
-                String path = Objects.requireNonNull(request.getPath());
+                String path = Objects.requireNonNull(request.getTarget());
                 String method = Objects.requireNonNull(request.getMethod());
+                String[] targetParts = path.split("%");
 
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reporterId=.*&reportType=StateEstimation&variantId=" + VARIANT_ID + "&receiver=.*")) {
                     // estim with success
@@ -188,8 +187,8 @@ class StateEstimationTest {
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reporterId=.*&reportType=StateEstimation&variantId=" + VARIANT_ID_2 + "&receiver=.*")) {
                     // estim with failure
                     input.send(MessageBuilder.withPayload("")
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[
-                                    11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + targetParts[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + targetParts[11].substring(4)
+                                    + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .build(), ESTIM_FAILED_DESTINATION);
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), estimErrorResultUuidStr);
                 } else if (path.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID)) {
@@ -199,20 +198,22 @@ class StateEstimationTest {
                 } else if (path.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID + "/stop.*")) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", STATE_ESTIMATION_RESULT_UUID)
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[
-                                    11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + targetParts[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + targetParts[11].substring(4)
+                                    + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .build(), ESTIM_STOPPED_DESTINATION);
-                    return new MockResponse(200);
+                    return new MockResponse.Builder().code(200).build();
                 } else if (path.matches("/v1/supervision/results-count")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "1");
                 } else if (path.matches("/v1/reports")) {
-                    return new MockResponse(200);
+                    return new MockResponse.Builder().code(200).build();
                 } else if (path.matches("/v1/results\\?resultsUuids.*")) {
-                    return new MockResponse(200);
+                    return new MockResponse.Builder().code(200).build();
+                } else if (path.matches("/v1/supervision/results")) {
+                    return new MockResponse.Builder().code(200).build();
                 } else if (path.matches("/v1/parameters/" + WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING)) {
-                    return new MockResponse(404);
-                } else if (path.matches("/v1/parameters")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(STATE_ESTIMATION_ERROR_RESULT_UUID));
+                    return new MockResponse.Builder().code(404).build();
+                } else if (path.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID + "/reset") && "PUT".equals(method)) {
+                    return new MockResponse.Builder().code(200).build();
                 } else if (path.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID)) {
                     if ("GET".equals(method)) {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), estimParametersJson);
@@ -224,12 +225,12 @@ class StateEstimationTest {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(STATE_ESTIMATION_PARAMETERS_UUID));
                 } else if (path.matches("/v1/parameters/default") && "POST".equals(method)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(STATE_ESTIMATION_PARAMETERS_UUID));
+                } else if (path.matches("/v1/users/.*/profile") && "GET".equals(method)) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "{}");
                 } else if (path.matches("/v1/users/.*/quota/.*") && "POST".equals(method)) {
-                    return new MockResponse(200);
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/logical-controls\\?variantId=.*") && "POST".equals(method)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), LOGICAL_CONTROLS_RESULT_JSON);
+                    return new MockResponse.Builder().code(200).build();
                 } else {
-                    return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
+                    return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getTarget()).build();
                 }
             }
         };
@@ -324,7 +325,7 @@ class StateEstimationTest {
     }
 
     @AfterEach
-    void tearDown(final MockWebServer server) {
+    void tearDown() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
         List<String> destinations = List.of(STUDY_UPDATE_DESTINATION, ESTIM_RESULT_JSON_DESTINATION, ESTIM_STOPPED_DESTINATION, ESTIM_FAILED_DESTINATION);
@@ -337,7 +338,7 @@ class StateEstimationTest {
     }
 
     @Test
-    void testComputation(final MockWebServer server) throws Exception {
+    void testComputation() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
         runEstim(server, ids);
 
@@ -355,7 +356,7 @@ class StateEstimationTest {
     }
 
     @Test
-    void testResultsDeletion(final MockWebServer server) throws Exception {
+    void testResultsDeletion() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
         runEstim(server, ids);
 
@@ -375,14 +376,14 @@ class StateEstimationTest {
                         .queryParam("dryRun", "false"))
                 .andExpect(status().isOk());
         var requests = TestUtils.getRequestsDone(2, server);
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/results\\?resultsUuids")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/supervision/results")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
         // no more result
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
     }
 
     @Test
-    void testStop(final MockWebServer server) throws Exception {
+    void testStop() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
         runEstim(server, ids);
 
@@ -394,7 +395,7 @@ class StateEstimationTest {
     }
 
     @Test
-    void testFailure(final MockWebServer server) throws Exception {
+    void testFailure() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID_2, "node 2", null);
 
         mockMvc.perform(post(STATE_ESTIMATION_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
@@ -408,7 +409,7 @@ class StateEstimationTest {
     }
 
     @Test
-    void testStateEstimationParameters(final MockWebServer server) throws Exception {
+    void testStateEstimationParameters() throws Exception {
         String estimParametersJson = TestUtils.resourceToString(ESTIM_PARAMETERS_FILE);
 
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
@@ -441,6 +442,10 @@ class StateEstimationTest {
         createOrUpdateParametersAndDoChecks(ids2.studyId, estimParametersJson, "userId", HttpStatus.OK);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING)));
 
+        //reset state estimation parameters to default ones
+        resetParametersAndDoChecks(ids2.studyId, "userId");
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING + "/reset")));
+
         // insert a study with a wrong state estimation parameters uuid
         StudyNodeIds ids3 = createStudyAndNode(VARIANT_ID, "node 3", UUID.fromString(WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING));
 
@@ -451,6 +456,16 @@ class StateEstimationTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING)));
     }
 
+    @Test
+    void testResetStateEstimationParametersWithNoExistingParameters() throws Exception {
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
+
+        resetParametersAndDoChecks(ids.studyId, "userId");
+
+        assertEquals(STATE_ESTIMATION_PARAMETERS_UUID, studyRepository.findById(ids.studyId).orElseThrow().getStateEstimationParametersUuid());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/default")));
+    }
+
     private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/state-estimation/parameters", studyNameUserIdUuid)
@@ -459,16 +474,31 @@ class StateEstimationTest {
                     .content(parameters))
             .andExpect(status().is(status.value()));
 
+        checkParametersChangedMessagesReceived(studyNameUserIdUuid);
+    }
+
+    private void resetParametersAndDoChecks(UUID studyNameUserIdUuid, String userId) throws Exception {
+        mockMvc.perform(
+                post("/v1/studies/{studyUuid}/state-estimation/parameters/reset", studyNameUserIdUuid)
+                    .header("userId", userId))
+            .andExpect(status().isOk());
+
+        checkParametersChangedMessagesReceived(studyNameUserIdUuid);
+    }
+
+    private void checkParametersChangedMessagesReceived(UUID studyNameUserIdUuid) {
         Message<byte[]> stateEstimationStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(studyNameUserIdUuid, stateEstimationStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS, stateEstimationStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOGICAL_CONTROLS_STATUS);
 
         Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     @Test
-    void testDebugComputation(final MockWebServer server) throws Exception {
+    void testDebugComputation() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
         mockMvc.perform(post(STATE_ESTIMATION_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
                         .param("debug", "true")
@@ -490,18 +520,6 @@ class StateEstimationTest {
                 status().isOk(),
                 content().string(ESTIM_STATUS_JSON));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID + "/status")));
-    }
-
-    @Test
-    void testComputeLogicalControls(final MockWebServer server) throws Exception {
-        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
-
-        MvcResult mvcResult = mockMvc.perform(post(STATE_ESTIMATION_URL_BASE + "logical-controls", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
-                .andExpect(status().isOk())
-                .andReturn();
-        assertEquals(LOGICAL_CONTROLS_RESULT_JSON, mvcResult.getResponse().getContentAsString());
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches(
-                "/v1/networks/" + NETWORK_UUID_STRING + "/logical-controls\\?variantId=" + VARIANT_ID)));
     }
 
     @Test

@@ -35,6 +35,7 @@ import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMargin
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
@@ -64,6 +65,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
+import static org.gridsuite.study.server.service.SupervisionService.SUPERVISION_USER;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.gridsuite.study.server.utils.TestUtils.synchronizeStudyServerExecutionService;
 import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyPostRequest;
@@ -183,7 +185,7 @@ class RootNetworkTest {
     @MockitoBean
     private NetworkService networkService;
     @MockitoBean
-    private NetworkModificationService networkModificationService;
+    private NetworkModificationRestService networkModificationService;
     @MockitoBean
     private PccMinRestService pccMinService;
 
@@ -385,11 +387,13 @@ class RootNetworkTest {
     }
 
     @Test
-    void testCreateRootNetworkConsumer() throws Exception {
+    void testCreateRootNetwork() throws Exception {
         // create study with first root network
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         UUID studyUuid = studyEntity.getId();
         studyRepository.save(studyEntity);
+        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
+        NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
 
         UUID newRootNetworkUuid = UUID.randomUUID();
 
@@ -431,6 +435,8 @@ class RootNetworkTest {
 
         // check case expiration has been disabled
         verify(caseService, times(1)).disableCaseExpiration(CASE_UUID2);
+
+        verify(networkModificationService, times(1)).addRootNetworkTag(List.of(firstNode.getModificationGroupUuid()), "rn2");
     }
 
     private void createAndConsumeMessageCaseImport(UUID studyUuid, RootNetworkInfos rootNetworkInfos, CaseImportAction caseImportAction) throws Exception {
@@ -570,14 +576,14 @@ class RootNetworkTest {
         verify(dynamicSecurityAnalysisRestService, times(1)).deleteResults(List.of(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID));
         verify(dynamicMarginCalculationRestService, times(1)).deleteResults(List.of(DYNAMIC_MARGIN_CALCULATION_RESULT_UUID));
         // check LOADFLOW_RESULT_UUID2 is also deleted
-        verify(loadFlowRestService, times(1)).deleteLoadFlowResults(argThat(list -> new HashSet<>(list).equals(Set.of(LOADFLOW_RESULT_UUID, LOADFLOW_RESULT_UUID2))));
-        verify(securityAnalysisService, times(1)).deleteSecurityAnalysisResults(List.of(SECURITY_ANALYSIS_RESULT_UUID));
-        verify(shortCircuitService, times(1)).deleteShortCircuitAnalysisResults(List.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
-        verify(shortCircuitService, times(1)).deleteShortCircuitAnalysisResults(List.of(ONE_BUS_SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
-        verify(stateEstimationService, times(1)).deleteStateEstimationResults(List.of(STATE_ESTIMATION_RESULT_UUID));
-        verify(pccMinService, times(1)).deletePccMinResults(List.of(PCC_MIN_RESULT_UUID));
-        verify(sensitivityAnalysisService, times(1)).deleteSensitivityAnalysisResults(List.of(SENSITIVITY_ANALYSIS_RESULT_UUID));
-        verify(voltageInitService, times(1)).deleteVoltageInitResults(List.of(VOLTAGE_INIT_RESULT_UUID));
+        verify(loadFlowRestService, times(1)).deleteResults(argThat(list -> new HashSet<>(list).equals(Set.of(LOADFLOW_RESULT_UUID, LOADFLOW_RESULT_UUID2))));
+        verify(securityAnalysisService, times(1)).deleteResults(List.of(SECURITY_ANALYSIS_RESULT_UUID));
+        verify(shortCircuitService, times(1)).deleteResults(List.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
+        verify(shortCircuitService, times(1)).deleteResults(List.of(ONE_BUS_SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
+        verify(stateEstimationService, times(1)).deleteResults(List.of(STATE_ESTIMATION_RESULT_UUID));
+        verify(pccMinService, times(1)).deleteResults(List.of(PCC_MIN_RESULT_UUID));
+        verify(sensitivityAnalysisService, times(1)).deleteResults(List.of(SENSITIVITY_ANALYSIS_RESULT_UUID));
+        verify(voltageInitService, times(1)).deleteResults(List.of(VOLTAGE_INIT_RESULT_UUID), SUPERVISION_USER);
     }
 
     @Test
@@ -813,6 +819,36 @@ class RootNetworkTest {
     }
 
     @Test
+    void getRootNetworkImportParameters() throws Exception {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        UUID rootNetworkUuid = UUID.randomUUID();
+        Map<String, Object> importParameters = new HashMap<>();
+        importParameters.put("param1", "value1");
+        importParameters.put("param2", true);
+        importParameters.put("param3", List.of("v1", "v2"));
+        importParameters.put("param4", null);
+        createDummyRootNetwork(studyEntity, RootNetworkInfos.builder()
+            .name(CASE_NAME2)
+            .caseInfos(new CaseInfos(CASE_UUID2, CASE_UUID, CASE_NAME2, CASE_FORMAT2))
+            .networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
+            .reportUuid(REPORT_UUID2)
+            .id(rootNetworkUuid)
+            .tag("rn2")
+            .importParameters(importParameters)
+            .build());
+        studyRepository.save(studyEntity);
+
+        String response = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/import-parameters", studyEntity.getId(), rootNetworkUuid))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        Map<String, Object> result = objectMapper.readValue(response, new TypeReference<>() { });
+        assertEquals(importParameters, result);
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/import-parameters", studyEntity.getId(), UUID.randomUUID()))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
     void getOrderedRootNetworksFromController() throws Exception {
         // create study with one root node, two network modification node and a root network
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
@@ -966,6 +1002,44 @@ class RootNetworkTest {
             .tag("dum")
             .build().toEntity(objectMapper);
         studyEntity.addRootNetwork(rootNetworkEntity);
+    }
+
+    @Test
+    void testGetRootNetworkTags() {
+        UUID studyWithTwoTags = createStudy("R2");
+        UUID studyWithOneTag = createStudy(null);
+        createStudy("R4"); // not requested
+        UUID monoRootStudyUuid = createStudy(null);
+        StudyEntity monoRootStudy = studyRepository.findById(monoRootStudyUuid).orElseThrow();
+        monoRootStudy.setMonoRoot(true);
+        studyRepository.save(monoRootStudy);
+
+        // a study has each tag once even when given twice, mono-root ones included, and an unknown study is ignored
+        Map<UUID, List<String>> tagsByStudy = rootNetworkService.getRootNetworkTags(
+            List.of(studyWithTwoTags, studyWithTwoTags, studyWithOneTag, monoRootStudyUuid, UUID.randomUUID()));
+        assertEquals(Set.of(studyWithTwoTags, studyWithOneTag, monoRootStudyUuid), tagsByStudy.keySet());
+        assertEquals(Set.of("dum", "R2"), Set.copyOf(tagsByStudy.get(studyWithTwoTags)));
+        assertEquals(2, tagsByStudy.get(studyWithTwoTags).size());
+        assertEquals(List.of("dum"), tagsByStudy.get(studyWithOneTag));
+        assertEquals(List.of("dum"), tagsByStudy.get(monoRootStudyUuid));
+        assertEquals(Map.of(), rootNetworkService.getRootNetworkTags(List.of(UUID.randomUUID())));
+        assertEquals(Map.of(), rootNetworkService.getRootNetworkTags(List.of()));
+    }
+
+    private UUID createStudy(String extraTag) {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        if (extraTag != null) {
+            createDummyRootNetwork(studyEntity, RootNetworkInfos.builder()
+                .id(UUID.randomUUID())
+                .name(CASE_NAME2)
+                .importParameters(Map.of())
+                .caseInfos(new CaseInfos(CASE_UUID2, CASE_UUID, CASE_NAME2, CASE_FORMAT2))
+                .networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
+                .reportUuid(REPORT_UUID2)
+                .tag(extraTag)
+                .build());
+        }
+        return studyRepository.save(studyEntity).getId();
     }
 
     @AfterEach

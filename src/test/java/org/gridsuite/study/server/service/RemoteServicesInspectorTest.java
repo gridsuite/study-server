@@ -39,10 +39,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.client.ResponseActions;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 import java.net.SocketException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -58,7 +59,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 @DisableCloudStream
 @DisableJpa
 @Import({StudyAppConfig.class, RemoteServicesProperties.class})
-@RestClientTest({RemoteServicesInspector.class})
+@RestClientTest({RemoteServicesInspector.class, StudyServerExecutionService.class})
 @ExtendWith({MockitoExtension.class})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.MethodName.class)
@@ -81,17 +82,20 @@ class RemoteServicesInspectorTest implements WithAssertions {
 
     @TestConfiguration
     public static class TestConfig {
-        static final List<RestTemplate> REST_TEMPLATES = Collections.synchronizedList(new ArrayList<>(1));
+        static MockRestServiceServer server;
 
         @Bean
-        public RestTemplateCustomizer testRestTemplateCustomizer() {
-            return REST_TEMPLATES::add;
+        public RestClient.Builder testRestClientBuilder() {
+            RestClient.Builder builder = Mockito.spy(RestClient.builder());
+            server = MockRestServiceServer.bindTo(builder).ignoreExpectOrder(true).build();
+            Mockito.doReturn(builder).when(builder).requestFactory(Mockito.any(ClientHttpRequestFactory.class));
+            return builder;
         }
     }
 
     @BeforeAll
     void setup() {
-        server = MockRestServiceServer.bindTo(TestConfig.REST_TEMPLATES.get(0)).ignoreExpectOrder(true).build();
+        server = TestConfig.server;
         remoteServicesProperties.setServices(Arrays.stream(RemoteServiceName.values())
                 .map(RemoteServiceName::serviceName)
                 .map(name -> new RemoteServicesProperties.Service(name, "http://" + name + "/", false))
@@ -143,6 +147,77 @@ class RemoteServicesInspectorTest implements WithAssertions {
     @Test
     void testOptionalServicesWithLatency() {
         testOptionalServices("{\"status\":\"DOWN\"}", ServiceStatus.DOWN, 2000);
+    }
+
+    @Test
+    void testOptionalServiceUpSyncCaseInsensitive() {
+        assertOptionalServiceUpSync("{\"status\":\"uP\"}", true);
+    }
+
+    @Test
+    void testOptionalServiceDownSync() {
+        assertOptionalServiceUpSync("{\"status\":\"DOWN\"}", false);
+    }
+
+    @Test
+    void testOptionalServiceUpSyncWithMissingStatus() {
+        assertOptionalServiceUpSync("{\"unexpected_property\":\"UP\"}", false);
+    }
+
+    @Test
+    void testOptionalServiceUpSyncWithMalformedJson() {
+        assertOptionalServiceUpSync("{\"malformed json\":", false);
+    }
+
+    @Test
+    void testOptionalServiceUpSyncWithNetworkError() {
+        final RemoteServicesProperties.Service service = new RemoteServicesProperties.Service("sync-service", "http://sync-service", false);
+        server.expect(requestToUriTemplate("http://{service}/actuator/health", service.getName()))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withException(new SocketException("Test no server")));
+
+        assertThat(remoteServicesInspector.isServiceUp(service)).isFalse();
+    }
+
+    @Test
+    void testOptionalServiceUpSyncWithNullService() {
+        assertThatNullPointerException().isThrownBy(() -> remoteServicesInspector.isServiceUp(null))
+                .withMessage("service is marked non-null but is null");
+    }
+
+    private void assertOptionalServiceUpSync(final String jsonResponse, final boolean expected) {
+        final RemoteServicesProperties.Service service = new RemoteServicesProperties.Service("sync-service", "http://sync-service", false);
+        server.expect(requestToUriTemplate("http://{service}/actuator/health", service.getName()))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(jsonResponse, MediaType.APPLICATION_JSON));
+
+        assertThat(remoteServicesInspector.isServiceUp(service)).isEqualTo(expected);
+    }
+
+    @Test
+    void testGetService() {
+        final RemoteServiceName serviceName = RemoteServiceName.LOADFLOW_SERVER;
+
+        assertThat(remoteServicesInspector.getService(serviceName))
+                .isSameAs(remoteServicesProperties.getServices().stream()
+                        .filter(service -> service.getName().equals(serviceName.serviceName()))
+                        .findFirst()
+                        .orElseThrow());
+    }
+
+    @Test
+    void testGetServiceNotFound() {
+        final RemoteServiceName serviceName = RemoteServiceName.LOADFLOW_SERVER;
+        final List<RemoteServicesProperties.Service> originalServices = remoteServicesProperties.getServices();
+        try {
+            remoteServicesProperties.setServices(originalServices.stream()
+                    .filter(service -> !service.getName().equals(serviceName.serviceName()))
+                    .toList());
+
+            assertThat(remoteServicesInspector.getService(serviceName)).isNull();
+        } finally {
+            remoteServicesProperties.setServices(originalServices);
+        }
     }
 
     private void testOptionalServices(final String jsonResponse, final ServiceStatus statusTest, int delayResponse) {

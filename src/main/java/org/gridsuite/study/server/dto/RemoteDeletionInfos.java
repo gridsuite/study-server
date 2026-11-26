@@ -33,6 +33,7 @@ public class RemoteDeletionInfos {
     protected Set<UUID> stateEstimationResultUuids = new HashSet<>();
     protected Set<UUID> pccMinResultUuids = new HashSet<>();
     protected Set<UUID> asymmetricalLoadResultUuids = new HashSet<>();
+    protected Set<UUID> logicalControlsResultUuids = new HashSet<>();
 
     public List<UUID> getReportUuids() {
         return reportUuids.stream().toList();
@@ -72,6 +73,10 @@ public class RemoteDeletionInfos {
 
     public List<UUID> getAsymmetricalLoadResultUuids() {
         return asymmetricalLoadResultUuids.stream().toList();
+    }
+
+    public List<UUID> getLogicalControlsResultUuids() {
+        return logicalControlsResultUuids.stream().toList();
     }
 
     public List<UUID> getDynamicSimulationResultUuids() {
@@ -136,6 +141,10 @@ public class RemoteDeletionInfos {
 
     public void addAsymmetricalLoadResultUuid(UUID asymmetricalLoadResultUuid) {
         asymmetricalLoadResultUuids.add(asymmetricalLoadResultUuid);
+    }
+
+    public void addLogicalControlsResultUuid(UUID logicalControlsResultUuid) {
+        logicalControlsResultUuids.add(logicalControlsResultUuid);
     }
 
 }

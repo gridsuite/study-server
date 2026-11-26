@@ -28,11 +28,9 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.nodeactivity.NodeActivityInfos;
-import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
-import org.gridsuite.study.server.nodeactivity.NodeActivityService;
-import org.gridsuite.study.server.nodeactivity.NodeActivityType;
+import org.gridsuite.study.server.nodeactivity.*;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationService;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -47,9 +45,7 @@ import java.beans.PropertyEditorSupport;
 import java.util.*;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.StudyConstants.CASE_FORMAT;
-import static org.gridsuite.study.server.StudyConstants.CompositeModificationsActionType;
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MOVE_NETWORK_MODIFICATION_FORBIDDEN;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.*;
 
@@ -69,11 +65,12 @@ public class StudyController {
     private final CaseService caseService;
     private final RemoteServicesInspector remoteServicesInspector;
     private final RootNetworkService rootNetworkService;
-    private final RebuildNodeService rebuildNodeService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
+    private final NetworkModificationActivityRunnerService networkModificationActivityRunnerService;
     private final NodeActivityService nodeActivityService;
     private final StudyExportService studyExportService;
     private final StudyImportService studyImportService;
+    private final NetworkModificationService networkModificationService;
 
     public StudyController(StudyService studyService,
                            NetworkService networkStoreService,
@@ -83,11 +80,12 @@ public class StudyController {
                            CaseService caseService,
                            RemoteServicesInspector remoteServicesInspector,
                            RootNetworkService rootNetworkService,
-                           RebuildNodeService rebuildNodeService,
                            NodeActivityRunnerService nodeActivityRunnerService,
+                           NetworkModificationActivityRunnerService networkModificationActivityRunnerService,
                            NodeActivityService nodeActivityService,
                            StudyExportService studyExportService,
-                           StudyImportService studyImportService) {
+                           StudyImportService studyImportService,
+                           NetworkModificationService networkModificationService) {
         this.nodeActivityService = nodeActivityService;
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -97,10 +95,11 @@ public class StudyController {
         this.caseService = caseService;
         this.remoteServicesInspector = remoteServicesInspector;
         this.rootNetworkService = rootNetworkService;
-        this.rebuildNodeService = rebuildNodeService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
+        this.networkModificationActivityRunnerService = networkModificationActivityRunnerService;
         this.studyExportService = studyExportService;
         this.studyImportService = studyImportService;
+        this.networkModificationService = networkModificationService;
     }
 
     @InitBinder
@@ -117,6 +116,15 @@ public class StudyController {
     public ResponseEntity<String> getStudyCaseName(@PathVariable("studyUuid") UUID studyUuid, @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
         String studyCaseName = rootNetworkService.getCaseName(rootNetworkUuid);
         return StringUtils.isEmpty(studyCaseName) ? ResponseEntity.noContent().build() : ResponseEntity.ok().body(studyCaseName);
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/import-parameters", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get the import parameters stored for a root network, used to (re)create its network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The root network import parameters"),
+                           @ApiResponse(responseCode = "404", description = "The root network doesn't exist")})
+    public ResponseEntity<Map<String, Object>> getRootNetworkImportParameters(@PathVariable("studyUuid") UUID studyUuid, @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
+        rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
+        return ResponseEntity.ok().body(rootNetworkService.getImportParameters(rootNetworkUuid));
     }
 
     @GetMapping(value = "/study_creation_requests")
@@ -294,6 +302,45 @@ public class StudyController {
         UUID networkUUID = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         return ResponseEntity.ok().body(new RootNetworkStatusInfos(networkStoreService.doesNetworkExist(networkUUID),
                 rootNetworkService.getRootNetworkLoadStatus(rootNetworkUuid)));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuid}/unshare")
+    @Operation(summary = "Unshare a reference modification and copy the referenced composite in its place")
+    @ApiResponse(responseCode = "200", description = "The reference modification has been replaced by a copy of its referenced composite")
+    public ResponseEntity<Void> unshareModificationReference(
+            @PathVariable("modificationUuid") UUID modificationUuid,
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        nodeActivityRunnerService.runWith(UNSHARE_MODIFICATIONS, studyUuid, List.of(nodeUuid),
+                () -> networkModificationService.unshareModificationReferences(studyUuid, Map.of(nodeUuid, List.of(modificationUuid)), userId));
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/unshare")
+    @Operation(summary = "Unshare all the reference modifications of a node and copy the referenced composites in their place")
+    @ApiResponse(responseCode = "200", description = "All the reference modifications from the node have been replaced by copies of their referenced composites")
+    public ResponseEntity<Void> unshareAllModificationReferencesInNode(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        networkModificationService.unshareAllReferencesInNode(studyUuid, nodeUuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/unshare")
+    @Operation(summary = "Unshare all the reference modifications and copy the referenced composites in their place")
+    @ApiResponse(responseCode = "200", description = "All the reference modifications from the study have been replaced by copies of their referenced composites")
+    public ResponseEntity<Void> unshareAllModificationReferences(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsStudyExist(studyUuid);
+        networkModificationService.unshareAllReferencesInStudy(studyUuid, userId);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", params = {"caseUuid"})
@@ -666,7 +713,11 @@ public class StudyController {
         studyService.assertIsStudyAndNodeExist(studyUuid, targetNodeUuid);
         studyService.assertIsNodeExist(studyUuid, sourceNodeUuid, new StudyException(MOVE_NETWORK_MODIFICATION_FORBIDDEN));
         studyService.assertIsNodeNotReadOnly(targetNodeUuid);
-        rebuildNodeService.moveNetworkModifications(studyUuid, targetNodeUuid, sourceNodeUuid, modificationMoveInfos, userId);
+        networkModificationActivityRunnerService.runWith(studyUuid, targetNodeUuid, sourceNodeUuid, userId,
+            () -> {
+                boolean isTargetInDifferentNodeTree = networkModificationService.invalidateNodeTreeWhenMoveModifications(studyUuid, targetNodeUuid, sourceNodeUuid);
+                networkModificationService.moveNetworkModifications(studyUuid, sourceNodeUuid, targetNodeUuid, modificationMoveInfos, isTargetInDifferentNodeTree, userId);
+            });
         return ResponseEntity.ok().build();
     }
 
@@ -694,7 +745,11 @@ public class StudyController {
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        UUID newCompositeUuid = rebuildNodeService.assembleModificationsIntoComposite(studyUuid, nodeUuid, modificationsUuids, userId);
+        UUID newCompositeUuid = networkModificationActivityRunnerService.runWith(studyUuid, nodeUuid, userId,
+            () -> {
+                networkModificationService.invalidateNodeTreeWhenMoveModification(studyUuid, nodeUuid);
+                return networkModificationService.assembleModificationsIntoComposite(studyUuid, nodeUuid, modificationsUuids, userId);
+            });
         return ResponseEntity.ok().body(newCompositeUuid);
     }
 
@@ -949,11 +1004,12 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(libraries);
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network-modifications/references/exists")
-    @Operation(summary = "Whether the study contains a shared modification, including nested in its composites")
-    @ApiResponse(responseCode = "200", description = "true if at least one shared modification is found")
-    public ResponseEntity<Boolean> hasSharedModifications(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.hasSharedModifications(studyUuid));
+    @GetMapping(value = "/studies/{studyUuid}/network-modifications/references/write-access")
+    @Operation(summary = "Whether the study contains shared modifications, including nested in its composites, and, if so, whether the user can write on all, some or none of them")
+    @ApiResponse(responseCode = "200", description = "The write access on the shared modifications was returned")
+    public ResponseEntity<SharedModificationsWriteAccess> getSharedModificationsWriteAccess(@PathVariable("studyUuid") UUID studyUuid,
+                                                                                            @RequestHeader(HEADER_USER_ID) String userId) {
+        return ResponseEntity.ok().body(studyService.getSharedModificationsWriteAccess(studyUuid, userId));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", produces = MediaType.TEXT_PLAIN_VALUE)
@@ -987,7 +1043,11 @@ public class StudyController {
                                                           @RequestBody String modificationAttributes,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        rebuildNodeService.createNetworkModification(studyUuid, nodeUuid, modificationAttributes, userId);
+        networkModificationActivityRunnerService.runWith(studyUuid, nodeUuid, userId,
+            () -> {
+                networkModificationTreeService.invalidateNodeTreeWithLF(studyUuid, nodeUuid, InvalidateNodeTreeParameters.ComputationsInvalidationMode.ALL);
+                networkModificationService.createNetworkModification(studyUuid, nodeUuid, modificationAttributes, userId);
+            });
         return ResponseEntity.ok().build();
     }
 
@@ -1000,7 +1060,8 @@ public class StudyController {
                                                           @RequestBody String modificationAttributes,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        rebuildNodeService.updateNetworkModification(studyUuid, modificationAttributes, nodeUuid, networkModificationUuid, userId);
+        networkModificationActivityRunnerService.runWith(studyUuid, nodeUuid, userId,
+            () -> networkModificationService.updateNetworkModification(studyUuid, modificationAttributes, nodeUuid, networkModificationUuid, userId));
         return ResponseEntity.ok().build();
     }
 
@@ -1009,7 +1070,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications was deleted"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<Void> deleteNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                           @Parameter(description = "Network modification UUIDs") @RequestParam(name = "uuids", required = false) List<UUID> networkModificationUuids,
+                                                           @Parameter(description = "Network modification UUIDs") @RequestParam(name = "uuids") List<UUID> networkModificationUuids,
                                                            @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.deleteNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
@@ -1027,25 +1088,44 @@ public class StudyController {
                                                                @Parameter(description = "Stashed Modification") @RequestParam(name = "stashed", required = true) Boolean stashed,
                                                                @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        if (stashed.booleanValue()) {
-            rebuildNodeService.stashNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
-        } else {
-            rebuildNodeService.restoreNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
-        }
+        networkModificationActivityRunnerService.runWith(studyUuid, nodeUuid, userId,
+            () -> {
+                if (stashed.booleanValue()) {
+                    networkModificationService.stashNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
+                } else {
+                    networkModificationService.restoreNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
+                }
+            });
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications")
-    @Operation(summary = "Updates the metadata of a network modification")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Update the metadata of a network modification"), @ApiResponse(responseCode = "404",
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", params = "active")
+    @Operation(summary = "Activates or deactivates network modifications of a node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The activation of the network modifications has been updated"), @ApiResponse(responseCode = "404",
             description = "The study/node is not found")})
-    public ResponseEntity<Void> updateNetworkModificationsMetadata(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                   @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                   @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
-                                                                   @RequestBody NetworkModificationMetadata metadata,
-                                                                   @RequestHeader(HEADER_USER_ID) String userId) {
+    public ResponseEntity<Void> updateNetworkModificationsActivation(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                     @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                     @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
+                                                                     @Parameter(description = "Activate or deactivate the modifications") @RequestParam("active") boolean active,
+                                                                     @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        rebuildNodeService.updateNetworkModificationsMetadata(studyUuid, nodeUuid, networkModificationUuids, userId, metadata);
+        networkModificationActivityRunnerService.runWith(studyUuid, nodeUuid, userId,
+            () -> {
+                networkModificationService.updateNetworkModificationsActivation(studyUuid, nodeUuid, networkModificationUuids, userId, active);
+            });
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuid}/name-and-description")
+    @Operation(summary = "Updates the name and the description of a network modification")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Update the name and the description of a network modification"),
+        @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<Void> updateModificationNameAndDescription(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                     @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                     @PathVariable UUID modificationUuid,
+                                                                     @RequestBody String metadata,
+                                                                     @RequestHeader(HEADER_USER_ID) String userId) {
+        networkModificationService.updateNetworkModificationNameAndDescription(studyUuid, nodeUuid, modificationUuid, metadata, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1060,7 +1140,10 @@ public class StudyController {
                                                                      @Parameter(description = "New applicability value") @RequestParam(name = "applicable") Boolean applicable,
                                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        rebuildNodeService.updateNetworkModificationsApplicability(studyUuid, nodeUuid, rootNetworkUuid, networkModificationUuids, userId, applicable);
+        networkModificationActivityRunnerService.runWith(studyUuid, nodeUuid, userId,
+            () -> {
+                networkModificationService.updateNetworkModificationsApplicabilityInRootNetwork(studyUuid, nodeUuid, rootNetworkUuid, networkModificationUuids, userId, applicable);
+            });
         return ResponseEntity.ok().build();
     }
 
@@ -1109,7 +1192,7 @@ public class StudyController {
     private void buildNewNode(UUID studyUuid, UUID referenceId, NetworkModificationNode createdNode, String userId) {
         studyService.getRootNetworksToBuildNewNode(studyUuid, referenceId, createdNode).forEach(rootNetworkUuid ->
             nodeActivityRunnerService.runWith(BUILD, studyUuid, rootNetworkUuid, List.of(createdNode.getId()),
-                () -> studyService.buildNode(studyUuid, createdNode.getId(), rootNetworkUuid, userId)));
+                () -> networkModificationService.buildNode(studyUuid, createdNode.getId(), rootNetworkUuid, userId)));
     }
 
     @GetMapping(value = "/nodes/infos", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -1121,6 +1204,17 @@ public class StudyController {
             @Parameter(description = "Node UUIDs") @RequestParam("ids") List<UUID> nodeUuids) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
                 .body(networkModificationTreeService.getNodesInfos(nodeUuids));
+    }
+
+    @PostMapping(value = "/studies/root-network-tags", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get the root network tags of the given studies")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Root network tags by study, unknown studies are ignored"),
+    })
+    public ResponseEntity<Map<UUID, List<String>>> getRootNetworkTags(
+            @Parameter(description = "Study UUIDs") @RequestBody List<UUID> studyUuids) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
+                .body(rootNetworkService.getRootNetworkTags(studyUuids));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
@@ -1217,7 +1311,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
     public ResponseEntity<RootNode> getNetworkModificationTree(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                                @Parameter(description = "root network uuid") @RequestParam(value = "rootNetworkUuid", required = false) UUID rootNetworkUuid) {
-        RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid, rootNetworkUuid);
+        RootNode rootNode = networkModificationTreeService.getStudyTreeWithReferencesInfos(studyUuid, rootNetworkUuid);
         return rootNode != null ?
             ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNode)
             : ResponseEntity.notFound().build();
@@ -1239,7 +1333,7 @@ public class StudyController {
     public ResponseEntity<NetworkModificationNode> getNetworkModificationSubtree(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                                  @Parameter(description = "parent node uuid") @RequestParam(value = "parentNodeUuid") UUID parentNodeUuid,
                                                                  @Parameter(description = "root network uuid") @RequestParam(value = "rootNetworkUuid", required = false) UUID rootNetworkUuid) {
-        NetworkModificationNode parentNode = (NetworkModificationNode) networkModificationTreeService.getStudySubtree(studyUuid, parentNodeUuid, rootNetworkUuid);
+        NetworkModificationNode parentNode = (NetworkModificationNode) networkModificationTreeService.getStudySubtreeWithReferencesInfos(studyUuid, parentNodeUuid, rootNetworkUuid);
         return parentNode != null ?
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(parentNode)
                 : ResponseEntity.notFound().build();
@@ -1278,7 +1372,7 @@ public class StudyController {
     public ResponseEntity<AbstractNode> getNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                 @Parameter(description = "node uuid") @PathVariable("id") UUID nodeId,
                                                 @Parameter(description = "root network uuid") @RequestParam(value = "rootNetworkUuid", required = false) UUID rootNetworkUuid) {
-        AbstractNode node = networkModificationTreeService.getNode(nodeId, rootNetworkUuid);
+        AbstractNode node = networkModificationTreeService.getNodeWithReferencesInfos(nodeId, rootNetworkUuid);
         return node != null ?
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(node)
                 : ResponseEntity.notFound().build();
@@ -1314,11 +1408,11 @@ public class StudyController {
                                           @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        if (studyService.isNodeBuilt(nodeUuid, rootNetworkUuid)) {
+        if (networkModificationService.isNodeBuilt(nodeUuid, rootNetworkUuid)) {
             return ResponseEntity.ok().build();
         }
         nodeActivityRunnerService.runWith(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid),
-            () -> studyService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId));
+            () -> networkModificationService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }
 
@@ -1332,7 +1426,7 @@ public class StudyController {
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                           @RequestHeader(HEADER_USER_ID) String userId) {
         // unbuildStudyNode only reaches the children of a security node whose loadflow has run
-        NodeActivityType unbuildType = studyService.isSecurityNodeWithLoadflowDone(nodeUuid, rootNetworkUuid)
+        NodeActivityType unbuildType = networkModificationTreeService.isSecurityNodeWithLoadFlowDone(nodeUuid, rootNetworkUuid)
             ? UNBUILD_CHILDREN : UNBUILD;
         nodeActivityRunnerService.runWith(unbuildType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> studyService.unbuildStudyNode(studyUuid, nodeUuid, rootNetworkUuid, userId));
@@ -1462,7 +1556,7 @@ public class StudyController {
             try {
                 E value = Enum.valueOf(enumClass, text.toUpperCase());
                 setValue(value);
-            } catch (IllegalArgumentException ex) {
+            } catch (IllegalArgumentException _) {
                 String avail = StringUtils.join(enumClass.getEnumConstants(), ", ");
                 throw new IllegalArgumentException(String.format("Enum unknown entry '%s' should be among %s", text, avail));
             }

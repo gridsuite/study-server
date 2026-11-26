@@ -9,7 +9,7 @@ package org.gridsuite.study.server.service.client.timeseries;
 
 import com.powsybl.timeseries.TimeSeries;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
-import org.gridsuite.study.server.service.client.RestClient;
+import org.gridsuite.study.server.service.client.RestClientService;
 
 import java.util.List;
 import java.util.UUID;
@@ -19,7 +19,7 @@ import static org.gridsuite.study.server.StudyConstants.TIME_SERIES_API_VERSION;
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
-public interface TimeSeriesClient extends RestClient {
+public interface TimeSeriesClient extends RestClientService {
     String API_VERSION = TIME_SERIES_API_VERSION;
     String DELIMITER = "/";
     String TIME_SERIES_END_POINT = "timeseries-group";

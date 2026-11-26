@@ -27,6 +27,8 @@ import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurit
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
+import org.gridsuite.study.server.service.logicalcontrols.LogicalControlsRestService;
+import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
@@ -40,6 +42,7 @@ import org.springframework.data.elasticsearch.core.IndexOperations;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
@@ -49,6 +52,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
+import static org.gridsuite.study.server.StudyConstants.*;
+
 /**
  * @author Hugo Marcellin <hugo.marcelin at rte-france.com>
  */
@@ -57,6 +62,7 @@ public class SupervisionService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SupervisionService.class);
     private static final String DELETION_LOG_MESSAGE = "{} results deletion for all studies : {} seconds";
+    private static final String SUPERVISION_RESULTS_PATH = "/supervision/results";
 
     private final StudyService studyService;
 
@@ -94,6 +100,8 @@ public class SupervisionService {
 
     private final AsymmetricalLoadRestService asymmetricalLoadRestService;
 
+    private final LogicalControlsRestService logicalControlsRestService;
+
     private final ElasticsearchOperations elasticsearchOperations;
 
     private final StudyInfosService studyInfosService;
@@ -104,9 +112,11 @@ public class SupervisionService {
 
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
-    private final NetworkModificationService networkModificationService;
+    private final NetworkModificationRestService networkModificationService;
 
-    private static final String SUPERVISION_USER = "Supervision";
+    private final RestClient restClient;
+
+    public static final String SUPERVISION_USER = "Supervision";
 
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService, LoadFlowService loadFlowService,
@@ -122,6 +132,7 @@ public class SupervisionService {
                               VoltageInitRestService voltageInitService,
                               EquipmentInfosService equipmentInfosService,
                               AsymmetricalLoadRestService asymmetricalLoadRestService,
+                              LogicalControlsRestService logicalControlsRestService,
                               StateEstimationRestService stateEstimationService,
                               PccMinRestService pccMinService,
                               ElasticsearchOperations elasticsearchOperations,
@@ -130,7 +141,8 @@ public class SupervisionService {
                               StudyRepository studyRepository,
                               NodeRepository nodeRepository,
                               NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
-                              NetworkModificationService networkModificationService) {
+                              NetworkModificationRestService networkModificationService,
+                              RestClient restClient) {
 
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -149,6 +161,7 @@ public class SupervisionService {
         this.stateEstimationService = stateEstimationService;
         this.pccMinService = pccMinService;
         this.asymmetricalLoadRestService = asymmetricalLoadRestService;
+        this.logicalControlsRestService = logicalControlsRestService;
         this.elasticsearchOperations = elasticsearchOperations;
         this.studyInfosService = studyInfosService;
         this.rootNetworkService = rootNetworkService;
@@ -156,6 +169,7 @@ public class SupervisionService {
         this.nodeRepository = nodeRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.networkModificationService = networkModificationService;
+        this.restClient = restClient;
     }
 
     @Transactional
@@ -182,6 +196,8 @@ public class SupervisionService {
                 dryRun ? pccMinService.getPccMinResultsCount() : deletePccMinResults();
             case ASYMMETRICAL_LOAD ->
                 dryRun ? asymmetricalLoadRestService.getAsymmetricalLoadResultsCount() : deleteAsymmetricalLoadResults();
+            case LOGICAL_CONTROLS ->
+                dryRun ? logicalControlsRestService.getLogicalControlsResultsCount() : deleteLogicalControlsResults();
         };
     }
 
@@ -246,7 +262,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeStatusEntities = rootNetworkNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull();
         rootNetworkNodeStatusEntities.forEach(rootNetworkNodeStatus -> rootNetworkNodeStatus.setDynamicSimulationResultUuid(null));
-        dynamicSimulationRestService.deleteAllResults();
+        deleteAllDynamicSimulationResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.DYNAMIC_SIMULATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeStatusEntities.size();
     }
@@ -256,7 +272,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeStatusEntities = rootNetworkNodeInfoRepository.findAllByDynamicSecurityAnalysisResultUuidNotNull();
         rootNetworkNodeStatusEntities.forEach(rootNetworkNodeStatus -> rootNetworkNodeStatus.setDynamicSecurityAnalysisResultUuid(null));
-        dynamicSecurityAnalysisRestService.deleteAllResults();
+        deleteAllDynamicSecurityAnalysisResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.DYNAMIC_SECURITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeStatusEntities.size();
     }
@@ -266,7 +282,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeStatusEntities = rootNetworkNodeInfoRepository.findAllByDynamicMarginCalculationResultUuidNotNull();
         rootNetworkNodeStatusEntities.forEach(rootNetworkNodeStatus -> rootNetworkNodeStatus.setDynamicMarginCalculationResultUuid(null));
-        dynamicMarginCalculationRestService.deleteAllResults();
+        deleteAllDynamicMarginCalculationResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.DYNAMIC_MARGIN_CALCULATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeStatusEntities.size();
     }
@@ -282,7 +298,7 @@ public class SupervisionService {
             rootNetworkNodeInfo.getComputationReports().remove(ComputationType.SECURITY_ANALYSIS.name());
         });
         reportService.deleteReports(reportsToDelete);
-        securityAnalysisService.deleteAllSecurityAnalysisResults();
+        deleteAllSecurityAnalysisResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.SECURITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
@@ -298,7 +314,7 @@ public class SupervisionService {
             rootNetworkNodeInfo.getComputationReports().remove(ComputationType.SENSITIVITY_ANALYSIS.name());
         });
         reportService.deleteReports(reportsToDelete);
-        sensitivityAnalysisService.deleteAllSensitivityAnalysisResults();
+        deleteAllSensitivityAnalysisResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.SENSITIVITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
 
         return rootNetworkNodeInfoEntities.size();
@@ -331,7 +347,7 @@ public class SupervisionService {
         }
 
         // Then delete all results (1-bus and all-buses), cause short-circuit-server cannot make the difference
-        shortCircuitService.deleteAllShortCircuitAnalysisResults();
+        deleteAllShortCircuitAnalysisResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.SHORT_CIRCUIT, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         // return distinct processed time point node info count
         return (int) Stream.concat(allBusesrootNetworkNodeInfoEntities.stream(), oneBusrootNetworkNodeInfoEntities.stream())
@@ -353,7 +369,7 @@ public class SupervisionService {
             });
             reportService.deleteReports(reportsToDelete);
         }
-        voltageInitService.deleteAllVoltageInitResults();
+        deleteAllVoltageInitResults(SUPERVISION_USER);
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.VOLTAGE_INITIALIZATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
@@ -369,7 +385,7 @@ public class SupervisionService {
             rootNetworkNodeInfo.getComputationReports().remove(ComputationType.STATE_ESTIMATION.name());
         });
         reportService.deleteReports(reportsToDelete);
-        stateEstimationService.deleteAllStateEstimationResults();
+        deleteAllStateEstimationResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.STATE_ESTIMATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
@@ -385,7 +401,7 @@ public class SupervisionService {
             rootNetworkNodeInfo.getComputationReports().remove(ComputationType.PCC_MIN.name());
         });
         reportService.deleteReports(reportsToDelete);
-        pccMinService.deleteAllPccMinResults();
+        deleteAllPccMinResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.PCC_MIN, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
@@ -401,9 +417,81 @@ public class SupervisionService {
             rootNetworkNodeInfo.getComputationReports().remove(ComputationType.ASYMMETRICAL_LOAD.name());
         });
         reportService.deleteReports(reportsToDelete);
-        asymmetricalLoadRestService.deleteAllAsymmetricalLoadResults();
+        deleteAllAsymmetricalLoadResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.ASYMMETRICAL_LOAD, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
+    }
+
+    private Integer deleteLogicalControlsResults() {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        startTime.set(System.nanoTime());
+        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByLogicalControlsResultUuidNotNull();
+        List<UUID> reportsToDelete = new ArrayList<>();
+        rootNetworkNodeInfoEntities.forEach(rootNetworkNodeInfo -> {
+            rootNetworkNodeInfo.setLogicalControlsResultUuid(null);
+            reportsToDelete.add(rootNetworkNodeInfo.getComputationReports().get(ComputationType.LOGICAL_CONTROLS.name()));
+            rootNetworkNodeInfo.getComputationReports().remove(ComputationType.LOGICAL_CONTROLS.name());
+        });
+        reportService.deleteReports(reportsToDelete);
+        deleteAllLogicalControlsResults();
+        LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.LOGICAL_CONTROLS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        return rootNetworkNodeInfoEntities.size();
+    }
+
+    public void deleteAllDynamicSimulationResults() {
+        restClient.delete().uri(dynamicSimulationRestService.getBaseUri() + DELIMITER + DYNAMIC_SIMULATION_API_VERSION + SUPERVISION_RESULTS_PATH)
+            .retrieve().toBodilessEntity();
+    }
+
+    public void deleteAllDynamicSecurityAnalysisResults() {
+        restClient.delete().uri(dynamicSecurityAnalysisRestService.getBaseUri() + DELIMITER + DYNAMIC_SECURITY_ANALYSIS_API_VERSION + SUPERVISION_RESULTS_PATH)
+            .retrieve().toBodilessEntity();
+    }
+
+    public void deleteAllDynamicMarginCalculationResults() {
+        restClient.delete().uri(dynamicMarginCalculationRestService.getBaseUri() + DELIMITER + DYNAMIC_MARGIN_CALCULATION_API_VERSION + SUPERVISION_RESULTS_PATH)
+            .retrieve().toBodilessEntity();
+    }
+
+    public void deleteAllSecurityAnalysisResults() {
+        restClient.delete().uri(securityAnalysisService.getBaseUri() + DELIMITER + SECURITY_ANALYSIS_API_VERSION + SUPERVISION_RESULTS_PATH)
+            .retrieve().toBodilessEntity();
+    }
+
+    public void deleteAllSensitivityAnalysisResults() {
+        restClient.delete().uri(sensitivityAnalysisService.getBaseUri() + DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + SUPERVISION_RESULTS_PATH)
+            .retrieve().toBodilessEntity();
+    }
+
+    public void deleteAllShortCircuitAnalysisResults() {
+        restClient.delete().uri(shortCircuitService.getBaseUri() + DELIMITER + SHORT_CIRCUIT_API_VERSION + SUPERVISION_RESULTS_PATH)
+            .retrieve().toBodilessEntity();
+    }
+
+    public void deleteAllVoltageInitResults(String userId) {
+        restClient.delete().uri(voltageInitService.getBaseUri() + DELIMITER + VOLTAGE_INIT_API_VERSION + SUPERVISION_RESULTS_PATH)
+            .headers(headers -> headers.set(HEADER_USER_ID, userId))
+            .retrieve().toBodilessEntity();
+    }
+
+    public void deleteAllStateEstimationResults() {
+        restClient.delete().uri(stateEstimationService.getBaseUri() + DELIMITER + STATE_ESTIMATION_API_VERSION + SUPERVISION_RESULTS_PATH)
+            .retrieve().toBodilessEntity();
+    }
+
+    public void deleteAllPccMinResults() {
+        restClient.delete().uri(pccMinService.getBaseUri() + DELIMITER + PCC_MIN_API_VERSION + SUPERVISION_RESULTS_PATH)
+            .retrieve().toBodilessEntity();
+    }
+
+    public void deleteAllAsymmetricalLoadResults() {
+        restClient.delete().uri(asymmetricalLoadRestService.getBaseUri() + DELIMITER + PCC_MIN_API_VERSION + "/supervision/asymmetrical-load/results")
+            .retrieve().toBodilessEntity();
+    }
+
+    public void deleteAllLogicalControlsResults() {
+        restClient.delete().uri(logicalControlsRestService.getBaseUri() + DELIMITER + STATE_ESTIMATION_API_VERSION + "/supervision/logical-controls/results")
+            .retrieve().toBodilessEntity();
     }
 
     @Transactional
@@ -435,6 +523,15 @@ public class SupervisionService {
             }
         });
         LOGGER.trace("Study {} nodes builds deleted and root node invalidated in : {} milliseconds", studyUuid, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime.get()));
+    }
+
+    public void recreateNetworkModificationSharingLinks(UUID studyUuid, String userId) {
+        studyService.assertIsStudyExist(studyUuid);
+        List<UUID> modificationGroupUuids = networkModificationTreeService.getAllNetworkModificationNodeInfos(studyUuid, false)
+            .stream()
+            .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
+            .toList();
+        networkModificationService.createSharingLinks(modificationGroupUuids, true, userId);
     }
 
     public void deleteAllStashedElements(UUID studyId) {
