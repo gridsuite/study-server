@@ -1278,7 +1278,7 @@ public class StudyController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Infos of the found nodes, unknown nodes are omitted"),
     })
-    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
+    @PreAuthorize("true")
     public ResponseEntity<List<NodeInfos>> getNodesInfos(
             @Parameter(description = "Node UUIDs") @RequestParam("ids") List<UUID> nodeUuids) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
