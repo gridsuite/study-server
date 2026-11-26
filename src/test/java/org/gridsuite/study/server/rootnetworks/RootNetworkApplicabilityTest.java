@@ -408,5 +408,8 @@ class RootNetworkApplicabilityTest {
     @AfterEach
     void tearDown() {
         output.clear();
+        // the database is shared by the test classes: leave no study tree behind
+        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
+        studyRepository.deleteAll();
     }
 }

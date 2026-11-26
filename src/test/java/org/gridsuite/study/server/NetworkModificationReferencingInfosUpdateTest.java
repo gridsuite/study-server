@@ -91,8 +91,9 @@ class NetworkModificationReferencingInfosUpdateTest {
 
     @AfterEach
     void tearDown() {
-        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
-        studyRepository.deleteAll();
+        // only the study of this test: the tree service is mocked, so the trees other test classes may leave in the
+        // shared database could not be deleted, and their studies neither
+        studyRepository.deleteById(studyUuid);
     }
 
     @Test
