@@ -17,10 +17,10 @@ import java.util.List;
  * @param allowedTags only when restricted, the only tags allowed; null otherwise
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public record RootNetworkTagsNamingRestrictions(boolean restricted, List<String> allowedTags) {
-    public static final RootNetworkTagsNamingRestrictions UNRESTRICTED = new RootNetworkTagsNamingRestrictions(false, null);
+public record RestrictionsOnTags(boolean restricted, List<String> allowedTags) {
+    public static final RestrictionsOnTags UNRESTRICTED = new RestrictionsOnTags(false, null);
 
-    public RootNetworkTagsNamingRestrictions {
+    public RestrictionsOnTags {
         if (restricted) {
             allowedTags = allowedTags == null ? List.of() : List.copyOf(allowedTags);
         } else {

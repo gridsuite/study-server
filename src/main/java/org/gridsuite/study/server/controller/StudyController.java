@@ -248,7 +248,7 @@ public class StudyController {
     @Operation(summary = "Get the tags the user may give to a new or renamed root network, restricted when the study" +
         " contains shared modifications the user cannot write on")
     @ApiResponse(responseCode = "200", description = "The root network tags naming restrictions were returned")
-    public ResponseEntity<RootNetworkTagsNamingRestrictions> getRootNetworkTagsNamingRestrictions(@PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<RestrictionsOnTags> getRootNetworkTagsNamingRestrictions(@PathVariable("studyUuid") UUID studyUuid,
                                                                            @RequestHeader(HEADER_USER_ID) String userId) {
         return ResponseEntity.ok().body(studyService.getRootNetworkTagsNamingRestrictions(studyUuid, userId));
     }

@@ -352,7 +352,7 @@ class RootNetworkApplicabilityTest {
         UUID studyUuid = studyEntity.getId();
 
         // a study with no modification node contains no shared modification, and the server is not even asked
-        assertEquals(RootNetworkTagsNamingRestrictions.UNRESTRICTED, getRootNetworkTagsNamingRestrictions(studyUuid));
+        assertEquals(RestrictionsOnTags.UNRESTRICTED, getRootNetworkTagsNamingRestrictions(studyUuid));
         verify(networkModificationRestService, never()).getRootNetworkTagsNamingRestrictions(any(), any(), any());
 
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
@@ -361,18 +361,18 @@ class RootNetworkApplicabilityTest {
 
         // the tags already used in the study are sent to be left out, as in the error values of a refused creation or rename
         List<String> studyTags = rootNetworkService.getStudyRootNetworkTags(studyUuid);
-        doReturn(RootNetworkTagsNamingRestrictions.UNRESTRICTED).when(networkModificationRestService).getRootNetworkTagsNamingRestrictions(groupUuids, studyTags, USER_ID);
-        assertEquals(RootNetworkTagsNamingRestrictions.UNRESTRICTED, getRootNetworkTagsNamingRestrictions(studyUuid));
+        doReturn(RestrictionsOnTags.UNRESTRICTED).when(networkModificationRestService).getRootNetworkTagsNamingRestrictions(groupUuids, studyTags, USER_ID);
+        assertEquals(RestrictionsOnTags.UNRESTRICTED, getRootNetworkTagsNamingRestrictions(studyUuid));
 
-        doReturn(new RootNetworkTagsNamingRestrictions(true, List.of("A", "B"))).when(networkModificationRestService)
+        doReturn(new RestrictionsOnTags(true, List.of("A", "B"))).when(networkModificationRestService)
             .getRootNetworkTagsNamingRestrictions(groupUuids, studyTags, USER_ID);
-        assertEquals(new RootNetworkTagsNamingRestrictions(true, List.of("A", "B")), getRootNetworkTagsNamingRestrictions(studyUuid));
+        assertEquals(new RestrictionsOnTags(true, List.of("A", "B")), getRootNetworkTagsNamingRestrictions(studyUuid));
     }
 
-    private RootNetworkTagsNamingRestrictions getRootNetworkTagsNamingRestrictions(UUID studyUuid) throws Exception {
+    private RestrictionsOnTags getRootNetworkTagsNamingRestrictions(UUID studyUuid) throws Exception {
         return objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/tags-naming-restrictions", studyUuid)
                 .header(HEADER_USER_ID, USER_ID))
-            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(), RootNetworkTagsNamingRestrictions.class);
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(), RestrictionsOnTags.class);
     }
 
     @Test

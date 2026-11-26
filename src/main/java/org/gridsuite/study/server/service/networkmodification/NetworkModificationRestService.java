@@ -16,7 +16,8 @@ import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.RootNetworkTagsCheckInfos;
-import org.gridsuite.study.server.dto.RootNetworkTagsNamingRestrictions;
+import org.gridsuite.study.server.dto.RootNetworkTagsNamingInfos;
+import org.gridsuite.study.server.dto.RestrictionsOnTags;
 import org.gridsuite.study.server.dto.SharedModificationsWriteAccess;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
@@ -432,15 +433,16 @@ public class NetworkModificationRestService {
         if (CollectionUtils.isEmpty(groupUuids) || CollectionUtils.isEmpty(rootNetworkTags)) {
             return;
         }
-        var path = UriComponentsBuilder
+        var uri = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + ROOT_NETWORK_TAG_PATH)
                 .queryParam(QUERY_PARAM_GROUP_UUIDS, groupUuids)
-                .queryParam(QUERY_PARAM_ROOT_NETWORK_TAGS, rootNetworkTags)
-                .buildAndExpand()
-                .toUriString();
+                .queryParam(QUERY_PARAM_ROOT_NETWORK_TAGS, Collections.nCopies(rootNetworkTags.size(), "{rootNetworkTag}"))
+                .encode()
+                .buildAndExpand(rootNetworkTags.toArray())
+                .toUri();
 
         restClient.delete()
-            .uri(path)
+            .uri(uri)
             .headers(headers -> headers.setContentType(MediaType.APPLICATION_JSON))
             .retrieve().toBodilessEntity();
     }
@@ -746,16 +748,12 @@ public class NetworkModificationRestService {
      * @return the root network tags the user may give to a root network, restricted when the containers refer to
      * shared modifications the user cannot write on; the {@code usedTags} are left out of the allowed tags
      */
-    public RootNetworkTagsNamingRestrictions getRootNetworkTagsNamingRestrictions(List<UUID> containerUuids, List<String> usedTags, String userId) {
-        String path = UriComponentsBuilder.fromPath(CONTAINERS + DELIMITER + "root-network-tags/naming-restrictions")
-                .queryParam("usedTags", usedTags)
-                .build().toUriString();
-        RootNetworkTagsNamingRestrictions restrictions = restClient.post().uri(getNetworkModificationServerURI(false) + path)
+    public RestrictionsOnTags getRootNetworkTagsNamingRestrictions(List<UUID> containerUuids, List<String> usedTags, String userId) {
+        return restClient.post().uri(getNetworkModificationServerURI(false) + CONTAINERS + DELIMITER + "root-network-tags/naming-restrictions")
                 .headers(headers -> headers.set(HEADER_USER_ID, userId))
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(containerUuids)
-                .retrieve().body(RootNetworkTagsNamingRestrictions.class);
-        return restrictions == null ? RootNetworkTagsNamingRestrictions.UNRESTRICTED : restrictions;
+                .body(new RootNetworkTagsNamingInfos(containerUuids, usedTags))
+                .retrieve().body(RestrictionsOnTags.class);
     }
 
     /**

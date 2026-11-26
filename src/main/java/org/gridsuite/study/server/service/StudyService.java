@@ -452,10 +452,10 @@ public class StudyService {
      * modifications the user cannot write on, the tags they all are already associated with, but the ones already
      * used in the study
      */
-    public RootNetworkTagsNamingRestrictions getRootNetworkTagsNamingRestrictions(UUID studyUuid, String userId) {
+    public RestrictionsOnTags getRootNetworkTagsNamingRestrictions(UUID studyUuid, String userId) {
         List<UUID> groupUuids = getStudyModificationGroupUuids(studyUuid);
         if (groupUuids.isEmpty()) {
-            return RootNetworkTagsNamingRestrictions.UNRESTRICTED;
+            return RestrictionsOnTags.UNRESTRICTED;
         }
         return networkModificationRestService.getRootNetworkTagsNamingRestrictions(groupUuids, rootNetworkService.getStudyRootNetworkTags(studyUuid), userId);
     }
