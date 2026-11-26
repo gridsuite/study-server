@@ -19,7 +19,7 @@ import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.RecordedRequest;
-import mockwebserver3.junit5.internal.MockWebServerExtension;
+import mockwebserver3.junit5.StartStop;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import org.gridsuite.study.server.dto.ComputationType;
@@ -40,7 +40,6 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -81,7 +80,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
-@ExtendWith(MockWebServerExtension.class)
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
@@ -161,9 +159,11 @@ class NetworkMapTest {
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @MockitoBean
     private ShortCircuitRestService shortCircuitService;
+    @StartStop
+    final MockWebServer server = new MockWebServer();
 
     @BeforeEach
-    void setup(final MockWebServer server) throws Exception {
+    void setup() throws Exception {
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
         wireMockStubs = new WireMockStubs(wireMockServer);
 
@@ -196,9 +196,9 @@ class NetworkMapTest {
             @Override
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
-                String path = Objects.requireNonNull(request.getPath());
+                String path = Objects.requireNonNull(request.getTarget());
                 if (path.matches("/v1/reports/.*") && "PUT".equals(request.getMethod())) {
-                    return new MockResponse(200);
+                    return new MockResponse.Builder().code(200).build();
                 }
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/all?variantId=first_variant_id&infoType=TAB") && "POST".equals(request.getMethod())) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "");
@@ -223,8 +223,8 @@ class NetworkMapTest {
                     case "/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING:
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), loadFlowParameters);
                     default:
-                        LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
-                        return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
+                        LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getTarget());
+                        return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getTarget()).build();
                 }
             }
         };
@@ -232,7 +232,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetLoadMapServer(final MockWebServer server) throws Exception {
+    void testGetLoadMapServer() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
 
         //create study
@@ -252,7 +252,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetLineMapServer(final MockWebServer server) throws Exception {
+    void testGetLineMapServer() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
 
         //create study
@@ -268,7 +268,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetHvdcLineMapServer(final MockWebServer server) throws Exception {
+    void testGetHvdcLineMapServer() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
 
         //create study
@@ -284,7 +284,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetGeneratorMapServer(final MockWebServer server) throws Exception {
+    void testGetGeneratorMapServer() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
         //create study
         StudyEntity studyEntity = insertDummyStudy(server, UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
@@ -299,7 +299,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetHvdcLinesMapServer(final MockWebServer server) throws Exception {
+    void testGetHvdcLinesMapServer() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
 
         //create study
@@ -315,7 +315,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGet2wtMapServer(final MockWebServer server) throws Exception {
+    void testGet2wtMapServer() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
 
         //create study
@@ -337,7 +337,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetShuntCompensatorMapServer(final MockWebServer server) throws Exception {
+    void testGetShuntCompensatorMapServer() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
         //create study
         StudyEntity studyEntity = insertDummyStudy(server, UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
@@ -352,7 +352,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetSubstationMapServer(final MockWebServer server) throws Exception {
+    void testGetSubstationMapServer() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
 
         //create study
@@ -371,7 +371,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetVoltageLevelsMapServer(final MockWebServer server) throws Exception {
+    void testGetVoltageLevelsMapServer() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
 
         //create study
@@ -386,7 +386,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetVoltageLevelsTopology(final MockWebServer server) throws Exception {
+    void testGetVoltageLevelsTopology() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
 
         //create study
@@ -401,7 +401,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetVoltageLevelEquipments(final MockWebServer server) throws Exception {
+    void testGetVoltageLevelEquipments() throws Exception {
         //create study
         StudyEntity studyEntity = insertDummyStudy(server, UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyEntity.getId());
@@ -418,7 +418,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetMapSubstations(final MockWebServer server) throws Exception {
+    void testGetMapSubstations() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
 
         //create study
@@ -436,7 +436,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetMapLines(final MockWebServer server) throws Exception {
+    void testGetMapLines() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
 
         //create study
@@ -452,7 +452,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetMapHvdcLines(final MockWebServer server) throws Exception {
+    void testGetMapHvdcLines() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
 
         //create study
@@ -470,7 +470,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetHvdcLineShuntCompensators(final MockWebServer server) throws Exception {
+    void testGetHvdcLineShuntCompensators() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
         final String responseBody = "{\"id\":\"HVDC1\",\"hvdcType\":\"LCC\",\"mcsOnside1\":[],\"mcsOnside2\":[]}";
         UUID stubUuid = wireMockStubs.stubHvdcLinesShuntCompensatorsGet(NETWORK_UUID_STRING, HVDC_LINE_ID_1, responseBody);
@@ -490,7 +490,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetBranchOr3WTVoltageLevelId(final MockWebServer server) throws Exception {
+    void testGetBranchOr3WTVoltageLevelId() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
         UUID stubUuid = wireMockStubs.stubBranchOr3WTVoltageLevelIdGet(NETWORK_UUID_STRING, LINE_ID_1, VL_ID_1);
         StudyEntity studyEntity = insertDummyStudy(server, UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
@@ -509,7 +509,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetHvdcLineShuntCompensatorsError(final MockWebServer server) throws Exception {
+    void testGetHvdcLineShuntCompensatorsError() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
         UUID stubUuid = wireMockStubs.stubHvdcLinesShuntCompensatorsGetError(NETWORK_UUID_STRING, HVDC_LINE_ID_ERR);
 
@@ -526,7 +526,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetSubstationIdForVoltageLevel(final MockWebServer server) throws Exception {
+    void testGetSubstationIdForVoltageLevel() throws Exception {
         MvcResult mvcResult;
         String resultAsString;
         StudyEntity studyEntity = insertDummyStudy(server, UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
@@ -547,7 +547,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetBusesOrBusbarSections(final MockWebServer server) throws Exception {
+    void testGetBusesOrBusbarSections() throws Exception {
         MvcResult mvcResult;
         String resultAsString;
         StudyEntity studyEntity = insertDummyStudy(server, UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
@@ -587,7 +587,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetVoltageLevelSwitches(final MockWebServer server) throws Exception {
+    void testGetVoltageLevelSwitches() throws Exception {
         MvcResult mvcResult;
         String resultAsString;
         StudyEntity studyEntity = insertDummyStudy(server, UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
@@ -608,7 +608,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetBusBarSectionsInfo(final MockWebServer server) throws Exception {
+    void testGetBusBarSectionsInfo() throws Exception {
         MvcResult mvcResult;
         String resultAsString;
         StudyEntity studyEntity = insertDummyStudy(server, UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
@@ -629,7 +629,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetFeederBaysBusBarSectionsInfo(final MockWebServer server) throws Exception {
+    void testGetFeederBaysBusBarSectionsInfo() throws Exception {
         MvcResult mvcResult;
         String resultAsString;
         StudyEntity studyEntity = insertDummyStudy(server, UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
@@ -650,7 +650,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGeneratorBusParameters(final MockWebServer server) throws Exception {
+    void testGeneratorBusParameters() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
         StudyEntity study = insertDummyStudy(server, UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study.getId());
@@ -687,7 +687,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testLineBusParameters(final MockWebServer server) throws Exception {
+    void testLineBusParameters() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
         StudyEntity study = insertDummyStudy(server, UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study.getId());
@@ -724,7 +724,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetAllNetworkElementsInfos(final MockWebServer server) throws Exception {
+    void testGetAllNetworkElementsInfos() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
 
         StudyEntity studyEntity = insertDummyStudy(server, UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
@@ -792,7 +792,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetNetworkElementsInfosFromFilters(final MockWebServer server) throws Exception {
+    void testGetNetworkElementsInfosFromFilters() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
 
         // Create study
@@ -955,7 +955,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetCountries(final MockWebServer server) throws Exception {
+    void testGetCountries() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
         final String responseBody = """
                 ['FR', 'GB']
@@ -977,7 +977,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetCountriesNotFoundError(final MockWebServer server) throws Exception {
+    void testGetCountriesNotFoundError() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
         UUID stubUuid = wireMockStubs.stubCountriesGetNotFoundError(NETWORK_UUID_STRING);
 
@@ -995,7 +995,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetCountriesError(final MockWebServer server) throws Exception {
+    void testGetCountriesError() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
         UUID stubUuid = wireMockStubs.stubCountriesGetError(NETWORK_UUID_STRING);
 
@@ -1013,7 +1013,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetNominalVoltages(final MockWebServer server) throws Exception {
+    void testGetNominalVoltages() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
         final String responseBody = """
                 [24.0, 380.0]
@@ -1035,7 +1035,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetNominalVoltagesNotFoundError(final MockWebServer server) throws Exception {
+    void testGetNominalVoltagesNotFoundError() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
         UUID stubUuid = wireMockStubs.stubNominalVoltagesGetNotFoundError(NETWORK_UUID_STRING);
 
@@ -1053,7 +1053,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetNominalVoltagesError(final MockWebServer server) throws Exception {
+    void testGetNominalVoltagesError() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
         UUID stubUuid = wireMockStubs.stubNominalVoltagesGetError(NETWORK_UUID_STRING);
 
@@ -1071,7 +1071,7 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetVoltageLevelInfoWithIcc(final MockWebServer server) throws Exception {
+    void testGetVoltageLevelInfoWithIcc() throws Exception {
         networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
         //create study
         StudyEntity studyEntity = insertDummyStudy(server, UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
@@ -1111,7 +1111,7 @@ class NetworkMapTest {
     }
 
     @AfterEach
-    void tearDown(final MockWebServer server) {
+    void tearDown() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
 

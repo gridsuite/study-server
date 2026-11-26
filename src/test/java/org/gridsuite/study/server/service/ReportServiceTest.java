@@ -15,7 +15,7 @@ import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.RecordedRequest;
-import mockwebserver3.junit5.internal.MockWebServerExtension;
+import mockwebserver3.junit5.StartStop;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
@@ -33,7 +33,6 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,7 +62,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
-@ExtendWith(MockWebServerExtension.class)
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
@@ -106,9 +104,11 @@ class ReportServiceTest {
     @Autowired
     // TODO remove studyService (use the repositories to create a node)
     private StudyService studyService;
+    @StartStop
+    final MockWebServer server = new MockWebServer();
 
     @BeforeEach
-    void setup(final MockWebServer server) {
+    void setup() {
         // Ask the server for its URL. You'll need this to make HTTP requests.
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
@@ -119,18 +119,18 @@ class ReportServiceTest {
             @Override
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
-                String path = Objects.requireNonNull(request.getPath());
+                String path = Objects.requireNonNull(request.getTarget());
                 if (path.matches("/v1/reports/.*\\?defaultName=.*")) {
-                    String reportUuid = Objects.requireNonNull(request.getRequestUrl()).pathSegments().get(2);
-                    String nodeUuid = request.getRequestUrl().queryParameter(QUERY_PARAM_REPORT_DEFAULT_NAME);
+                    String reportUuid = Objects.requireNonNull(request.getUrl()).pathSegments().get(2);
+                    String nodeUuid = request.getUrl().queryParameter(QUERY_PARAM_REPORT_DEFAULT_NAME);
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(getNodeReport(UUID.fromString(
                             reportUuid), nodeUuid)));
                 } else if (path.matches("/v1/subreports/.*\\?severityLevels=.*")) {
-                    String reportId = Objects.requireNonNull(request.getRequestUrl()).pathSegments().get(2);
+                    String reportId = Objects.requireNonNull(request.getUrl()).pathSegments().get(2);
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(getNodeReport(UUID.fromString(
                             reportId), reportId)));
                 } else if (path.matches("/v1/reports/" + NOT_FOUND_REPORT_UUID + "/duplicate")) {
-                    return new MockResponse(HttpStatus.NOT_FOUND.value());
+                    return new MockResponse.Builder().code(HttpStatus.NOT_FOUND.value()).build();
                 } else if (path.matches("/v1/reports/" + MODIFICATION_CHILD_NODE1_REPORT_UUID + "/aggregated-severities")) {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(Set.of("INFO")));
                 } else if (path.matches("/v1/reports/" + ROOT_NODE_REPORT_UUID + "/aggregated-severities")) {
@@ -138,8 +138,8 @@ class ReportServiceTest {
                 } else if (path.matches("/v1/reports/.*/aggregated-severities")) {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(Set.of("UNKNOWN")));
                 } else {
-                    LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
-                    return new MockResponse.Builder().code(HttpStatus.I_AM_A_TEAPOT.value()).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
+                    LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getTarget());
+                    return new MockResponse.Builder().code(HttpStatus.I_AM_A_TEAPOT.value()).body("Unhandled method+path: " + request.getMethod() + " " + request.getTarget()).build();
                 }
             }
         };
@@ -147,7 +147,7 @@ class ReportServiceTest {
     }
 
     @AfterEach
-    void tearDown(final MockWebServer server) {
+    void tearDown() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
         TestUtils.assertQueuesEmptyThenClear(List.of(STUDY_UPDATE_DESTINATION), output);
@@ -166,7 +166,7 @@ class ReportServiceTest {
     }
 
     @Test
-    void testReport(final MockWebServer server) throws Exception {
+    void testReport() throws Exception {
         RootNode rootNode = createRoot();
         StudyEntity studyEntity = studyRepository.findById(rootNode.getStudyId()).orElseThrow(() -> new StudyException(NOT_FOUND));
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyEntity.getId());
@@ -204,7 +204,7 @@ class ReportServiceTest {
     }
 
     @Test
-    void testMultipleReport(final MockWebServer server) throws Exception {
+    void testMultipleReport() throws Exception {
         RootNode rootNode = createRoot();
         StudyEntity studyEntity = studyRepository.findById(rootNode.getStudyId()).orElseThrow(() -> new StudyException(NOT_FOUND));
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyEntity.getId());
@@ -295,7 +295,7 @@ class ReportServiceTest {
     }
 
     @Test
-    void testDuplicateRootNodeReport(final MockWebServer server) {
+    void testDuplicateRootNodeReport() {
         // with null reportUuid
         assertThrows(NullPointerException.class, () -> reportService.duplicateReport(null));
 
