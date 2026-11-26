@@ -25,7 +25,7 @@ import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.RecordedRequest;
-import mockwebserver3.junit5.internal.MockWebServerExtension;
+import mockwebserver3.junit5.StartStop;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import org.gridsuite.study.server.dto.ComputationType;
@@ -63,7 +63,6 @@ import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -103,7 +102,6 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@ExtendWith(MockWebServerExtension.class)
 @AutoConfigureWebTestClient
 @AutoConfigureMockMvc
 @SpringBootTest
@@ -229,9 +227,11 @@ class NetworkModificationTreeTest {
     private NodeActivityRunnerService nodeActivityRunnerService;
     @MockitoSpyBean
     private StudyService studyService;
+    @StartStop
+    final MockWebServer server = new MockWebServer();
 
     @BeforeEach
-    void setUp(final MockWebServer server) {
+    void setUp() {
         Configuration.defaultConfiguration();
         mocks = MockitoAnnotations.openMocks(this);
         objectMapper.enable(DeserializationFeature.USE_LONG_FOR_INTS);
@@ -293,13 +293,13 @@ class NetworkModificationTreeTest {
             @SneakyThrows
             @Override
             public MockResponse dispatch(RecordedRequest request) {
-                String path = Objects.requireNonNull(request.getPath());
+                String path = Objects.requireNonNull(request.getTarget());
 
                 if (path.matches("/v1/results.*") && request.getMethod().equals("DELETE")) {
-                    return new MockResponse(HttpStatus.OK.value());
+                    return new MockResponse.Builder().code(HttpStatus.OK.value()).build();
                 } else if ("/v1/containers/reference-modifications".equals(path) && request.getMethod().equals("POST")) {
                     // only the nodes of MODIFICATION_GROUP_UUID_2 hold shared modifications
-                    List<UUID> containersWithReferenceModifications = request.getBody().readUtf8().contains(MODIFICATION_GROUP_UUID_2.toString()) ? List.of(MODIFICATION_GROUP_UUID_2) : List.of();
+                    List<UUID> containersWithReferenceModifications = request.getBody().utf8().contains(MODIFICATION_GROUP_UUID_2.toString()) ? List.of(MODIFICATION_GROUP_UUID_2) : List.of();
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE),
                         objectMapper.writeValueAsString(containersWithReferenceModifications));
                 } else if (path.matches("/v1/references\\?uuids=.*") && request.getMethod().equals("GET")) {
@@ -315,7 +315,7 @@ class NetworkModificationTreeTest {
                             objectMapper.writeValueAsString(List.of())
                     );
                 } else if (path.matches("/v1/network-modifications.*")) {
-                    return new MockResponse(HttpStatus.OK.value());
+                    return new MockResponse.Builder().code(HttpStatus.OK.value()).build();
                 } else if (path.matches("/v1/containers/" + MODIFICATION_GROUP_UUID + "/network-modifications-count.*") && request.getMethod().equals("GET")) {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(0));
                 } else if (path.matches("/v1/containers/" + MODIFICATION_GROUP_UUID_2 + "/network-modifications-count.*") && request.getMethod().equals("GET")) {
@@ -332,12 +332,12 @@ class NetworkModificationTreeTest {
                 } else if (path.matches("/v1/containers/" + MODIFICATION_GROUP_UUID_3 + "/.*") && request.getMethod().equals("GET")) {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(List.of()));
                 } else if (path.matches("/v1/groups/.*") && request.getMethod().equals("DELETE")) {
-                    return new MockResponse(HttpStatus.OK.value());
+                    return new MockResponse.Builder().code(HttpStatus.OK.value()).build();
                 } else if (path.matches("/v1/reports") && request.getMethod().equals("DELETE")) {
-                    return new MockResponse(HttpStatus.OK.value());
+                    return new MockResponse.Builder().code(HttpStatus.OK.value()).build();
                 } else {
-                    LOGGER.error("Path not supported: {}", request.getPath());
-                    return new MockResponse(HttpStatus.NOT_FOUND.value());
+                    LOGGER.error("Path not supported: {}", request.getTarget());
+                    return new MockResponse.Builder().code(HttpStatus.NOT_FOUND.value()).build();
                 }
             }
         };
