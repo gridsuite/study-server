@@ -404,7 +404,8 @@ class StudyTest extends StudyTestBase {
         UUID stubDeleteStashedId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/groups/stashed-modifications"))
             .willReturn(WireMock.ok())).getId();
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/unload", studyUuid))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/unload", studyUuid)
+                .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
 
         // load status, build status and indexation notifications

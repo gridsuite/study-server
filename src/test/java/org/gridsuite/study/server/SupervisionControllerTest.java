@@ -367,7 +367,8 @@ class SupervisionControllerTest {
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         List<UUID> loadedStudyUuids = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
         assertEquals(List.of(STUDY_UUID), loadedStudyUuids);
-        mockMvc.perform(post("/v1/studies/{studyUuid}/unload", STUDY_UUID))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/unload", STUDY_UUID)
+                        .header("userId", "userId"))
                 .andExpect(status().isOk());
         mvcResult = mockMvc.perform(get("/v1/supervision/studies/loaded")
                         .queryParam("ids", STUDY_UUID.toString(), unknownStudyUuid.toString()))

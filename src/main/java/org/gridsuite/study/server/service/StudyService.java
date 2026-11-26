@@ -83,7 +83,6 @@ import static org.gridsuite.study.server.StudyConstants.BUS_ID_TO_ICC_VALUES;
 import static org.gridsuite.study.server.StudyConstants.CURRENT_LIMIT_VIOLATIONS_INFOS;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
-import static org.gridsuite.study.server.service.SupervisionService.SUPERVISION_USER;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -1524,19 +1523,19 @@ public class StudyService {
         }
     }
 
-    public void unloadStudy(UUID studyUuid) {
+    public void unloadStudy(UUID studyUuid, String userId) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         // remove all stashed nodes and stashed network modifications
         try {
-            deleteAllStashedElements(studyUuid);
+            deleteAllStashedElements(studyUuid, userId);
         } catch (Exception e) {
             LOGGER.error("Error while deleting stashed elements", e);
         }
         rootNetworkService.getStudyRootNetworkIds(studyUuid).forEach(rnId -> {
             try {
                 rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADING);
-                invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER, false);
+                invalidateStudyRootNetwork(studyUuid, rnId, userId, false);
                 rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADED);
             } catch (Exception e) {
                 rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.LOADED);
@@ -1546,7 +1545,7 @@ public class StudyService {
         LOGGER.trace("Study {} nodes builds deleted and root node invalidated in : {} milliseconds", studyUuid, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime.get()));
     }
 
-    public void deleteAllStashedElements(UUID studyId) {
+    public void deleteAllStashedElements(UUID studyId, String userId) {
         List<NodeEntity> nodes = nodeRepository.findAllByStudyId(studyId);
         List<NodeEntity> stashedNodes = new ArrayList<>();
         List<NodeEntity> notStashedNodes = new ArrayList<>();
@@ -1564,10 +1563,10 @@ public class StudyService {
         List<UUID> notStashedModificationGroupUuids = networkModificationNodeInfos.stream()
                 .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
                 .toList();
-        networkModificationRestService.deleteStashedModificationsFromGroups(notStashedModificationGroupUuids, SUPERVISION_USER);
+        networkModificationRestService.deleteStashedModificationsFromGroups(notStashedModificationGroupUuids, userId);
 
         // remove stashed nodes and their modifications
-        self.deleteNodes(studyId, stashedNodes.stream().map(NodeEntity::getIdNode).toList(), true, SUPERVISION_USER, false);
+        self.deleteNodes(studyId, stashedNodes.stream().map(NodeEntity::getIdNode).toList(), true, userId, false);
     }
 
     @Transactional
