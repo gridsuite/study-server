@@ -743,11 +743,10 @@ public class NetworkModificationRestService {
     }
 
     /**
-     * @return the root network tags the user may associate with the content of the containers, restricted when it
-     * refers to shared modifications the user cannot write on, the {@code usedTags} left out: the tags reported when
+     * @return the root network tags the user may give to a root network, restricted when the containers refer to
+     * shared modifications the user cannot write on; the {@code usedTags} are left out of the allowed tags
      */
     public RootNetworkTagsNamingRestrictions getRootNetworkTagsNamingRestrictions(List<UUID> containerUuids, List<String> usedTags, String userId) {
-        // the uuids go in the body as a large tree would exceed the url length limit
         String path = UriComponentsBuilder.fromPath(CONTAINERS + DELIMITER + "root-network-tags/naming-restrictions")
                 .queryParam("usedTags", usedTags)
                 .build().toUriString();
