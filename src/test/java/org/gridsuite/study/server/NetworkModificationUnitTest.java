@@ -8,6 +8,7 @@ package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.gridsuite.study.server.controller.NodeController;
 import org.gridsuite.study.server.controller.StudyController;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
@@ -79,6 +80,8 @@ class NetworkModificationUnitTest {
     private StudyRepository studyRepository;
     @Autowired
     private StudyController studyController;
+    @Autowired
+    private NodeController studyNodeController;
 
     @MockitoBean
     private NetworkService networkService;
@@ -254,7 +257,7 @@ class NetworkModificationUnitTest {
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
         List<UUID> rootNetworkUuids = rootNetworkRepository.findAllWithInfosByStudyId(studyUuid).stream().map(RootNetworkEntity::getId).toList();
 
-        studyController.unbuildAllNodes(studyUuid, USER_ID_HEADER);
+        studyNodeController.unbuildAllNodes(studyUuid, USER_ID_HEADER);
 
         ArgumentCaptor<UUID> rootNetworkUuidCaptor = ArgumentCaptor.forClass(UUID.class);
         verify(networkModificationTreeService, times(2))
@@ -283,7 +286,7 @@ class NetworkModificationUnitTest {
     }
 
     private void updateNetworkModificationActivationStatus(List<UUID> networkModificationUuids, UUID nodeWithModification, List<UUID> childrenNodes, List<UUID> nodesToUnbuild, boolean activated) {
-        studyController.updateNetworkModificationsActivation(studyUuid, node1Uuid, networkModificationUuids, activated, USER_ID_HEADER);
+        studyNodeController.updateNetworkModificationsActivation(studyUuid, node1Uuid, networkModificationUuids, activated, USER_ID_HEADER);
 
         checkUpdateBuildStateMessageReceived(studyUuid, nodesToUnbuild);
         checkUpdateStatusMessagesReceived(studyUuid, nodeWithModification, output);

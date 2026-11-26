@@ -68,9 +68,9 @@ public class LoadFlowController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @RequestParam(value = "withRatioTapChangers", required = false, defaultValue = "false") boolean withRatioTapChangers,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        networkModificationTreeService.assertIsNodeNotReadOnly(nodeUuid);
         QuotaRunner.runComputationWithQuota(studyService, LOAD_FLOW, userId, quotaId -> {
-            studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNA_FLOW_PROVIDER), loadFlowService::getLoadFlowProvider);
+            networkModificationTreeService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNA_FLOW_PROVIDER), loadFlowService::getLoadFlowProvider);
             UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
             // a loadflow on a security node writes solved values onto its own variant and invalidates its children
             NodeActivityType activityType = networkModificationTreeService.isSecurityNode(nodeUuid)
