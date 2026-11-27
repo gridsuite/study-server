@@ -10,6 +10,7 @@ import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.pccmin.PccMinService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,6 +28,7 @@ public class PccMinParametersController {
     }
 
     @GetMapping(value = "/parameters/{parameterUuid}")
+    @PreAuthorize("@authorizationService.canRead(#parameterUuid)")
     public ResponseEntity<String> getPccMinParameters(@PathVariable UUID parameterUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(pccMinService.getPccMinParametersByUuid(parameterUuid));
     }

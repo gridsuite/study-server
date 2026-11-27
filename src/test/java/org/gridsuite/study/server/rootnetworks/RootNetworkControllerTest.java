@@ -12,6 +12,7 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.powsybl.commons.PowsyblException;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.network.store.client.NetworkStoreService;
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.BasicStudyInfos;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -32,8 +33,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.context.annotation.Import;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -64,6 +67,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
+@Import(AllowAllAuthTestConfiguration.class)
+@WithMockUser(username = "userId")
 class RootNetworkControllerTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(RootNetworkControllerTest.class);
 
@@ -158,8 +163,7 @@ class RootNetworkControllerTest {
         String userId = "userId";
         UUID studyUuid = createStudy(userId, importParameters);
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
-        mockMvc.perform(head("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid)
-                        .header(USER_ID_HEADER, userId))
+        mockMvc.perform(head("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid))
                 .andExpect(status().isOk());
     }
 
@@ -172,8 +176,7 @@ class RootNetworkControllerTest {
         UUID studyUuid = createStudy(userId, importParameters);
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         when(networkStoreService.getNetwork(NETWORK_UUID)).thenThrow(new PowsyblException("Network '" + NETWORK_UUID + "' not found"));
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid)
-                        .header(USER_ID_HEADER, userId))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.exists").value(false));
     }
@@ -194,8 +197,7 @@ class RootNetworkControllerTest {
                 null, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
         UUID disableCaseExpirationStubId = wireMockStubs.caseServer.stubDisableCaseExpiration(CASE_UUID.toString());
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid)
-                        .header(USER_ID_HEADER, userId))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid))
                 .andExpect(status().isOk());
 
         countDownLatch.await();
@@ -219,8 +221,7 @@ class RootNetworkControllerTest {
         UUID studyUuid = createStudy(userId, importParameters);
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         UUID caseExistsStubId = wireMockStubs.caseServer.stubCaseExists(CASE_UUID.toString(), false);
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid)
-                        .header(USER_ID_HEADER, userId))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid))
                 .andExpect(status().isNotFound());
         wireMockStubs.caseServer.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
     }
@@ -244,8 +245,7 @@ class RootNetworkControllerTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid)
                         .param(HEADER_IMPORT_PARAMETERS, objectWriter.writeValueAsString(newImportParameters))
-                        .param("caseUuid", CASE_UUID_STRING)
-                        .header(USER_ID_HEADER, userId))
+                        .param("caseUuid", CASE_UUID_STRING))
                 .andExpectAll(status().isOk());
 
         countDownLatch.await();
@@ -277,8 +277,7 @@ class RootNetworkControllerTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid)
                         .param(HEADER_IMPORT_PARAMETERS, objectWriter.writeValueAsString(newImportParameters))
-                        .param("caseUuid", CASE_UUID_STRING)
-                        .header(USER_ID_HEADER, userId))
+                        .param("caseUuid", CASE_UUID_STRING))
                 .andExpectAll(status().isNotFound());
 
         wireMockStubs.caseServer.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
@@ -296,7 +295,6 @@ class RootNetworkControllerTest {
         when(shortCircuitService.createParameters(null)).thenReturn(SHORTCIRCUIT_PARAMETERS_UUID);
         when(studyConfigService.createDefaultSpreadsheetConfigCollection()).thenReturn(SPREADSHEET_CONFIG_COLLECTION_UUID);
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", RootNetworkControllerTest.CASE_UUID)
-                        .header("userId", userId)
                         .param(CASE_FORMAT_PARAM, "UCTE")
                         .param(FIRST_ROOT_NETWORK_NAME, "firstRootNetworkName"))
                 .andExpect(status().isOk())

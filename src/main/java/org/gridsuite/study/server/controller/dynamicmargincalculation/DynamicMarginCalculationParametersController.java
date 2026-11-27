@@ -11,6 +11,7 @@ import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMargin
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -25,22 +26,26 @@ public class DynamicMarginCalculationParametersController {
     }
 
     @GetMapping(value = "/providers")
+    @PreAuthorize("true")
     public ResponseEntity<String> getProviders() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(dynamicMarginCalculationService.getProviders());
     }
 
     @GetMapping(value = "/parameters/{parameterUuid}")
+    @PreAuthorize("@authorizationService.canRead(#parameterUuid)")
     public ResponseEntity<String> getParameters(@PathVariable UUID parameterUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(dynamicMarginCalculationService.getParameters(parameterUuid, null));
     }
 
     @PutMapping(value = "/parameters/{parameterUuid}")
+    @PreAuthorize("@authorizationService.canWrite(#parameterUuid)")
     public ResponseEntity<Void> updateParameters(@PathVariable UUID parameterUuid, @RequestBody String parameters) {
         dynamicMarginCalculationService.updateParameters(parameterUuid, parameters);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/results/{resultUuid}/download-debug-file")
+    @PreAuthorize("true")
     public ResponseEntity<Resource> downloadDebugFile(@PathVariable UUID resultUuid) {
         return dynamicMarginCalculationService.downloadDebugFile(resultUuid);
     }

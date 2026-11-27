@@ -9,6 +9,7 @@ package org.gridsuite.study.server.controller;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.NetworkMapService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,6 +27,7 @@ public class NetworkMapController {
     }
 
     @GetMapping(value = "/schemas/{elementType}/{infoType}")
+    @PreAuthorize("true")
     public ResponseEntity<String> getElementSchema(@PathVariable String elementType, @PathVariable String infoType) {
         return ResponseEntity.ok().header("Content-Type", APPLICATION_JSON_SCHEMA_VALUE).body(networkMapService.getElementSchema(elementType, infoType));
     }

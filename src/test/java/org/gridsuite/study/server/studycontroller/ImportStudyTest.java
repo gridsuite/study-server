@@ -25,6 +25,7 @@ import org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.Message;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
@@ -39,6 +40,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
  */
+@WithMockUser(username = "testUser")
 class ImportStudyTest extends StudyTestBase {
 
     private static final String IMPORT_URL = "/v1/studies/import";
@@ -73,7 +75,7 @@ class ImportStudyTest extends StudyTestBase {
                 rootNetworkExportInfos("rn2", "2", 1, caseUuid2)
         ), nodeTree);
 
-        mockMvc.perform(post(IMPORT_URL).header(HEADER_USER_ID, USER_ID)
+        mockMvc.perform(post(IMPORT_URL)
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(treeExportInfos)))
                 .andExpect(status().isOk());

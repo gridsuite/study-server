@@ -14,11 +14,11 @@ import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
-
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -38,10 +38,11 @@ public class ShortCircuitStudyParametersController {
     @PostMapping(value = "/parameters", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "set short-circuit analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> setShortCircuitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody String shortCircuitParametersInfos,
-            @RequestHeader(HEADER_USER_ID) String userId) {
+            @RequestBody String shortCircuitParametersInfos) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         shortCircuitService.setShortCircuitParameters(studyUuid, shortCircuitParametersInfos, userId);
         return ResponseEntity.ok().build();
     }
@@ -50,15 +51,17 @@ public class ShortCircuitStudyParametersController {
     @Operation(summary = "reset short-circuit analysis parameters on study to the user profile or default ones")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are reset"),
         @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> resetShortCircuitParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestHeader(HEADER_USER_ID) String userId) {
+            @PathVariable("studyUuid") UUID studyUuid) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         return shortCircuitService.resetShortCircuitParameters(studyUuid, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/parameters", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get short-circuit analysis parameters on study")
     @ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters return by shortcircuit-server")
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getShortCircuitParameters(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(shortCircuitService.getShortCircuitParametersInfo(studyUuid));
     }

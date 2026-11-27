@@ -10,6 +10,8 @@ import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.DirectoryService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,10 +27,11 @@ public class DirectoryController {
     }
 
     @GetMapping(value = "/elements")
+    @PreAuthorize("@authorizationService.canRead(#ids)")
     public ResponseEntity<String> getElements(@RequestParam("ids") List<UUID> ids,
                                               @RequestParam(name = "elementTypes", required = false, defaultValue = "") List<String> elementTypes,
-                                              @RequestParam(name = "strictMode", defaultValue = "true") boolean strictMode,
-                                              @RequestHeader("userId") String userId) {
+                                              @RequestParam(name = "strictMode", defaultValue = "true") boolean strictMode) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(directoryService.getElements(ids, elementTypes, strictMode, userId));
     }
 }

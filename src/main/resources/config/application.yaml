@@ -245,6 +245,9 @@ powsybl:
       preloading-strategy: COLLECTION
 
 powsybl-ws:
+  autoconfigure:
+    authorization-system:
+      enable: true
   database:
     name: study
 

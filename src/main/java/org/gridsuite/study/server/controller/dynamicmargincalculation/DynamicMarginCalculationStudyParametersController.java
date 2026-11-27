@@ -13,11 +13,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
-
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -37,6 +37,7 @@ public class DynamicMarginCalculationStudyParametersController {
     @GetMapping(value = "/provider")
     @Operation(summary = "Get dynamic margin calculation provider for a specified study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic margin calculation provider is returned")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getDynamicMarginCalculationProvider(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(dynamicMarginCalculationService.getDynamicMarginCalculationProvider(studyUuid));
     }
@@ -44,10 +45,11 @@ public class DynamicMarginCalculationStudyParametersController {
     @PostMapping(value = "/parameters")
     @Operation(summary = "Set dynamic margin calculation parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic margin calculation parameters are set")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> setDynamicMarginCalculationParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody String dmcParameter,
-            @RequestHeader(HEADER_USER_ID) String userId) {
+            @RequestBody String dmcParameter) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         dynamicMarginCalculationService.setDynamicMarginCalculationParameters(studyUuid, dmcParameter, userId);
         return ResponseEntity.ok().build();
     }
@@ -56,9 +58,10 @@ public class DynamicMarginCalculationStudyParametersController {
     @Operation(summary = "Reset dynamic margin calculation parameters on study to the user profile or default ones")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic margin calculation parameters are reset"),
         @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> resetDynamicMarginCalculationParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestHeader(HEADER_USER_ID) String userId) {
+            @PathVariable("studyUuid") UUID studyUuid) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         return dynamicMarginCalculationService.resetDynamicMarginCalculationParameters(studyUuid, userId) ?
                 ResponseEntity.noContent().build() :
                 ResponseEntity.ok().build();
@@ -67,10 +70,10 @@ public class DynamicMarginCalculationStudyParametersController {
     @GetMapping(value = "/parameters")
     @Operation(summary = "Get dynamic margin calculation parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic margin calculation parameters")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getDynamicMarginCalculationParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestHeader(HEADER_USER_ID) String userId
-    ) {
+            @PathVariable("studyUuid") UUID studyUuid) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok().body(dynamicMarginCalculationService.getDynamicMarginCalculationParameters(studyUuid, userId));
     }
 }
