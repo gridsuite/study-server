@@ -30,7 +30,6 @@ import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
@@ -64,6 +63,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -416,7 +417,7 @@ class StudyTest extends StudyTestBase {
         WireMockUtils.verifyDeleteRequest(wireMockServer, stubDeleteIndexId, "/v1/network-modifications/index", false, Map.of(), 1);
         WireMockUtils.verifyDeleteRequest(wireMockServer, stubDeleteStashedId, "/v1/groups/stashed-modifications", false, Map.of(), 1);
 
-        Mockito.verify(networkStoreService, Mockito.times(1)).deleteNetwork(NETWORK_UUID);
+        verify(networkStoreService, times(1)).deleteNetwork(NETWORK_UUID);
         assertEquals(RootNetworkLoadStatus.UNLOADED, rootNetworkRepository.findById(rootNetworkUuid).orElseThrow().getLoadStatus());
     }
 
