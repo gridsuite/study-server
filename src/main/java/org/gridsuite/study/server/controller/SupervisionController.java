@@ -207,15 +207,6 @@ public class SupervisionController {
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping(value = "/studies/{studyUuid}/unload")
-    @Operation(summary = "Invalidate all node tree, clean stashed elements and delete root networks")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "study has been unloaded")})
-    @PreAuthorize("true")
-    public ResponseEntity<Void> unloadStudy(@PathVariable("studyUuid") UUID studyUuid) {
-        supervisionService.unloadStudy(studyUuid);
-        return ResponseEntity.ok().build();
-    }
-
     @GetMapping(value = "/studies/loaded")
     @Operation(summary = "Get the study uuids whose network is currently loaded")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of the study uuids whose network is currently loaded")})

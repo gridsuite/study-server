@@ -165,6 +165,16 @@ public class StudyController {
         return ResponseEntity.ok().body(createStudy);
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/unload")
+    @Operation(summary = "Invalidate all node tree, clean stashed elements and delete root networks")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "study has been unloaded")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
+    public ResponseEntity<Void> unloadStudy(@PathVariable("studyUuid") UUID studyUuid,
+                                            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.unloadStudy(studyUuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/duplicate")
     @Operation(summary = "create a study from an existing one")
     @ApiResponses(value = {

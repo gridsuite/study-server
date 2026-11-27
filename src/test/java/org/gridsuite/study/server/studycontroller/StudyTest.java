@@ -23,10 +23,12 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.service.DirectoryService;
+import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.StudyServerExecutionService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.utils.MatcherReport;
 import org.gridsuite.study.server.utils.TestUtils;
+import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +42,7 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.GenericMessage;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.net.URLEncoder;
@@ -62,7 +65,10 @@ import static org.gridsuite.study.server.utils.TestUtils.checkUpdateStatusMessag
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -71,6 +77,9 @@ class StudyTest extends StudyTestBase {
 
     @Autowired
     StudyService studyService;
+
+    @MockitoSpyBean
+    RootNetworkService rootNetworkService;
 
     @Test
     void test() throws Exception {
@@ -390,6 +399,55 @@ class StudyTest extends StudyTestBase {
                 )
             .andExpect(status().isOk());
         checkStudyMetadataUpdatedMessagesReceived();
+    }
+
+    @Test
+    void testUnloadStudy() throws Exception {
+        UUID studyUuid = createStudyWithStubs("userId", CASE_UUID);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+        UUID secondRootNetworkUuid = UUID.randomUUID();
+        UUID secondNetworkUuid = UUID.randomUUID();
+        RootNetworkInfos secondRootNetworkInfos = RootNetworkInfos.builder()
+            .id(secondRootNetworkUuid)
+            .name("secondRootNetwork")
+            .tag("RN_2")
+            .networkInfos(new NetworkInfos(secondNetworkUuid, "secondNetwork"))
+            .caseInfos(new CaseInfos(UUID.randomUUID(), UUID.randomUUID(), "secondCase", "UCTE"))
+            .reportUuid(UUID.randomUUID())
+            .build();
+
+        UUID stubDeleteReportsId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/reports"))
+            .willReturn(WireMock.ok())).getId();
+        wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/network-modifications/index"))
+            .willReturn(WireMock.ok()));
+        UUID stubDeleteStashedId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/groups/stashed-modifications"))
+            .willReturn(WireMock.ok())).getId();
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-modifications/root-network-tag"))
+            .willReturn(WireMock.ok()));
+        rootNetworkService.insertCreationRequest(studyUuid, secondRootNetworkInfos, "userId");
+        studyService.createRootNetwork(studyUuid, secondRootNetworkInfos);
+        wireMockServer.resetRequests();
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/unload", studyUuid)
+                .header(USER_ID_HEADER, "userId"))
+            .andExpect(status().isOk());
+
+        WireMockUtils.verifyDeleteRequest(wireMockServer, stubDeleteReportsId, "/v1/reports", false, Map.of(), 3);
+        WireMockUtils.verifyDeleteRequest(wireMockServer, stubDeleteStashedId, "/v1/groups/stashed-modifications", false, Map.of(), 1);
+
+        verify(rootNetworkService, times(2)).invalidateRootNetworkRemoteInfos(any(), eq(true), eq(false));
+        verify(networkStoreService, times(1)).deleteNetwork(NETWORK_UUID);
+        verify(networkStoreService, times(1)).deleteNetwork(secondNetworkUuid);
+        verify(equipmentInfosService, times(1)).deleteEquipmentIndexes(NETWORK_UUID);
+        verify(equipmentInfosService, times(1)).deleteEquipmentIndexes(secondNetworkUuid);
+
+        List<UUID> allRootNetworkUuids = rootNetworkService.getStudyRootNetworkIds(studyUuid);
+        assertEquals(2, allRootNetworkUuids.size());
+        assertEquals(RootNetworkLoadStatus.UNLOADED, rootNetworkRepository.findById(firstRootNetworkUuid).orElseThrow().getLoadStatus());
+        assertEquals(RootNetworkLoadStatus.UNLOADED, rootNetworkRepository.findById(secondRootNetworkUuid).orElseThrow().getLoadStatus());
+        assertEquals(RootNetworkIndexationStatus.NOT_INDEXED, rootNetworkRepository.findById(firstRootNetworkUuid).orElseThrow().getIndexationStatus());
+        assertEquals(RootNetworkIndexationStatus.NOT_INDEXED, rootNetworkRepository.findById(secondRootNetworkUuid).orElseThrow().getIndexationStatus());
+        TestUtils.assertQueuesEmptyThenClear(List.of(elementUpdateDestination), output);
     }
 
     @Test

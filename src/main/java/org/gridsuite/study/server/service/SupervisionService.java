@@ -13,12 +13,9 @@ import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
-import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.asymmetricalload.AsymmetricalLoadRestService;
@@ -108,10 +105,6 @@ public class SupervisionService {
 
     private final RootNetworkService rootNetworkService;
 
-    private final NodeRepository nodeRepository;
-
-    private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
-
     private final NetworkModificationRestService networkModificationService;
 
     private final RestClient restClient;
@@ -139,8 +132,6 @@ public class SupervisionService {
                               StudyInfosService studyInfosService,
                               RootNetworkService rootNetworkService,
                               StudyRepository studyRepository,
-                              NodeRepository nodeRepository,
-                              NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
                               NetworkModificationRestService networkModificationService,
                               RestClient restClient) {
 
@@ -166,8 +157,6 @@ public class SupervisionService {
         this.studyInfosService = studyInfosService;
         this.rootNetworkService = rootNetworkService;
         this.studyRepository = studyRepository;
-        this.nodeRepository = nodeRepository;
-        this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.networkModificationService = networkModificationService;
         this.restClient = restClient;
     }
@@ -503,28 +492,6 @@ public class SupervisionService {
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 
-    public void unloadStudy(UUID studyUuid) {
-        AtomicReference<Long> startTime = new AtomicReference<>();
-        startTime.set(System.nanoTime());
-        // remove all stashed nodes and stashed network modifications
-        try {
-            deleteAllStashedElements(studyUuid);
-        } catch (Exception e) {
-            LOGGER.error("Error while deleting stashed elements", e);
-        }
-        rootNetworkService.getStudyRootNetworkIds(studyUuid).forEach(rnId -> {
-            try {
-                rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADING);
-                studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER, false);
-                rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.UNLOADED);
-            } catch (Exception e) {
-                rootNetworkService.updateNetworkLoadStatus(rnId, RootNetworkLoadStatus.LOADED);
-                LOGGER.error("Error while invalidating study root network", e);
-            }
-        });
-        LOGGER.trace("Study {} nodes builds deleted and root node invalidated in : {} milliseconds", studyUuid, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime.get()));
-    }
-
     public void recreateNetworkModificationSharingLinks(UUID studyUuid, String userId) {
         studyService.assertIsStudyExist(studyUuid);
         List<UUID> modificationGroupUuids = networkModificationTreeService.getAllNetworkModificationNodeInfos(studyUuid, false)
@@ -532,30 +499,6 @@ public class SupervisionService {
             .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
             .toList();
         networkModificationService.createSharingLinks(modificationGroupUuids, true, userId);
-    }
-
-    public void deleteAllStashedElements(UUID studyId) {
-        List<NodeEntity> nodes = nodeRepository.findAllByStudyId(studyId);
-        List<NodeEntity> stashedNodes = new ArrayList<>();
-        List<NodeEntity> notStashedNodes = new ArrayList<>();
-        for (NodeEntity nodeEntity : nodes) {
-            if (nodeEntity.isStashed()) {
-                stashedNodes.add(nodeEntity);
-            } else {
-                notStashedNodes.add(nodeEntity);
-            }
-        }
-
-        // remove stashed modification on not stashed nodes
-        List<NetworkModificationNodeInfoEntity> networkModificationNodeInfos = networkModificationNodeInfoRepository
-                .findAllById(notStashedNodes.stream().map(NodeEntity::getIdNode).toList());
-        List<UUID> notStashedModificationGroupUuids = networkModificationNodeInfos.stream()
-                .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
-                .toList();
-        networkModificationService.deleteStashedModificationsFromGroups(notStashedModificationGroupUuids, SUPERVISION_USER);
-
-        // remove stashed nodes and their modifications
-        studyService.deleteNodes(studyId, stashedNodes.stream().map(NodeEntity::getIdNode).toList(), true, SUPERVISION_USER, false);
     }
 
     @Transactional(readOnly = true)
