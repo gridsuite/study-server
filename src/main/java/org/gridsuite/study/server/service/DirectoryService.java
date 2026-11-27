@@ -104,19 +104,43 @@ public class DirectoryService {
     }
 
     public void createSharingLinks(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, String userId) {
-        references.forEach(ref -> createSharingLink(ref.referencedId(), toReferenceAttributes(ref, studyUuid, nodeUuid), false, userId));
+        createSharingLinks(references, studyUuid, nodeUuid, false, userId);
     }
 
     public void createSharingLinks(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, boolean recreate, String userId) {
-        references.forEach(ref -> createSharingLink(ref.referencedId(), toReferenceAttributes(ref, studyUuid, nodeUuid), recreate, userId));
+        // one call per referenced shared element, carrying all its references
+        for (Map.Entry<UUID, List<ReferenceAttributes>> entry : groupReferenceAttributesByReferencedId(references, studyUuid, nodeUuid).entrySet()) {
+            createSharingLinks(entry.getKey(), entry.getValue(), recreate, userId);
+        }
     }
 
     public void updateSharingLinks(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, String userId) {
-        references.forEach(ref -> updateSharingLink(ref.referencedId(), toReferenceAttributes(ref, studyUuid, nodeUuid), userId));
+        updateSharingLinks(groupReferenceAttributesByReferencedId(references, studyUuid, nodeUuid), userId);
+    }
+
+    public void updateSharingLinks(Map<UUID, List<ReferenceAttributes>> referencesAttributesByReferencedId, String userId) {
+        for (Map.Entry<UUID, List<ReferenceAttributes>> entry : referencesAttributesByReferencedId.entrySet()) {
+            updateSharingLinks(entry.getKey(), entry.getValue(), userId);
+        }
     }
 
     public void removeSharingLinks(List<ModificationReference> references, String userId) {
-        references.forEach(ref -> removeSharingLink(ref.referencedId(), ref.modificationUuid(), userId));
+        // one call per referenced shared element, carrying all its references
+        Map<UUID, List<UUID>> referenceUuidsByReferencedId = new LinkedHashMap<>();
+        for (ModificationReference ref : references) {
+            referenceUuidsByReferencedId.computeIfAbsent(ref.referencedId(), k -> new ArrayList<>()).add(ref.modificationUuid());
+        }
+        for (Map.Entry<UUID, List<UUID>> entry : referenceUuidsByReferencedId.entrySet()) {
+            removeSharingLinks(entry.getKey(), entry.getValue(), userId);
+        }
+    }
+
+    private static Map<UUID, List<ReferenceAttributes>> groupReferenceAttributesByReferencedId(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid) {
+        Map<UUID, List<ReferenceAttributes>> referenceAttributesByReferencedId = new LinkedHashMap<>();
+        for (ModificationReference ref : references) {
+            referenceAttributesByReferencedId.computeIfAbsent(ref.referencedId(), k -> new ArrayList<>()).add(toReferenceAttributes(ref, studyUuid, nodeUuid));
+        }
+        return referenceAttributesByReferencedId;
     }
 
     /**
@@ -133,7 +157,7 @@ public class DirectoryService {
                         : ReferenceAttributes.ReferenceType.STUDY_NODE);
     }
 
-    public void createSharingLink(@NonNull UUID elementUuid, @NonNull ReferenceAttributes referenceAttributes, boolean recreate, String userId) {
+    public void createSharingLinks(@NonNull UUID elementUuid, @NonNull List<ReferenceAttributes> referencesAttributes, boolean recreate, String userId) {
 
         var path = UriComponentsBuilder.fromPath(
                 DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")
@@ -144,23 +168,24 @@ public class DirectoryService {
         restClient.post().uri(getDirectoryServerServerBaseUri() + path)
             .headers(headers -> headers.set(HEADER_USER_ID, userId))
             .contentType(MediaType.APPLICATION_JSON)
-            .body(referenceAttributes)
+            .body(referencesAttributes)
             .retrieve().toEntity(ElementAttributes.class);
     }
 
     /**
-     * remove reference from the shared modification in directory server
-     * @param referenceUuid uuid of the composite or group where the 'Modification reference' is located
+     * remove references from the shared modification in directory server in a single call
+     * @param referenceUuids uuids of the 'Modification references' to remove
      * @param userId id of the user who caused the unreferencing
      * @param sharedElementUuid uuid of the referenced shared element in the directory-server
      */
-    public void removeSharingLink(UUID sharedElementUuid, UUID referenceUuid, String userId) {
-        Objects.requireNonNull(referenceUuid);
+    public void removeSharingLinks(UUID sharedElementUuid, List<UUID> referenceUuids, String userId) {
+        Objects.requireNonNull(referenceUuids);
         Objects.requireNonNull(sharedElementUuid);
 
         var path = UriComponentsBuilder.fromPath(
-                        DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references/{referenceUuid}")
-                .buildAndExpand(sharedElementUuid, referenceUuid)
+                        DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")
+                .queryParam(PARAM_IDS, referenceUuids)
+                .buildAndExpand(sharedElementUuid)
                 .toUriString();
 
         restClient.delete()
@@ -203,24 +228,25 @@ public class DirectoryService {
     }
 
     /**
-     * update a element sharing link in directory server so it points to a new container after a move.
-     * the row to update is identified by {@code elementUuid} (the referenced shared element) and
-     * {@code referenceUuid} (the modification-reference itself); {@code referenceAttributes} carries the new location.
+     * update element sharing links in directory server in a single call, so they point to a new container after a move.
+     * the rows to update are identified by {@code elementUuid} (the referenced shared element) and, for each entry,
+     * the {@code referenceId} carried by its {@code ReferenceAttributes} (the modification-reference itself); each
+     * {@code ReferenceAttributes} also carries the new location.
      * @param elementUuid uuid of the referenced shared element in the directory-server
-     * @param referenceAttributes new attributes of the modification-reference
-     * @param userId id of the user who moves the reference
+     * @param referencesAttributes new attributes of the modification-references
+     * @param userId id of the user who moves the references
      */
-    public void updateSharingLink(@NonNull UUID elementUuid, @NonNull ReferenceAttributes referenceAttributes, String userId) {
+    public void updateSharingLinks(@NonNull UUID elementUuid, @NonNull List<ReferenceAttributes> referencesAttributes, String userId) {
 
         var path = UriComponentsBuilder.fromPath(
-                DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references/{referenceUuid}")
-            .buildAndExpand(elementUuid, referenceAttributes.getReferenceId())
+                DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")
+            .buildAndExpand(elementUuid)
             .toUriString();
 
         restClient.put().uri(getDirectoryServerServerBaseUri() + path)
             .headers(headers -> headers.set(HEADER_USER_ID, userId))
             .contentType(MediaType.APPLICATION_JSON)
-            .body(referenceAttributes)
+            .body(referencesAttributes)
             .retrieve().toBodilessEntity();
     }
 }

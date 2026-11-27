@@ -1726,13 +1726,18 @@ public class StudyService {
 
     private void createCompositesReferences(List<CompositeInfos> compositesInfos, List<UUID> insertedModificationUuids,
                                             UUID studyUuid, UUID nodeUuid, String userId) {
+        Map<UUID, List<ReferenceAttributes>> referencesAttributesByCompositeId = new LinkedHashMap<>();
         for (int i = 0; i < compositesInfos.size(); i++) {
             CompositeInfos composite = compositesInfos.get(i);
             if (!composite.isShared()) {
                 continue;
             }
-            directoryService.createSharingLink(composite.id(), ReferenceAttributes.createReferenceAttributes(
-                    insertedModificationUuids.get(i), studyUuid, nodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE), false, userId);
+            referencesAttributesByCompositeId.computeIfAbsent(composite.id(), k -> new ArrayList<>())
+                    .add(ReferenceAttributes.createReferenceAttributes(
+                            insertedModificationUuids.get(i), studyUuid, nodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE));
+        }
+        for (Map.Entry<UUID, List<ReferenceAttributes>> entry : referencesAttributesByCompositeId.entrySet()) {
+            directoryService.createSharingLinks(entry.getKey(), entry.getValue(), false, userId);
         }
     }
 

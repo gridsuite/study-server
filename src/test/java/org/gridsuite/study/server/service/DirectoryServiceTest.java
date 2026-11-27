@@ -100,42 +100,49 @@ class DirectoryServiceTest {
         UUID nodeUuid = UUID.randomUUID();
         ModificationReference rootReference = new ModificationReference(UUID.randomUUID(), UUID.randomUUID(), null);
         ModificationReference compositeReference = new ModificationReference(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
-        makeFluent(restClient.put().uri(referenceUrl(rootReference)));
-        makeFluent(restClient.put().uri(referenceUrl(compositeReference)));
+        makeFluent(restClient.put().uri(referencesUrl(rootReference.referencedId())));
+        makeFluent(restClient.put().uri(referencesUrl(compositeReference.referencedId())));
 
         directoryService.updateSharingLinks(List.of(rootReference, compositeReference), studyUuid, nodeUuid, USER_ID);
 
-        ArgumentCaptor<ReferenceAttributes> rootBodyCaptor = ArgumentCaptor.forClass(ReferenceAttributes.class);
-        var rootRequest = restClient.put().uri(referenceUrl(rootReference));
+        // one call per referenced shared element, carrying all its references
+        ArgumentCaptor<List<ReferenceAttributes>> rootBodyCaptor = ArgumentCaptor.forClass(List.class);
+        var rootRequest = restClient.put().uri(referencesUrl(rootReference.referencedId()));
         verify(rootRequest).body(rootBodyCaptor.capture());
-        assertThat(rootBodyCaptor.getValue()).usingRecursiveComparison().isEqualTo(ReferenceAttributes.createReferenceAttributes(
-            rootReference.modificationUuid(), studyUuid, nodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE));
+        assertThat(rootBodyCaptor.getValue()).usingRecursiveComparison().isEqualTo(List.of(ReferenceAttributes.createReferenceAttributes(
+            rootReference.modificationUuid(), studyUuid, nodeUuid, ReferenceAttributes.ReferenceType.STUDY_NODE)));
         ArgumentCaptor<Consumer<HttpHeaders>> headersCaptor = ArgumentCaptor.forClass(Consumer.class);
         verify(rootRequest).headers(headersCaptor.capture());
         HttpHeaders headers = new HttpHeaders();
         headersCaptor.getValue().accept(headers);
         assertThat(headers.getFirst(HEADER_USER_ID)).isEqualTo(USER_ID);
 
-        ArgumentCaptor<ReferenceAttributes> compositeBodyCaptor = ArgumentCaptor.forClass(ReferenceAttributes.class);
-        verify(restClient.put().uri(referenceUrl(compositeReference))).body(compositeBodyCaptor.capture());
-        assertThat(compositeBodyCaptor.getValue()).usingRecursiveComparison().isEqualTo(ReferenceAttributes.createReferenceAttributes(
-            compositeReference.modificationUuid(), nodeUuid, compositeReference.containerId(), ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION));
+        ArgumentCaptor<List<ReferenceAttributes>> compositeBodyCaptor = ArgumentCaptor.forClass(List.class);
+        verify(restClient.put().uri(referencesUrl(compositeReference.referencedId()))).body(compositeBodyCaptor.capture());
+        assertThat(compositeBodyCaptor.getValue()).usingRecursiveComparison().isEqualTo(List.of(ReferenceAttributes.createReferenceAttributes(
+            compositeReference.modificationUuid(), nodeUuid, compositeReference.containerId(), ReferenceAttributes.ReferenceType.STUDY_NODE_NETWORK_MODIFICATION)));
     }
 
     @Test
     void testRemoveElementsReferences() {
-        ModificationReference reference1 = new ModificationReference(UUID.randomUUID(), UUID.randomUUID(), null);
-        ModificationReference reference2 = new ModificationReference(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
-        var request1 = restClient.delete().uri(referenceUrl(reference1));
-        var request2 = restClient.delete().uri(referenceUrl(reference2));
-        doReturn(request1).when(request1).headers(any());
-        doReturn(request2).when(request2).headers(any());
+        // two references to the same shared element are removed in a single call, the one to another element in its own call
+        UUID sharedElementUuid = UUID.randomUUID();
+        ModificationReference reference1 = new ModificationReference(UUID.randomUUID(), sharedElementUuid, null);
+        ModificationReference reference2 = new ModificationReference(UUID.randomUUID(), sharedElementUuid, UUID.randomUUID());
+        ModificationReference otherReference = new ModificationReference(UUID.randomUUID(), UUID.randomUUID(), null);
+        String expectedUrl = referencesUrl(sharedElementUuid) + "?ids=" + reference1.modificationUuid() + "&ids=" + reference2.modificationUuid();
+        String otherExpectedUrl = referencesUrl(otherReference.referencedId()) + "?ids=" + otherReference.modificationUuid();
+        var request = restClient.delete().uri(expectedUrl);
+        var otherRequest = restClient.delete().uri(otherExpectedUrl);
+        doReturn(request).when(request).headers(any());
+        doReturn(otherRequest).when(otherRequest).headers(any());
 
-        directoryService.removeSharingLinks(List.of(reference1, reference2), USER_ID);
+        directoryService.removeSharingLinks(List.of(reference1, reference2, otherReference), USER_ID);
 
         ArgumentCaptor<Consumer<HttpHeaders>> headersCaptor = ArgumentCaptor.forClass(Consumer.class);
-        verify(request1).headers(headersCaptor.capture());
-        verify(request2).retrieve();
+        verify(request).headers(headersCaptor.capture());
+        verify(request).retrieve();
+        verify(otherRequest).retrieve();
 
         HttpHeaders headers = new HttpHeaders();
         headersCaptor.getValue().accept(headers);
@@ -146,13 +153,14 @@ class DirectoryServiceTest {
     @Test
     void testRemoveElementReferenceWithNullArguments() {
         UUID uuid = UUID.randomUUID();
-        assertThrows(NullPointerException.class, () -> directoryService.removeSharingLink(uuid, null, USER_ID));
-        assertThrows(NullPointerException.class, () -> directoryService.removeSharingLink(null, uuid, USER_ID));
+        List<UUID> referenceUuids = List.of(uuid);
+        assertThrows(NullPointerException.class, () -> directoryService.removeSharingLinks(uuid, null, USER_ID));
+        assertThrows(NullPointerException.class, () -> directoryService.removeSharingLinks(null, referenceUuids, USER_ID));
         verifyNoInteractions(restClient);
     }
 
-    private static String referenceUrl(ModificationReference reference) {
-        return DIRECTORY_SERVER_URI + "/v1/elements/" + reference.referencedId() + "/references/" + reference.modificationUuid();
+    private static String referencesUrl(UUID referencedId) {
+        return DIRECTORY_SERVER_URI + "/v1/elements/" + referencedId + "/references";
     }
 
     private static void makeFluent(RestClient.RequestBodySpec requestSpec) {
