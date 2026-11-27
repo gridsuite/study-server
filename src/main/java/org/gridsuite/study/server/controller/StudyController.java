@@ -168,7 +168,7 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/unload")
     @Operation(summary = "Invalidate all node tree, clean stashed elements and delete root networks")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "study has been unloaded")})
-    @PreAuthorize("@authorizationService.canWrite(#studyId)")
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> unloadStudy(@PathVariable("studyUuid") UUID studyUuid,
                                             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.unloadStudy(studyUuid, userId);
