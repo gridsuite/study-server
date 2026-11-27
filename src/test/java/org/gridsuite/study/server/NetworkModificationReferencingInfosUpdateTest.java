@@ -91,9 +91,7 @@ class NetworkModificationReferencingInfosUpdateTest {
 
     @AfterEach
     void tearDown() {
-        // only the study of this test: the tree service is mocked, so the trees other test classes may leave in the
-        // shared database could not be deleted, and their studies neither
-        studyRepository.deleteById(studyUuid);
+        studyRepository.deleteAll();
     }
 
     @Test
