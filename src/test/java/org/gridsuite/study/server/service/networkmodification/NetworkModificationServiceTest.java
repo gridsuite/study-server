@@ -347,15 +347,13 @@ class NetworkModificationServiceTest {
     @Test
     void testUpdateNetworkModificationsNameAndDescription() {
         UUID modificationUuid = UUID.randomUUID();
-        String description = "{\"description\":\"new description\"}";
-        // the name is strictly encoded, '+' and '&' included
-        URI expectedUri = URI.create(NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid + "/name-and-description?name=a%2Bb%26c%20d");
-        var requestSpec = restClient.put().uri(expectedUri);
+        String metadata = "";
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid + "/name-and-description";
+        var requestSpec = restClient.put().uri(expectedUrl);
         makeFluent(requestSpec);
 
-        networkModificationService.updateNetworkModificationNameAndDescription(modificationUuid, "a+b&c d", description, USER_ID);
-        verify(requestSpec).contentType(MediaType.APPLICATION_JSON);
-        verify(requestSpec).body(description);
+        networkModificationService.updateNetworkModificationNameAndDescription(modificationUuid, metadata, USER_ID);
+        verify(requestSpec).body(metadata);
     }
 
     private void expectUserIdIsForwarded(String expectedUrl) {
