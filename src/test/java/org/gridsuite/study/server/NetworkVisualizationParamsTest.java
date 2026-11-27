@@ -11,7 +11,7 @@ import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.RecordedRequest;
-import mockwebserver3.junit5.internal.MockWebServerExtension;
+import mockwebserver3.junit5.StartStop;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -25,7 +25,6 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.slf4j.Logger;
@@ -55,7 +54,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * @author David BRAQUART <david.braquart at rte-france.com>
  */
-@ExtendWith(MockWebServerExtension.class)
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
@@ -92,9 +90,11 @@ class NetworkVisualizationParamsTest {
     private StudyRepository studyRepository;
     @Autowired
     private StudyConfigService studyConfigService;
+    @StartStop
+    final MockWebServer server = new MockWebServer();
 
     @BeforeEach
-    void setup(final MockWebServer server) {
+    void setup() {
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         studyConfigService.setStudyConfigServerBaseUri(baseUrl);
@@ -103,17 +103,17 @@ class NetworkVisualizationParamsTest {
             @Override
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
-                String path = Objects.requireNonNull(request.getPath());
+                String path = Objects.requireNonNull(request.getTarget());
                 String method = Objects.requireNonNull(request.getMethod());
                 if (path.startsWith("/v1/network-visualizations-params")) {
                     if ("GET".equals(method)) {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), NETWORK_VISU_DEFAULT_PARAMETERS_JSON);
                     } else {
-                        return new MockResponse(200);
+                        return new MockResponse.Builder().code(200).build();
                     }
                 } else {
-                    LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
-                    return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
+                    LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getTarget());
+                    return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getTarget()).build();
                 }
             }
         };
@@ -121,7 +121,7 @@ class NetworkVisualizationParamsTest {
     }
 
     @Test
-    void testGetParameters(final MockWebServer server) throws Exception {
+    void testGetParameters() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, NETWORK_VISU_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
 
@@ -136,16 +136,16 @@ class NetworkVisualizationParamsTest {
     }
 
     @Test
-    void testUpdateParameters(final MockWebServer server) throws Exception {
-        testSetParameters(server, true);
+    void testUpdateParameters() throws Exception {
+        testSetParameters(true);
     }
 
     @Test
-    void testCreateParameters(final MockWebServer server) throws Exception {
-        testSetParameters(server, false);
+    void testCreateParameters() throws Exception {
+        testSetParameters(false);
     }
 
-    void testSetParameters(final MockWebServer server, boolean withVisuParams) throws Exception {
+    void testSetParameters(boolean withVisuParams) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, withVisuParams ? NETWORK_VISU_PARAMETERS_UUID : null);
         UUID studyNameUserIdUuid = studyEntity.getId();
         mockMvc.perform(
@@ -167,7 +167,7 @@ class NetworkVisualizationParamsTest {
     }
 
     @AfterEach
-    void tearDown(final MockWebServer server) {
+    void tearDown() {
         List<String> destinations = List.of(STUDY_UPDATE_DESTINATION);
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
