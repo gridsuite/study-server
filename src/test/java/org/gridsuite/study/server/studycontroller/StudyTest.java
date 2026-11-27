@@ -432,10 +432,6 @@ class StudyTest extends StudyTestBase {
                 .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
 
-        // load status, build status and indexation notifications
-        while (output.receive(TIMEOUT, studyUpdateDestination) != null) {
-            // drain
-        }
         WireMockUtils.verifyDeleteRequest(wireMockServer, stubDeleteReportsId, "/v1/reports", false, Map.of(), 3);
         WireMockUtils.verifyDeleteRequest(wireMockServer, stubDeleteStashedId, "/v1/groups/stashed-modifications", false, Map.of(), 1);
 
