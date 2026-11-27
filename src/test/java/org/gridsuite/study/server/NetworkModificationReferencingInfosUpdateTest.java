@@ -100,9 +100,6 @@ class NetworkModificationReferencingInfosUpdateTest {
 
     @AfterEach
     void tearDown() {
-        networkModificationNodeInfoRepository.deleteAll();
-        rootNodeInfoRepository.deleteAll();
-        nodeRepository.deleteAll();
         studyRepository.deleteAll();
     }
 

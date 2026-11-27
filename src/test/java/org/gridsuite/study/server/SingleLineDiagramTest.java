@@ -20,7 +20,7 @@ import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.RecordedRequest;
-import mockwebserver3.junit5.internal.MockWebServerExtension;
+import mockwebserver3.junit5.StartStop;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
@@ -41,7 +41,6 @@ import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,7 +70,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
-@ExtendWith(MockWebServerExtension.class)
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
@@ -135,9 +133,11 @@ class SingleLineDiagramTest {
     private StudyService studyService;
     @Autowired
     private TestUtils studyTestUtils;
+    @StartStop
+    final MockWebServer server = new MockWebServer();
 
     @BeforeEach
-    void setup(final MockWebServer server) {
+    void setup() {
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
 
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
@@ -172,21 +172,22 @@ class SingleLineDiagramTest {
             @Override
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
-                String path = Objects.requireNonNull(request.getPath());
+                String path = Objects.requireNonNull(request.getTarget());
                 switch (path) {
                     case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING + "/voltageLevelId?variantId=" + VARIANT_ID:
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "svgandmetadata");
 
                     case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING + "/voltageLevelId": {
-                        Map<String, Object> sldRequestInfos = objectMapper.readValue(request.getBody().readUtf8(), new TypeReference<>() { });
+                        Map<String, Object> sldRequestInfos = objectMapper.readValue(request.getBody().utf8(), new TypeReference<>() { });
                         switch (sldRequestInfos.get("sldDisplayMode")) {
                             case SldDisplayMode.STATE_VARIABLE:
                                 return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "svgandmetadata");
                             case SldDisplayMode.FEEDER_POSITION:
                                 return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "FEEDER_POSITION");
                             default:
-                                LOGGER.error("Unhandled method+path: {} {} with body: {}", request.getMethod(), request.getPath(), sldRequestInfos);
-                                return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath() + " with body: " + sldRequestInfos).build();
+                                LOGGER.error("Unhandled method+path: {} {} with body: {}", request.getMethod(), request.getTarget(), sldRequestInfos);
+                                return new MockResponse.Builder().code(418)
+                                        .body("Unhandled method+path: " + request.getMethod() + " " + request.getTarget() + " with body: " + sldRequestInfos).build();
                         }
                     }
 
@@ -200,7 +201,7 @@ class SingleLineDiagramTest {
                     case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING + "/voltageLevelNotFoundId":
                     case "/v1/substation-svg/" + NETWORK_UUID_STRING + "/substationNotFoundId":
                     case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationNotFoundId":
-                        return new MockResponse(404);
+                        return new MockResponse.Builder().code(404).build();
 
                     case "/v1/network-area-diagram/" + NETWORK_UUID_STRING:
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "nad-svg");
@@ -215,10 +216,10 @@ class SingleLineDiagramTest {
                     case "/v1/lines/infos?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID:
                     case "/v1/substations/infos?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID:
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/all":
-                        return new MockResponse(200);
+                        return new MockResponse.Builder().code(200).build();
                     default:
-                        LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
-                        return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
+                        LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getTarget());
+                        return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getTarget()).build();
                 }
             }
         };
@@ -226,7 +227,7 @@ class SingleLineDiagramTest {
     }
 
     @Test
-    void testDiagramsAndGraphics(final MockWebServer server) throws Exception {
+    void testDiagramsAndGraphics() throws Exception {
         MvcResult mvcResult;
 
         //insert a study
@@ -563,7 +564,7 @@ class SingleLineDiagramTest {
     }
 
     @AfterEach
-    void tearDown(final MockWebServer server) {
+    void tearDown() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
 
