@@ -31,10 +31,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -124,15 +124,12 @@ class NetworkModificationReferencingInfosUpdateTest {
         ModificationMoveInfos modificationMoveInfos = new ModificationMoveInfos(modificationReferenceToMoveUuid, sourceCompositeUuid, targetCompositeUuid, null);
         networkModificationService.moveNetworkModifications(studyUuid, originNodeUuid, targetNodeUuid, List.of(modificationMoveInfos), isTargetInDifferentNodeTree, userId);
 
-        ArgumentCaptor<List<ReferenceAttributes>> referencesAttributesCaptor = ArgumentCaptor.forClass(List.class);
-        ArgumentCaptor<UUID> sharedModificationUuidCaptor = ArgumentCaptor.forClass(UUID.class);
-        verify(directoryService, times(1)).updateSharingLinks(sharedModificationUuidCaptor.capture(), referencesAttributesCaptor.capture(), anyString());
-
-        assertEquals(sharedModificationUuid, sharedModificationUuidCaptor.getValue());
+        ArgumentCaptor<Map<UUID, List<ReferenceAttributes>>> referencesAttributesCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(directoryService, times(1)).updateSharingLinks(referencesAttributesCaptor.capture(), anyString());
 
         assertNotNull(referencesAttributesCaptor.getValue());
         assertThat(referencesAttributesCaptor.getValue())
             .usingRecursiveComparison()
-            .isEqualTo(List.of(referenceAttributesExpected));
+            .isEqualTo(Map.of(sharedModificationUuid, List.of(referenceAttributesExpected)));
     }
 }

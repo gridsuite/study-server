@@ -115,8 +115,11 @@ public class DirectoryService {
     }
 
     public void updateSharingLinks(List<ModificationReference> references, UUID studyUuid, UUID nodeUuid, String userId) {
-        // one call per referenced shared element, carrying all its references
-        for (Map.Entry<UUID, List<ReferenceAttributes>> entry : groupReferenceAttributesByReferencedId(references, studyUuid, nodeUuid).entrySet()) {
+        updateSharingLinks(groupReferenceAttributesByReferencedId(references, studyUuid, nodeUuid), userId);
+    }
+
+    public void updateSharingLinks(Map<UUID, List<ReferenceAttributes>> referencesAttributesByReferencedId, String userId) {
+        for (Map.Entry<UUID, List<ReferenceAttributes>> entry : referencesAttributesByReferencedId.entrySet()) {
             updateSharingLinks(entry.getKey(), entry.getValue(), userId);
         }
     }

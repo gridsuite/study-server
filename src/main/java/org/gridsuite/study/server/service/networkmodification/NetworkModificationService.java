@@ -270,15 +270,12 @@ public class NetworkModificationService {
 
     private void updateElementsSharingLinks(List<ModificationReference> modificationReferences, UUID rootContainerId, UUID containerId,
                                            ReferenceAttributes.ReferenceType targetReferenceType, String userId) {
-        // one call per referenced shared element, carrying all its references
         Map<UUID, List<ReferenceAttributes>> referencesAttributesByReferencedId = new LinkedHashMap<>();
         for (ModificationReference ref : modificationReferences) {
             referencesAttributesByReferencedId.computeIfAbsent(ref.referencedId(), k -> new ArrayList<>())
                 .add(ReferenceAttributes.createReferenceAttributes(ref.modificationUuid(), rootContainerId, containerId, targetReferenceType));
         }
-        for (Map.Entry<UUID, List<ReferenceAttributes>> entry : referencesAttributesByReferencedId.entrySet()) {
-            directoryService.updateSharingLinks(entry.getKey(), entry.getValue(), userId);
-        }
+        directoryService.updateSharingLinks(referencesAttributesByReferencedId, userId);
     }
 
     private void handleNetworkModificationApplyResult(UUID studyUuid, List<Optional<NetworkModificationResult>> modificationResults, List<RootNetworkEntity> rootNetworkEntities, UUID impactedNode) {
