@@ -9,7 +9,9 @@ package org.gridsuite.study.server.service.networkmodification;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ModificationReference;
+import org.gridsuite.study.server.dto.RestrictionsOnTags;
 import org.gridsuite.study.server.dto.RootNetworkTagsCheckInfos;
+import org.gridsuite.study.server.dto.RootNetworkTagsNamingInfos;
 import org.gridsuite.study.server.dto.SharedModificationsWriteAccess;
 import org.gridsuite.study.server.service.RootNetworkService;
 import org.junit.jupiter.api.BeforeEach;
@@ -247,12 +249,13 @@ class NetworkModificationServiceTest {
     @Test
     void testDeleteRootNetworkTags() {
         UUID groupUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
-                + "?groupUuids=" + groupUuid + "&rootNetworkTags=PH1&rootNetworkTags=PH2";
-        var requestSpec = restClient.delete().uri(expectedUrl);
+        // the reserved characters of the tags must be encoded, otherwise "A&B+C" would be read as "A" and a "B C" parameter
+        URI expectedUri = URI.create(NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/root-network-tag"
+                + "?groupUuids=" + groupUuid + "&rootNetworkTags=PH1&rootNetworkTags=A%26B%2BC");
+        var requestSpec = restClient.delete().uri(expectedUri);
         doReturn(requestSpec).when(requestSpec).headers(any());
 
-        networkModificationService.deleteRootNetworkTags(List.of(groupUuid), List.of("PH1", "PH2"));
+        networkModificationService.deleteRootNetworkTags(List.of(groupUuid), List.of("PH1", "A&B+C"));
 
         assertHeaders(requestSpec, Map.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE));
         verify(requestSpec.retrieve()).toBodilessEntity();
@@ -294,8 +297,11 @@ class NetworkModificationServiceTest {
         verify(requestSpec).body(new RootNetworkTagsCheckInfos(List.of(), List.of(modificationUuid), List.of(), List.of("PH1")));
         networkModificationService.assertRootNetworkTagsAllowed(List.of(), List.of(), List.of(sharedUuid), List.of("PH1"), USER_ID);
         verify(requestSpec).body(new RootNetworkTagsCheckInfos(List.of(), List.of(), List.of(sharedUuid), List.of("PH1")));
-        verify(requestSpec, times(3)).contentType(MediaType.APPLICATION_JSON);
-        verify(requestSpec, times(3)).headers(argThat(headersConsumer -> {
+        // the tags already used are sent to be left out of the allowed tags reported on refusal
+        networkModificationService.assertRootNetworkTagsAllowed(List.of(groupUuid), List.of(), List.of(), List.of("PH3"), List.of("PH1"), USER_ID);
+        verify(requestSpec).body(new RootNetworkTagsCheckInfos(List.of(groupUuid), List.of(), List.of(), List.of("PH3"), List.of("PH1")));
+        verify(requestSpec, times(4)).contentType(MediaType.APPLICATION_JSON);
+        verify(requestSpec, times(4)).headers(argThat(headersConsumer -> {
             HttpHeaders headers = new HttpHeaders();
             headersConsumer.accept(headers);
             return USER_ID.equals(headers.getFirst(HEADER_USER_ID));
@@ -328,6 +334,26 @@ class NetworkModificationServiceTest {
 
         assertThat(networkModificationService.getReferencedModificationsWriteAccess(List.of(groupUuid), USER_ID))
             .isEqualTo(SharedModificationsWriteAccess.NONE_WRITABLE);
+    }
+
+    @Test
+    void testGetRootNetworkTagsNamingRestrictions() {
+        UUID groupUuid = UUID.randomUUID();
+        String url = NETWORK_MODIFICATION_SERVER_URI + "/v1/containers/root-network-tags/naming-restrictions";
+        var requestSpec = restClient.post().uri(url);
+        makeFluent(requestSpec);
+        doReturn(requestSpec).when(requestSpec).body(any(Object.class));
+        RestrictionsOnTags restrictions = new RestrictionsOnTags(true, List.of("A"));
+        when(requestSpec.retrieve().body(RestrictionsOnTags.class)).thenReturn(restrictions);
+
+        assertThat(networkModificationService.getRootNetworkTagsNamingRestrictions(List.of(groupUuid), List.of("PH1", "fi&g", "&lio", "a+b c"), USER_ID)).isEqualTo(restrictions);
+        // the tags go in the body, so free text such as "fi&g" reaches the server intact
+        verify(requestSpec).body(new RootNetworkTagsNamingInfos(List.of(groupUuid), List.of("PH1", "fi&g", "&lio", "a+b c")));
+        verify(requestSpec).headers(argThat(headersConsumer -> {
+            HttpHeaders headers = new HttpHeaders();
+            headersConsumer.accept(headers);
+            return USER_ID.equals(headers.getFirst(HEADER_USER_ID));
+        }));
     }
 
     @Test

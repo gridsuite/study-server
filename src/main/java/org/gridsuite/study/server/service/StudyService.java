@@ -414,10 +414,12 @@ public class StudyService {
 
     /**
      * A root network tag of a study must be associated with all its shared modifications: the ones the user cannot
-     * write on, which they cannot associate with a new tag, must already be.
+     * write on, which they cannot associate with a new tag, must already be. On refusal, the allowed tags reported leave
+     * out the ones the study already uses, as {@link #getRootNetworkTagsNamingRestrictions} does.
      */
     private void assertCanAddRootNetworkTag(UUID studyUuid, String newTag, String userId) {
-        networkModificationRestService.assertRootNetworkTagsAllowed(getStudyModificationGroupUuids(studyUuid), List.of(), List.of(), List.of(newTag), userId);
+        networkModificationRestService.assertRootNetworkTagsAllowed(getStudyModificationGroupUuids(studyUuid), List.of(), List.of(),
+                List.of(newTag), rootNetworkService.getStudyRootNetworkTags(studyUuid), userId);
     }
 
     /**
@@ -443,6 +445,19 @@ public class StudyService {
         return groupUuids.isEmpty()
                 ? SharedModificationsWriteAccess.NO_SHARED_MODIFICATION
                 : networkModificationRestService.getReferencedModificationsWriteAccess(groupUuids, userId);
+    }
+
+    /**
+     * @return the tags the user may give to a new or renamed root network of the study: when restricted by shared
+     * modifications the user cannot write on, the tags they all are already associated with, but the ones already
+     * used in the study
+     */
+    public RestrictionsOnTags getRootNetworkTagsNamingRestrictions(UUID studyUuid, String userId) {
+        List<UUID> groupUuids = getStudyModificationGroupUuids(studyUuid);
+        if (groupUuids.isEmpty()) {
+            return RestrictionsOnTags.UNRESTRICTED;
+        }
+        return networkModificationRestService.getRootNetworkTagsNamingRestrictions(groupUuids, rootNetworkService.getStudyRootNetworkTags(studyUuid), userId);
     }
 
     private List<UUID> getStudyModificationGroupUuids(UUID studyUuid) {

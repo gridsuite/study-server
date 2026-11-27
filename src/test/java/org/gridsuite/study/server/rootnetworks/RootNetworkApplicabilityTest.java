@@ -293,7 +293,8 @@ class RootNetworkApplicabilityTest {
 
         // the study points to a shared modification the user is not allowed to write on, and not associated with the new tag
         doThrow(HttpClientErrorException.create(HttpStatus.FORBIDDEN, "Forbidden", null, null, null))
-            .when(networkModificationRestService).assertRootNetworkTagsAllowed(List.of(firstNode.getModificationGroupUuid()), List.of(), List.of(), List.of(ROOT_NETWORK_TAG_2), USER_ID);
+            .when(networkModificationRestService).assertRootNetworkTagsAllowed(List.of(firstNode.getModificationGroupUuid()), List.of(), List.of(), List.of(ROOT_NETWORK_TAG_2),
+                List.of(ROOT_NETWORK_TAG_1), USER_ID);
 
         UUID studyUuid = studyEntity.getId();
         RootNetworkInfos renamingTagInfos = RootNetworkInfos.builder().id(rootNetworkUuid).tag(ROOT_NETWORK_TAG_2).build();
@@ -305,7 +306,7 @@ class RootNetworkApplicabilityTest {
 
         // an update keeping the tag is no rename, so it needs no permission
         updateRootNetwork(studyUuid, rootNetworkUuid, ROOT_NETWORK_TAG_1);
-        verify(networkModificationRestService, times(1)).assertRootNetworkTagsAllowed(any(), any(), any(), any(), any());
+        verify(networkModificationRestService, times(1)).assertRootNetworkTagsAllowed(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -330,6 +331,36 @@ class RootNetworkApplicabilityTest {
         return objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/network-modifications/references/write-access", studyUuid)
                 .header(HEADER_USER_ID, USER_ID))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(), SharedModificationsWriteAccess.class);
+    }
+
+    @Test
+    void testGetRootNetworkTagsNamingRestrictions() throws Exception {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(studyEntity);
+        UUID studyUuid = studyEntity.getId();
+
+        // a study with no modification node contains no shared modification, and the server is not even asked
+        assertEquals(RestrictionsOnTags.UNRESTRICTED, getRootNetworkTagsNamingRestrictions(studyUuid));
+        verify(networkModificationRestService, never()).getRootNetworkTagsNamingRestrictions(any(), any(), any());
+
+        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
+        NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
+        List<UUID> groupUuids = List.of(firstNode.getModificationGroupUuid());
+
+        // the tags already used in the study are sent to be left out, as in the error values of a refused creation or rename
+        List<String> studyTags = rootNetworkService.getStudyRootNetworkTags(studyUuid);
+        doReturn(RestrictionsOnTags.UNRESTRICTED).when(networkModificationRestService).getRootNetworkTagsNamingRestrictions(groupUuids, studyTags, USER_ID);
+        assertEquals(RestrictionsOnTags.UNRESTRICTED, getRootNetworkTagsNamingRestrictions(studyUuid));
+
+        doReturn(new RestrictionsOnTags(true, List.of("A", "B"))).when(networkModificationRestService)
+            .getRootNetworkTagsNamingRestrictions(groupUuids, studyTags, USER_ID);
+        assertEquals(new RestrictionsOnTags(true, List.of("A", "B")), getRootNetworkTagsNamingRestrictions(studyUuid));
+    }
+
+    private RestrictionsOnTags getRootNetworkTagsNamingRestrictions(UUID studyUuid) throws Exception {
+        return objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/tags-naming-restrictions", studyUuid)
+                .header(HEADER_USER_ID, USER_ID))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(), RestrictionsOnTags.class);
     }
 
     @Test
@@ -367,5 +398,8 @@ class RootNetworkApplicabilityTest {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
         output.clear();
+        // the database is shared by the test classes: leave no study tree behind
+        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
+        studyRepository.deleteAll();
     }
 }

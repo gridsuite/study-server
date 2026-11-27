@@ -15,7 +15,9 @@ import org.gridsuite.study.server.StudyConstants.CompositeModificationsActionTyp
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.ModificationReference;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.RestrictionsOnTags;
 import org.gridsuite.study.server.dto.RootNetworkTagsCheckInfos;
+import org.gridsuite.study.server.dto.RootNetworkTagsNamingInfos;
 import org.gridsuite.study.server.dto.SharedModificationsWriteAccess;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
@@ -431,15 +433,16 @@ public class NetworkModificationRestService {
         if (CollectionUtils.isEmpty(groupUuids) || CollectionUtils.isEmpty(rootNetworkTags)) {
             return;
         }
-        var path = UriComponentsBuilder
+        var uri = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + ROOT_NETWORK_TAG_PATH)
                 .queryParam(QUERY_PARAM_GROUP_UUIDS, groupUuids)
-                .queryParam(QUERY_PARAM_ROOT_NETWORK_TAGS, rootNetworkTags)
-                .buildAndExpand()
-                .toUriString();
+                .queryParam(QUERY_PARAM_ROOT_NETWORK_TAGS, Collections.nCopies(rootNetworkTags.size(), "{rootNetworkTag}"))
+                .encode()
+                .buildAndExpand(rootNetworkTags.toArray())
+                .toUri();
 
         restClient.delete()
-            .uri(path)
+            .uri(uri)
             .headers(headers -> headers.setContentType(MediaType.APPLICATION_JSON))
             .retrieve().toBodilessEntity();
     }
@@ -742,17 +745,34 @@ public class NetworkModificationRestService {
     }
 
     /**
+     * @return the root network tags the user may give to a root network, restricted when the containers refer to
+     * shared modifications the user cannot write on; the {@code usedTags} are left out of the allowed tags
+     */
+    public RestrictionsOnTags getRootNetworkTagsNamingRestrictions(List<UUID> containerUuids, List<String> usedTags, String userId) {
+        return restClient.post().uri(getNetworkModificationServerURI(false) + CONTAINERS + DELIMITER + "root-network-tags/naming-restrictions")
+                .headers(headers -> headers.set(HEADER_USER_ID, userId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new RootNetworkTagsNamingInfos(containerUuids, usedTags))
+                .retrieve().body(RestrictionsOnTags.class);
+    }
+
+    /**
      * Throws forbidden when the unwritable shared modifications involved miss some of the tags.
      */
     public void assertRootNetworkTagsAllowed(List<UUID> containerUuids, List<UUID> modificationUuids, List<UUID> sharedUuids,
                                              List<String> rootNetworkTags, String userId) {
+        assertRootNetworkTagsAllowed(containerUuids, modificationUuids, sharedUuids, rootNetworkTags, List.of(), userId);
+    }
+
+    public void assertRootNetworkTagsAllowed(List<UUID> containerUuids, List<UUID> modificationUuids, List<UUID> sharedUuids,
+                                             List<String> rootNetworkTags, List<String> usedTags, String userId) {
         if (rootNetworkTags.isEmpty() || containerUuids.isEmpty() && modificationUuids.isEmpty() && sharedUuids.isEmpty()) {
             return;
         }
         restClient.post().uri(getNetworkModificationServerURI(false) + CONTAINERS + DELIMITER + "root-network-tags/authorized")
                 .headers(headers -> headers.set(HEADER_USER_ID, userId))
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(new RootNetworkTagsCheckInfos(containerUuids, modificationUuids, sharedUuids, rootNetworkTags))
+                .body(new RootNetworkTagsCheckInfos(containerUuids, modificationUuids, sharedUuids, rootNetworkTags, usedTags))
                 .retrieve().toBodilessEntity();
     }
 
