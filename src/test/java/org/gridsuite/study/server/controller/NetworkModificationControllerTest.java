@@ -142,8 +142,9 @@ class NetworkModificationControllerTest {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
 
-        mockMvc.perform(put(BASE_URL + "/network-modifications")
-                .param("uuids", firstUuid.toString(), secondUuid.toString())
+        mockMvc.perform(put(BASE_URL + "/network-modifications/activation")
+                .content("[\"" + firstUuid + "\", \"" + secondUuid + "\"]")
+                .contentType(MediaType.APPLICATION_JSON)
                 .param("active", "true")
                 .header("userId", "userId"))
             .andExpect(status().isOk())

@@ -1448,18 +1448,18 @@ class StudyTest extends StudyTestBase {
         UUID nodeUuid = getRootNodeUuid(studyUuid);
 
         UUID modificationUuid = UUID.randomUUID();
-        Map<String, Map<String, String>> metadata = Map.of(
-                "message", Map.of("name", "newName", "description", "newDescription"));
-        String metadataJson = mapper.writeValueAsString(metadata);
+        String descriptionJson = mapper.writeValueAsString(Map.of("description", "newDescription"));
 
-        UUID stubId = wireMockStubs.stubNetworkModificationUpdateNameAndDescription(modificationUuid.toString(), metadataJson);
+        UUID stubId = wireMockStubs.stubNetworkModificationUpdateNameAndDescription(modificationUuid.toString(), descriptionJson);
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuid}/name-and-description",
                 studyUuid, nodeUuid, modificationUuid)
-                .content(metadataJson)
+                .queryParam("name", "new name")
+                .content(descriptionJson)
+                .contentType(MediaType.APPLICATION_JSON)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
 
-        wireMockStubs.verifyNetworkModificationUpdateNameAndDescription(stubId, modificationUuid.toString(), metadataJson);
+        wireMockStubs.verifyNetworkModificationUpdateNameAndDescription(stubId, modificationUuid.toString(), "new name", descriptionJson);
         TestUtils.receiveNetworkModificationUpdate(output, studyUpdateDestination, TIMEOUT);
     }
 }

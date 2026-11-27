@@ -118,15 +118,15 @@ class NetworkModificationServiceTest {
     void testUpdateNetworkModificationsActivation() {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications?uuids=" + firstUuid + "&uuids=" + secondUuid + "&active=false";
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/activation?active=false";
         var requestSpec = restClient.put().uri(expectedUrl);
-        doReturn(requestSpec).when(requestSpec).headers(any());
+        doReturn(requestSpec).when(requestSpec).contentType(any(MediaType.class));
 
         networkModificationService.updateNetworkModificationsActivation(List.of(firstUuid, secondUuid), false, USER_ID);
 
-        verify(requestSpec, never()).body(any(Object.class));
-        assertHeaders(requestSpec, Map.of(HEADER_USER_ID, USER_ID));
-        verify(requestSpec).retrieve();
+        verify(requestSpec).contentType(MediaType.APPLICATION_JSON);
+        verify(requestSpec).header(HEADER_USER_ID, USER_ID);
+        verify(requestSpec).body(List.of(firstUuid, secondUuid));
     }
 
     @Test
@@ -347,13 +347,15 @@ class NetworkModificationServiceTest {
     @Test
     void testUpdateNetworkModificationsNameAndDescription() {
         UUID modificationUuid = UUID.randomUUID();
-        String metadata = "";
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid + "/name-and-description";
-        var requestSpec = restClient.put().uri(expectedUrl);
+        String description = "{\"description\":\"new description\"}";
+        // the name is strictly encoded, '+' and '&' included
+        URI expectedUri = URI.create(NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid + "/name-and-description?name=a%2Bb%26c%20d");
+        var requestSpec = restClient.put().uri(expectedUri);
         makeFluent(requestSpec);
 
-        networkModificationService.updateNetworkModificationNameAndDescription(modificationUuid, metadata, USER_ID);
-        verify(requestSpec).body(metadata);
+        networkModificationService.updateNetworkModificationNameAndDescription(modificationUuid, "a+b&c d", description, USER_ID);
+        verify(requestSpec).contentType(MediaType.APPLICATION_JSON);
+        verify(requestSpec).body(description);
     }
 
     private void expectUserIdIsForwarded(String expectedUrl) {

@@ -1099,13 +1099,13 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", params = "active")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/activation", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Activates or deactivates network modifications of a node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The activation of the network modifications has been updated"), @ApiResponse(responseCode = "404",
             description = "The study/node is not found")})
     public ResponseEntity<Void> updateNetworkModificationsActivation(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                      @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                     @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
+                                                                     @Parameter(description = "Network modification UUIDs") @RequestBody List<UUID> networkModificationUuids,
                                                                      @Parameter(description = "Activate or deactivate the modifications") @RequestParam("active") boolean active,
                                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
@@ -1129,14 +1129,14 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", params = "applicable")
+    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/root-network-applicability", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Update the applicability of network modifications for a node on a specific root network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Update the applicability of network modifications on a node in a specific root network"),
         @ApiResponse(responseCode = "404", description = "The study/root network/node is not found")})
     public ResponseEntity<Void> updateNetworkModificationsApplicability(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                      @Parameter(description = "Root network UUID") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                      @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                     @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") Set<UUID> networkModificationUuids,
+                                                                     @Parameter(description = "Network modification UUIDs") @RequestBody Set<UUID> networkModificationUuids,
                                                                      @Parameter(description = "New applicability value") @RequestParam(name = "applicable") Boolean applicable,
                                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);

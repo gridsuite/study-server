@@ -282,8 +282,9 @@ public class WireMockStubs {
             requestBody);
     }
 
-    public void verifyNetworkModificationUpdateNameAndDescription(UUID stubId, String modificationUuid, String requestBody) {
-        verifyPutRequest(wireMock, stubId, URI_NETWORK_MODIFICATION + DELIMITER + modificationUuid + StudyConstants.DELIMITER + "name-and-description", false, Map.of(), requestBody);
+    public void verifyNetworkModificationUpdateNameAndDescription(UUID stubId, String modificationUuid, String name, String requestBody) {
+        verifyPutRequest(wireMock, stubId, URI_NETWORK_MODIFICATION + DELIMITER + modificationUuid + StudyConstants.DELIMITER + "name-and-description", false,
+            Map.of("name", WireMock.equalTo(name)), requestBody);
     }
 
     public void verifyNetworkModificationPut(UUID stubId, String modificationUuid, String requestBody) {
