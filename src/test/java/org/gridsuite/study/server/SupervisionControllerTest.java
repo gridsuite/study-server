@@ -8,6 +8,7 @@ package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.WireMockServer;
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
@@ -31,6 +32,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.utils.TestUtils;
+import org.gridsuite.study.server.utils.wiremock.NetworkModificationServerStubs;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,6 +54,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -59,7 +62,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -123,7 +125,6 @@ class SupervisionControllerTest {
 
     @MockitoBean
     private NetworkStoreService networkStoreService;
-
     @Autowired
     private StudyInfosService studyInfosService;
 
@@ -133,8 +134,12 @@ class SupervisionControllerTest {
     @Autowired
     private OutputDestination output;
 
-    @MockitoBean
+    @Autowired
     private NetworkModificationRestService networkModificationService;
+
+    private WireMockServer wireMockServer;
+
+    private NetworkModificationServerStubs networkModificationServerStubs;
 
     private static EquipmentInfos toEquipmentInfos(Identifiable<?> i) {
         return EquipmentInfos.builder()
@@ -157,6 +162,11 @@ class SupervisionControllerTest {
 
     @BeforeEach
     void setup() {
+        wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
+        networkModificationServerStubs = new NetworkModificationServerStubs(wireMockServer);
+        wireMockServer.start();
+        networkModificationService.setNetworkModificationServerBaseUri(wireMockServer.baseUrl());
+
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase", new ResourceSet("", TEST_FILE));
         Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
         network.getIdentifiables().forEach(idable -> equipmentInfosService.addEquipmentInfos(toEquipmentInfos(idable)));
@@ -176,6 +186,8 @@ class SupervisionControllerTest {
         studyRepository.deleteAll();
         // Each test must consume the notifications it triggers, so nothing leaks into the next test
         TestUtils.assertQueuesEmptyThenClear(List.of(ELEMENT_UPDATE_DESTINATION), output);
+        // Each test must verify the wiremock requests it triggers, so nothing leaks into the next test
+        TestUtils.assertWiremockServerRequestsEmptyThenShutdown(wireMockServer);
     }
 
     private StudyEntity initStudy() throws Exception {
@@ -399,19 +411,19 @@ class SupervisionControllerTest {
     @Test
     void testrecreateNetworkModificationSharingLinks() throws Exception {
         initStudy();
+        networkModificationServerStubs.stubCreateSharingLinks(true, "userId");
+
         mockMvc.perform(post("/v1/supervision/studies/{studyUuid}/network-modifications/sharing-links/recreate", STUDY_UUID)
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        verify(networkModificationService, times(1)).createSharingLinks(any(), eq(true), eq("userId"));
-
-        Mockito.clearInvocations(networkModificationService);
+        networkModificationServerStubs.verifyCreateSharingLinks(true, 1);
 
         mockMvc.perform(post("/v1/supervision/studies/{studyUuid}/network-modifications/sharing-links/recreate", NOT_FOUND_STUDY_UUID)
                         .header("userId", "userId"))
                 .andExpect(status().isNotFound());
-        verify(networkModificationService, Mockito.never()).createSharingLinks(any(), eq(true), any());
-
+        // no sharing-links request is expected for an unknown study: enforced by
+        // assertWiremockServerRequestsEmptyThenShutdown in tearDown
     }
 
     @Test
