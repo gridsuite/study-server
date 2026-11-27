@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.StudyService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
@@ -35,6 +36,7 @@ public class ComputationResultFiltersController {
     @GetMapping("/{computationType}")
     @Operation(summary = "Get study's computation result global filters")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The computation result global filters")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getComputationResultGlobalFilters(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("computationType") String computationType) {
@@ -46,6 +48,7 @@ public class ComputationResultFiltersController {
     @GetMapping("/{computationType}/{computationSubType}")
     @Operation(summary = "Get study's computation result column filters")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The computation result column filters")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getComputationResultColumnFilters(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("computationType") String computationType,
@@ -60,6 +63,7 @@ public class ComputationResultFiltersController {
             description = "Replaces all existing global filters with the provided list for a computation result")
     @ApiResponse(responseCode = "204", description = "Global filters set successfully")
     @ApiResponse(responseCode = "404", description = "computation result global filters not found")
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> setGlobalFiltersForComputationResult(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable String computationType,
@@ -71,6 +75,7 @@ public class ComputationResultFiltersController {
     @PutMapping("/{computationType}/{computationSubType}/columns")
     @Operation(summary = "Update a column", description = "Updates a column")
     @ApiResponse(responseCode = "204", description = "Column updated")
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> updateColumns(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable String computationType,
@@ -84,6 +89,7 @@ public class ComputationResultFiltersController {
     @Operation(summary = "Reset global and column filters",
             description = "Resets the global filters of a computation type and the column filters of one of its subtypes")
     @ApiResponse(responseCode = "204", description = "Filters reset successfully")
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> resetFilters(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable String computationType,

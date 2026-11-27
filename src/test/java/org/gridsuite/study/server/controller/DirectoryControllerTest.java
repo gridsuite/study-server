@@ -12,7 +12,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -25,7 +27,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@SpringBootTest
 @ExtendWith(MockitoExtension.class)
+@WithMockUser(username = "userId")
 class DirectoryControllerTest {
 
     private static final String BASE_URL = "/v1/directory";
@@ -50,8 +54,7 @@ class DirectoryControllerTest {
         mockMvc.perform(get(BASE_URL + "/elements")
                 .param("ids", elementUuid.toString())
                 .param("elementTypes", "STUDY")
-                .param("strictMode", "false")
-                .header("userId", USER_ID))
+                .param("strictMode", "false"))
             .andExpect(status().isOk())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
             .andExpect(content().json(elements));

@@ -10,11 +10,11 @@ import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
-
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/loadflow")
@@ -26,27 +26,32 @@ public class LoadFlowParametersController {
     }
 
     @GetMapping(value = "/providers")
+    @PreAuthorize("true")
     public ResponseEntity<String> getProviders() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(loadFlowService.getProviders());
     }
 
     @GetMapping(value = "/specific-parameters")
+    @PreAuthorize("true")
     public ResponseEntity<String> getSpecificParameters() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(loadFlowService.getSpecificParameters());
     }
 
     @GetMapping(value = "/parameters/default-limit-reductions")
+    @PreAuthorize("true")
     public ResponseEntity<String> getDefaultLimitReductions() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(loadFlowService.getDefaultLimitReductions());
     }
 
     @GetMapping(value = "/parameters/{parameterUuid}")
-    public ResponseEntity<String> getLoadFlowParameters(@PathVariable UUID parameterUuid,
-                                                        @RequestHeader(HEADER_USER_ID) String userId) {
+    @PreAuthorize("@authorizationService.canRead(#parameterUuid)")
+    public ResponseEntity<String> getLoadFlowParameters(@PathVariable UUID parameterUuid) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(loadFlowService.getParameters(parameterUuid, userId));
     }
 
     @PutMapping(value = "/parameters/{parameterUuid}")
+    @PreAuthorize("@authorizationService.canWrite(#parameterUuid)")
     public ResponseEntity<Void> updateLoadFlowParameters(@PathVariable UUID parameterUuid, @RequestBody(required = false) String parameters) {
         loadFlowService.updateLoadFlowParameters(parameterUuid, parameters);
         return ResponseEntity.ok().build();

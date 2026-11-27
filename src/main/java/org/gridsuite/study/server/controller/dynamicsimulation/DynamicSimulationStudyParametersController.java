@@ -13,11 +13,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
-
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -35,10 +35,11 @@ public class DynamicSimulationStudyParametersController {
     @PostMapping(value = "/parameters")
     @Operation(summary = "Set dynamic simulation parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation parameters are set")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> setDynamicSimulationParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody String dsParameter,
-            @RequestHeader(HEADER_USER_ID) String userId) {
+            @RequestBody String dsParameter) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         dynamicSimulationService.setDynamicSimulationParameters(studyUuid, dsParameter, userId);
         return ResponseEntity.ok().build();
     }
@@ -47,9 +48,10 @@ public class DynamicSimulationStudyParametersController {
     @Operation(summary = "Reset dynamic simulation parameters on study to the user profile or default ones")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation parameters are reset"),
         @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> resetDynamicSimulationParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestHeader(HEADER_USER_ID) String userId) {
+            @PathVariable("studyUuid") UUID studyUuid) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         return dynamicSimulationService.resetDynamicSimulationParameters(studyUuid, userId) ?
                 ResponseEntity.noContent().build() :
                 ResponseEntity.ok().build();
@@ -58,6 +60,7 @@ public class DynamicSimulationStudyParametersController {
     @GetMapping(value = "/parameters")
     @Operation(summary = "Get dynamic simulation parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation parameters")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getDynamicSimulationParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(dynamicSimulationService.getDynamicSimulationParameters(studyUuid));
@@ -66,6 +69,7 @@ public class DynamicSimulationStudyParametersController {
     @GetMapping(value = "/provider")
     @Operation(summary = "Get dynamic simulation provider for a specified study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation provider is returned")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getDynamicSimulationProvider(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(dynamicSimulationService.getDynamicSimulationProvider(studyUuid));
     }

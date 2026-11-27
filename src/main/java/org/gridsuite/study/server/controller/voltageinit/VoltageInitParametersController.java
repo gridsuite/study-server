@@ -12,6 +12,7 @@ import org.gridsuite.study.server.service.voltageinit.VoltageInitService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,11 +30,13 @@ public class VoltageInitParametersController {
     }
 
     @GetMapping(value = "/results/{resultUuid}/download-debug-file")
+    @PreAuthorize("true")
     public ResponseEntity<Resource> downloadDebugFile(@PathVariable UUID resultUuid) {
         return voltageInitService.downloadDebugFile(resultUuid);
     }
 
     @GetMapping(value = "/parameters/{parameterUuid}")
+    @PreAuthorize("@authorizationService.canRead(#parameterUuid)")
     public ResponseEntity<VoltageInitParametersInfos> getParameters(@PathVariable UUID parameterUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(voltageInitService.getVoltageInitParametersByUuid(parameterUuid));
     }

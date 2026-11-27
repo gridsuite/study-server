@@ -23,13 +23,14 @@ import org.gridsuite.study.server.utils.ResultParameters;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
 
@@ -57,14 +58,15 @@ public class ShortCircuitController {
     @PutMapping(value = "/run")
     @Operation(summary = "run short circuit analysis on study")
     @ApiResponse(responseCode = "200", description = "The short circuit analysis has started")
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> runShortCircuit(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @RequestParam(value = "busId", required = false) Optional<String> busId,
-            @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
-            @RequestHeader(HEADER_USER_ID) String userId) {
+            @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         QuotaRunner.runComputationWithQuota(studyService, SHORT_CIRCUIT, userId, quotaId ->
             nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
                 () -> shortCircuitService.runShortCircuit(studyUuid, nodeUuid, rootNetworkUuid, busId, debug, userId, quotaId)));
@@ -74,10 +76,11 @@ public class ShortCircuitController {
     @PutMapping(value = "/stop")
     @Operation(summary = "stop security analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis has been stopped")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> stopShortCircuitAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                         @RequestHeader(HEADER_USER_ID) String userId) {
+                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         rootNetworkNodeInfoService.stopShortCircuitAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
@@ -87,6 +90,7 @@ public class ShortCircuitController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis result"),
         @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The short circuit analysis has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getShortCircuitResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                         @Parameter(description = "root network UUID") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                         @Parameter(description = "node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
@@ -110,6 +114,7 @@ public class ShortCircuitController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis status"),
         @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The short circuit analysis status has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getShortCircuitAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                 @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
@@ -125,6 +130,7 @@ public class ShortCircuitController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis csv export"),
         @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The short circuit analysis has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<byte[]> getShortCircuitAnalysisCsvResult(
             @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,

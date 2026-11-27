@@ -21,13 +21,14 @@ import org.gridsuite.study.server.utils.QuotaRunner;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_FILTERS;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_GLOBAL_FILTERS;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_SORT;
@@ -58,12 +59,13 @@ public class StateEstimationController {
     @PostMapping(value = "/run")
     @Operation(summary = "run state estimation on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation has started")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> runStateEstimation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                    @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                    @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                   @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
-                                                   @RequestHeader(HEADER_USER_ID) String userId) {
+                                                   @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         QuotaRunner.runComputationWithQuota(studyService, STATE_ESTIMATION, userId, quotaId ->
             nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
                 () -> stateEstimationService.runStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug, quotaId)));
@@ -75,6 +77,7 @@ public class StateEstimationController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation result"),
         @ApiResponse(responseCode = "204", description = "No state estimation has been done yet"),
         @ApiResponse(responseCode = "404", description = "The state estimation has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getStateEstimationResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
@@ -89,6 +92,7 @@ public class StateEstimationController {
         @ApiResponse(responseCode = "204", description = "No state estimation has been done yet"),
         @ApiResponse(responseCode = "400", description = "Invalid global filters, or column filters/sort supplied"),
         @ApiResponse(responseCode = "404", description = "The study, root network, node or state estimation has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getStateEstimationMeasurements(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                  @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                  @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
@@ -109,6 +113,7 @@ public class StateEstimationController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation status"),
         @ApiResponse(responseCode = "204", description = "No state estimation has been done yet"),
         @ApiResponse(responseCode = "404", description = "The state estimation status has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getStateEstimationStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
@@ -119,10 +124,11 @@ public class StateEstimationController {
     @PutMapping(value = "/stop")
     @Operation(summary = "stop state estimation on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation has been stopped")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> stopStateEstimation(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                     @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                    @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                    @RequestHeader(HEADER_USER_ID) String userId) {
+                                                    @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         rootNetworkNodeInfoService.stopStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }

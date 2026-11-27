@@ -21,12 +21,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.ASYMMETRICAL_LOAD;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
 
@@ -55,6 +56,7 @@ public class AsymmetricalLoadController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Csv of asymmetrical load results"),
         @ApiResponse(responseCode = "204", description = "No asymmetrical load has been done yet"),
         @ApiResponse(responseCode = "404", description = "The asymmetrical load has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<byte[]> exportAsymmetricalLoadResultsAsCsv(
             @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
@@ -68,11 +70,11 @@ public class AsymmetricalLoadController {
     @PostMapping(value = "/run")
     @Operation(summary = "run asymmetrical load on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The asymmetrical load has started")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> runAsymmetricalLoad(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                           @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                          @RequestHeader(HEADER_USER_ID) String userId) {
-
+                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         QuotaRunner.runComputationWithQuota(studyService, ASYMMETRICAL_LOAD, userId, quotaId ->
             nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
@@ -83,6 +85,7 @@ public class AsymmetricalLoadController {
     @PutMapping(value = "/stop")
     @Operation(summary = "stop asymmetrical load on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The asymmetrical load has been stopped")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> stopAsymmetricalLoad(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
@@ -95,6 +98,7 @@ public class AsymmetricalLoadController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The asymmetrical load result"),
         @ApiResponse(responseCode = "204", description = "No asymmetrical load  has been done yet"),
         @ApiResponse(responseCode = "404", description = "The asymmetrical load  has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getAsymmetricalLoadResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                   @Parameter(description = "rootNetwork Uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                   @Parameter(description = "node Uuid") @PathVariable("nodeUuid") UUID nodeUuid,
@@ -111,6 +115,7 @@ public class AsymmetricalLoadController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The asymmetrical load status"),
         @ApiResponse(responseCode = "204", description = "No asymmetrical load has been done yet"),
         @ApiResponse(responseCode = "404", description = "The asymmetrical load status has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getAsymmetricalLoadStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                   @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {

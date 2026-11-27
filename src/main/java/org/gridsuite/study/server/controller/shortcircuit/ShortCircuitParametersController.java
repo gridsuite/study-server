@@ -11,6 +11,7 @@ import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -25,21 +26,25 @@ public class ShortCircuitParametersController {
     }
 
     @GetMapping(value = "/results/{resultUuid}/download-debug-file")
+    @PreAuthorize("true")
     public ResponseEntity<Resource> downloadDebugFile(@PathVariable UUID resultUuid) {
         return shortCircuitService.downloadDebugFile(resultUuid);
     }
 
     @GetMapping(value = "/parameters/specific-parameters")
+    @PreAuthorize("true")
     public ResponseEntity<String> getSpecificParameters() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(shortCircuitService.getSpecificParameters());
     }
 
     @GetMapping(value = "/parameters/{parameterUuid}")
+    @PreAuthorize("@authorizationService.canRead(#parameterUuid)")
     public ResponseEntity<String> getParameters(@PathVariable UUID parameterUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(shortCircuitService.getParameters(parameterUuid));
     }
 
     @PutMapping(value = "/parameters/{parameterUuid}")
+    @PreAuthorize("@authorizationService.canWrite(#parameterUuid)")
     public ResponseEntity<Void> updateParameters(@PathVariable UUID parameterUuid, @RequestBody(required = false) String parameters) {
         shortCircuitService.updateParameters(parameterUuid, parameters);
         return ResponseEntity.ok().build();

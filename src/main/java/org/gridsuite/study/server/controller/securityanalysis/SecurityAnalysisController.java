@@ -22,12 +22,13 @@ import org.gridsuite.study.server.utils.QuotaRunner;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
 
@@ -55,11 +56,12 @@ public class SecurityAnalysisController {
     @PostMapping(value = "/run")
     @Operation(summary = "run security analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has started")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> runSecurityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                     @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                    @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                    @RequestHeader(HEADER_USER_ID) String userId) {
+                                                    @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         QuotaRunner.runComputationWithQuota(studyService, SECURITY_ANALYSIS, userId, quotaId ->
             nodeActivityRunnerService.runWith(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
                 () -> securityAnalysisService.runSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId, quotaId)));
@@ -71,6 +73,7 @@ public class SecurityAnalysisController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis result"),
         @ApiResponse(responseCode = "204", description = "No security analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The security analysis has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getSecurityAnalysisResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                             @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
@@ -88,6 +91,7 @@ public class SecurityAnalysisController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis result csv export"),
         @ApiResponse(responseCode = "204", description = "No security analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The security analysis has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<byte[]> getSecurityAnalysisResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                             @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
@@ -104,6 +108,7 @@ public class SecurityAnalysisController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis status"),
         @ApiResponse(responseCode = "204", description = "No security analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The security analysis status has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getSecurityAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                             @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
@@ -114,10 +119,11 @@ public class SecurityAnalysisController {
     @PutMapping(value = "/stop")
     @Operation(summary = "stop security analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has been stopped")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> stopSecurityAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                      @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                     @RequestHeader(HEADER_USER_ID) String userId) {
+                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         rootNetworkNodeInfoService.stopSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }

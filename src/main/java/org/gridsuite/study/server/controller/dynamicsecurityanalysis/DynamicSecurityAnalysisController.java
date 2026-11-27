@@ -19,13 +19,14 @@ import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurit
 import org.gridsuite.study.server.utils.QuotaRunner;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.DYNAWO_PROVIDER;
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_SECURITY_ANALYSIS;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
 
@@ -55,11 +56,12 @@ public class DynamicSecurityAnalysisController {
     @PostMapping(value = "/run")
     @Operation(summary = "run dynamic security analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic security analysis has started")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> runDynamicSecurityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                            @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                           @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
-                                                           @RequestHeader(HEADER_USER_ID) String userId) {
+                                                           @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         QuotaRunner.runComputationWithQuota(studyService, DYNAMIC_SECURITY_ANALYSIS, userId, quotaId -> {
             studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), dynamicSecurityAnalysisService::getDynamicSecurityAnalysisProvider);
@@ -74,6 +76,7 @@ public class DynamicSecurityAnalysisController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The status of dynamic security analysis result"),
         @ApiResponse(responseCode = "204", description = "No dynamic security analysis status"),
         @ApiResponse(responseCode = "404", description = "The dynamic security analysis has not been found")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getDynamicSecurityAnalysisStatus(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                    @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                    @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {

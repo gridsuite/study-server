@@ -16,7 +16,9 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -24,7 +26,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNBUILD_ALL;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -37,7 +38,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@SpringBootTest
 @ExtendWith(MockitoExtension.class)
+@WithMockUser(username = "userId")
 class LoadFlowStudyParametersControllerTest {
 
     private static final String BASE_URL = "/v1/studies/{studyUuid}/loadflow";
@@ -82,7 +85,6 @@ class LoadFlowStudyParametersControllerTest {
         runTheRunnableOf(invalidatedNodes, studyUuid);
 
         mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
-                .header(HEADER_USER_ID, USER_ID)
                 .content(PARAMETERS)
                 .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
@@ -103,8 +105,7 @@ class LoadFlowStudyParametersControllerTest {
         runTheActionOf(invalidatedNodes, studyUuid);
         when(loadFlowService.resetLoadFlowParameters(studyUuid, USER_ID)).thenReturn(true);
 
-        mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid)
-                .header(HEADER_USER_ID, USER_ID))
+        mockMvc.perform(post(BASE_URL + "/parameters/reset", studyUuid))
             .andExpect(status().isNoContent())
             .andExpect(content().string(""));
 
@@ -118,8 +119,7 @@ class LoadFlowStudyParametersControllerTest {
         UUID studyUuid = UUID.randomUUID();
         when(loadFlowService.getLoadFlowParametersValues(studyUuid, USER_ID)).thenReturn(PARAMETERS);
 
-        mockMvc.perform(get(BASE_URL + "/parameters", studyUuid)
-                .header(HEADER_USER_ID, USER_ID))
+        mockMvc.perform(get(BASE_URL + "/parameters", studyUuid))
             .andExpect(status().isOk())
             .andExpect(content().json(PARAMETERS));
 

@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server;
 
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.DynamicMappingService;
@@ -20,7 +21,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -42,6 +45,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
+@Import(AllowAllAuthTestConfiguration.class)
+@WithMockUser(username = "userId")
 class StudyControllerDynamicMappingTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyControllerDynamicMappingTest.class);
@@ -52,9 +57,6 @@ class StudyControllerDynamicMappingTest {
 
     private static final String STUDY_NETWORK_VALUES_END_POINT = "{studyUuid}/dynamic-mapping/network/values";
     private static final String STUDY_NETWORK_MATCHES_END_POINT = "{studyUuid}/dynamic-mapping/network/matches/rule";
-
-    private static final String HEADER_USER_ID_NAME = "userId";
-    private static final String HEADER_USER_ID_VALUE = "userId";
 
     private static final UUID CASE_UUID = UUID.randomUUID();
     private static final UUID NETWORK_UUID = UUID.randomUUID();
@@ -101,8 +103,7 @@ class StudyControllerDynamicMappingTest {
         String studyBaseUrl = UrlUtil.buildEndPointUrl("", API_VERSION, STUDY_END_POINT);
         // --- call endpoint to be tested --- //
         LOGGER.info("Calling getNetworkValuesFromStudy for studyUuid={}", studyUuid);
-        MvcResult result = studyClient.perform(get(studyBaseUrl + DELIMITER + STUDY_NETWORK_VALUES_END_POINT, studyUuid)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+        MvcResult result = studyClient.perform(get(studyBaseUrl + DELIMITER + STUDY_NETWORK_VALUES_END_POINT, studyUuid))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
@@ -130,7 +131,6 @@ class StudyControllerDynamicMappingTest {
         // --- call endpoint to be tested --- //
         LOGGER.info("Calling getNetworkMatchesFromStudy for studyUuid={}", studyUuid);
         MvcResult result = studyClient.perform(post(studyBaseUrl + DELIMITER + STUDY_NETWORK_MATCHES_END_POINT, studyUuid)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(RULE_TO_MATCH_JSON))
                 .andExpect(status().isOk())
