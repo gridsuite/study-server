@@ -20,6 +20,7 @@ import org.mockito.ArgumentMatcher;
 import org.mockito.MockedStatic;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -39,7 +40,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -53,6 +53,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
  */
+@WithMockUser(username = "testUser")
 class TreeExportTest extends StudyTestBase {
 
     private static final String GROUP_MODIFICATIONS_URL = "/v1/containers/[^/]+/network-modifications";
@@ -85,7 +86,7 @@ class TreeExportTest extends StudyTestBase {
         computationServerStubs.stubGetParametersAny("{}");
         stubJsonGet(GROUP_MODIFICATIONS_URL, "[]");
         // Export as zip
-        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName").header(HEADER_USER_ID, "testUser"))
+        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", "application/zip"))
                 .andReturn();
@@ -180,7 +181,7 @@ class TreeExportTest extends StudyTestBase {
         Map<UUID, String> names = Map.of(filterA, "nameA", filterB, "nameB", filterC, "nameC", identifierList, "nameI", filterBasedList, "nameF");
         wireMockStubs.directoryServer.stubGetElementNames(objectMapper.writeValueAsString(names));
 
-        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName").header(HEADER_USER_ID, "testUser"))
+        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName"))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -239,7 +240,7 @@ class TreeExportTest extends StudyTestBase {
         Map<UUID, String> names = Map.of(filterA, "nameA", filterB, "nameB", filterC, "nameC", loadFlowParameters, "nameLF");
         wireMockStubs.directoryServer.stubGetElementNames(objectMapper.writeValueAsString(names));
 
-        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName").header(HEADER_USER_ID, "testUser"))
+        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName"))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -296,7 +297,7 @@ class TreeExportTest extends StudyTestBase {
         stubJsonGet("/v1/filters/metadata", "[" + filterAJson + "," + filterBJson + "]");
         wireMockStubs.directoryServer.stubGetElementNames(objectMapper.writeValueAsString(Map.of(filterA, "nameA", filterB, "nameB")));
 
-        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName").header(HEADER_USER_ID, "testUser"))
+        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName"))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -338,7 +339,7 @@ class TreeExportTest extends StudyTestBase {
         computationServerStubs.stubGetParametersAny("{}");
         stubJsonGet(GROUP_MODIFICATIONS_URL, "[]");
 
-        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName").header(HEADER_USER_ID, "testUser"))
+        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName"))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -381,7 +382,7 @@ class TreeExportTest extends StudyTestBase {
         UUID studyUuid = createStudyWithStubs("testUser", CASE_UUID);
         wireMockStubs.directoryServer.stubCheckPermission(List.of(studyUuid), null, "testUser", PermissionType.READ, false, HttpStatus.FORBIDDEN.value());
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName").header(HEADER_USER_ID, "testUser"))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName"))
                 .andExpect(status().isForbidden())
                 .andExpect(header().string("Content-Disposition", nullValue()));
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
@@ -417,7 +418,7 @@ class TreeExportTest extends StudyTestBase {
                 mockedFiles.when(() -> Files.deleteIfExists(argThat(isStudyZipFile)))
                         .thenThrow(new IOException("Simulated failure deleting temp zip file"));
 
-                mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName").header(HEADER_USER_ID, "testUser"))
+                mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName"))
                         .andExpect(status().isInternalServerError())
                         .andExpect(header().string("Content-Disposition", nullValue()));
                 assertNotNull(capturedZipFile.get(), "the mocked zip file path was never matched");

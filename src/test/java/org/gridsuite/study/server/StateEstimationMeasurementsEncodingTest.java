@@ -8,6 +8,7 @@ package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.RecordedRequest;
@@ -36,9 +37,11 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
@@ -70,6 +73,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
+@Import(AllowAllAuthTestConfiguration.class)
+@WithMockUser(username = "userId")
 class StateEstimationMeasurementsEncodingTest {
 
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
@@ -137,7 +142,7 @@ class StateEstimationMeasurementsEncodingTest {
         nodeJson.put("variantId", VARIANT_ID);
         nodeJson.put("modificationGroupUuid", node.getModificationGroupUuid());
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, rootNodeUuid)
-                .content(nodeJson.toString()).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
+                .content(nodeJson.toString()).contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());
         nodeUuid = UUID.fromString(String.valueOf(TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION).getHeaders().get(NotificationService.HEADER_NEW_NODE)));
         rootNetworkNodeInfoService.updateRootNetworkNode(nodeUuid, rootNetworkUuid,

@@ -7,6 +7,7 @@
 package org.gridsuite.study.server;
 
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
@@ -33,10 +34,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -58,13 +61,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
+@Import(AllowAllAuthTestConfiguration.class)
+@WithMockUser(username = "noProfileUser")
 class NetworkVisualizationParamsTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(NetworkVisualizationParamsTest.class);
 
     private static final String CASE_LOADFLOW_UUID_STRING = "11a91c11-2c2d-83bb-b45f-20b83e4ef00c";
     private static final UUID CASE_LOADFLOW_UUID = UUID.fromString(CASE_LOADFLOW_UUID_STRING);
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
-    private static final String NO_PROFILE_USER_ID = "noProfileUser";
 
     private static final String NETWORK_VISU_PARAMETERS_UUID_STRING = "5218bc26-1196-4ac5-a860-d7342359bca7";
     private static final UUID NETWORK_VISU_PARAMETERS_UUID = UUID.fromString(NETWORK_VISU_PARAMETERS_UUID_STRING);
@@ -150,7 +154,6 @@ class NetworkVisualizationParamsTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
         mockMvc.perform(
                         post("/v1/studies/{studyUuid}/network-visualizations/parameters", studyNameUserIdUuid)
-                                .header("userId", NO_PROFILE_USER_ID)
                                 .contentType(MediaType.ALL)
                                 .content(NETWORK_VISU_DEFAULT_PARAMETERS_JSON))
                 .andExpect(status().is(HttpStatus.OK.value()));

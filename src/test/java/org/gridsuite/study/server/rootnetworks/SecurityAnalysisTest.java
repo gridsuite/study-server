@@ -15,6 +15,7 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
 import com.powsybl.contingency.violations.LimitViolationType;
 import com.powsybl.security.SecurityAnalysisParameters;
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import org.assertj.core.api.recursive.comparison.RecursiveComparisonConfiguration;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.ContingencyCount;
@@ -44,6 +45,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -51,6 +53,7 @@ import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -66,7 +69,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
 import static org.gridsuite.study.server.notification.NotificationService.*;
@@ -88,6 +90,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
+@Import(AllowAllAuthTestConfiguration.class)
+@WithMockUser(username = "userId")
 class SecurityAnalysisTest {
 
     private static final String SECURITY_ANALYSIS_RESULT_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
@@ -330,7 +334,7 @@ class SecurityAnalysisTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());
         var mess = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertNotNull(mess);
@@ -344,6 +348,7 @@ class SecurityAnalysisTest {
     }
 
     @Test
+    @WithMockUser(username = "testUserId")
     void getResultZippedCsv() throws Exception {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null);
@@ -358,7 +363,7 @@ class SecurityAnalysisTest {
          */
         computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, SECURITY_ANALYSIS_RESULT_UUID);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run",
-            studyUuid, firstRootNetworkUuid, nodeUuid).header(HEADER_USER_ID, "testUserId")).andExpect(status().isOk());
+            studyUuid, firstRootNetworkUuid, nodeUuid)).andExpect(status().isOk());
 
         consumeSAResult(studyUuid, firstRootNetworkUuid, nodeUuid, SECURITY_ANALYSIS_RESULT_UUID);
 
@@ -469,6 +474,7 @@ class SecurityAnalysisTest {
     }
 
     @Test
+    @WithMockUser(username = "testUserId")
     void getResultZippedCsvNotFound() throws Exception {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null);
@@ -484,7 +490,7 @@ class SecurityAnalysisTest {
          */
         computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, SECURITY_ANALYSIS_RESULT_UUID);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run",
-            studyUuid, firstRootNetworkUuid, nodeUuid).header(HEADER_USER_ID, "testUserId")).andExpect(status().isOk());
+            studyUuid, firstRootNetworkUuid, nodeUuid)).andExpect(status().isOk());
 
         consumeSAResult(studyUuid, firstRootNetworkUuid, nodeUuid, SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID);
 
@@ -540,6 +546,7 @@ class SecurityAnalysisTest {
     }
 
     @Test
+    @WithMockUser(username = "testUserId")
     void testSecurityAnalysis() throws Exception {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null);
@@ -555,8 +562,7 @@ class SecurityAnalysisTest {
 
         // attempt run security analysis on root node → forbidden (not allowed)
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run",
-                studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
-                .header(HEADER_USER_ID, "testUserId"))
+                studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid))
             .andExpect(status().isForbidden());
 
         wireMockServer.verify(0, WireMock.getRequestedFor(WireMock.urlMatching("/v1/security-analysis/.*")));
@@ -571,8 +577,7 @@ class SecurityAnalysisTest {
         );
         requestBuilder
             .contentType(MediaType.APPLICATION_JSON)
-            .content(objectWriter.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS))
-            .header(HEADER_USER_ID, "testUserId");
+            .content(objectWriter.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS));
 
         mockMvc.perform(requestBuilder)
             .andExpect(status().isOk());
@@ -647,7 +652,6 @@ class SecurityAnalysisTest {
             requestBuilder.contentType(MediaType.APPLICATION_JSON)
                 .content(objectWriter.writeValueAsString(securityAnalysisParameters));
         }
-        requestBuilder.header(HEADER_USER_ID, "testUserId");
 
         mockMvc.perform(requestBuilder).andExpect(status().isOk());
         consumeSAResult(studyUuid, rootNetworkUuid, nodeUuid, resultUuid);
@@ -735,8 +739,8 @@ class SecurityAnalysisTest {
         // stop security analysis
         computationServerStubs.stubComputationStop(resultUuid);
 
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/stop", studyUuid, rootNetworkUuid, nodeUuid).header("userId",
-                "userId")).andExpect(status().isOk());
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/stop", studyUuid, rootNetworkUuid, nodeUuid))
+            .andExpect(status().isOk());
 
         String receiverJson = objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid));
         Message<String> stoppedMessage = MessageBuilder.withPayload("")
@@ -800,7 +804,6 @@ class SecurityAnalysisTest {
         computationServerStubs.stubParameterPut(SECURITY_ANALYSIS_PARAMETERS_UUID_STRING, mnBodyJson);
         mockMvc.perform(
             post("/v1/studies/{studyUuid}/security-analysis/parameters", studyUuid)
-                .header("userId", "userId")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mnBodyJson)
         ).andExpect(status().isOk());
@@ -817,7 +820,6 @@ class SecurityAnalysisTest {
 
         mockMvc.perform(
             post("/v1/studies/{studyUuid}/security-analysis/parameters", studyUuid)
-                .header("userId", "userId")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mnBodyJson)
         ).andExpect(status().isOk());
@@ -843,7 +845,6 @@ class SecurityAnalysisTest {
         String bodyJson = objectWriter.writeValueAsString(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
         computationServerStubs.stubCreateParameter(objectMapper.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS_UUID));
         mockMvc.perform(post("/v1/studies/{studyUuid}/security-analysis/parameters", studyUuid)
-                .header("userId", "userId")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(bodyJson))
             .andExpect(status().isOk());
@@ -855,17 +856,19 @@ class SecurityAnalysisTest {
     }
 
     @Test
+    @WithMockUser(username = NO_PROFILE_USER_ID)
     void testResetSecurityAnalysisParametersUserHasNoProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SECURITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         userAdminServerStubs.stubGetUserProfile(NO_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
         computationServerStubs.stubParametersReset(SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);
-        resetParametersAndDoChecks(studyNameUserIdUuid, NO_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyNameUserIdUuid, HttpStatus.OK);
         userAdminServerStubs.verifyGetUserProfile(NO_PROFILE_USER_ID);
         computationServerStubs.verifyParametersReset(SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);
     }
 
     @Test
+    @WithMockUser(username = "testUserId")
     void testSecurityAnalysisFailedForNotification() throws Exception {
         // --- Setup study and node ---
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_2_STRING), CASE_2_UUID, null);
@@ -880,8 +883,7 @@ class SecurityAnalysisTest {
         //run failing security analysis (because in network 2)
         computationServerStubs.stubComputationRun(NETWORK_UUID_2_STRING, null, SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run",
-                studyUuid, firstRootNetworkUuid, nodeUuid)
-                .header(HEADER_USER_ID, "testUserId"))
+                studyUuid, firstRootNetworkUuid, nodeUuid))
             .andExpect(status().isOk());
 
         // failed security analysis
@@ -915,8 +917,7 @@ class SecurityAnalysisTest {
         computationServerStubs.stubComputationRun(NETWORK_UUID_3_STRING, null, SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run",
-                studyUuid2, firstRootNetworkUuid2, modificationNode1Uuid2)
-                .header(HEADER_USER_ID, "testUserId"))
+                studyUuid2, firstRootNetworkUuid2, modificationNode1Uuid2))
             .andExpect(status().isOk());
         // failed security analysis without receiver -> no failure message sent to frontend
         failedMessage = MessageBuilder.withPayload("")
@@ -932,19 +933,21 @@ class SecurityAnalysisTest {
     }
 
     @Test
+    @WithMockUser(username = NO_PARAMS_IN_PROFILE_USER_ID)
     void testResetSecurityAnalysisParametersUserHasNoParamsInProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SECURITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyUuid = studyEntity.getId();
 
         userAdminServerStubs.stubGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
         computationServerStubs.stubParametersReset(SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);
-        resetParametersAndDoChecks(studyUuid, NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyUuid, HttpStatus.OK);
 
         userAdminServerStubs.verifyGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID);
         computationServerStubs.verifyParametersReset(SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);
     }
 
     @Test
+    @WithMockUser(username = INVALID_PARAMS_IN_PROFILE_USER_ID)
     void testResetSecurityAnalysisParametersUserHasInvalidParamsInProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SECURITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -952,7 +955,7 @@ class SecurityAnalysisTest {
         userAdminServerStubs.stubGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON);
         computationServerStubs.stubParametersReset(SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);
         computationServerStubs.stubParametersDuplicateFromNotFound(PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
-        resetParametersAndDoChecks(studyUuid, INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
+        resetParametersAndDoChecks(studyUuid, HttpStatus.NO_CONTENT);
 
         // --- Verify WireMock requests ---
         userAdminServerStubs.verifyGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID);
@@ -961,6 +964,7 @@ class SecurityAnalysisTest {
     }
 
     @Test
+    @WithMockUser(username = VALID_PARAMS_IN_PROFILE_USER_ID)
     void testResetSecurityAnalysisParametersUserHasValidParamsInProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SECURITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -978,13 +982,12 @@ class SecurityAnalysisTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run",
                 studyUuid, firstRootNetworkUuid, modificationNode1.getId())
                 .content(objectWriter.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS))
-                .contentType(MediaType.APPLICATION_JSON)
-                .header(HEADER_USER_ID, "testUserId"))
+                .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());
         Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
 
-        resetParametersAndDoChecks(studyUuid, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyUuid, HttpStatus.OK);
 
         computationServerStubs.verifyComputationRun(NETWORK_UUID_STRING, Map.of("receiver", matching(".*")));
 
@@ -1001,6 +1004,7 @@ class SecurityAnalysisTest {
     }
 
     @Test
+    @WithMockUser(username = VALID_PARAMS_IN_PROFILE_USER_ID)
     void testResetSecurityAnalysisParametersUserHasValidParamsInProfileButNoExistingSecurityAnalysisParams() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null);
         UUID studyUuid = studyEntity.getId();
@@ -1008,17 +1012,16 @@ class SecurityAnalysisTest {
         userAdminServerStubs.stubGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
         computationServerStubs.stubParametersDuplicateFrom(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING, DUPLICATED_PARAMS_JSON);
 
-        resetParametersAndDoChecks(studyUuid, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyUuid, HttpStatus.OK);
 
         // --- Verify requests ---
         userAdminServerStubs.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
         computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
     }
 
-    private void resetParametersAndDoChecks(UUID studyUuid, String userId, HttpStatusCode status) throws Exception {
+    private void resetParametersAndDoChecks(UUID studyUuid, HttpStatusCode status) throws Exception {
         mockMvc.perform(
-                post("/v1/studies/{studyUuid}/security-analysis/parameters/reset", studyUuid)
-                    .header("userId", userId))
+                post("/v1/studies/{studyUuid}/security-analysis/parameters/reset", studyUuid))
             .andExpect(status().is(status.value()));
 
         checkParametersChangedMessagesReceived(studyUuid);

@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import mockwebserver3.Dispatcher;
@@ -46,6 +47,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -53,6 +55,7 @@ import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -78,6 +81,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
+@Import(AllowAllAuthTestConfiguration.class)
+@WithMockUser(username = "userId")
 class StateEstimationTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StateEstimationTest.class);
@@ -276,8 +281,7 @@ class StateEstimationTest {
     }
 
     private void runEstim(final MockWebServer server, StudyNodeIds ids) throws Exception {
-        mockMvc.perform(post(STATE_ESTIMATION_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
-                        .header("userId", "userId"))
+        mockMvc.perform(post(STATE_ESTIMATION_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
                 .andExpect(status().isOk());
 
         consumeEstimResult(ids, STATE_ESTIMATION_RESULT_UUID);
@@ -312,7 +316,7 @@ class StateEstimationTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         var mess = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertNotNull(mess);
@@ -389,8 +393,7 @@ class StateEstimationTest {
         runEstim(server, ids);
 
         // stop running estim
-        mockMvc.perform(put(STATE_ESTIMATION_URL_BASE + "stop", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
-                .header("userId", "userId")).andExpect(status().isOk());
+        mockMvc.perform(put(STATE_ESTIMATION_URL_BASE + "stop", ids.studyId, ids.rootNetworkUuid, ids.nodeId)).andExpect(status().isOk());
         checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_RESULT);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID + "/stop\\?receiver=.*nodeUuid.*")));
     }
@@ -399,8 +402,7 @@ class StateEstimationTest {
     void testFailure() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID_2, "node 2", null);
 
-        mockMvc.perform(post(STATE_ESTIMATION_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
-                        .header("userId", "userId"))
+        mockMvc.perform(post(STATE_ESTIMATION_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
                 .andExpect(status().isOk());
         checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_FAILED);
         checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
@@ -414,7 +416,7 @@ class StateEstimationTest {
         String estimParametersJson = TestUtils.resourceToString(ESTIM_PARAMETERS_FILE);
 
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
-        createOrUpdateParametersAndDoChecks(ids.studyId, estimParametersJson, "userId", HttpStatus.OK);
+        createOrUpdateParametersAndDoChecks(ids.studyId, estimParametersJson, HttpStatus.OK);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters")));
 
         //insert a study
@@ -428,7 +430,7 @@ class StateEstimationTest {
 
         assertEquals(estimParametersJson, mvcResult.getResponse().getContentAsString());
 
-        createOrUpdateParametersAndDoChecks(ids2.studyId, estimParametersJson, "userId", HttpStatus.OK);
+        createOrUpdateParametersAndDoChecks(ids2.studyId, estimParametersJson, HttpStatus.OK);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING)));
 
         //checking update is registered
@@ -440,11 +442,11 @@ class StateEstimationTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING)));
 
         //update state estimation parameters
-        createOrUpdateParametersAndDoChecks(ids2.studyId, estimParametersJson, "userId", HttpStatus.OK);
+        createOrUpdateParametersAndDoChecks(ids2.studyId, estimParametersJson, HttpStatus.OK);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING)));
 
         //reset state estimation parameters to default ones
-        resetParametersAndDoChecks(ids2.studyId, "userId");
+        resetParametersAndDoChecks(ids2.studyId);
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + STATE_ESTIMATION_PARAMETERS_UUID_STRING + "/reset")));
 
         // insert a study with a wrong state estimation parameters uuid
@@ -461,16 +463,15 @@ class StateEstimationTest {
     void testResetStateEstimationParametersWithNoExistingParameters() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
 
-        resetParametersAndDoChecks(ids.studyId, "userId");
+        resetParametersAndDoChecks(ids.studyId);
 
         assertEquals(STATE_ESTIMATION_PARAMETERS_UUID, studyRepository.findById(ids.studyId).orElseThrow().getStateEstimationParametersUuid());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/default")));
     }
 
-    private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
+    private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, HttpStatusCode status) throws Exception {
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/state-estimation/parameters", studyNameUserIdUuid)
-                    .header("userId", userId)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(parameters))
             .andExpect(status().is(status.value()));
@@ -478,10 +479,9 @@ class StateEstimationTest {
         checkParametersChangedMessagesReceived(studyNameUserIdUuid);
     }
 
-    private void resetParametersAndDoChecks(UUID studyNameUserIdUuid, String userId) throws Exception {
+    private void resetParametersAndDoChecks(UUID studyNameUserIdUuid) throws Exception {
         mockMvc.perform(
-                post("/v1/studies/{studyUuid}/state-estimation/parameters/reset", studyNameUserIdUuid)
-                    .header("userId", userId))
+                post("/v1/studies/{studyUuid}/state-estimation/parameters/reset", studyNameUserIdUuid))
             .andExpect(status().isOk());
 
         checkParametersChangedMessagesReceived(studyNameUserIdUuid);
@@ -502,8 +502,7 @@ class StateEstimationTest {
     void testDebugComputation() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
         mockMvc.perform(post(STATE_ESTIMATION_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
-                        .param("debug", "true")
-                        .header("userId", "userId"))
+                        .param("debug", "true"))
                 .andExpect(status().isOk());
         consumeEstimResult(ids, STATE_ESTIMATION_RESULT_UUID);
         assertTrue(TestUtils.getRequestsDone(1,

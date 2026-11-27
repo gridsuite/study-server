@@ -10,6 +10,7 @@ import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -24,16 +25,19 @@ public class SensitivityAnalysisParametersController {
     }
 
     @GetMapping(value = "/providers")
+    @PreAuthorize("true")
     public ResponseEntity<String> getProviders() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(sensitivityAnalysisService.getProviders());
     }
 
     @GetMapping(value = "/parameters/{parameterUuid}")
+    @PreAuthorize("@authorizationService.canRead(#parameterUuid)")
     public ResponseEntity<String> getSensitivityAnalysisParameters(@PathVariable UUID parameterUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(sensitivityAnalysisService.getSensitivityAnalysisParametersByUuid(parameterUuid));
     }
 
     @PutMapping(value = "/parameters/{parameterUuid}")
+    @PreAuthorize("@authorizationService.canWrite(#parameterUuid)")
     public ResponseEntity<Void> updateSensitivityAnalysisParameters(@PathVariable UUID parameterUuid, @RequestBody(required = false) String parameters) {
         sensitivityAnalysisService.updateSensitivityAnalysisParameters(parameterUuid, parameters);
         return ResponseEntity.ok().build();

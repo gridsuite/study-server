@@ -13,6 +13,7 @@ import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.WorkspaceService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,6 +34,7 @@ public class WorkspaceController {
     @Operation(summary = "Get workspaces metadata")
     @ApiResponse(responseCode = "200", description = "Workspaces metadata retrieved")
     @ApiResponse(responseCode = "404", description = "Study not found")
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getWorkspaces(
             @PathVariable UUID studyUuid) {
         return ResponseEntity.ok(workspaceService.getWorkspaces(studyUuid));
@@ -42,6 +44,7 @@ public class WorkspaceController {
     @Operation(summary = "Get a specific workspace")
     @ApiResponse(responseCode = "200", description = "Workspace retrieved")
     @ApiResponse(responseCode = "404", description = "Study or workspace not found")
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getWorkspace(
             @PathVariable UUID studyUuid,
             @PathVariable UUID workspaceId) {
@@ -52,6 +55,7 @@ public class WorkspaceController {
     @Operation(summary = "Rename a workspace")
     @ApiResponse(responseCode = "204", description = "Workspace renamed")
     @ApiResponse(responseCode = "404", description = "Study or workspace not found")
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> renameWorkspace(
             @PathVariable UUID studyUuid,
             @PathVariable UUID workspaceId,
@@ -65,6 +69,7 @@ public class WorkspaceController {
     @Operation(summary = "Get panels from a workspace")
     @ApiResponse(responseCode = "200", description = "Panels retrieved")
     @ApiResponse(responseCode = "404", description = "Study or workspace not found")
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getPanels(
             @PathVariable UUID studyUuid,
             @PathVariable UUID workspaceId,
@@ -76,6 +81,7 @@ public class WorkspaceController {
     @Operation(summary = "Create or update panels in a workspace")
     @ApiResponse(responseCode = "204", description = "Panels created or updated")
     @ApiResponse(responseCode = "404", description = "Study or workspace not found")
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> createOrUpdatePanels(
             @PathVariable UUID studyUuid,
             @PathVariable UUID workspaceId,
@@ -89,6 +95,7 @@ public class WorkspaceController {
     @Operation(summary = "Delete panels from a workspace")
     @ApiResponse(responseCode = "204", description = "Panels deleted")
     @ApiResponse(responseCode = "404", description = "Study or workspace not found")
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> deletePanels(
             @PathVariable UUID studyUuid,
             @PathVariable UUID workspaceId,
@@ -102,6 +109,7 @@ public class WorkspaceController {
     @Operation(summary = "Save NAD config")
     @ApiResponse(responseCode = "201", description = "NAD config saved")
     @ApiResponse(responseCode = "404", description = "Study not found")
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<UUID> saveNadConfig(
             @PathVariable UUID studyUuid,
             @PathVariable UUID workspaceId,

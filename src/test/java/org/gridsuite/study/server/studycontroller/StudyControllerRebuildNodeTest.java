@@ -8,6 +8,7 @@ package org.gridsuite.study.server.studycontroller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import org.gridsuite.study.server.controller.StudyController;
 import org.gridsuite.study.server.dto.modification.ModificationMoveInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -25,8 +26,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
@@ -44,6 +47,8 @@ import static org.mockito.Mockito.*;
  */
 @SpringBootTest
 @DisableElasticsearch
+@Import(AllowAllAuthTestConfiguration.class)
+@WithMockUser(username = "userId")
 class StudyControllerRebuildNodeTest {
 
     @Autowired
@@ -94,7 +99,7 @@ class StudyControllerRebuildNodeTest {
 
     @Test
     void testCreateNetworkModification() {
-        studyController.createNetworkModification(studyUuid, nodeUuid, "modificationBody", userId);
+        studyController.createNetworkModification(studyUuid, nodeUuid, "modificationBody");
 
         verify(networkModificationService, times(1)).createNetworkModification(studyUuid, nodeUuid, "modificationBody", userId);
         verify(networkModificationService, times(1)).buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId);
@@ -107,7 +112,7 @@ class StudyControllerRebuildNodeTest {
 
         doReturn(Map.of(nodeUuid, Set.of(rootNetworkUuid))).when(networkModificationService).getSecurityNodesToRebuild(studyUuid, nodeUuid, originNodeUuid);
 
-        studyController.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationMoveInfos, userId);
+        studyController.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationMoveInfos);
 
         verify(networkModificationService, times(1)).moveNetworkModifications(studyUuid, originNodeUuid, nodeUuid, modificationMoveInfos, false, userId);
         verify(networkModificationService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
@@ -115,7 +120,7 @@ class StudyControllerRebuildNodeTest {
 
     @Test
     void updateNetworkModification() {
-        studyController.updateNetworkModification(studyUuid, nodeUuid, modificationUuid, "modificationAttributes", userId);
+        studyController.updateNetworkModification(studyUuid, nodeUuid, modificationUuid, "modificationAttributes");
 
         verify(networkModificationService, times(1)).updateNetworkModification(studyUuid, "modificationAttributes", nodeUuid, modificationUuid, userId);
         verify(networkModificationService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
@@ -124,7 +129,7 @@ class StudyControllerRebuildNodeTest {
     @Test
     void stashNetworkModification() {
         List<UUID> modificationUuids = List.of(UUID.randomUUID());
-        studyController.stashNetworkModifications(studyUuid, nodeUuid, modificationUuids, true, userId);
+        studyController.stashNetworkModifications(studyUuid, nodeUuid, modificationUuids, true);
 
         verify(networkModificationService, times(1)).stashNetworkModifications(studyUuid, nodeUuid, modificationUuids, userId);
         verify(networkModificationService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
@@ -133,7 +138,7 @@ class StudyControllerRebuildNodeTest {
     @Test
     void restoreNetworkModification() {
         List<UUID> modificationUuids = List.of(UUID.randomUUID());
-        studyController.stashNetworkModifications(studyUuid, nodeUuid, modificationUuids, false, userId);
+        studyController.stashNetworkModifications(studyUuid, nodeUuid, modificationUuids, false);
 
         verify(networkModificationService, times(1)).restoreNetworkModifications(studyUuid, nodeUuid, modificationUuids, userId);
         verify(networkModificationService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
@@ -143,7 +148,7 @@ class StudyControllerRebuildNodeTest {
     @Test
     void updateNetworkModificationActivation() {
         List<UUID> modificationUuids = List.of(UUID.randomUUID());
-        studyController.updateNetworkModificationsActivation(studyUuid, nodeUuid, modificationUuids, true, userId);
+        studyController.updateNetworkModificationsActivation(studyUuid, nodeUuid, modificationUuids, true);
 
         verify(networkModificationService, times(1)).updateNetworkModificationsActivation(studyUuid, nodeUuid, modificationUuids, userId, true);
         verify(networkModificationService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
@@ -153,7 +158,7 @@ class StudyControllerRebuildNodeTest {
     void testUpdateNetworkModificationsNameAndDescription() throws JsonProcessingException {
         Map<String, Map<String, String>> metadataMap = Map.of("message", Map.of("name", "newName", "description", "newDescription"));
         String metadata = mapper.writeValueAsString(metadataMap);
-        studyController.updateModificationNameAndDescription(studyUuid, nodeUuid, modificationUuid, metadata, userId);
+        studyController.updateModificationNameAndDescription(studyUuid, nodeUuid, modificationUuid, metadata);
 
         verify(networkModificationService, times(1))
                 .updateNetworkModificationNameAndDescription(studyUuid, nodeUuid, modificationUuid, metadata, userId);
@@ -162,7 +167,7 @@ class StudyControllerRebuildNodeTest {
     @Test
     void testUpdateNetworkModificationApplicabilityByRootNetwork() {
         Set<UUID> modificationUuids = Set.of(UUID.randomUUID());
-        studyController.updateNetworkModificationsApplicability(studyUuid, rootNetworkUuid, nodeUuid, modificationUuids, true, userId);
+        studyController.updateNetworkModificationsApplicability(studyUuid, rootNetworkUuid, nodeUuid, modificationUuids, true);
 
         verify(networkModificationService, times(1)).updateNetworkModificationsApplicabilityInRootNetwork(studyUuid, nodeUuid, rootNetworkUuid, modificationUuids, userId, true);
         verify(networkModificationService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
@@ -170,7 +175,7 @@ class StudyControllerRebuildNodeTest {
 
     @Test
     void testUnshareModificationReference() {
-        ResponseEntity<Void> response = studyController.unshareModificationReference(modificationUuid, studyUuid, nodeUuid, userId);
+        ResponseEntity<Void> response = studyController.unshareModificationReference(modificationUuid, studyUuid, nodeUuid);
 
         Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(networkModificationService, times(1)).unshareModificationReferences(studyUuid, Map.of(nodeUuid, List.of(modificationUuid)), userId);
@@ -180,7 +185,7 @@ class StudyControllerRebuildNodeTest {
 
     @Test
     void testUnshareAllReferencesInNode() {
-        ResponseEntity<Void> response = studyController.unshareAllModificationReferencesInNode(studyUuid, nodeUuid, userId);
+        ResponseEntity<Void> response = studyController.unshareAllModificationReferencesInNode(studyUuid, nodeUuid);
 
         Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(studyService, times(1)).assertIsStudyAndNodeExist(studyUuid, nodeUuid);
@@ -190,7 +195,7 @@ class StudyControllerRebuildNodeTest {
 
     @Test
     void testUnshareAllReferencesInStudy() {
-        ResponseEntity<Void> response = studyController.unshareAllModificationReferences(studyUuid, userId);
+        ResponseEntity<Void> response = studyController.unshareAllModificationReferences(studyUuid);
 
         Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(studyService, times(1)).assertIsStudyExist(studyUuid);

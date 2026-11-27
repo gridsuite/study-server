@@ -14,11 +14,11 @@ import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
 import org.gridsuite.study.server.service.voltageinit.VoltageInitService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
-
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -38,10 +38,11 @@ public class VoltageInitStudyParametersController {
     @PostMapping(value = "/parameters")
     @Operation(summary = "Set voltage init parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters are set")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> setVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody StudyVoltageInitParameters voltageInitParameters,
-            @RequestHeader(HEADER_USER_ID) String userId) {
+            @RequestBody StudyVoltageInitParameters voltageInitParameters) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         voltageInitService.setVoltageInitParameters(studyUuid, voltageInitParameters, userId);
         return ResponseEntity.ok().build();
     }
@@ -50,16 +51,18 @@ public class VoltageInitStudyParametersController {
     @Operation(summary = "Reset voltage init parameters on study to the user profile or default ones")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters are reset"),
         @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> resetVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestHeader(HEADER_USER_ID) String userId,
             @RequestParam(value = "applyModifications", defaultValue = "true", required = false) boolean applyModifications) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         return voltageInitService.resetVoltageInitParameters(studyUuid, userId, applyModifications) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/parameters")
     @Operation(summary = "Get voltage init parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<StudyVoltageInitParameters> getVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(voltageInitService.getVoltageInitParameters(studyUuid));

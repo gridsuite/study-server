@@ -14,11 +14,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
-
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -37,6 +37,7 @@ public class SecurityAnalysisStudyParametersController {
     @GetMapping(value = "/parameters")
     @Operation(summary = "Get security analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters")})
+    @PreAuthorize("@authorizationService.canRead(#studyUuid)")
     public ResponseEntity<String> getSecurityAnalysisParametersValues(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(securityAnalysisService.getSecurityAnalysisParametersValues(studyUuid));
@@ -45,10 +46,11 @@ public class SecurityAnalysisStudyParametersController {
     @PostMapping(value = "/parameters")
     @Operation(summary = "set security analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters are set")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> setSecurityAnalysisParametersValues(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody String securityAnalysisParametersValues,
-            @RequestHeader(HEADER_USER_ID) String userId) {
+            @RequestBody String securityAnalysisParametersValues) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         securityAnalysisService.setSecurityAnalysisParametersValues(studyUuid, securityAnalysisParametersValues, userId);
         return ResponseEntity.ok().build();
     }
@@ -58,9 +60,10 @@ public class SecurityAnalysisStudyParametersController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The security analysis parameters were reset"),
         @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    @PreAuthorize("@authorizationService.canWrite(#studyUuid)")
     public ResponseEntity<Void> resetSecurityAnalysisParametersValues(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestHeader(HEADER_USER_ID) String userId) {
+            @PathVariable("studyUuid") UUID studyUuid) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         return securityAnalysisService.resetSecurityAnalysisParametersValues(studyUuid, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 }

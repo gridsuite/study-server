@@ -13,6 +13,7 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
+import com.powsybl.ws.commons.security.AllowAllAuthTestConfiguration;
 import lombok.AllArgsConstructor;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
@@ -43,6 +44,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
@@ -52,6 +54,7 @@ import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.HttpClientErrorException;
@@ -81,6 +84,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
+@Import(AllowAllAuthTestConfiguration.class)
+@WithMockUser(username = "userId")
 class AsymmetricalLoadTest {
 
     private static final String ASYMMETRICAL_LOAD_URL_BASE = "/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/asymmetrical-load/";
@@ -245,8 +250,7 @@ class AsymmetricalLoadTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid)
                 .content(mnBodyJson)
-                .contentType(MediaType.APPLICATION_JSON)
-                .header("userId", "userId"))
+                .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());
 
         Message<?> msg = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
@@ -285,8 +289,7 @@ class AsymmetricalLoadTest {
     private void runAsymmetricalLoad(StudyNodeIds ids) throws Exception {
         computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, ASYMMETRICAL_LOAD_RESULT_UUID, ASYMMETRICAL_LOAD_PREFIX);
 
-        mockMvc.perform(post(ASYMMETRICAL_LOAD_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
-                .header("userId", "userId"))
+        mockMvc.perform(post(ASYMMETRICAL_LOAD_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
             .andExpect(status().isOk());
 
         consumeAsymmetricalLoadResult(ids, ASYMMETRICAL_LOAD_RESULT_UUID);
@@ -311,8 +314,7 @@ class AsymmetricalLoadTest {
 
         // Run Asymmetrical load
         UUID stubRun = wireMockStubs.stubAsymmetricalLoadRun(NETWORK_UUID_STRING, VARIANT_ID, ASYMMETRICAL_LOAD_RESULT_UUID);
-        mockMvc.perform(post(ASYMMETRICAL_LOAD_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
-                .header("userId", "userId"))
+        mockMvc.perform(post(ASYMMETRICAL_LOAD_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
             .andExpect(status().isOk());
 
         consumeAsymmetricalLoadResult(ids, ASYMMETRICAL_LOAD_RESULT_UUID);
@@ -358,8 +360,7 @@ class AsymmetricalLoadTest {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID_2, "node 2", ASYMMETRICAL_LOAD_PARAMETERS_UUID);
         UUID stubFail = wireMockStubs.stubAsymmetricalLoadFailed(NETWORK_UUID_STRING, VARIANT_ID_2, ASYMMETRICAL_LOAD_ERROR_RESULT_UUID);
 
-        mockMvc.perform(post(ASYMMETRICAL_LOAD_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
-                .header("userId", "userId"))
+        mockMvc.perform(post(ASYMMETRICAL_LOAD_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
             .andExpect(status().isOk());
 
         // asymmetrical load failed
@@ -377,6 +378,7 @@ class AsymmetricalLoadTest {
     }
 
     @Test
+    @WithMockUser(username = VALID_PARAMS_IN_PROFILE_USER_ID)
     void testResetAsymmetricalLoadParametersUserHasValidParamsInProfileButNoExistingAsymmetricalLoadParams() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null);
         UUID studyUuid = studyEntity.getId();
@@ -389,7 +391,7 @@ class AsymmetricalLoadTest {
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             ));
 
-        resetParametersAndDoChecks(studyUuid, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyUuid, HttpStatus.OK);
 
         userAdminServerStubs.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
         wireMockServer.verify(postRequestedFor(
@@ -398,29 +400,32 @@ class AsymmetricalLoadTest {
     }
 
     @Test
+    @WithMockUser(username = NO_PROFILE_USER_ID)
     void testResetAsymmetricalLoadParametersUserHasNoProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), UUID.randomUUID(), ASYMMETRICALLOAD_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         userAdminServerStubs.stubGetUserProfile(NO_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
         computationServerStubs.stubParameterPut(ASYMMETRICAL_LOAD_PARAMETERS_UUID_STRING, ASYMMETRICAL_LOAD_PROFILE_PARAMETERS_JSON, ASYMMETRICAL_LOAD_PREFIX);
-        resetParametersAndDoChecks(studyNameUserIdUuid, NO_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyNameUserIdUuid, HttpStatus.OK);
         computationServerStubs.verifyParameterPut(ASYMMETRICAL_LOAD_PARAMETERS_UUID_STRING, ASYMMETRICAL_LOAD_PREFIX);
     }
 
     @Test
+    @WithMockUser(username = NO_PARAMS_IN_PROFILE_USER_ID)
     void testResetAsymmetricalLoadParametersUserHasNoParamsInProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, ASYMMETRICALLOAD_PARAMETERS_UUID);
         UUID studyUuid = studyEntity.getId();
 
         userAdminServerStubs.stubGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
         computationServerStubs.stubParameterPut(ASYMMETRICAL_LOAD_PARAMETERS_UUID_STRING, ASYMMETRICAL_LOAD_PROFILE_PARAMETERS_JSON, ASYMMETRICAL_LOAD_PREFIX);
-        resetParametersAndDoChecks(studyUuid, NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyUuid, HttpStatus.OK);
 
         userAdminServerStubs.verifyGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID);
         computationServerStubs.verifyParameterPut(ASYMMETRICAL_LOAD_PARAMETERS_UUID_STRING, ASYMMETRICAL_LOAD_PREFIX);
     }
 
     @Test
+    @WithMockUser(username = INVALID_PARAMS_IN_PROFILE_USER_ID)
     void testResetAsymmetricalLoadParametersUserHasInvalidParamsInProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, ASYMMETRICALLOAD_PARAMETERS_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -428,7 +433,7 @@ class AsymmetricalLoadTest {
         userAdminServerStubs.stubGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON);
         computationServerStubs.stubParameterPut(ASYMMETRICAL_LOAD_PARAMETERS_UUID_STRING, ASYMMETRICAL_LOAD_PROFILE_PARAMETERS_JSON, ASYMMETRICAL_LOAD_PREFIX);
         computationServerStubs.stubParametersDuplicateFromNotFound(PROFILE_ASYMMETRICAL_LOAD_INVALID_PARAMETERS_UUID_STRING, ASYMMETRICAL_LOAD_PREFIX);
-        resetParametersAndDoChecks(studyUuid, INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
+        resetParametersAndDoChecks(studyUuid, HttpStatus.NO_CONTENT);
 
         // --- Verify WireMock requests ---
         userAdminServerStubs.verifyGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID);
@@ -437,6 +442,7 @@ class AsymmetricalLoadTest {
     }
 
     @Test
+    @WithMockUser(username = VALID_PARAMS_IN_PROFILE_USER_ID)
     void testResetAsymmetricalLoadParametersUserHasValidParamsInProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, ASYMMETRICALLOAD_PARAMETERS_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -453,14 +459,13 @@ class AsymmetricalLoadTest {
             .willReturn(ok()));
         computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, ASYMMETRICAL_LOAD_RESULT_UUID, ASYMMETRICAL_LOAD_PREFIX);
         mockMvc.perform(post(ASYMMETRICAL_LOAD_URL_BASE + "run", studyUuid, firstRootNetworkUuid, modificationNode1.getId())
-                .contentType(MediaType.APPLICATION_JSON)
-                .header("userId", "userId"))
+                .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());
 
         Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(UPDATE_TYPE_ASYMMETRICAL_LOAD_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
 
-        resetParametersAndDoChecks(studyUuid, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyUuid, HttpStatus.OK);
         userAdminServerStubs.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
         computationServerStubs.verifyComputationRun(NETWORK_UUID_STRING, Map.of("reportUuid", matching(".*")), ASYMMETRICAL_LOAD_PREFIX);
         computationServerStubs.verifyParametersDuplicateFrom(PROFILE_ASYMMETRICAL_LOAD_VALID_PARAMETERS_UUID_STRING, 1, ASYMMETRICAL_LOAD_PREFIX);
@@ -544,10 +549,9 @@ class AsymmetricalLoadTest {
         wireMockServer.verify(0, WireMock.getRequestedFor(WireMock.urlMatching("/v1/asymmetrical-load/results/.*")));
     }
 
-    private void createOrUpdateParametersAndDoChecks(UUID studyUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
+    private void createOrUpdateParametersAndDoChecks(UUID studyUuid, String parameters, HttpStatusCode status) throws Exception {
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/asymmetrical-load/parameters", studyUuid)
-                    .header("userId", userId)
                     .contentType(MediaType.ALL)
                     .content(parameters))
             .andExpect(status().is(status.value()));
@@ -564,10 +568,9 @@ class AsymmetricalLoadTest {
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
     }
 
-    private void resetParametersAndDoChecks(UUID studyUuid, String userId, HttpStatusCode status) throws Exception {
+    private void resetParametersAndDoChecks(UUID studyUuid, HttpStatusCode status) throws Exception {
         mockMvc.perform(
-                post("/v1/studies/{studyUuid}/asymmetrical-load/parameters/reset", studyUuid)
-                    .header("userId", userId))
+                post("/v1/studies/{studyUuid}/asymmetrical-load/parameters/reset", studyUuid))
             .andExpect(status().is(status.value()));
 
         Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
@@ -637,7 +640,7 @@ class AsymmetricalLoadTest {
             .willReturn(ok()));
         UUID studyUuid = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), ASYMMETRICAL_LOAD_PARAMETERS_UUID).getId();
 
-        createOrUpdateParametersAndDoChecks(studyUuid, parameterToUpdate, "userId", HttpStatus.OK);
+        createOrUpdateParametersAndDoChecks(studyUuid, parameterToUpdate, HttpStatus.OK);
         wireMockServer.verify(putRequestedFor(urlPathEqualTo("/v1/asymmetrical-load/parameters/" + ASYMMETRICAL_LOAD_PARAMETERS_UUID)));
 
         // Fail case
@@ -732,8 +735,7 @@ class AsymmetricalLoadTest {
                 .param("filters", "fakeFilters")
                 .param("globalFilters", "fakeGlobalFilters")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(content)
-                .header("userId", "userId"))
+                .content(content))
             .andExpect(status().isOk())
             .andExpect(content().bytes(ASYMMETRICAL_LOAD_RESULTS_AS_ZIPPED_CSV));
 
