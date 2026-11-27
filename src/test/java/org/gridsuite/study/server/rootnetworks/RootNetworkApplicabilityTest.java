@@ -57,6 +57,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
 class RootNetworkApplicabilityTest {
+    private static final String APPLICABILITY_URL = "/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/root-network-applicability";
+
     private static final String USER_ID = "userId";
 
     private static final UUID NETWORK_UUID = UUID.randomUUID();
@@ -123,8 +125,9 @@ class RootNetworkApplicabilityTest {
         // an unknown modification returns 404 and does not update anything
         UUID invalidModificationUuid = UUID.randomUUID();
         doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND)).when(networkModificationRestService).verifyModifications(firstNode.getModificationGroupUuid(), Set.of(invalidModificationUuid));
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkUuid, firstNode.getId())
-                .param("uuids", invalidModificationUuid.toString())
+        mockMvc.perform(put(APPLICABILITY_URL, studyEntity.getId(), rootNetworkUuid, firstNode.getId())
+                .content("[\"" + invalidModificationUuid + "\"]")
+                .contentType(MediaType.APPLICATION_JSON)
                 .param("applicable", Boolean.FALSE.toString())
                 .header(USER_ID, USER_ID))
             .andExpect(status().isNotFound());
@@ -133,8 +136,9 @@ class RootNetworkApplicabilityTest {
         doNothing().when(networkModificationRestService).verifyModifications(firstNode.getModificationGroupUuid(), Set.of(MODIFICATION_1));
 
         // deactivating the modification on that root network is forwarded with its tag
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkUuid, firstNode.getId())
-                .param("uuids", MODIFICATION_1.toString())
+        mockMvc.perform(put(APPLICABILITY_URL, studyEntity.getId(), rootNetworkUuid, firstNode.getId())
+                .content("[\"" + MODIFICATION_1 + "\"]")
+                .contentType(MediaType.APPLICATION_JSON)
                 .param("applicable", Boolean.FALSE.toString())
                 .header(USER_ID, USER_ID))
             .andExpect(status().isOk());
@@ -142,8 +146,9 @@ class RootNetworkApplicabilityTest {
                 .updateRootNetworkApplicability(List.of(MODIFICATION_1), ROOT_NETWORK_TAG_1, false, "userId");
 
         // and so is activating it back
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkUuid, firstNode.getId())
-                .param("uuids", MODIFICATION_1.toString())
+        mockMvc.perform(put(APPLICABILITY_URL, studyEntity.getId(), rootNetworkUuid, firstNode.getId())
+                .content("[\"" + MODIFICATION_1 + "\"]")
+                .contentType(MediaType.APPLICATION_JSON)
                 .param("applicable", Boolean.TRUE.toString())
                 .header(USER_ID, USER_ID))
             .andExpect(status().isOk());

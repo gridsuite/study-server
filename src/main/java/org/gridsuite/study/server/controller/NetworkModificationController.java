@@ -63,8 +63,8 @@ public class NetworkModificationController {
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/network-modifications")
-    public ResponseEntity<Void> updateNetworkModificationsActivation(@RequestParam("uuids") List<UUID> networkModificationUuids, @RequestParam("active") boolean active,
+    @PutMapping(value = "/network-modifications/activation", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> updateNetworkModificationsActivation(@RequestBody List<UUID> networkModificationUuids, @RequestParam("active") boolean active,
                                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         networkModificationRestService.updateNetworkModificationsActivation(networkModificationUuids, active, userId);
         return ResponseEntity.ok().build();

@@ -3633,10 +3633,11 @@ class NetworkModificationTest {
                         "/v1/network-modifications/root-network-applicability"))
                 .willReturn(WireMock.ok()));
 
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications",
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/root-network-applicability",
                         studyUuid, rootNetworkUuid, nodeUuid)
                         .queryParam("applicable", "false")
-                        .queryParam("uuids", compositeUuid.toString())
+                        .content(mapper.writeValueAsString(List.of(compositeUuid)))
+                        .contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
 
@@ -3660,9 +3661,8 @@ class NetworkModificationTest {
 
         // the applicability is updated for the tag of the root network, on the composite alone
         WireMockUtilsCriteria.verifyPutRequest(wireMockServer, "/v1/network-modifications/root-network-applicability", false, Map.of(
-                "uuids", equalTo(compositeUuid.toString()),
                 "rootNetworkTag", equalTo(rootNetworkTag),
-                "applicable", equalTo("false")), null);
+                "applicable", equalTo("false")), mapper.writeValueAsString(List.of(compositeUuid)));
     }
 
     @AfterEach

@@ -155,13 +155,7 @@ public class NetworkModificationRestService {
     }
 
     public void updateNetworkModificationsActivation(List<UUID> networkModificationUuids, boolean active, String userId) {
-        String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH)
-            .queryParam(UUIDS, networkModificationUuids)
-            .queryParam(QUERY_PARAM_ACTIVE, active)
-            .build().toUriString();
-        restClient.put().uri(getNetworkModificationServerURI(false) + path)
-            .headers(headers -> headers.set(HEADER_USER_ID, userId))
-            .retrieve().toBodilessEntity();
+        updateModificationsActivation(networkModificationUuids, active, userId);
     }
 
     /**
@@ -283,17 +277,17 @@ public class NetworkModificationRestService {
     public void updateModificationsActivation(List<UUID> modificationsUuids, boolean active, String userId) {
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
-            .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
-            .queryParam(UUIDS, modificationsUuids)
+            .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + "activation")
             .queryParam(QUERY_PARAM_ACTIVE, active)
             .buildAndExpand()
             .toUriString();
 
-        var requestSpec = restClient.put().uri(path);
+        var requestSpec = restClient.put().uri(path)
+            .contentType(MediaType.APPLICATION_JSON);
         if (userId != null) {
             requestSpec.header(HEADER_USER_ID, userId);
         }
-        requestSpec.retrieve().toBodilessEntity();
+        requestSpec.body(modificationsUuids).retrieve().toBodilessEntity();
     }
 
     public void updateNetworkModificationNameAndDescription(UUID networkModificationUuid, String metadata, String userId) {
@@ -370,7 +364,6 @@ public class NetworkModificationRestService {
         Objects.requireNonNull(rootNetworkTag);
         var path = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + "root-network-applicability")
-                .queryParam(UUIDS, modificationsUuids)
                 .queryParam(QUERY_PARAM_ROOT_NETWORK_TAG, rootNetworkTag)
                 .queryParam(QUERY_PARAM_APPLICABLE, applicable)
                 .buildAndExpand()
@@ -379,6 +372,7 @@ public class NetworkModificationRestService {
         restClient.put().uri(path)
             .headers(headers -> headers.set(HEADER_USER_ID, userId))
             .contentType(MediaType.APPLICATION_JSON)
+            .body(modificationsUuids)
             .retrieve().toBodilessEntity();
     }
 
