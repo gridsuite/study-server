@@ -9,7 +9,7 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.controller.NodeController;
-import org.gridsuite.study.server.controller.StudyController;
+import org.gridsuite.study.server.controller.RootNetworkStudyController;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
 import org.gridsuite.study.server.dto.NodeInfos;
@@ -29,7 +29,10 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
-import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NetworkService;
+import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
+import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.networkmodification.NetworkModificationRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -52,7 +55,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_WORKFLOW_INFOS;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_WORKFLOW_TYPE;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
@@ -79,7 +81,7 @@ class NetworkModificationUnitTest {
     @Autowired
     private StudyRepository studyRepository;
     @Autowired
-    private StudyController studyController;
+    private RootNetworkStudyController rootNetworkStudyController;
     @Autowired
     private NodeController studyNodeController;
 
@@ -169,7 +171,7 @@ class NetworkModificationUnitTest {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
 
         // Unbuild security node without LF -> no children invalidation
-        studyController.unbuildNode(studyUuid, firstRootNetworkUuid, node1Uuid, USER_ID_HEADER);
+        rootNetworkStudyController.unbuildNode(studyUuid, firstRootNetworkUuid, node1Uuid, USER_ID_HEADER);
         /*       rootNode
          *          |
          *        node1
@@ -189,7 +191,7 @@ class NetworkModificationUnitTest {
 
         // Unbuild security node with LF -> children invalidation
         when(rootNetworkNodeInfoService.isLoadflowDone(node2Uuid, firstRootNetworkUuid)).thenReturn(true);
-        studyController.unbuildNode(studyUuid, firstRootNetworkUuid, node2Uuid, USER_ID_HEADER);
+        rootNetworkStudyController.unbuildNode(studyUuid, firstRootNetworkUuid, node2Uuid, USER_ID_HEADER);
         /*       rootNode
          *          |
          *        node1
@@ -256,13 +258,15 @@ class NetworkModificationUnitTest {
         setupWithTwoRootNetwork();
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
         List<UUID> rootNetworkUuids = rootNetworkRepository.findAllWithInfosByStudyId(studyUuid).stream().map(RootNetworkEntity::getId).toList();
+        assertEquals(2, rootNetworkUuids.size());
 
         studyNodeController.unbuildAllNodes(studyUuid, USER_ID_HEADER);
 
-        ArgumentCaptor<UUID> rootNetworkUuidCaptor = ArgumentCaptor.forClass(UUID.class);
-        verify(networkModificationTreeService, times(2))
-            .invalidateNodeTree(eq(studyUuid), eq(rootNodeUuid), rootNetworkUuidCaptor.capture(), eq(InvalidateNodeTreeParameters.ALL), eq(false));
-        assertThat(rootNetworkUuids).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(rootNetworkUuidCaptor.getAllValues());
+        InvalidateNodeTreeParameters invalidateNodeTreeParameters = InvalidateNodeTreeParameters.builder().invalidationMode(InvalidateNodeTreeParameters.InvalidationMode.ALL).build();
+        verify(networkModificationTreeService, times(1))
+            .doUnbuildNodeTree(eq(studyUuid), eq(rootNodeUuid), eq(false), eq(USER_ID_HEADER));
+        verify(rootNetworkNodeInfoService, times(1)).invalidateRootNetworkNodes(eq(rootNetworkUuids.getFirst()), anyList(), eq(invalidateNodeTreeParameters));
+        verify(rootNetworkNodeInfoService, times(1)).invalidateRootNetworkNodes(eq(rootNetworkUuids.getLast()), anyList(), eq(invalidateNodeTreeParameters));
 
         // one for each root network
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid, node2Uuid, node4Uuid));

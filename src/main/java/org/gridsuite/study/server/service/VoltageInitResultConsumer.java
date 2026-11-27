@@ -40,15 +40,18 @@ public class VoltageInitResultConsumer {
     public static final String HEADER_REACTIVE_SLACKS_OVER_THRESHOLD = "REACTIVE_SLACKS_OVER_THRESHOLD";
     public static final String HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE = "reactiveSlacksThreshold";
     public static final String HEADER_VOLTAGE_LEVEL_LIMITS_OUT_OF_NOMINAL_VOLTAGE_RANGE = "VOLTAGE_LEVEL_LIMITS_OUT_OF_NOMINAL_VOLTAGE_RANGE";
+    private final RootNetworkStudyService rootNetworkStudyService;
 
     public VoltageInitResultConsumer(StudyService studyService,
                                      ConsumerService consumerService,
                                      NotificationService notificationService,
-                                     NodeActivityRunnerService nodeActivityRunnerService) {
+                                     NodeActivityRunnerService nodeActivityRunnerService,
+                                     RootNetworkStudyService rootNetworkStudyService) {
         this.studyService = studyService;
         this.consumerService = consumerService;
         this.notificationService = notificationService;
         this.nodeActivityRunnerService = nodeActivityRunnerService;
+        this.rootNetworkStudyService = rootNetworkStudyService;
     }
 
     private void checkReactiveSlacksOverThreshold(Message<String> msg, UUID studyUuid) {
@@ -86,7 +89,7 @@ public class VoltageInitResultConsumer {
                         String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
                         // the compute activity is already released, and this insert invalidates the node tree
                         nodeActivityRunnerService.runWith(EDIT_MODIFICATIONS, studyUuid, List.of(nodeReceiver.getNodeUuid()),
-                            () -> studyService.insertVoltageInitModifications(studyUuid, nodeReceiver.getNodeUuid(), nodeReceiver.getRootNetworkUuid(), userId));
+                            () -> rootNetworkStudyService.insertVoltageInitModifications(studyUuid, nodeReceiver.getNodeUuid(), nodeReceiver.getRootNetworkUuid(), userId));
                     });
                 }
             });

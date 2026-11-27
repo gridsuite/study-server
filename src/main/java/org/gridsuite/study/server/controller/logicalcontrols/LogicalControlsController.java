@@ -91,7 +91,7 @@ public class LogicalControlsController {
         if (request.getParameterMap().containsKey(QUERY_PARAM_FILTERS) || request.getParameterMap().containsKey(QUERY_PARAM_SORT)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only global filters are supported on logical controls results");
         }
-        studyService.assertIsRootNetworkAndNodeInStudy(studyUuid, rootNetworkUuid, nodeUuid);
+        networkModificationTreeService.assertIsRootNetworkAndNodeInStudy(studyUuid, rootNetworkUuid, nodeUuid);
         String result = logicalControlsService.getLogicalControlsResult(nodeUuid, rootNetworkUuid, globalFilters);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
                 ResponseEntity.noContent().build();

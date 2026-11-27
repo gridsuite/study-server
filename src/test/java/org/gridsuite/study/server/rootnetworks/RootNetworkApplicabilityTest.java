@@ -39,27 +39,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.*;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -92,6 +80,8 @@ class RootNetworkApplicabilityTest {
     private NetworkModificationTreeService networkModificationTreeService;
     @Autowired
     private StudyService studyService;
+    @Autowired
+    private RootNetworkStudyService rootNetworkStudyService;
     @Autowired
     private NetworkModificationService networkModificationService;
     @Autowired
@@ -126,7 +116,7 @@ class RootNetworkApplicabilityTest {
     void testUpdateApplicability() throws Exception {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
-        List<BasicRootNetworkInfos> rootNetworkBasicInfos = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
+        List<BasicRootNetworkInfos> rootNetworkBasicInfos = rootNetworkStudyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
         UUID rootNetworkUuid = rootNetworkBasicInfos.getFirst().rootNetworkUuid();
 
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
@@ -167,7 +157,7 @@ class RootNetworkApplicabilityTest {
     void testUpdateApplicabilityOfSharedModificationNeedsWritePermission() {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
-        UUID rootNetworkUuid = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).getFirst().rootNetworkUuid();
+        UUID rootNetworkUuid = rootNetworkStudyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).getFirst().rootNetworkUuid();
 
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
         NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
@@ -193,7 +183,7 @@ class RootNetworkApplicabilityTest {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyEntity.setMonoRoot(false);
         studyRepository.save(studyEntity);
-        UUID rootNetworkUuid = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).getFirst().rootNetworkUuid();
+        UUID rootNetworkUuid = rootNetworkStudyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).getFirst().rootNetworkUuid();
 
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
         NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
@@ -272,7 +262,7 @@ class RootNetworkApplicabilityTest {
     void testRenamingARootNetworkTagCarriesTheApplicabilitiesAlong() throws Exception {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
-        UUID rootNetworkUuid = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).getFirst().rootNetworkUuid();
+        UUID rootNetworkUuid = rootNetworkStudyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).getFirst().rootNetworkUuid();
 
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
         NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
@@ -298,7 +288,7 @@ class RootNetworkApplicabilityTest {
     void testRenamingARootNetworkTagNeedsTheSharedModificationsTheUserCannotWriteOnToBeAssociatedWithIt() throws Exception {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
-        UUID rootNetworkUuid = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).getFirst().rootNetworkUuid();
+        UUID rootNetworkUuid = rootNetworkStudyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).getFirst().rootNetworkUuid();
 
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
         NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
@@ -309,7 +299,7 @@ class RootNetworkApplicabilityTest {
 
         UUID studyUuid = studyEntity.getId();
         RootNetworkInfos renamingTagInfos = RootNetworkInfos.builder().id(rootNetworkUuid).tag(ROOT_NETWORK_TAG_2).build();
-        assertThrows(HttpClientErrorException.class, () -> studyService.updateRootNetworkRequest(studyUuid, renamingTagInfos, USER_ID));
+        assertThrows(HttpClientErrorException.class, () -> rootNetworkStudyService.updateRootNetworkRequest(studyUuid, renamingTagInfos, USER_ID));
 
         // neither the tag nor the applicabilities are touched
         assertEquals(ROOT_NETWORK_TAG_1, rootNetworkService.getRootNetworkTag(rootNetworkUuid));
@@ -361,7 +351,7 @@ class RootNetworkApplicabilityTest {
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
         NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
 
-        studyService.deleteRootNetworks(studyEntity.getId(), List.of(deletedRootNetworkUuid), USER_ID);
+        rootNetworkStudyService.deleteRootNetworks(studyEntity.getId(), List.of(deletedRootNetworkUuid), USER_ID);
 
         verify(networkModificationRestService, times(1)).deleteRootNetworkTags(List.of(firstNode.getModificationGroupUuid()), List.of(ROOT_NETWORK_TAG_2));
     }
@@ -376,6 +366,8 @@ class RootNetworkApplicabilityTest {
 
     @AfterEach
     void tearDown() {
+        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
+        studyRepository.deleteAll();
         output.clear();
     }
 }
